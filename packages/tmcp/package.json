@@ -1,0 +1,25 @@
+{
+	"name": "tmcp",
+	"version": "1.0.0",
+	"description": "The main tmcp library",
+	"main": "src/index.js",
+	"type": "module",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"typecheck": "tsc --noEmit"
+	},
+	"keywords": [],
+	"author": "Paolo Ricciuti",
+	"license": "MIT",
+	"files": [
+		"src/"
+	],
+	"dependencies": {
+		"json-rpc-2.0": "^1.7.1",
+		"uri-template-matcher": "^1.1.0",
+		"xsschema": "0.3.0-beta.8"
+	},
+	"devDependencies": {
+		"@standard-schema/spec": "^1.0.0"
+	}
+}
