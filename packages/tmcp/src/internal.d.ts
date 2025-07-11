@@ -5,7 +5,7 @@ export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
 	execute: (
-		input: StandardSchemaV1.InferInput<TSchema>,
+		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<unknown> | unknown;
 };
 
@@ -18,7 +18,7 @@ export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
 	execute: (
-		input: StandardSchemaV1.InferInput<TSchema>,
+		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<unknown> | unknown;
 };
 

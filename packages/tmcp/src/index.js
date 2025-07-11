@@ -1,7 +1,7 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
- * @import { Tool, Completion, Prompt, Resource, ServerOptions } from "./internal.js";
+ * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo } from "./internal.js";
  */
 import { JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
 import { UriTemplateMatcher } from 'uri-template-matcher';
@@ -38,7 +38,7 @@ export class McpServer {
 		'ref/resource': new Map(),
 	};
 	/**
-	 * @param {object} server_info
+	 * @param {ServerInfo} server_info
 	 * @param {ServerOptions} options
 	 */
 	constructor(server_info, options) {
@@ -87,7 +87,9 @@ export class McpServer {
 						name,
 						title: tool.description,
 						description: tool.description,
-						inputSchema: await toJsonSchema(tool.schema),
+						inputSchema: tool.schema
+							? await toJsonSchema(tool.schema)
+							: { type: 'object', properties: {} },
 					};
 				}),
 			);
@@ -101,6 +103,9 @@ export class McpServer {
 				const tool = this.#tools.get(name);
 				if (!tool) {
 					throw new Error(`Tool ${name} not found`);
+				}
+				if (!tool.schema) {
+					return tool.execute();
 				}
 				let validated_args = tool.schema['~standard'].validate(args);
 				if (validated_args instanceof Promise)
@@ -121,14 +126,21 @@ export class McpServer {
 		if (!this.#options.capabilities?.prompts) return;
 		this.#server.addMethod('prompts/list', async () => {
 			const available_prompts = await Promise.all(
-				[...this.#prompts].map(async ([name, tool]) => {
-					const arguments_schema = await toJsonSchema(tool.schema);
+				[...this.#prompts].map(async ([name, prompt]) => {
+					const arguments_schema = prompt.schema
+						? await toJsonSchema(prompt.schema)
+						: {
+								type: 'object',
+								properties:
+									/** @type {Record<string, {description: string}>} */ ({}),
+								required: [],
+							};
 					const keys = Object.keys(arguments_schema.properties ?? {});
 					const required = arguments_schema.required ?? [];
 					return {
 						name,
-						title: tool.description,
-						description: tool.description,
+						title: prompt.description,
+						description: prompt.description,
 						arguments: keys.map((key) => {
 							const property = arguments_schema.properties?.[key];
 							const description =
@@ -154,6 +166,9 @@ export class McpServer {
 				const prompt = this.#prompts.get(name);
 				if (!prompt) {
 					throw new Error(`Tool ${name} not found`);
+				}
+				if (!prompt.schema) {
+					return prompt.execute();
 				}
 				let validated_args = prompt.schema['~standard'].validate(args);
 				if (validated_args instanceof Promise)
@@ -243,13 +258,11 @@ export class McpServer {
 		);
 	}
 	/**
-	 * @template {StandardSchemaV1} TSchema
-	 * @param {string} name
-	 * @param {string} description
-	 * @param {TSchema} schema
-	 * @param {(input: StandardSchemaV1.InferInput<TSchema>) => Promise<unknown> | unknown} execute
+	 * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
+	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
+	 * @param {TSchema extends undefined ? (()=>Promise<unknown> | unknown) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown)} execute
 	 */
-	tool(name, description, schema, execute) {
+	tool({ name, description, schema }, execute) {
 		if (this.#options.capabilities?.tools?.listChanged) {
 			this.#notify('notifications/tools/list_changed', {});
 		}
@@ -260,14 +273,11 @@ export class McpServer {
 		});
 	}
 	/**
-	 * @template {StandardSchemaV1} TSchema
-	 * @param {string} name
-	 * @param {string} description
-	 * @param {TSchema} schema
-	 * @param {(input: StandardSchemaV1.InferInput<TSchema>) => Promise<unknown> | unknown} execute
-	 * @param {Completion} [complete]
+	 * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
+	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: Completion }} options
+	 * @param {TSchema extends undefined ? (()=>Promise<unknown> | unknown) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown} execute
 	 */
-	prompt(name, description, schema, execute, complete) {
+	prompt({ name, description, schema, complete }, execute) {
 		if (complete) {
 			this.#completions['ref/prompt'].set(name, complete);
 		}
@@ -306,22 +316,17 @@ export class McpServer {
 		});
 	}
 	/**
-	 * @param {string} name
-	 * @param {string} description
-	 * @param {string} uri
+	 * @param {{ name: string; description: string; uri: string }} options
 	 * @param {(uri: string, params?: unknown) => Promise<unknown> | unknown} execute
 	 */
-	resource(name, description, uri, execute) {
+	resource({ name, description, uri }, execute) {
 		this.#resource(name, description, uri, execute, undefined, false);
 	}
 	/**
-	 * @param {string} name
-	 * @param {string} description
-	 * @param {string} uri
+	 * @param {{ name: string; description: string; uri: string; complete?: Completion }} options
 	 * @param {(uri: string, params?: unknown) => Promise<unknown> | unknown} execute
-	 * @param {Completion} [complete]
 	 */
-	template(name, description, uri, execute, complete) {
+	template({ name, description, uri, complete }, execute) {
 		this.#resource(name, description, uri, execute, complete, true);
 	}
 	/**
