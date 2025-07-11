@@ -250,6 +250,9 @@ export class McpServer {
 	 * @param {(input: StandardSchemaV1.InferInput<TSchema>) => Promise<unknown> | unknown} execute
 	 */
 	tool(name, description, schema, execute) {
+		if (this.#options.capabilities?.tools?.listChanged) {
+			this.#notify('notifications/tools/list_changed', {});
+		}
 		this.#tools.set(name, {
 			description,
 			schema,
@@ -291,6 +294,9 @@ export class McpServer {
 		}
 		if (template) {
 			this.#templates.add(uri);
+		}
+		if (this.#options.capabilities?.resources?.listChanged) {
+			this.#notify('notifications/resources/list_changed', {});
 		}
 		this.#resources.set(uri, {
 			description,
