@@ -1,14 +1,13 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
- * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo } from "./internal.js";
+ * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo } from "./internal/internal.js";
  */
 import { JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
 import { UriTemplateMatcher } from 'uri-template-matcher';
-import { toJsonSchema } from 'xsschema';
 
 /**
- *
+ * @template {StandardSchemaV1} StandardSchema
  */
 export class McpServer {
 	#server = new JSONRPCServer();
@@ -39,7 +38,7 @@ export class McpServer {
 	};
 	/**
 	 * @param {ServerInfo} server_info
-	 * @param {ServerOptions} options
+	 * @param {ServerOptions<StandardSchema>} options
 	 */
 	constructor(server_info, options) {
 		this.#options = options;
@@ -88,7 +87,9 @@ export class McpServer {
 						title: tool.description,
 						description: tool.description,
 						inputSchema: tool.schema
-							? await toJsonSchema(tool.schema)
+							? await this.#options.adapter.toJsonSchema(
+									tool.schema,
+								)
 							: { type: 'object', properties: {} },
 					};
 				}),
@@ -128,7 +129,9 @@ export class McpServer {
 			const available_prompts = await Promise.all(
 				[...this.#prompts].map(async ([name, prompt]) => {
 					const arguments_schema = prompt.schema
-						? await toJsonSchema(prompt.schema)
+						? await this.#options.adapter.toJsonSchema(
+								prompt.schema,
+							)
 						: {
 								type: 'object',
 								properties:
@@ -258,7 +261,7 @@ export class McpServer {
 		);
 	}
 	/**
-	 * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
+	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<unknown> | unknown) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown)} execute
 	 */
@@ -273,7 +276,7 @@ export class McpServer {
 		});
 	}
 	/**
-	 * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
+	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: Completion }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<unknown> | unknown) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown} execute
 	 */

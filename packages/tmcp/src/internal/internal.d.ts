@@ -1,5 +1,6 @@
 import { StandardSchemaV1 } from '@standard-schema/spec';
 import { JSONRPCRequest } from 'json-rpc-2.0';
+import { JsonSchemaAdapter } from '../adapter.js';
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
@@ -29,7 +30,7 @@ export type Resource = {
 	execute: (uri: string, params?: unknown) => Promise<unknown> | unknown;
 };
 
-export type ServerOptions = {
+export type ServerOptions<TSchema extends StandardSchemaV1> = {
 	send?: (payload: JSONRPCRequest) => void;
 	capabilities?: {
 		tools?: { listChanged?: boolean };
@@ -37,6 +38,7 @@ export type ServerOptions = {
 		prompts?: { listChanged?: boolean; subscribe?: boolean };
 	};
 	instructions?: string;
+	adapter: JsonSchemaAdapter<TSchema>;
 };
 
 export type ServerInfo = {

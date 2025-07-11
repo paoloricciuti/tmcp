@@ -6,7 +6,8 @@
 	"type": "module",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"generate:types": "rm -f ./src/*.d.ts && tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint"
 	},
 	"keywords": [],
 	"author": "Paolo Ricciuti",
@@ -14,12 +15,25 @@
 	"files": [
 		"src/"
 	],
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./src/index.js"
+		},
+		"./adapter": {
+			"types": "./src/adapter.d.ts",
+			"default": "./src/adapter.js"
+		},
+		"./package.json": "./package.json"
+	},
 	"dependencies": {
 		"json-rpc-2.0": "^1.7.1",
 		"uri-template-matcher": "^1.1.0",
-		"xsschema": "0.3.0-beta.8"
+		"valibot": "^1.1.0"
 	},
 	"devDependencies": {
-		"@standard-schema/spec": "^1.0.0"
+		"@standard-schema/spec": "^1.0.0",
+		"@types/json-schema": "^7.0.15",
+		"publint": "^0.3.12"
 	}
 }
