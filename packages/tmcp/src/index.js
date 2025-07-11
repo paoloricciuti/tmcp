@@ -1,7 +1,7 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
- * @import { Tool, Completion, Prompt, Resource, ServerOptions } from "./index.js";
+ * @import { Tool, Completion, Prompt, Resource, ServerOptions } from "./internal.js";
  */
 import { JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
 import { UriTemplateMatcher } from 'uri-template-matcher';
