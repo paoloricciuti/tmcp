@@ -1,17 +1,17 @@
-# @tmcp/arktype-jsonschema
+# @tmcpkit/adapter-arktype
 
 ArkType adapter for TMCP JSON Schema conversion.
 
 ## Installation
 
 ```bash
-npm install @tmcp/arktype-jsonschema arktype tmcp
+npm install @tmcpkit/adapter-arktype arktype tmcp
 ```
 
 ## Usage
 
 ```javascript
-import { ArktypeJsonSchemaAdapter } from '@tmcp/arktype-jsonschema';
+import { ArktypeJsonSchemaAdapter } from '@tmcpkit/adapter-arktype';
 import { type } from 'arktype';
 
 const adapter = new ArktypeJsonSchemaAdapter();
@@ -32,7 +32,7 @@ console.log(jsonSchema);
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { ArktypeJsonSchemaAdapter } from '@tmcp/arktype-jsonschema';
+import { ArktypeJsonSchemaAdapter } from '@tmcpkit/adapter-arktype';
 import { type } from 'arktype';
 
 const adapter = new ArktypeJsonSchemaAdapter();
