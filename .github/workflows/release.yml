@@ -18,6 +18,7 @@ jobs:
               with:
                   node-version: 22.x
                   cache: 'pnpm'
+                  registry-url: https://registry.npmjs.org
 
             - run: pnpm install --frozen-lockfile
             - name: Create Release Pull Request or Publish
