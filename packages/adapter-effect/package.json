@@ -1,0 +1,38 @@
+{
+	"name": "@tmcpkit/adapter-effect",
+	"version": "0.1.0",
+	"description": "Effect Schema adapter for TMCP JSON Schema conversion",
+	"type": "module",
+	"main": "src/index.js",
+	"types": "src/index.d.ts",
+	"scripts": {
+		"generate:types": "tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint",
+		"prepublish": "pnpm generate:types"
+	},
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./src/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"peerDependencies": {
+		"effect": "^3.0.0",
+		"tmcp": "workspace:^"
+	},
+	"dependencies": {
+		"@standard-schema/spec": "^1.0.0",
+		"@types/json-schema": "^7.0.15"
+	},
+	"keywords": [
+		"tmcp",
+		"effect",
+		"effect-schema",
+		"jsonschema",
+		"adapter"
+	],
+	"devDependencies": {
+		"effect": "^3.16.12",
+		"publint": "^0.3.12"
+	}
+}
