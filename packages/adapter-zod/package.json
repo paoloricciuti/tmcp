@@ -1,6 +1,6 @@
 {
 	"name": "@tmcpkit/adapter-zod",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Zod adapter for TMCP JSON Schema conversion",
 	"type": "module",
 	"main": "src/index.js",
@@ -22,6 +22,7 @@
 	},
 	"dependencies": {
 		"@standard-schema/spec": "^1.0.0",
+		"@types/json-schema": "^7.0.15",
 		"zod": "^4.0.5"
 	},
 	"keywords": [

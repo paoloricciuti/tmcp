@@ -1,5 +1,6 @@
 /**
  * @import { ZodSchema } from "zod";
+ * @import { JSONSchema7 } from "json-schema";
  */
 
 import { JsonSchemaAdapter } from 'tmcp/adapter';
@@ -13,9 +14,9 @@ export class ZodJsonSchemaAdapter extends JsonSchemaAdapter {
 	/**
 	 * Converts a Zod schema to JSON Schema format
 	 * @param {ZodSchema} schema - The Zod schema to convert
-	 * @returns {Promise<object>} The JSON Schema representation
+	 * @returns {Promise<JSONSchema7>} The JSON Schema representation
 	 */
 	async toJsonSchema(schema) {
-		return z.toJSONSchema(schema);
+		return /** @type {JSONSchema7} */ (z.toJSONSchema(schema));
 	}
 }
