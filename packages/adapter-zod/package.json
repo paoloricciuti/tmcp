@@ -1,7 +1,7 @@
 {
-	"name": "@tmcpkit/adapter-arktype",
+	"name": "@tmcpkit/adapter-zod",
 	"version": "0.1.0",
-	"description": "ArkType adapter for TMCP JSON Schema conversion",
+	"description": "Zod adapter for TMCP JSON Schema conversion",
 	"type": "module",
 	"main": "src/index.js",
 	"types": "src/index.d.ts",
@@ -17,22 +17,20 @@
 		"./package.json": "./package.json"
 	},
 	"peerDependencies": {
-		"arktype": "^2.0.0",
-		"tmcp": "workspace:^"
+		"tmcp": "workspace:^",
+		"zod": "^4.0.0"
 	},
 	"dependencies": {
 		"@standard-schema/spec": "^1.0.0",
-		"@types/json-schema": "^7.0.15",
-		"arktype": "^2.0.0"
+		"zod": "^4.0.5"
 	},
 	"keywords": [
 		"tmcp",
-		"arktype",
+		"zod",
 		"jsonschema",
 		"adapter"
 	],
 	"devDependencies": {
-		"@types/node": "^24.0.13",
 		"publint": "^0.3.12"
 	}
 }

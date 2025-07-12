@@ -38,6 +38,9 @@ importers:
       arktype:
         specifier: ^2.0.0
         version: 2.1.20
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
     devDependencies:
       '@types/node':
         specifier: ^24.0.13
@@ -65,17 +68,36 @@ importers:
         specifier: ^0.3.12
         version: 0.3.12
 
-  packages/arktype-jsonschema:
+  packages/adapter-zod:
     dependencies:
       '@standard-schema/spec':
         specifier: ^1.0.0
         version: 1.0.0
-      arktype:
-        specifier: ^2.0.0
-        version: 2.1.20
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
+      zod:
+        specifier: ^4.0.5
+        version: 4.0.5
+    devDependencies:
+      publint:
+        specifier: ^0.3.12
+        version: 0.3.12
+
+  packages/adapter-zod-v3:
+    dependencies:
+      '@standard-schema/spec':
+        specifier: ^1.0.0
+        version: 1.0.0
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
+      zod:
+        specifier: ^3.0.0
+        version: 3.25.76
+      zod-to-json-schema:
+        specifier: ^3.24.6
+        version: 3.24.6(zod@3.25.76)
     devDependencies:
       publint:
         specifier: ^0.3.12
@@ -99,25 +121,6 @@ importers:
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
-      publint:
-        specifier: ^0.3.12
-        version: 0.3.12
-
-  packages/valibot-jsonschema:
-    dependencies:
-      '@standard-schema/spec':
-        specifier: ^1.0.0
-        version: 1.0.0
-      '@valibot/to-json-schema':
-        specifier: ^1.3.0
-        version: 1.3.0(valibot@1.1.0(typescript@5.8.3))
-      tmcp:
-        specifier: workspace:^
-        version: link:../tmcp
-      valibot:
-        specifier: ^1.1.0
-        version: 1.1.0(typescript@5.8.3)
-    devDependencies:
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -905,6 +908,17 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  zod-to-json-schema@3.24.6:
+    resolution: {integrity: sha512-h/z3PKvcTcTetyjl1fkj79MHNEjm+HpD6NXheWjzOekY7kV+lwDYnHw+ivHkijnCSMz1yJaWBD9vu/Fcmk+vEg==}
+    peerDependencies:
+      zod: ^3.24.1
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
+  zod@4.0.5:
+    resolution: {integrity: sha512-/5UuuRPStvHXu7RS+gmvRf4NXrNxpSllGwDnCBcJZtQsKrviYXm54yDGV2KYNLT5kq0lHGcl7lqWJLgSaG+tgA==}
 
 snapshots:
 
@@ -1725,3 +1739,11 @@ snapshots:
   word-wrap@1.2.5: {}
 
   yocto-queue@0.1.0: {}
+
+  zod-to-json-schema@3.24.6(zod@3.25.76):
+    dependencies:
+      zod: 3.25.76
+
+  zod@3.25.76: {}
+
+  zod@4.0.5: {}

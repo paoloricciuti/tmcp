@@ -6,7 +6,8 @@
 	"main": "src/index.js",
 	"types": "src/index.d.ts",
 	"scripts": {
-		"generate:types": "tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint"
+		"generate:types": "tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint",
+		"prepublish": "pnpm generate:types"
 	},
 	"exports": {
 		".": {
