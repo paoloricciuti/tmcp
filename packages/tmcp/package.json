@@ -8,7 +8,8 @@
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"typecheck": "tsc --noEmit",
 		"generate:types": "rm -f ./src/*.d.ts && tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint",
-		"prepublish": "pnpm generate:types"
+		"prepublish": "pnpm generate:types",
+		"release": "changeset publish"
 	},
 	"keywords": [],
 	"author": "Paolo Ricciuti",

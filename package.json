@@ -16,6 +16,7 @@
 	"author": "Paolo Ricciuti",
 	"license": "MIT",
 	"devDependencies": {
+		"@changesets/cli": "^2.29.5",
 		"@eslint/js": "^9.30.1",
 		"eslint": "^9.30.1",
 		"eslint-config-prettier": "^10.1.5",
