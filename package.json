@@ -10,7 +10,8 @@
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"typecheck": "pnpm -r typecheck"
+		"typecheck": "pnpm -r typecheck",
+		"release": "changeset publish"
 	},
 	"keywords": [],
 	"author": "Paolo Ricciuti",
