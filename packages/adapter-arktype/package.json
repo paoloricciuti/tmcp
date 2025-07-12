@@ -1,0 +1,37 @@
+{
+	"name": "@tmcpkit/adapter-arktype",
+	"version": "0.1.0",
+	"description": "ArkType adapter for TMCP JSON Schema conversion",
+	"type": "module",
+	"main": "src/index.js",
+	"types": "src/index.d.ts",
+	"scripts": {
+		"generate:types": "tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint"
+	},
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./src/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"peerDependencies": {
+		"arktype": "^2.0.0",
+		"tmcp": "workspace:^"
+	},
+	"dependencies": {
+		"@standard-schema/spec": "^1.0.0",
+		"@types/json-schema": "^7.0.15",
+		"arktype": "^2.0.0"
+	},
+	"keywords": [
+		"tmcp",
+		"arktype",
+		"jsonschema",
+		"adapter"
+	],
+	"devDependencies": {
+		"@types/node": "^24.0.13",
+		"publint": "^0.3.12"
+	}
+}

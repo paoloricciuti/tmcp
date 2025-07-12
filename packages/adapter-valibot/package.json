@@ -1,5 +1,5 @@
 {
-	"name": "@tmcp/valibot-jsonschema",
+	"name": "@tmcpkit/adapter-valibot",
 	"version": "0.1.0",
 	"description": "Valibot adapter for TMCP JSON Schema conversion",
 	"type": "module",
