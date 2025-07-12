@@ -5,14 +5,14 @@ Effect Schema adapter for TMCP JSON Schema conversion.
 ## Installation
 
 ```bash
-npm install @tmcpkit/adapter-effect @effect/schema tmcp
+npm install @tmcpkit/adapter-effect effect tmcp
 ```
 
 ## Usage
 
 ```javascript
 import { EffectJsonSchemaAdapter } from '@tmcpkit/adapter-effect';
-import * as S from '@effect/schema/Schema';
+import * as S from 'effect/Schema';
 
 const adapter = new EffectJsonSchemaAdapter();
 
@@ -33,7 +33,7 @@ console.log(jsonSchema);
 ```javascript
 import { McpServer } from 'tmcp';
 import { EffectJsonSchemaAdapter } from '@tmcpkit/adapter-effect';
-import * as S from '@effect/schema/Schema';
+import * as S from 'effect/Schema';
 
 const adapter = new EffectJsonSchemaAdapter();
 const server = new McpServer(
@@ -73,7 +73,7 @@ server.tool(
 
 ```javascript
 import { EffectJsonSchemaAdapter } from '@tmcpkit/adapter-effect';
-import * as S from '@effect/schema/Schema';
+import * as S from 'effect/Schema';
 
 const adapter = new EffectJsonSchemaAdapter();
 
@@ -94,7 +94,7 @@ const jsonSchema = await adapter.toJsonSchema(UserSchema);
 ### Complex Schemas
 
 ```javascript
-import * as S from '@effect/schema/Schema';
+import * as S from 'effect/Schema';
 
 // Union types
 const ContactSchema = S.Union(
@@ -123,7 +123,7 @@ A class that extends the base `JsonSchemaAdapter` from TMCP and provides Effect 
 
 ## Dependencies
 
-- `@effect/schema` - Peer dependency for schema validation and type definitions
+- `effect` - Peer dependency for schema validation and type definitions
 - `tmcp` - Peer dependency for the base adapter
 
 ## Features

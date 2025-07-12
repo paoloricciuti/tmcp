@@ -1,17 +1,17 @@
-# @tmcp/valibot-jsonschema
+# @tmcpkit/adapter-valibot
 
 Valibot adapter for TMCP JSON Schema conversion.
 
 ## Installation
 
 ```bash
-npm install @tmcp/valibot-jsonschema valibot tmcp
+npm install @tmcpkit/adapter-valibot valibot tmcp
 ```
 
 ## Usage
 
 ```javascript
-import { ValibotJsonSchemaAdapter } from '@tmcp/valibot-jsonschema';
+import { ValibotJsonSchemaAdapter } from '@tmcpkit/adapter-valibot';
 import * as v from 'valibot';
 
 const adapter = new ValibotJsonSchemaAdapter();

@@ -1,17 +1,17 @@
-# @tmcp/zod-jsonschema
+# @tmcpkit/adapter-zod-v3
 
-Zod adapter for TMCP JSON Schema conversion.
+Zod v3 adapter for TMCP JSON Schema conversion.
 
 ## Installation
 
 ```bash
-npm install @tmcp/zod-jsonschema zod tmcp
+npm install @tmcpkit/adapter-zod-v3 zod tmcp
 ```
 
 ## Usage
 
 ```javascript
-import { ZodJsonSchemaAdapter } from '@tmcp/zod-jsonschema';
+import { ZodJsonSchemaAdapter } from '@tmcpkit/adapter-zod-v3';
 import { z } from 'zod';
 
 const adapter = new ZodJsonSchemaAdapter();
@@ -32,7 +32,7 @@ console.log(jsonSchema);
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { ZodJsonSchemaAdapter } from '@tmcp/zod-jsonschema';
+import { ZodJsonSchemaAdapter } from '@tmcpkit/adapter-zod-v3';
 import { z } from 'zod';
 
 const adapter = new ZodJsonSchemaAdapter();
@@ -72,7 +72,7 @@ server.tool(
 ### Custom JSON Schema Options
 
 ```javascript
-import { ZodJsonSchemaAdapter } from '@tmcp/zod-jsonschema';
+import { ZodJsonSchemaAdapter } from '@tmcpkit/adapter-zod-v3';
 import { z } from 'zod';
 
 const adapter = new ZodJsonSchemaAdapter();
