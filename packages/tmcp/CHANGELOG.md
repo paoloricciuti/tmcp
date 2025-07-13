@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.2.0
+
+### Minor Changes
+
+- ae4a79c: breaking: way better complete api and initial typesafe
+
 ## 1.1.0
 
 ### Minor Changes
