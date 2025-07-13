@@ -11,7 +11,7 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"typecheck": "pnpm -r typecheck",
-		"release": "changeset publish"
+		"release": "npm whoami && npm access list packages @tmcpkit && changeset publish"
 	},
 	"keywords": [],
 	"author": "Paolo Ricciuti",
