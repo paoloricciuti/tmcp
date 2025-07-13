@@ -9,22 +9,6 @@ export default [
 			jsdoc,
 		},
 		rules: {
-			'jsdoc/require-jsdoc': [
-				'error',
-				{
-					require: {
-						FunctionDeclaration: true,
-						MethodDefinition: true,
-						ClassDeclaration: true,
-						ArrowFunctionExpression: true,
-						FunctionExpression: true,
-					},
-				},
-			],
-			'jsdoc/require-param': 'error',
-			'jsdoc/require-param-type': 'error',
-			'jsdoc/require-returns': 'error',
-			'jsdoc/require-returns-type': 'error',
 			'jsdoc/check-types': 'error',
 			'jsdoc/check-param-names': 'error',
 			'jsdoc/check-tag-names': 'error',
