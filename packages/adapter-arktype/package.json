@@ -1,6 +1,6 @@
 {
 	"name": "@tmcpkit/adapter-arktype",
-	"version": "1.0.0",
+	"version": "0.1.1",
 	"description": "ArkType adapter for TMCP JSON Schema conversion",
 	"type": "module",
 	"main": "src/index.js",
