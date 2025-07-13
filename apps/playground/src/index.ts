@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { McpServer } from 'tmcp';
+import { StdioTransport } from '@tmcpkit/transport-stdio';
 import { ValibotJsonSchemaAdapter } from '@tmcpkit/adapter-valibot';
 import * as v from 'valibot';
 
@@ -26,9 +27,6 @@ const server = new McpServer(
 		},
 	},
 );
-server.on('send', (message) => {
-	process.stdout.write(JSON.stringify(message) + '\n');
-});
 
 setTimeout(() => {
 	server.changed('resource', 'playground://info');
@@ -156,45 +154,6 @@ server.resource(
 	},
 );
 
-// Handle stdio communication
-process.stdin.setEncoding('utf8');
+const transport = new StdioTransport(server);
 
-let buffer = '';
-
-process.stdin.on('data', async (chunk) => {
-	buffer += chunk;
-
-	// Process complete JSON-RPC messages
-	const lines = buffer.split('\n');
-	buffer = lines.pop() || ''; // Keep the incomplete line in buffer
-
-	for (const line of lines) {
-		if (line.trim()) {
-			try {
-				const message = JSON.parse(line);
-				const response = await server.receive(message);
-				console.error('response:', response);
-				if (response) {
-					process.stdout.write(JSON.stringify(response) + '\n');
-				}
-			} catch (error) {
-				console.error('Error processing message:', error);
-			}
-		}
-	}
-});
-
-process.stdin.on('end', () => {
-	process.exit(0);
-});
-
-// Handle process termination
-process.on('SIGINT', () => {
-	process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-	process.exit(0);
-});
-
-console.error('MCP Playground Server started');
+transport.listen();

@@ -14,6 +14,7 @@
 	},
 	"dependencies": {
 		"@tmcpkit/adapter-valibot": "workspace:^",
+		"@tmcpkit/transport-stdio": "workspace:^",
 		"tmcp": "workspace:^",
 		"valibot": "^1.1.0"
 	},

@@ -38,6 +38,9 @@ importers:
       '@tmcpkit/adapter-valibot':
         specifier: workspace:^
         version: link:../../packages/adapter-valibot
+      '@tmcpkit/transport-stdio':
+        specifier: workspace:^
+        version: link:../../packages/transport-stdio
       tmcp:
         specifier: workspace:^
         version: link:../../packages/tmcp
@@ -177,6 +180,27 @@ importers:
       publint:
         specifier: ^0.3.12
         version: 0.3.12
+
+  packages/transport-http:
+    devDependencies:
+      publint:
+        specifier: ^0.3.12
+        version: 0.3.12
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
+
+  packages/transport-stdio:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.13
+        version: 24.0.13
+      publint:
+        specifier: ^0.3.12
+        version: 0.3.12
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
 
 packages:
 
