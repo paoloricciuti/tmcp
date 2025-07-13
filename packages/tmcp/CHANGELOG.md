@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.1.0
+
+### Minor Changes
+
+- 9073ae4: breaking: refactor how send works
+
 ## 1.0.2
 
 ### Patch Changes
