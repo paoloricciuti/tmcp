@@ -34,5 +34,8 @@
 	"devDependencies": {
 		"@types/node": "^24.0.13",
 		"publint": "^0.3.12"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }

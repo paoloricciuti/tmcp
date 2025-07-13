@@ -34,5 +34,8 @@
 	"devDependencies": {
 		"effect": "^3.16.12",
 		"publint": "^0.3.12"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }
