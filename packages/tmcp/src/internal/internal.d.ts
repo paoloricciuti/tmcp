@@ -31,11 +31,10 @@ export type Resource = {
 };
 
 export type ServerOptions<TSchema extends StandardSchemaV1> = {
-	send?: (payload: JSONRPCRequest) => void;
 	capabilities?: {
 		tools?: { listChanged?: boolean };
 		resources?: { listChanged?: boolean; subscribe?: boolean };
-		prompts?: { listChanged?: boolean; subscribe?: boolean };
+		prompts?: { listChanged?: boolean };
 	};
 	instructions?: string;
 	adapter: JsonSchemaAdapter<TSchema>;
@@ -45,4 +44,10 @@ export type ServerInfo = {
 	name: string;
 	version: string;
 	description: string;
+};
+
+export type SubscriptionsKeys = 'resource';
+
+export type McpEvents = {
+	send: (message: JSONRPCRequest) => void;
 };

@@ -1,0 +1,25 @@
+{
+	"name": "playground",
+	"version": "1.0.0",
+	"description": "Playground app for testing tmcp with MCP Inspector",
+	"private": true,
+	"type": "module",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"start": "node src/index.ts",
+		"typecheck": "tsc --noEmit",
+		"inspect": "mcp-inspector"
+	},
+	"dependencies": {
+		"@tmcpkit/adapter-valibot": "workspace:^",
+		"tmcp": "workspace:^",
+		"valibot": "^1.1.0"
+	},
+	"devDependencies": {
+		"@modelcontextprotocol/inspector": "^0.16.1",
+		"@types/node": "^22.0.0",
+		"typescript": "^5.8.3"
+	}
+}

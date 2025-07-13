@@ -8,6 +8,13 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
      */
     constructor(server_info: ServerInfo, options: ServerOptions<StandardSchema>);
     /**
+     * @template {keyof McpEvents} TEvent
+     * @param {TEvent} event
+     * @param {McpEvents[TEvent]} callback
+     * @param {AddEventListenerOptions} [options]
+     */
+    on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): void;
+    /**
      * @template {StandardSchema | undefined} [TSchema=undefined]
      * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
      * @param {TSchema extends undefined ? (()=>Promise<unknown> | unknown) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown)} execute
@@ -52,11 +59,19 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
      * @returns {ReturnType<JSONRPCServer['receive']>}
      */
     receive(request: JSONRPCRequest): ReturnType<JSONRPCServer["receive"]>;
+    /**
+     * Send a notification for subscriptions
+     * @param {SubscriptionsKeys} what
+     * @param {string} id
+     */
+    changed(what: SubscriptionsKeys, id: string): void;
     #private;
 }
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { McpEvents } from "./internal/internal.js";
 import type { Completion } from "./internal/internal.js";
 import type { JSONRPCRequest } from "json-rpc-2.0";
 import { JSONRPCServer } from 'json-rpc-2.0';
+import type { SubscriptionsKeys } from "./internal/internal.js";
 import type { ServerInfo } from "./internal/internal.js";
 import type { ServerOptions } from "./internal/internal.js";

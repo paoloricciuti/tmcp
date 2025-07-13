@@ -1,7 +1,7 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
- * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo } from "./internal/internal.js";
+ * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
 import { UriTemplateMatcher } from 'uri-template-matcher';
@@ -36,17 +36,25 @@ export class McpServer {
 		'ref/prompt': new Map(),
 		'ref/resource': new Map(),
 	};
+
+	#event_target = new EventTarget();
+
+	/**
+	 * @type {Record<SubscriptionsKeys, Set<string>>}
+	 */
+	#subscriptions = {
+		/**
+		 * @type {Set<string>}
+		 */
+		resource: new Set(),
+	};
+
 	/**
 	 * @param {ServerInfo} server_info
 	 * @param {ServerOptions<StandardSchema>} options
 	 */
 	constructor(server_info, options) {
 		this.#options = options;
-		if (options.send) {
-			this.#client = new JSONRPCClient((payload) => {
-				options.send?.(payload);
-			});
-		}
 		this.#server.addMethod('initialize', ({ protocolVersion }) => {
 			return {
 				protocolVersion,
@@ -64,6 +72,30 @@ export class McpServer {
 		this.#init_prompts();
 		this.#init_resources();
 		this.#init_completion();
+	}
+
+	/**
+	 * @template {keyof McpEvents} TEvent
+	 * @param {TEvent} event
+	 * @param {McpEvents[TEvent]} callback
+	 * @param {AddEventListenerOptions} [options]
+	 */
+	on(event, callback, options) {
+		if (event === 'send' && !this.#client) {
+			this.#client = new JSONRPCClient((payload) => {
+				this.#event_target.dispatchEvent(
+					new CustomEvent('send', { detail: payload }),
+				);
+			});
+		}
+
+		this.#event_target.addEventListener(
+			event,
+			(e) => {
+				callback(/** @type {CustomEvent} */ (e).detail);
+			},
+			options,
+		);
 	}
 
 	/**
@@ -190,6 +222,14 @@ export class McpServer {
 	 */
 	#init_resources() {
 		if (!this.#options.capabilities?.resources) return;
+
+		if (this.#options.capabilities?.resources?.subscribe) {
+			this.#server.addMethod('resources/subscribe', async ({ uri }) => {
+				this.#subscriptions.resource.add(uri);
+				return {};
+			});
+		}
+
 		this.#server.addMethod('resources/list', async () => {
 			return {
 				resources: [...this.#resources].reduce(
@@ -338,5 +378,21 @@ export class McpServer {
 	 */
 	receive(request) {
 		return this.#server.receive(request);
+	}
+
+	/**
+	 * Send a notification for subscriptions
+	 * @param {SubscriptionsKeys} what
+	 * @param {string} id
+	 */
+	changed(what, id) {
+		if (this.#subscriptions[what].has(id)) {
+			const resource = this.#resources.get(id);
+			if (!resource) return;
+			this.#notify(`notifications/resources/updated`, {
+				uri: id,
+				title: resource.name,
+			});
+		}
 	}
 }
