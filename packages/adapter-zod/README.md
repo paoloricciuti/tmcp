@@ -20,7 +20,7 @@ const adapter = new ZodJsonSchemaAdapter();
 const userSchema = z.object({
 	name: z.string(),
 	age: z.number(),
-	email: z.string().email()
+	email: z.string().email(),
 });
 
 // Convert to JSON Schema
@@ -40,14 +40,14 @@ const server = new McpServer(
 	{
 		name: 'my-server',
 		version: '1.0.0',
-		description: 'Server with Zod schemas'
+		description: 'Server with Zod schemas',
 	},
 	{
 		adapter,
 		capabilities: {
-			tools: { listChanged: true }
-		}
-	}
+			tools: { listChanged: true },
+		},
+	},
 );
 
 // Define a tool with Zod schema
@@ -58,12 +58,12 @@ server.tool(
 		schema: z.object({
 			name: z.string(),
 			age: z.number().positive(),
-			email: z.string().email()
-		})
+			email: z.string().email(),
+		}),
 	},
 	async ({ name, age, email }) => {
 		return `Created user: ${name}, age ${age}, email ${email}`;
-	}
+	},
 );
 ```
 
@@ -82,10 +82,12 @@ const userSchema = z.object({
 	name: z.string().describe('Full name of the user'),
 	age: z.number().positive().describe('Age in years'),
 	email: z.string().email().describe('Valid email address'),
-	preferences: z.object({
-		theme: z.enum(['light', 'dark']).default('light'),
-		notifications: z.boolean().default(true)
-	}).optional()
+	preferences: z
+		.object({
+			theme: z.enum(['light', 'dark']).default('light'),
+			notifications: z.boolean().default(true),
+		})
+		.optional(),
 });
 
 const jsonSchema = await adapter.toJsonSchema(userSchema);
@@ -99,7 +101,7 @@ import { z } from 'zod';
 // Union types
 const contactSchema = z.union([
 	z.object({ type: z.literal('email'), value: z.string().email() }),
-	z.object({ type: z.literal('phone'), value: z.string().regex(/^\+?\d+$/) })
+	z.object({ type: z.literal('phone'), value: z.string().regex(/^\+?\d+$/) }),
 ]);
 
 // Arrays and nested objects
@@ -107,7 +109,7 @@ const companySchema = z.object({
 	name: z.string(),
 	employees: z.array(userSchema),
 	contacts: z.array(contactSchema),
-	founded: z.date().transform(date => date.toISOString())
+	founded: z.date().transform((date) => date.toISOString()),
 });
 ```
 

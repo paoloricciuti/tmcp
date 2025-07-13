@@ -3,7 +3,7 @@
  * @augments {JsonSchemaAdapter<GenericSchema>}
  */
 export class ValibotJsonSchemaAdapter extends JsonSchemaAdapter<GenericSchema> {
-    constructor();
+	constructor();
 }
-import type { GenericSchema } from "valibot";
+import type { GenericSchema } from 'valibot';
 import { JsonSchemaAdapter } from 'tmcp/adapter';

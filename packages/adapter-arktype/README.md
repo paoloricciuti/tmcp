@@ -20,7 +20,7 @@ const adapter = new ArktypeJsonSchemaAdapter();
 const userSchema = type({
 	name: 'string',
 	age: 'number',
-	email: 'string.email'
+	email: 'string.email',
 });
 
 // Convert to JSON Schema
@@ -40,14 +40,14 @@ const server = new McpServer(
 	{
 		name: 'my-server',
 		version: '1.0.0',
-		description: 'Server with ArkType schemas'
+		description: 'Server with ArkType schemas',
 	},
 	{
 		adapter,
 		capabilities: {
-			tools: { listChanged: true }
-		}
-	}
+			tools: { listChanged: true },
+		},
+	},
 );
 
 // Define a tool with ArkType schema
@@ -58,12 +58,12 @@ server.tool(
 		schema: type({
 			name: 'string',
 			age: 'number',
-			email: 'string.email'
-		})
+			email: 'string.email',
+		}),
 	},
 	async ({ name, age, email }) => {
 		return `Created user: ${name}, age ${age}, email ${email}`;
-	}
+	},
 );
 ```
 

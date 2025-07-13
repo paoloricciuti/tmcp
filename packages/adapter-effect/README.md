@@ -20,7 +20,7 @@ const adapter = new EffectJsonSchemaAdapter();
 const UserSchema = S.Struct({
 	name: S.String,
 	age: S.Number,
-	email: S.String.pipe(S.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
+	email: S.String.pipe(S.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)),
 });
 
 // Convert to JSON Schema
@@ -40,14 +40,14 @@ const server = new McpServer(
 	{
 		name: 'my-server',
 		version: '1.0.0',
-		description: 'Server with Effect schemas'
+		description: 'Server with Effect schemas',
 	},
 	{
 		adapter,
 		capabilities: {
-			tools: { listChanged: true }
-		}
-	}
+			tools: { listChanged: true },
+		},
+	},
 );
 
 // Define a tool with Effect schema
@@ -58,12 +58,12 @@ server.tool(
 		schema: S.Struct({
 			name: S.String,
 			age: S.Number.pipe(S.positive()),
-			email: S.String.pipe(S.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
-		})
+			email: S.String.pipe(S.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)),
+		}),
 	},
 	async ({ name, age, email }) => {
 		return `Created user: ${name}, age ${age}, email ${email}`;
-	}
+	},
 );
 ```
 
@@ -79,13 +79,22 @@ const adapter = new EffectJsonSchemaAdapter();
 
 // Schema with custom descriptions and metadata
 const UserSchema = S.Struct({
-	name: S.String.annotations({ title: 'Full Name', description: 'Full name of the user' }),
-	age: S.Number.pipe(S.positive()).annotations({ description: 'Age in years' }),
-	email: S.String.pipe(S.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)).annotations({ description: 'Valid email address' }),
-	preferences: S.optional(S.Struct({
-		theme: S.Literal('light', 'dark').annotations({ default: 'light' }),
-		notifications: S.Boolean.annotations({ default: true })
-	}))
+	name: S.String.annotations({
+		title: 'Full Name',
+		description: 'Full name of the user',
+	}),
+	age: S.Number.pipe(S.positive()).annotations({
+		description: 'Age in years',
+	}),
+	email: S.String.pipe(S.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)).annotations({
+		description: 'Valid email address',
+	}),
+	preferences: S.optional(
+		S.Struct({
+			theme: S.Literal('light', 'dark').annotations({ default: 'light' }),
+			notifications: S.Boolean.annotations({ default: true }),
+		}),
+	),
 });
 
 const jsonSchema = await adapter.toJsonSchema(UserSchema);
@@ -98,8 +107,14 @@ import * as S from 'effect/Schema';
 
 // Union types
 const ContactSchema = S.Union(
-	S.Struct({ type: S.Literal('email'), value: S.String.pipe(S.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) }),
-	S.Struct({ type: S.Literal('phone'), value: S.String.pipe(S.pattern(/^\+?\d+$/)) })
+	S.Struct({
+		type: S.Literal('email'),
+		value: S.String.pipe(S.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)),
+	}),
+	S.Struct({
+		type: S.Literal('phone'),
+		value: S.String.pipe(S.pattern(/^\+?\d+$/)),
+	}),
 );
 
 // Arrays and nested objects
@@ -107,7 +122,13 @@ const CompanySchema = S.Struct({
 	name: S.String,
 	employees: S.Array(UserSchema),
 	contacts: S.Array(ContactSchema),
-	founded: S.Date.pipe(S.transform(S.String, date => date.toISOString(), dateStr => new Date(dateStr)))
+	founded: S.Date.pipe(
+		S.transform(
+			S.String,
+			(date) => date.toISOString(),
+			(dateStr) => new Date(dateStr),
+		),
+	),
 });
 ```
 

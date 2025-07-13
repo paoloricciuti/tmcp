@@ -9,11 +9,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Architecture
 
 ### Monorepo Structure
+
 - `packages/tmcp/` - Core library with `McpServer` class and base `JsonSchemaAdapter`
 - `packages/adapter-*/` - Schema validation library adapters (Zod, Valibot, ArkType, Effect, Zod v3)
 - Uses adapter pattern where each adapter implements `toJsonSchema(schema)` method
 
 ### Code Style
+
 - **JavaScript with JSDoc** - No TypeScript files, comprehensive JSDoc annotations for type safety
 - **ES Modules** - `"type": "module"` throughout
 - **snake_case** - Internal methods and variables
@@ -21,6 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - JSDoc validation enforced via ESLint
 
 ### Key Classes
+
 - `McpServer` (`packages/tmcp/src/index.js`) - Main server implementation with `.tool()`, `.prompt()`, `.resource()`, `.template()` methods
 - `JsonSchemaAdapter` (`packages/tmcp/src/adapter.js`) - Base adapter class
 - Adapters extend base class: `ZodJsonSchemaAdapter`, `ValibotJsonSchemaAdapter`, etc.
@@ -52,11 +55,13 @@ pnpm -r test        # Run tests in all packages
 ## Key Dependencies
 
 ### Core Package (`tmcp`)
+
 - `json-rpc-2.0` - JSON-RPC protocol handling
 - `uri-template-matcher` - URI template matching for resources
 - `valibot` - Internal validation (not exposed to users)
 
 ### Development
+
 - `@standard-schema/spec` - Standardized schema interface for type inference
 - `@changesets/cli` - Version management and publishing
 - `eslint-plugin-jsdoc` - JSDoc validation and linting
@@ -64,13 +69,15 @@ pnpm -r test        # Run tests in all packages
 ## Type Generation Process
 
 The project uses TypeScript compiler to generate `.d.ts` files from JavaScript with JSDoc comments:
-- Each package runs `tsc --declaration --emitDeclarationOnly` 
+
+- Each package runs `tsc --declaration --emitDeclarationOnly`
 - Generated types are committed and published
 - `publint` validates package exports
 
 ## Adapter Development Pattern
 
 When creating new schema adapters:
+
 1. Extend `JsonSchemaAdapter` base class
 2. Implement `toJsonSchema(schema)` method to convert schema to JSON Schema
 3. Export class as default with clear naming: `{LibraryName}JsonSchemaAdapter`
@@ -79,7 +86,8 @@ When creating new schema adapters:
 ## MCP Protocol Implementation
 
 The server implements full MCP capabilities:
+
 - **Tools** - Executable functions with optional schema validation
-- **Prompts** - Template generation with completion support  
+- **Prompts** - Template generation with completion support
 - **Resources** - Static resource serving
 - **Templates** - Dynamic URI template resources with parameter completion

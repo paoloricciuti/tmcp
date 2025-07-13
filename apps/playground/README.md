@@ -5,7 +5,7 @@ A playground MCP server for testing the tmcp library with Valibot schema validat
 ## Features
 
 - **TypeScript Implementation**: Built with TypeScript (.ts files) for type safety
-- **TMCP Library**: Uses the tmcp package for MCP server implementation  
+- **TMCP Library**: Uses the tmcp package for MCP server implementation
 - **Valibot Validation**: Uses Valibot and the @tmcpkit/adapter-valibot for schema validation
 - **Stdio Communication**: Communicates via stdio for use with MCP Inspector
 
@@ -26,14 +26,16 @@ A playground MCP server for testing the tmcp library with Valibot schema validat
 ## Usage with MCP Inspector
 
 1. Build the project:
-   ```bash
-   pnpm build
-   ```
+
+    ```bash
+    pnpm build
+    ```
 
 2. Start the server:
-   ```bash
-   node dist/index.js
-   ```
+
+    ```bash
+    node dist/index.js
+    ```
 
 3. Configure MCP Inspector to use this server via stdio
 
