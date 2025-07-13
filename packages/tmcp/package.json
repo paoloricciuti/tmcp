@@ -11,6 +11,11 @@
 		"prepublish": "pnpm generate:types"
 	},
 	"keywords": [],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/paoloricciuti/tmcp.git",
+		"directory": "packages/tmcp"
+	},
 	"author": "Paolo Ricciuti",
 	"license": "MIT",
 	"files": [

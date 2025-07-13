@@ -31,6 +31,11 @@
 		"jsonschema",
 		"adapter"
 	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/paoloricciuti/tmcp.git",
+		"directory": "packages/adapter-arktype"
+	},
 	"devDependencies": {
 		"@types/node": "^24.0.13",
 		"publint": "^0.3.12",
