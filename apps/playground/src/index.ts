@@ -116,6 +116,9 @@ server.prompt(
 		name: 'story_prompt',
 		description: 'Generate a creative story prompt',
 		schema: StoryPromptSchema,
+		complete: {
+			topic: (arg) => [`A day in the life of ${arg}`],
+		},
 	},
 	async (input) => {
 		const length = input.length || 'medium';
@@ -148,6 +151,29 @@ server.resource(
 					uri: 'playground://info',
 					mimeType: 'text/plain',
 					text: 'This is a playground MCP server built with tmcp and Valibot for testing with MCP Inspector.',
+				},
+			],
+		};
+	},
+);
+
+server.template(
+	{
+		description: 'A template resource for testing',
+		name: 'playground_template',
+		uri: 'playground://template/{name}/{action}',
+		complete: {
+			name: (arg) => [`Hello ${arg}`, `Goodbye ${arg}`],
+			action: (arg) => [`greet`, `farewell`],
+		},
+	},
+	async (uri, { action, name }) => {
+		return {
+			contents: [
+				{
+					uri,
+					mimeType: 'text/plain',
+					text: `You called the ${action} action for ${name}.`,
 				},
 			],
 		};

@@ -26,34 +26,36 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
     }, execute: TSchema extends undefined ? (() => Promise<unknown> | unknown) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown)): void;
     /**
      * @template {StandardSchema | undefined} [TSchema=undefined]
-     * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: Completion }} options
+     * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>> }} options
      * @param {TSchema extends undefined ? (()=>Promise<unknown> | unknown) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown} execute
      */
     prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, schema, complete }: {
         name: string;
         description: string;
         schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-        complete?: Completion;
+        complete?: TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>;
     }, execute: TSchema extends undefined ? (() => Promise<unknown> | unknown) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown): void;
     /**
      * @param {{ name: string; description: string; uri: string }} options
-     * @param {(uri: string, params?: unknown) => Promise<unknown> | unknown} execute
+     * @param {(uri: string) => Promise<unknown> | unknown} execute
      */
     resource({ name, description, uri }: {
         name: string;
         description: string;
         uri: string;
-    }, execute: (uri: string, params?: unknown) => Promise<unknown> | unknown): void;
+    }, execute: (uri: string) => Promise<unknown> | unknown): void;
     /**
-     * @param {{ name: string; description: string; uri: string; complete?: Completion }} options
-     * @param {(uri: string, params?: unknown) => Promise<unknown> | unknown} execute
+     * @template {string} TUri
+     * @template {ExtractURITemplateVariables<TUri>} TVariables
+     * @param {{ name: string; description: string; uri: TUri; complete?: TVariables extends never ? never : Partial<Record<TVariables, Completion>> }} options
+     * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<unknown> | unknown} execute
      */
-    template({ name, description, uri, complete }: {
+    template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, uri, complete }: {
         name: string;
         description: string;
-        uri: string;
-        complete?: Completion;
-    }, execute: (uri: string, params?: unknown) => Promise<unknown> | unknown): void;
+        uri: TUri;
+        complete?: TVariables extends never ? never : Partial<Record<TVariables, Completion>>;
+    }, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<unknown> | unknown): void;
     /**
      * @param {JSONRPCRequest} request
      * @returns {ReturnType<JSONRPCServer['receive']>}
@@ -70,6 +72,7 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { McpEvents } from "./internal/internal.js";
 import type { Completion } from "./internal/internal.js";
+import type { ExtractURITemplateVariables } from "./internal/uri-template.js";
 import type { JSONRPCRequest } from "json-rpc-2.0";
 import { JSONRPCServer } from 'json-rpc-2.0';
 import type { SubscriptionsKeys } from "./internal/internal.js";

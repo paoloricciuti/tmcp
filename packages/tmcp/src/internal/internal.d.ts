@@ -11,7 +11,7 @@ export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 };
 
 export type Completion = (
-	argument: { name: string; value: string },
+	query: string,
 	context: { arguments: Record<string, string> },
 ) => string[];
 
@@ -23,12 +23,22 @@ export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	) => Promise<unknown> | unknown;
 };
 
-export type Resource = {
-	description: string;
-	name: string;
-	template: boolean;
-	execute: (uri: string, params?: unknown) => Promise<unknown> | unknown;
-};
+export type Resource =
+	| {
+			description: string;
+			name: string;
+			template: true;
+			execute: (
+				uri: string,
+				params: Record<string, string | string[]>,
+			) => Promise<unknown> | unknown;
+	  }
+	| {
+			description: string;
+			name: string;
+			template: false;
+			execute: (uri: string) => Promise<unknown> | unknown;
+	  };
 
 export type ServerOptions<TSchema extends StandardSchemaV1> = {
 	capabilities?: {

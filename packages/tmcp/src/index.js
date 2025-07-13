@@ -1,6 +1,7 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
+ * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
@@ -30,7 +31,7 @@ export class McpServer {
 	#resources = new Map();
 	#templates = new UriTemplateMatcher();
 	/**
-	 * @type {{ [ref: string]: Map<string, Completion> }}
+	 * @type {{ [ref: string]: Map<string, Partial<Record<string, Completion>>> }}
 	 */
 	#completions = {
 		'ref/prompt': new Map(),
@@ -277,7 +278,12 @@ export class McpServer {
 					throw new Error(`Resource ${uri} not found`);
 				}
 			}
-			return resource.execute(uri, params);
+			if (resource.template) {
+				if (!params)
+					throw new Error('Missing parameters for template resource');
+				return resource.execute(uri, params);
+			}
+			return resource.execute(uri);
 		});
 	}
 	/**
@@ -291,9 +297,11 @@ export class McpServer {
 				if (!completions) return null;
 				const complete = completions.get(ref.uri ?? ref.name);
 				if (!complete) return null;
+				const actual_complete = complete[argument.name];
+				if (!actual_complete) return null;
 				return {
 					completion: {
-						values: complete(argument, context),
+						values: actual_complete(argument.value, context),
 						hasMore: false,
 					},
 				};
@@ -317,7 +325,7 @@ export class McpServer {
 	}
 	/**
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: Completion }} options
+	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>> }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<unknown> | unknown) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown} execute
 	 */
 	prompt({ name, description, schema, complete }, execute) {
@@ -334,43 +342,48 @@ export class McpServer {
 		});
 	}
 	/**
-	 * @param {string} name
-	 * @param {string} description
-	 * @param {string} uri
-	 * @param {(uri: string, params?: unknown) => Promise<unknown> | unknown} execute
-	 * @param {Completion} [complete]
-	 * @param {boolean} [template=false]
+	 * @type {(resource: Resource & {complete?: Partial<Record<string,Completion>>, uri: string})=> void}
 	 */
-	#resource(name, description, uri, execute, complete, template = false) {
+	#resource({ uri, complete, ...resource }) {
 		if (complete) {
 			this.#completions['ref/resource'].set(uri, complete);
 		}
-		if (template) {
+		if (resource.template) {
 			this.#templates.add(uri);
 		}
 		if (this.#options.capabilities?.resources?.listChanged) {
 			this.#notify('notifications/resources/list_changed', {});
 		}
-		this.#resources.set(uri, {
-			description,
-			name,
-			execute,
-			template,
-		});
+		this.#resources.set(uri, resource);
 	}
 	/**
 	 * @param {{ name: string; description: string; uri: string }} options
-	 * @param {(uri: string, params?: unknown) => Promise<unknown> | unknown} execute
+	 * @param {(uri: string) => Promise<unknown> | unknown} execute
 	 */
 	resource({ name, description, uri }, execute) {
-		this.#resource(name, description, uri, execute, undefined, false);
+		this.#resource({
+			name,
+			description,
+			uri,
+			execute,
+			template: false,
+		});
 	}
 	/**
-	 * @param {{ name: string; description: string; uri: string; complete?: Completion }} options
-	 * @param {(uri: string, params?: unknown) => Promise<unknown> | unknown} execute
+	 * @template {string} TUri
+	 * @template {ExtractURITemplateVariables<TUri>} TVariables
+	 * @param {{ name: string; description: string; uri: TUri; complete?: TVariables extends never ? never : Partial<Record<TVariables, Completion>> }} options
+	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<unknown> | unknown} execute
 	 */
 	template({ name, description, uri, complete }, execute) {
-		this.#resource(name, description, uri, execute, complete, true);
+		this.#resource({
+			name,
+			description,
+			uri,
+			execute,
+			complete,
+			template: true,
+		});
 	}
 	/**
 	 * @param {JSONRPCRequest} request
