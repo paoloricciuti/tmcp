@@ -33,7 +33,8 @@
 	],
 	"devDependencies": {
 		"@types/node": "^24.0.13",
-		"publint": "^0.3.12"
+		"publint": "^0.3.12",
+		"tmcp": "workspace:^"
 	},
 	"publishConfig": {
 		"access": "public"
