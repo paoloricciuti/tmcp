@@ -8,6 +8,10 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
     publish:
+        permissions:
+            contents: write # to create release (changesets/action)
+            id-token: write # OpenID Connect token needed for provenance
+            pull-requests: write # to create pull request (changesets/action)
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
