@@ -1,26 +1,32 @@
 import { StandardSchemaV1 } from '@standard-schema/spec';
 import { JSONRPCRequest } from 'json-rpc-2.0';
 import { JsonSchemaAdapter } from '../adapter.js';
+import {
+	GetPromptResult,
+	CallToolResult,
+	ReadResourceResult,
+	CompleteResult,
+} from '../validation/index.js';
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
-	) => Promise<unknown> | unknown;
+	) => Promise<CallToolResult> | CallToolResult;
 };
 
 export type Completion = (
 	query: string,
 	context: { arguments: Record<string, string> },
-) => string[];
+) => CompleteResult;
 
 export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
-	) => Promise<unknown> | unknown;
+	) => Promise<GetPromptResult> | GetPromptResult;
 };
 
 export type Resource =
@@ -31,13 +37,15 @@ export type Resource =
 			execute: (
 				uri: string,
 				params: Record<string, string | string[]>,
-			) => Promise<unknown> | unknown;
+			) => Promise<ReadResourceResult> | ReadResourceResult;
 	  }
 	| {
 			description: string;
 			name: string;
 			template: false;
-			execute: (uri: string) => Promise<unknown> | unknown;
+			execute: (
+				uri: string,
+			) => Promise<ReadResourceResult> | ReadResourceResult;
 	  };
 
 export type ServerOptions<TSchema extends StandardSchemaV1> = {

@@ -7,13 +7,13 @@
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"typecheck": "tsc --noEmit",
-		"generate:types": "rm -f ./src/*.d.ts && tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint",
+		"generate:types": "find ./src -name \"*.d.ts\" -not -path \"./src/internal/*\" -delete && tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint",
 		"prepublish": "pnpm generate:types"
 	},
 	"keywords": [],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/paoloricciuti/tmcp.git",
+		"url": "git+https://github.com/paoloricciuti/tmcp.git",
 		"directory": "packages/tmcp"
 	},
 	"author": "Paolo Ricciuti",

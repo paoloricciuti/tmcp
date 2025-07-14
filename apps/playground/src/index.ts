@@ -74,6 +74,7 @@ server.tool(
 	async (input) => {
 		const greeting = input.formal ? 'Good day' : 'Hello';
 		return {
+			skibidi: true,
 			content: [
 				{
 					type: 'text',
@@ -117,7 +118,13 @@ server.prompt(
 		description: 'Generate a creative story prompt',
 		schema: StoryPromptSchema,
 		complete: {
-			topic: (arg) => [`A day in the life of ${arg}`],
+			topic: (arg) => {
+				return {
+					completion: {
+						values: [''],
+					},
+				};
+			},
 		},
 	},
 	async (input) => {
@@ -163,8 +170,20 @@ server.template(
 		name: 'playground_template',
 		uri: 'playground://template/{name}/{action}',
 		complete: {
-			name: (arg) => [`Hello ${arg}`, `Goodbye ${arg}`],
-			action: (arg) => [`greet`, `farewell`],
+			name: (arg) => {
+				return {
+					completion: {
+						values: [''],
+					},
+				};
+			},
+			action: () => {
+				return {
+					completion: {
+						values: [''],
+					},
+				};
+			},
 		},
 	},
 	async (uri, { action, name }) => {

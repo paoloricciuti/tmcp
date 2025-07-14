@@ -2,10 +2,18 @@
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, CompleteResult } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
 import { UriTemplateMatcher } from 'uri-template-matcher';
+import {
+	CallToolResultSchema,
+	ReadResourceResultSchema,
+	GetPromptResultSchema,
+	CompleteResultSchema,
+} from './validation/index.js';
+import * as v from 'valibot';
 
 /**
  * @template {StandardSchemaV1} StandardSchema
@@ -139,7 +147,7 @@ export class McpServer {
 					throw new Error(`Tool ${name} not found`);
 				}
 				if (!tool.schema) {
-					return tool.execute();
+					return v.parse(CallToolResultSchema, await tool.execute());
 				}
 				let validated_args = tool.schema['~standard'].validate(args);
 				if (validated_args instanceof Promise)
@@ -149,7 +157,10 @@ export class McpServer {
 						`Invalid arguments for tool ${name}: ${JSON.stringify(validated_args.issues)}`,
 					);
 				}
-				return tool.execute(validated_args.value);
+				return v.parse(
+					CallToolResultSchema,
+					await tool.execute(validated_args.value),
+				);
 			},
 		);
 	}
@@ -204,7 +215,10 @@ export class McpServer {
 					throw new Error(`Tool ${name} not found`);
 				}
 				if (!prompt.schema) {
-					return prompt.execute();
+					return v.parse(
+						GetPromptResultSchema,
+						await prompt.execute(),
+					);
 				}
 				let validated_args = prompt.schema['~standard'].validate(args);
 				if (validated_args instanceof Promise)
@@ -214,7 +228,10 @@ export class McpServer {
 						`Invalid arguments for tool ${name}: ${JSON.stringify(validated_args.issues)}`,
 					);
 				}
-				return prompt.execute(validated_args.value);
+				return v.parse(
+					GetPromptResultSchema,
+					await prompt.execute(validated_args.value),
+				);
 			},
 		);
 	}
@@ -281,9 +298,15 @@ export class McpServer {
 			if (resource.template) {
 				if (!params)
 					throw new Error('Missing parameters for template resource');
-				return resource.execute(uri, params);
+				return v.parse(
+					ReadResourceResultSchema,
+					await resource.execute(uri, params),
+				);
 			}
-			return resource.execute(uri);
+			return v.parse(
+				ReadResourceResultSchema,
+				await resource.execute(uri),
+			);
 		});
 	}
 	/**
@@ -299,19 +322,17 @@ export class McpServer {
 				if (!complete) return null;
 				const actual_complete = complete[argument.name];
 				if (!actual_complete) return null;
-				return {
-					completion: {
-						values: actual_complete(argument.value, context),
-						hasMore: false,
-					},
-				};
+				return v.parse(
+					CompleteResultSchema,
+					actual_complete(argument.value, context),
+				);
 			},
 		);
 	}
 	/**
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
-	 * @param {TSchema extends undefined ? (()=>Promise<unknown> | unknown) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown)} execute
+	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)} execute
 	 */
 	tool({ name, description, schema }, execute) {
 		if (this.#options.capabilities?.tools?.listChanged) {
@@ -325,8 +346,8 @@ export class McpServer {
 	}
 	/**
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>> }} options
-	 * @param {TSchema extends undefined ? (()=>Promise<unknown> | unknown) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<unknown> | unknown} execute
+	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
+	 * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} execute
 	 */
 	prompt({ name, description, schema, complete }, execute) {
 		if (complete) {
@@ -358,7 +379,7 @@ export class McpServer {
 	}
 	/**
 	 * @param {{ name: string; description: string; uri: string }} options
-	 * @param {(uri: string) => Promise<unknown> | unknown} execute
+	 * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
 	resource({ name, description, uri }, execute) {
 		this.#resource({
@@ -372,8 +393,8 @@ export class McpServer {
 	/**
 	 * @template {string} TUri
 	 * @template {ExtractURITemplateVariables<TUri>} TVariables
-	 * @param {{ name: string; description: string; uri: TUri; complete?: TVariables extends never ? never : Partial<Record<TVariables, Completion>> }} options
-	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<unknown> | unknown} execute
+	 * @param {{ name: string; description: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>> }} options
+	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
 	template({ name, description, uri, complete }, execute) {
 		this.#resource({
