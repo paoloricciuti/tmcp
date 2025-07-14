@@ -1,5 +1,12 @@
 # tmcp
 
+## 1.5.0
+
+### Minor Changes
+
+- f541e35: feat: add `roots` support
+- 524e7c0: feat: add `sampling`
+
 ## 1.4.0
 
 ### Minor Changes
