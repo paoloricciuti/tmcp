@@ -159,7 +159,22 @@ server.resource(
 	},
 	async () => {
 		console.error('roots', server.roots);
-
+		server
+			.message({
+				maxTokens: 100,
+				messages: [
+					{
+						role: 'user',
+						content: {
+							type: 'text',
+							text: 'What is this playground server?',
+						},
+					},
+				],
+			})
+			.then((result) => {
+				console.error('sampling result', result);
+			});
 		return {
 			contents: [
 				{

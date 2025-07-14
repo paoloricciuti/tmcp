@@ -383,6 +383,431 @@ export const PromptMessageSchema: v.LooseObjectSchema<{
     }, undefined>], undefined>;
 }, undefined>;
 /**
+ * A model hint for sampling requests.
+ */
+export const ModelHintSchema: v.LooseObjectSchema<{
+    /**
+     * Optional name of the model.
+     */
+    readonly name: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+}, undefined>;
+/**
+ * A sampling message used in sampling requests.
+ */
+export const SamplingMessageSchema: v.LooseObjectSchema<{
+    readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
+    readonly content: v.UnionSchema<[v.LooseObjectSchema<{
+        readonly type: v.LiteralSchema<"text", undefined>;
+        /**
+         * The text content of the message.
+         */
+        readonly text: v.StringSchema<undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.LooseObjectSchema<{
+        readonly type: v.LiteralSchema<"image", undefined>;
+        /**
+         * The base64-encoded image data.
+         */
+        readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+        /**
+         * The MIME type of the image. Different providers may support different image types.
+         */
+        readonly mimeType: v.StringSchema<undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.LooseObjectSchema<{
+        readonly type: v.LiteralSchema<"audio", undefined>;
+        /**
+         * The base64-encoded audio data.
+         */
+        readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+        /**
+         * The MIME type of the audio. Different providers may support different audio types.
+         */
+        readonly mimeType: v.StringSchema<undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.LooseObjectSchema<{
+        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+        readonly name: v.StringSchema<undefined>;
+        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        /**
+         * The URI of this resource.
+         */
+        readonly uri: v.StringSchema<undefined>;
+        /**
+         * A description of what this resource represents.
+         */
+        readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        /**
+         * The MIME type of this resource, if known.
+         */
+        readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly type: v.LiteralSchema<"resource_link", undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.LooseObjectSchema<{
+        readonly type: v.LiteralSchema<"resource", undefined>;
+        readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+            /**
+             * The URI of this resource.
+             */
+            readonly uri: v.StringSchema<undefined>;
+            /**
+             * The MIME type of this resource, if known.
+             */
+            readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+            /**
+             * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
+             */
+            readonly text: v.StringSchema<undefined>;
+            /**
+             * See [MCP specification] for notes on _meta usage.
+             */
+            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.LooseObjectSchema<{
+            /**
+             * The URI of this resource.
+             */
+            readonly uri: v.StringSchema<undefined>;
+            /**
+             * The MIME type of this resource, if known.
+             */
+            readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+            /**
+             * A base64-encoded string representing the binary data of the item.
+             */
+            readonly blob: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+            /**
+             * See [MCP specification] for notes on _meta usage.
+             */
+            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        }, undefined>], undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>], undefined>;
+}, undefined>;
+/**
+ * Model preferences for sampling requests.
+ */
+export const ModelPreferencesSchema: v.LooseObjectSchema<{
+    /**
+     * Optional hints for which model to use, in order of preference.
+     */
+    readonly hints: v.OptionalSchema<v.ArraySchema<v.LooseObjectSchema<{
+        /**
+         * Optional name of the model.
+         */
+        readonly name: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    }, undefined>, undefined>, undefined>;
+    /**
+     * Priority for cost considerations (0-1, where 1 is highest priority).
+     */
+    readonly costPriority: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
+    /**
+     * Priority for speed considerations (0-1, where 1 is highest priority).
+     */
+    readonly speedPriority: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
+    /**
+     * Priority for intelligence considerations (0-1, where 1 is highest priority).
+     */
+    readonly intelligencePriority: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
+}, undefined>;
+/**
+ * Request for sampling/createMessage.
+ */
+export const CreateMessageRequestSchema: v.LooseObjectSchema<{
+    /**
+     * The messages to be processed.
+     */
+    readonly messages: v.ArraySchema<v.LooseObjectSchema<{
+        readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
+        readonly content: v.UnionSchema<[v.LooseObjectSchema<{
+            readonly type: v.LiteralSchema<"text", undefined>;
+            /**
+             * The text content of the message.
+             */
+            readonly text: v.StringSchema<undefined>;
+            /**
+             * See [MCP specification] for notes on _meta usage.
+             */
+            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.LooseObjectSchema<{
+            readonly type: v.LiteralSchema<"image", undefined>;
+            /**
+             * The base64-encoded image data.
+             */
+            readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+            /**
+             * The MIME type of the image. Different providers may support different image types.
+             */
+            readonly mimeType: v.StringSchema<undefined>;
+            /**
+             * See [MCP specification] for notes on _meta usage.
+             */
+            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.LooseObjectSchema<{
+            readonly type: v.LiteralSchema<"audio", undefined>;
+            /**
+             * The base64-encoded audio data.
+             */
+            readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+            /**
+             * The MIME type of the audio. Different providers may support different audio types.
+             */
+            readonly mimeType: v.StringSchema<undefined>;
+            /**
+             * See [MCP specification] for notes on _meta usage.
+             */
+            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.LooseObjectSchema<{
+            /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+            readonly name: v.StringSchema<undefined>;
+            readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+            /**
+             * The URI of this resource.
+             */
+            readonly uri: v.StringSchema<undefined>;
+            /**
+             * A description of what this resource represents.
+             */
+            readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+            /**
+             * The MIME type of this resource, if known.
+             */
+            readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+            readonly type: v.LiteralSchema<"resource_link", undefined>;
+            /**
+             * See [MCP specification] for notes on _meta usage.
+             */
+            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.LooseObjectSchema<{
+            readonly type: v.LiteralSchema<"resource", undefined>;
+            readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+                /**
+                 * The URI of this resource.
+                 */
+                readonly uri: v.StringSchema<undefined>;
+                /**
+                 * The MIME type of this resource, if known.
+                 */
+                readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+                /**
+                 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
+                 */
+                readonly text: v.StringSchema<undefined>;
+                /**
+                 * See [MCP specification] for notes on _meta usage.
+                 */
+                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            }, undefined>, v.LooseObjectSchema<{
+                /**
+                 * The URI of this resource.
+                 */
+                readonly uri: v.StringSchema<undefined>;
+                /**
+                 * The MIME type of this resource, if known.
+                 */
+                readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+                /**
+                 * A base64-encoded string representing the binary data of the item.
+                 */
+                readonly blob: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+                /**
+                 * See [MCP specification] for notes on _meta usage.
+                 */
+                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            }, undefined>], undefined>;
+            /**
+             * See [MCP specification] for notes on _meta usage.
+             */
+            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        }, undefined>], undefined>;
+    }, undefined>, undefined>;
+    /**
+     * Optional system prompt to provide context.
+     */
+    readonly systemPrompt: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    /**
+     * Optional context inclusion preference.
+     */
+    readonly includeContext: v.OptionalSchema<v.PicklistSchema<["none", "thisServer", "allServers"], undefined>, undefined>;
+    /**
+     * Optional temperature for generation.
+     */
+    readonly temperature: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
+    /**
+     * Maximum number of tokens to generate.
+     */
+    readonly maxTokens: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>, v.MinValueAction<number, 1, undefined>]>;
+    /**
+     * Optional stop sequences.
+     */
+    readonly stopSequences: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+    /**
+     * Optional metadata for the request.
+     */
+    readonly metadata: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    /**
+     * Optional model preferences for the request.
+     */
+    readonly modelPreferences: v.OptionalSchema<v.LooseObjectSchema<{
+        /**
+         * Optional hints for which model to use, in order of preference.
+         */
+        readonly hints: v.OptionalSchema<v.ArraySchema<v.LooseObjectSchema<{
+            /**
+             * Optional name of the model.
+             */
+            readonly name: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        }, undefined>, undefined>, undefined>;
+        /**
+         * Priority for cost considerations (0-1, where 1 is highest priority).
+         */
+        readonly costPriority: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
+        /**
+         * Priority for speed considerations (0-1, where 1 is highest priority).
+         */
+        readonly speedPriority: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
+        /**
+         * Priority for intelligence considerations (0-1, where 1 is highest priority).
+         */
+        readonly intelligencePriority: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
+    }, undefined>, undefined>;
+}, undefined>;
+/**
+ * Response for sampling/createMessage.
+ */
+export const CreateMessageResultSchema: v.LooseObjectSchema<{
+    /**
+     * The model that generated the message.
+     */
+    readonly model: v.StringSchema<undefined>;
+    /**
+     * Optional stop reason.
+     */
+    readonly stopReason: v.OptionalSchema<v.UnionSchema<[v.LiteralSchema<"endTurn", undefined>, v.LiteralSchema<"stopSequence", undefined>, v.LiteralSchema<"maxTokens", undefined>, v.StringSchema<undefined>], undefined>, undefined>;
+    /**
+     * The role of the generated message.
+     */
+    readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
+    /**
+     * The content of the generated message.
+     */
+    readonly content: v.UnionSchema<[v.LooseObjectSchema<{
+        readonly type: v.LiteralSchema<"text", undefined>;
+        /**
+         * The text content of the message.
+         */
+        readonly text: v.StringSchema<undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.LooseObjectSchema<{
+        readonly type: v.LiteralSchema<"image", undefined>;
+        /**
+         * The base64-encoded image data.
+         */
+        readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+        /**
+         * The MIME type of the image. Different providers may support different image types.
+         */
+        readonly mimeType: v.StringSchema<undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.LooseObjectSchema<{
+        readonly type: v.LiteralSchema<"audio", undefined>;
+        /**
+         * The base64-encoded audio data.
+         */
+        readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+        /**
+         * The MIME type of the audio. Different providers may support different audio types.
+         */
+        readonly mimeType: v.StringSchema<undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.LooseObjectSchema<{
+        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+        readonly name: v.StringSchema<undefined>;
+        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        /**
+         * The URI of this resource.
+         */
+        readonly uri: v.StringSchema<undefined>;
+        /**
+         * A description of what this resource represents.
+         */
+        readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        /**
+         * The MIME type of this resource, if known.
+         */
+        readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly type: v.LiteralSchema<"resource_link", undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.LooseObjectSchema<{
+        readonly type: v.LiteralSchema<"resource", undefined>;
+        readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+            /**
+             * The URI of this resource.
+             */
+            readonly uri: v.StringSchema<undefined>;
+            /**
+             * The MIME type of this resource, if known.
+             */
+            readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+            /**
+             * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
+             */
+            readonly text: v.StringSchema<undefined>;
+            /**
+             * See [MCP specification] for notes on _meta usage.
+             */
+            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.LooseObjectSchema<{
+            /**
+             * The URI of this resource.
+             */
+            readonly uri: v.StringSchema<undefined>;
+            /**
+             * The MIME type of this resource, if known.
+             */
+            readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+            /**
+             * A base64-encoded string representing the binary data of the item.
+             */
+            readonly blob: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+            /**
+             * See [MCP specification] for notes on _meta usage.
+             */
+            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        }, undefined>], undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>], undefined>;
+}, undefined>;
+/**
  * The server's response to a tool call.
  */
 export const CallToolResultSchema: v.LooseObjectSchema<{
@@ -711,6 +1136,21 @@ export const InitializeRequestSchema: v.LooseObjectSchema<{
  * @typedef {v.InferInput<typeof CompleteResultSchema>} CompleteResult
  */
 /**
+ * @typedef {v.InferInput<typeof CreateMessageRequestSchema>} CreateMessageRequest
+ */
+/**
+ * @typedef {v.InferInput<typeof CreateMessageResultSchema>} CreateMessageResult
+ */
+/**
+ * @typedef {v.InferInput<typeof ModelPreferencesSchema>} ModelPreferences
+ */
+/**
+ * @typedef {v.InferInput<typeof SamplingMessageSchema>} SamplingMessage
+ */
+/**
+ * @typedef {v.InferInput<typeof ModelHintSchema>} ModelHint
+ */
+/**
  * JSON-RPC 2.0 Request
  */
 export const JSONRPCRequestSchema: v.LooseObjectSchema<{
@@ -761,6 +1201,11 @@ export type CallToolResult = v.InferInput<typeof CallToolResultSchema>;
 export type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
 export type GetPromptResult = v.InferInput<typeof GetPromptResultSchema>;
 export type CompleteResult = v.InferInput<typeof CompleteResultSchema>;
+export type CreateMessageRequest = v.InferInput<typeof CreateMessageRequestSchema>;
+export type CreateMessageResult = v.InferInput<typeof CreateMessageResultSchema>;
+export type ModelPreferences = v.InferInput<typeof ModelPreferencesSchema>;
+export type SamplingMessage = v.InferInput<typeof SamplingMessageSchema>;
+export type ModelHint = v.InferInput<typeof ModelHintSchema>;
 export type JSONRPCRequest = v.InferInput<typeof JSONRPCRequestSchema>;
 export type JSONRPCResponse = v.InferInput<typeof JSONRPCResponseSchema>;
 import * as v from 'valibot';

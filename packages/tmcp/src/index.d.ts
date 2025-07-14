@@ -103,6 +103,12 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
      * @returns {Promise<StandardSchemaV1.InferOutput<TSchema>>}
      */
     elicitation<TSchema extends StandardSchema>(schema: TSchema): Promise<StandardSchemaV1.InferOutput<TSchema>>;
+    /**
+     * Request language model sampling from the client
+     * @param {CreateMessageRequest} request
+     * @returns {Promise<CreateMessageResult>}
+     */
+    message(request: CreateMessageRequest): Promise<CreateMessageResult>;
     #private;
 }
 export type ClientCapabilities = ClientCapabilitiesType;
@@ -118,6 +124,8 @@ import type { JSONRPCRequest } from "json-rpc-2.0";
 import { JSONRPCServer } from 'json-rpc-2.0';
 import { JSONRPCClient } from 'json-rpc-2.0';
 import type { SubscriptionsKeys } from "./internal/internal.js";
+import type { CreateMessageRequest } from "./validation/index.js";
+import type { CreateMessageResult } from "./validation/index.js";
 import type { ServerInfo } from "./internal/internal.js";
 import type { ServerOptions } from "./internal/internal.js";
 import type { ClientCapabilities as ClientCapabilitiesType } from "./validation/index.js";

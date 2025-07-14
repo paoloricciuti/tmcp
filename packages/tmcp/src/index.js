@@ -2,7 +2,7 @@
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse } from "./validation/index.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequest, CreateMessageResult } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
@@ -15,6 +15,8 @@ import {
 	InitializeRequestSchema,
 	JSONRPCRequestSchema,
 	JSONRPCResponseSchema,
+	CreateMessageRequestSchema,
+	CreateMessageResultSchema,
 } from './validation/index.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import * as v from 'valibot';
@@ -587,5 +589,32 @@ export class McpServer {
 			);
 		}
 		return validated_result.value;
+	}
+
+	/**
+	 * Request language model sampling from the client
+	 * @param {CreateMessageRequest} request
+	 * @returns {Promise<CreateMessageResult>}
+	 */
+	async message(request) {
+		if (!this.#client_capabilities?.sampling)
+			throw new Error("Client doesn't support sampling");
+
+		this.#lazyily_create_client();
+
+		// Validate the request
+		const validated_request = v.parse(CreateMessageRequestSchema, request);
+
+		// Make the request to the client
+		const response = await this.#client?.request(
+			'sampling/createMessage',
+			validated_request,
+			{
+				sessions: [this.#session_id],
+			},
+		);
+
+		// Validate and return the response
+		return v.parse(CreateMessageResultSchema, response);
 	}
 }

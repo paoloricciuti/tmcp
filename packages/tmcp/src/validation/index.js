@@ -168,6 +168,115 @@ export const PromptMessageSchema = v.looseObject({
 });
 
 /**
+ * A model hint for sampling requests.
+ */
+export const ModelHintSchema = v.looseObject({
+	/**
+	 * Optional name of the model.
+	 */
+	name: v.optional(v.string()),
+});
+
+/**
+ * A sampling message used in sampling requests.
+ */
+export const SamplingMessageSchema = v.looseObject({
+	role: v.picklist(['user', 'assistant']),
+	content: ContentBlockSchema,
+});
+
+/**
+ * Model preferences for sampling requests.
+ */
+export const ModelPreferencesSchema = v.looseObject({
+	/**
+	 * Optional hints for which model to use, in order of preference.
+	 */
+	hints: v.optional(v.array(ModelHintSchema)),
+	/**
+	 * Priority for cost considerations (0-1, where 1 is highest priority).
+	 */
+	costPriority: v.optional(v.number()),
+	/**
+	 * Priority for speed considerations (0-1, where 1 is highest priority).
+	 */
+	speedPriority: v.optional(v.number()),
+	/**
+	 * Priority for intelligence considerations (0-1, where 1 is highest priority).
+	 */
+	intelligencePriority: v.optional(v.number()),
+});
+
+/**
+ * Request for sampling/createMessage.
+ */
+export const CreateMessageRequestSchema = v.looseObject({
+	/**
+	 * The messages to be processed.
+	 */
+	messages: v.array(SamplingMessageSchema),
+	/**
+	 * Optional system prompt to provide context.
+	 */
+	systemPrompt: v.optional(v.string()),
+	/**
+	 * Optional context inclusion preference.
+	 */
+	includeContext: v.optional(
+		v.picklist(['none', 'thisServer', 'allServers']),
+	),
+	/**
+	 * Optional temperature for generation.
+	 */
+	temperature: v.optional(v.number()),
+	/**
+	 * Maximum number of tokens to generate.
+	 */
+	maxTokens: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	/**
+	 * Optional stop sequences.
+	 */
+	stopSequences: v.optional(v.array(v.string())),
+	/**
+	 * Optional metadata for the request.
+	 */
+	metadata: v.optional(v.looseObject({})),
+	/**
+	 * Optional model preferences for the request.
+	 */
+	modelPreferences: v.optional(ModelPreferencesSchema),
+});
+
+/**
+ * Response for sampling/createMessage.
+ */
+export const CreateMessageResultSchema = v.looseObject({
+	/**
+	 * The model that generated the message.
+	 */
+	model: v.string(),
+	/**
+	 * Optional stop reason.
+	 */
+	stopReason: v.optional(
+		v.union([
+			v.literal('endTurn'),
+			v.literal('stopSequence'),
+			v.literal('maxTokens'),
+			v.string(),
+		]),
+	),
+	/**
+	 * The role of the generated message.
+	 */
+	role: v.picklist(['user', 'assistant']),
+	/**
+	 * The content of the generated message.
+	 */
+	content: ContentBlockSchema,
+});
+
+/**
  * The server's response to a tool call.
  */
 export const CallToolResultSchema = v.looseObject({
@@ -268,6 +377,26 @@ export const InitializeRequestSchema = v.looseObject({
 
 /**
  * @typedef {v.InferInput<typeof CompleteResultSchema>} CompleteResult
+ */
+
+/**
+ * @typedef {v.InferInput<typeof CreateMessageRequestSchema>} CreateMessageRequest
+ */
+
+/**
+ * @typedef {v.InferInput<typeof CreateMessageResultSchema>} CreateMessageResult
+ */
+
+/**
+ * @typedef {v.InferInput<typeof ModelPreferencesSchema>} ModelPreferences
+ */
+
+/**
+ * @typedef {v.InferInput<typeof SamplingMessageSchema>} SamplingMessage
+ */
+
+/**
+ * @typedef {v.InferInput<typeof ModelHintSchema>} ModelHint
  */
 
 /**
