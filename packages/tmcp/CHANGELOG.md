@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.3.0
+
+### Minor Changes
+
+- a95336f: breaking: initial validation for exposed methods
+
 ## 1.2.0
 
 ### Minor Changes
