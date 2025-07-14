@@ -1,6 +1,6 @@
 {
 	"name": "@tmcpkit/transport-stdio",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Transport for TMCP using STDIO",
 	"type": "module",
 	"main": "src/index.js",

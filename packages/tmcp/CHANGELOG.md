@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.4.0
+
+### Minor Changes
+
+- 41fb096: breaking: handle sessions + `elicitations`
+
 ## 1.3.0
 
 ### Minor Changes
