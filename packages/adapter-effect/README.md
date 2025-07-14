@@ -62,7 +62,12 @@ server.tool(
 		}),
 	},
 	async ({ name, age, email }) => {
-		return `Created user: ${name}, age ${age}, email ${email}`;
+		return {
+			content: [{ 
+				type: 'text', 
+				text: `Created user: ${name}, age ${age}, email ${email}` 
+			}]
+		};
 	},
 );
 ```

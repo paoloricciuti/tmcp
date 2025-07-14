@@ -62,9 +62,58 @@ server.tool(
 		}),
 	},
 	async ({ name, age, email }) => {
-		return `Created user: ${name}, age ${age}, email ${email}`;
+		return {
+			content: [{ 
+				type: 'text', 
+				text: `Created user: ${name}, age ${age}, email ${email}` 
+			}]
+		};
 	},
 );
+```
+
+## Advanced Usage
+
+### Complex Type Definitions
+
+```javascript
+import { ArktypeJsonSchemaAdapter } from '@tmcpkit/adapter-arktype';
+import { type } from 'arktype';
+
+const adapter = new ArktypeJsonSchemaAdapter();
+
+// Complex nested types
+const userSchema = type({
+	name: 'string>0',
+	age: 'number>=0',
+	email: 'string.email',
+	preferences: {
+		theme: "'light' | 'dark'",
+		notifications: 'boolean',
+	},
+	tags: 'string[]',
+});
+
+const jsonSchema = await adapter.toJsonSchema(userSchema);
+```
+
+### Union Types and Constraints
+
+```javascript
+import { type } from 'arktype';
+
+// Union types with constraints
+const contactSchema = type({
+	type: "'email' | 'phone'",
+	value: 'string',
+});
+
+// Conditional types
+const eventSchema = type({
+	type: "'click' | 'hover' | 'scroll'",
+	timestamp: 'number',
+	data: 'unknown',
+});
 ```
 
 ## API
@@ -87,3 +136,5 @@ A class that extends the base `JsonSchemaAdapter` from TMCP and provides ArkType
 - **Built-in conversion** - Uses ArkType's native `toJsonSchema()` method
 - **Type safety** - Full TypeScript support with proper type inference
 - **Easy integration** - Drop-in replacement for other TMCP adapters
+- **Runtime validation** - Leverages ArkType's powerful runtime type checking
+- **String-based types** - Intuitive string-based type definitions
