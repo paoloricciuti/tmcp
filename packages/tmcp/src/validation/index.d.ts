@@ -1,30 +1,3 @@
-export const LATEST_PROTOCOL_VERSION: "2025-06-18";
-export const DEFAULT_NEGOTIATED_PROTOCOL_VERSION: "2025-03-26";
-export const SUPPORTED_PROTOCOL_VERSIONS: string[];
-export const JSONRPC_VERSION: "2.0";
-/**
- * A uniquely identifying ID for a request in JSON-RPC.
- */
-export const RequestIdSchema: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
-export namespace ErrorCode {
-    let ConnectionClosed: number;
-    let RequestTimeout: number;
-    let ParseError: number;
-    let InvalidRequest: number;
-    let MethodNotFound: number;
-    let InvalidParams: number;
-    let InternalError: number;
-}
-export class McpError extends Error {
-    /**
-     * @param {number} code
-     * @param {string} message
-     * @param {unknown} [data]
-     */
-    constructor(code: number, message: string, data?: unknown);
-    code: number;
-    data: unknown;
-}
 /**
  * Text provided to or from an LLM.
  */
@@ -702,6 +675,25 @@ export const CompleteResultSchema: v.LooseObjectSchema<{
     }, undefined>;
     readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
+export const ClientCapabilitiesSchema: v.LooseObjectSchema<{
+    readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+    }, undefined>, undefined>;
+    readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+}, undefined>;
+export const InitializeRequestSchema: v.LooseObjectSchema<{
+    readonly protocolVersion: v.StringSchema<undefined>;
+    readonly capabilities: v.LooseObjectSchema<{
+        readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
+            readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+        }, undefined>, undefined>;
+        readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>;
+}, undefined>;
+export type ClientCapabilities = v.InferInput<typeof ClientCapabilitiesSchema>;
+export type InitializeRequest = v.InferInput<typeof InitializeRequestSchema>;
 export type CallToolResult = v.InferInput<typeof CallToolResultSchema>;
 export type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
 export type GetPromptResult = v.InferInput<typeof GetPromptResultSchema>;

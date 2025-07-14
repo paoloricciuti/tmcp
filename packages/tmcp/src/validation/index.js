@@ -231,6 +231,29 @@ export const CompleteResultSchema = v.looseObject({
 	_meta: v.optional(v.looseObject({})),
 });
 
+export const ClientCapabilitiesSchema = v.looseObject({
+	roots: v.optional(
+		v.looseObject({
+			listChanged: v.optional(v.boolean()),
+		}),
+	),
+	sampling: v.optional(v.looseObject({})),
+	elicitation: v.optional(v.looseObject({})),
+});
+
+export const InitializeRequestSchema = v.looseObject({
+	protocolVersion: v.string(),
+	capabilities: ClientCapabilitiesSchema,
+});
+
+/**
+ * @typedef {v.InferInput<typeof ClientCapabilitiesSchema>} ClientCapabilities
+ */
+
+/**
+ * @typedef {v.InferInput<typeof InitializeRequestSchema>} InitializeRequest
+ */
+
 /**
  * @typedef {v.InferInput<typeof CallToolResultSchema>} CallToolResult
  */

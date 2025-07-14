@@ -177,6 +177,9 @@ importers:
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
+      '@types/node':
+        specifier: ^24.0.13
+        version: 24.0.13
       publint:
         specifier: ^0.3.12
         version: 0.3.12

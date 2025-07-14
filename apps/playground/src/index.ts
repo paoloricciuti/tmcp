@@ -3,6 +3,7 @@
 import { McpServer } from 'tmcp';
 import { StdioTransport } from '@tmcpkit/transport-stdio';
 import { ValibotJsonSchemaAdapter } from '@tmcpkit/adapter-valibot';
+import fs from 'node:fs/promises';
 import * as v from 'valibot';
 
 const server = new McpServer(
@@ -118,10 +119,15 @@ server.prompt(
 		description: 'Generate a creative story prompt',
 		schema: StoryPromptSchema,
 		complete: {
-			topic: (arg) => {
+			length: (arg) => {
+				const values = ['short', 'medium', 'long'].filter((l) =>
+					l.includes(arg),
+				);
 				return {
 					completion: {
-						values: [''],
+						values,
+						total: values.length,
+						hasMore: false,
 					},
 				};
 			},
@@ -149,20 +155,29 @@ server.resource(
 	{
 		name: 'playground_info',
 		description: 'Information about this playground server',
-		uri: 'playground://info',
+		uri: 'file:///src/resource.txt',
 	},
 	async () => {
 		return {
 			contents: [
 				{
-					uri: 'playground://info',
+					uri: 'file:///src/resource.txt',
 					mimeType: 'text/plain',
-					text: 'This is a playground MCP server built with tmcp and Valibot for testing with MCP Inspector.',
+					text: await fs.readFile('./src/resource.txt', 'utf-8'),
 				},
 			],
 		};
 	},
 );
+
+const changed = fs.watch('./src/resource.txt');
+
+(async () => {
+	for await (let _ of changed) {
+		console.error('changed');
+		server.changed('resource', 'file:///src/resource.txt');
+	}
+})();
 
 server.template(
 	{

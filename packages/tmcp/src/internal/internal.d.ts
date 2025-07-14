@@ -6,6 +6,7 @@ import {
 	CallToolResult,
 	ReadResourceResult,
 	CompleteResult,
+	InitializeRequest,
 } from '../validation/index.js';
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
@@ -67,5 +68,11 @@ export type ServerInfo = {
 export type SubscriptionsKeys = 'resource';
 
 export type McpEvents = {
-	send: (message: JSONRPCRequest) => void;
+	send: (message: {
+		request: JSONRPCRequest;
+		context: {
+			sessions?: string[] | undefined;
+		};
+	}) => void;
+	initialize: (initialize_request: InitializeRequest) => void;
 };

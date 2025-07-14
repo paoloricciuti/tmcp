@@ -40,6 +40,7 @@
 	"devDependencies": {
 		"@standard-schema/spec": "^1.0.0",
 		"@types/json-schema": "^7.0.15",
+		"@types/node": "^24.0.13",
 		"publint": "^0.3.12"
 	}
 }

@@ -1,5 +1,5 @@
 /**
- * @import { McpServer } from "tmcp";
+ * @import { McpServer, ClientCapabilities } from "tmcp";
  */
 import process from 'node:process';
 
@@ -15,8 +15,8 @@ export class StdioTransport {
 	 */
 	constructor(server) {
 		this.#server = server;
-		this.#server.on('send', (response) => {
-			process.stdout.write(JSON.stringify(response) + '\n');
+		this.#server.on('send', ({ request }) => {
+			process.stdout.write(JSON.stringify(request) + '\n');
 		});
 	}
 
@@ -38,14 +38,13 @@ export class StdioTransport {
 					try {
 						const message = JSON.parse(line);
 						const response = await this.#server.receive(message);
-						console.error('response:', response);
 						if (response) {
 							process.stdout.write(
 								JSON.stringify(response) + '\n',
 							);
 						}
-					} catch (error) {
-						console.error('Error processing message:', error);
+					} catch {
+						/** empty */
 					}
 				}
 			}
@@ -63,7 +62,5 @@ export class StdioTransport {
 		process.on('SIGTERM', () => {
 			process.exit(0);
 		});
-
-		console.error('MCP Playground Server started');
 	}
 }

@@ -1,4 +1,7 @@
 /**
+ * @typedef {ClientCapabilitiesType} ClientCapabilities
+ */
+/**
  * @template {StandardSchemaV1} StandardSchema
  */
 export class McpServer<StandardSchema extends StandardSchemaV1> {
@@ -7,6 +10,21 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
      * @param {ServerOptions<StandardSchema>} options
      */
     constructor(server_info: ServerInfo, options: ServerOptions<StandardSchema>);
+    currentClientCapabilities(): {
+        roots?: {
+            listChanged?: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        sampling?: {} & {
+            [key: string]: unknown;
+        };
+        elicitation?: {} & {
+            [key: string]: unknown;
+        };
+    } & {
+        [key: string]: unknown;
+    };
     /**
      * @template {keyof McpEvents} TEvent
      * @param {TEvent} event
@@ -58,17 +76,25 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
     }, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
     /**
      * @param {JSONRPCRequest} request
+     * @param {string} [session_id]
      * @returns {ReturnType<JSONRPCServer['receive']>}
      */
-    receive(request: JSONRPCRequest): ReturnType<JSONRPCServer["receive"]>;
+    receive(request: JSONRPCRequest, session_id?: string): ReturnType<JSONRPCServer["receive"]>;
     /**
      * Send a notification for subscriptions
      * @param {SubscriptionsKeys} what
      * @param {string} id
      */
     changed(what: SubscriptionsKeys, id: string): void;
+    /**
+     * @template {StandardSchema} TSchema
+     * @param {TSchema} schema
+     * @returns {Promise<StandardSchemaV1.InferOutput<TSchema>>}
+     */
+    elicitation<TSchema extends StandardSchema>(schema: TSchema): Promise<StandardSchemaV1.InferOutput<TSchema>>;
     #private;
 }
+export type ClientCapabilities = ClientCapabilitiesType;
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { McpEvents } from "./internal/internal.js";
 import type { CallToolResult } from "./validation/index.js";
@@ -81,3 +107,4 @@ import { JSONRPCServer } from 'json-rpc-2.0';
 import type { SubscriptionsKeys } from "./internal/internal.js";
 import type { ServerInfo } from "./internal/internal.js";
 import type { ServerOptions } from "./internal/internal.js";
+import type { ClientCapabilities as ClientCapabilitiesType } from "./validation/index.js";

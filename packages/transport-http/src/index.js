@@ -1,5 +1,5 @@
 /**
- * @import { McpServer } from "tmcp";
+ * @import { McpServer, ClientCapabilities } from "tmcp";
  */
 
 /**
@@ -19,7 +19,13 @@ export class HttpTransport {
 	 */
 	#options;
 
+	/**
+	 * @type {Map<string, ReadableStreamDefaultController>}
+	 */
 	#session = new Map();
+	/**
+	 * @type {Map<string, ReadableStream>}
+	 */
 	#streams = new Map();
 
 	/**
@@ -32,11 +38,13 @@ export class HttpTransport {
 		this.#options = options || {
 			getSessionId: () => crypto.randomUUID(),
 		};
-		this.#server.on('send', (response) => {
-			for (let controller of this.#session.values()) {
-				controller.enqueue(
-					'data: ' + JSON.stringify(response) + '\n\n',
-				);
+		this.#server.on('send', ({ request, context: { sessions } }) => {
+			for (let [session_id, controller] of this.#session.entries()) {
+				if (sessions === undefined || sessions.includes(session_id)) {
+					controller.enqueue(
+						'data: ' + JSON.stringify(request) + '\n\n',
+					);
+				}
 			}
 		});
 	}
@@ -55,7 +63,7 @@ export class HttpTransport {
 			request.headers.get('mcp-session-id') ||
 			this.#options.getSessionId();
 		const controller = sessions.get(session_id);
-		const response = await this.#server.receive(body);
+		const response = await this.#server.receive(body, session_id);
 
 		if (controller) {
 			controller.enqueue('data: ' + JSON.stringify(response) + '\n\n');

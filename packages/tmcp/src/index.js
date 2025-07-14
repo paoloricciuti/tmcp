@@ -2,7 +2,7 @@
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, CompleteResult } from "./validation/index.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
@@ -12,8 +12,14 @@ import {
 	ReadResourceResultSchema,
 	GetPromptResultSchema,
 	CompleteResultSchema,
+	InitializeRequestSchema,
 } from './validation/index.js';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import * as v from 'valibot';
+
+/**
+ * @typedef {ClientCapabilitiesType} ClientCapabilities
+ */
 
 /**
  * @template {StandardSchemaV1} StandardSchema
@@ -21,7 +27,7 @@ import * as v from 'valibot';
 export class McpServer {
 	#server = new JSONRPCServer();
 	/**
-	 * @type {JSONRPCClient | undefined}
+	 * @type {JSONRPCClient<Record<string, any> | undefined> | undefined}
 	 */
 	#client;
 	#options;
@@ -49,14 +55,24 @@ export class McpServer {
 	#event_target = new EventTarget();
 
 	/**
-	 * @type {Record<SubscriptionsKeys, Set<string>>}
+	 * @type {Record<SubscriptionsKeys, Map<string, Set<string | undefined>>>}
 	 */
 	#subscriptions = {
 		/**
-		 * @type {Set<string>}
+		 * @type {Map<string, Set<string>>}
 		 */
-		resource: new Set(),
+		resource: new Map(),
 	};
+
+	/**
+	 * @type {AsyncLocalStorage<string | undefined>}
+	 */
+	#session_storage = new AsyncLocalStorage();
+
+	/**
+	 * @type {Map<string|undefined, ClientCapabilities>}
+	 */
+	#client_capabilities_map = new Map();
 
 	/**
 	 * @param {ServerInfo} server_info
@@ -64,9 +80,22 @@ export class McpServer {
 	 */
 	constructor(server_info, options) {
 		this.#options = options;
-		this.#server.addMethod('initialize', ({ protocolVersion }) => {
+		this.#server.addMethod('initialize', (initialize_request) => {
+			const validated_initialize = v.parse(
+				InitializeRequestSchema,
+				initialize_request,
+			);
+			this.#client_capabilities_map.set(
+				this.#session_id,
+				validated_initialize.capabilities,
+			);
+			this.#event_target.dispatchEvent(
+				new CustomEvent('initialize', {
+					detail: validated_initialize,
+				}),
+			);
 			return {
-				protocolVersion,
+				protocolVersion: validated_initialize.protocolVersion,
 				...options,
 				serverInfo: server_info,
 			};
@@ -83,6 +112,30 @@ export class McpServer {
 		this.#init_completion();
 	}
 
+	get #session_id() {
+		return this.#session_storage.getStore();
+	}
+
+	get #client_capabilities() {
+		return this.#client_capabilities_map.get(this.#session_id);
+	}
+
+	currentClientCapabilities() {
+		return this.#client_capabilities;
+	}
+
+	#lazyily_create_client() {
+		if (!this.#client) {
+			this.#client = new JSONRPCClient((payload, context = {}) => {
+				this.#event_target.dispatchEvent(
+					new CustomEvent('send', {
+						detail: { request: payload, context },
+					}),
+				);
+			});
+		}
+	}
+
 	/**
 	 * @template {keyof McpEvents} TEvent
 	 * @param {TEvent} event
@@ -90,12 +143,8 @@ export class McpServer {
 	 * @param {AddEventListenerOptions} [options]
 	 */
 	on(event, callback, options) {
-		if (event === 'send' && !this.#client) {
-			this.#client = new JSONRPCClient((payload) => {
-				this.#event_target.dispatchEvent(
-					new CustomEvent('send', { detail: payload }),
-				);
-			});
+		if (event === 'send') {
+			this.#lazyily_create_client();
 		}
 
 		this.#event_target.addEventListener(
@@ -110,9 +159,10 @@ export class McpServer {
 	/**
 	 * @param {string} method
 	 * @param {JSONRPCParams} [params]
+	 * @param {Record<string, any>} [extra]
 	 */
-	#notify(method, params) {
-		this.#client?.notify(method, params);
+	#notify(method, params, extra) {
+		this.#client?.notify(method, params, extra);
 	}
 
 	/**
@@ -243,7 +293,12 @@ export class McpServer {
 
 		if (this.#options.capabilities?.resources?.subscribe) {
 			this.#server.addMethod('resources/subscribe', async ({ uri }) => {
-				this.#subscriptions.resource.add(uri);
+				let subscriptions = this.#subscriptions.resource.get(uri);
+				if (!subscriptions) {
+					subscriptions = new Set();
+					this.#subscriptions.resource.set(uri, subscriptions);
+				}
+				subscriptions.add(this.#session_id);
 				return {};
 			});
 		}
@@ -408,10 +463,14 @@ export class McpServer {
 	}
 	/**
 	 * @param {JSONRPCRequest} request
+	 * @param {string} [session_id]
 	 * @returns {ReturnType<JSONRPCServer['receive']>}
 	 */
-	receive(request) {
-		return this.#server.receive(request);
+	receive(request, session_id) {
+		return this.#session_storage.run(
+			session_id,
+			async () => await this.#server.receive(request),
+		);
 	}
 
 	/**
@@ -423,10 +482,48 @@ export class McpServer {
 		if (this.#subscriptions[what].has(id)) {
 			const resource = this.#resources.get(id);
 			if (!resource) return;
-			this.#notify(`notifications/resources/updated`, {
-				uri: id,
-				title: resource.name,
-			});
+			const sessions = this.#subscriptions[what].get(id);
+			this.#notify(
+				`notifications/resources/updated`,
+				{
+					uri: id,
+					title: resource.name,
+				},
+				{
+					sessions: sessions ? [...sessions] : undefined,
+				},
+			);
 		}
+	}
+
+	/**
+	 * @template {StandardSchema} TSchema
+	 * @param {TSchema} schema
+	 * @returns {Promise<StandardSchemaV1.InferOutput<TSchema>>}
+	 */
+	async elicitation(schema) {
+		if (!this.#client_capabilities?.elicitation)
+			throw new Error("Client doesn't support elicitation");
+
+		this.#lazyily_create_client();
+		let validated_result = schema['~standard'].validate(
+			await this.#client?.request(
+				'elicitation/create',
+				{
+					params: await this.#options.adapter.toJsonSchema(schema),
+				},
+				{
+					sessions: [this.#session_id],
+				},
+			),
+		);
+		if (validated_result instanceof Promise)
+			validated_result = await validated_result;
+		if (validated_result.issues) {
+			throw new Error(
+				`Invalid elicitation result: ${JSON.stringify(validated_result.issues)}`,
+			);
+		}
+		return validated_result.value;
 	}
 }
