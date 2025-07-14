@@ -10,6 +10,13 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
      * @param {ServerOptions<StandardSchema>} options
      */
     constructor(server_info: ServerInfo, options: ServerOptions<StandardSchema>);
+    /**
+     * @type {Array<{uri: string, name?: string}>}
+     */
+    roots: Array<{
+        uri: string;
+        name?: string;
+    }>;
     currentClientCapabilities(): {
         roots?: {
             listChanged?: boolean;
@@ -75,17 +82,21 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
         complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
     }, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
     /**
-     * @param {JSONRPCRequest} request
+     * @param {JSONRPCResponse | JSONRPCRequest} message
      * @param {string} [session_id]
-     * @returns {ReturnType<JSONRPCServer['receive']>}
+     * @returns {ReturnType<JSONRPCServer['receive']> | ReturnType<JSONRPCClient['receive'] | undefined>}
      */
-    receive(request: JSONRPCRequest, session_id?: string): ReturnType<JSONRPCServer["receive"]>;
+    receive(message: JSONRPCResponse | JSONRPCRequest, session_id?: string): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
     /**
      * Send a notification for subscriptions
      * @param {SubscriptionsKeys} what
      * @param {string} id
      */
     changed(what: SubscriptionsKeys, id: string): void;
+    /**
+     * Refresh roots list from client
+     */
+    refreshRoots(): Promise<void>;
     /**
      * @template {StandardSchema} TSchema
      * @param {TSchema} schema
@@ -102,8 +113,10 @@ import type { Completion } from "./internal/internal.js";
 import type { GetPromptResult } from "./validation/index.js";
 import type { ReadResourceResult } from "./validation/index.js";
 import type { ExtractURITemplateVariables } from "./internal/uri-template.js";
+import type { JSONRPCResponse } from "./validation/index.js";
 import type { JSONRPCRequest } from "json-rpc-2.0";
 import { JSONRPCServer } from 'json-rpc-2.0';
+import { JSONRPCClient } from 'json-rpc-2.0';
 import type { SubscriptionsKeys } from "./internal/internal.js";
 import type { ServerInfo } from "./internal/internal.js";
 import type { ServerOptions } from "./internal/internal.js";

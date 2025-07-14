@@ -269,3 +269,51 @@ export const InitializeRequestSchema = v.looseObject({
 /**
  * @typedef {v.InferInput<typeof CompleteResultSchema>} CompleteResult
  */
+
+/**
+ * JSON-RPC 2.0 Request
+ */
+export const JSONRPCRequestSchema = v.looseObject({
+	jsonrpc: v.literal('2.0'),
+	method: v.string(),
+	params: v.optional(v.union([v.array(v.unknown()), v.looseObject({})])),
+	id: v.optional(v.union([v.string(), v.number(), v.null()])),
+});
+
+/**
+ * JSON-RPC 2.0 Response Success
+ */
+export const JSONRPCResponseSuccessSchema = v.looseObject({
+	jsonrpc: v.literal('2.0'),
+	result: v.unknown(),
+	id: v.union([v.string(), v.number(), v.null()]),
+});
+
+/**
+ * JSON-RPC 2.0 Response Error
+ */
+export const JSONRPCResponseErrorSchema = v.looseObject({
+	jsonrpc: v.literal('2.0'),
+	error: v.looseObject({
+		code: v.number(),
+		message: v.string(),
+		data: v.optional(v.unknown()),
+	}),
+	id: v.union([v.string(), v.number(), v.null()]),
+});
+
+/**
+ * JSON-RPC 2.0 Response (Success or Error)
+ */
+export const JSONRPCResponseSchema = v.union([
+	JSONRPCResponseSuccessSchema,
+	JSONRPCResponseErrorSchema,
+]);
+
+/**
+ * @typedef {v.InferInput<typeof JSONRPCRequestSchema>} JSONRPCRequest
+ */
+
+/**
+ * @typedef {v.InferInput<typeof JSONRPCResponseSchema>} JSONRPCResponse
+ */

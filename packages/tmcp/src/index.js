@@ -2,7 +2,7 @@
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType } from "./validation/index.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
@@ -13,6 +13,8 @@ import {
 	GetPromptResultSchema,
 	CompleteResultSchema,
 	InitializeRequestSchema,
+	JSONRPCRequestSchema,
+	JSONRPCResponseSchema,
 } from './validation/index.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import * as v from 'valibot';
@@ -44,6 +46,10 @@ export class McpServer {
 	 */
 	#resources = new Map();
 	#templates = new UriTemplateMatcher();
+	/**
+	 * @type {Array<{uri: string, name?: string}>}
+	 */
+	roots = [];
 	/**
 	 * @type {{ [ref: string]: Map<string, Partial<Record<string, Completion>>> }}
 	 */
@@ -94,6 +100,10 @@ export class McpServer {
 					detail: validated_initialize,
 				}),
 			);
+			// Trigger initial roots request if client supports it
+			if (validated_initialize.capabilities?.roots) {
+				this.#refresh_roots();
+			}
 			return {
 				protocolVersion: validated_initialize.protocolVersion,
 				...options,
@@ -109,6 +119,7 @@ export class McpServer {
 		this.#init_tools();
 		this.#init_prompts();
 		this.#init_resources();
+		this.#init_roots();
 		this.#init_completion();
 	}
 
@@ -367,6 +378,37 @@ export class McpServer {
 	/**
 	 *
 	 */
+	#init_roots() {
+		this.#server.addMethod('notifications/roots/list_changed', () => {
+			this.#refresh_roots();
+			return null;
+		});
+	}
+
+	/**
+	 * Request roots list from client
+	 */
+	async #refresh_roots() {
+		if (!this.#client_capabilities?.roots) return;
+
+		this.#lazyily_create_client();
+		try {
+			const response = await this.#client?.request(
+				'roots/list',
+				undefined,
+				{
+					sessions: [this.#session_id],
+				},
+			);
+			this.roots = response?.roots || [];
+		} catch {
+			// Client doesn't support roots or request failed
+			this.roots = [];
+		}
+	}
+	/**
+	 *
+	 */
 	#init_completion() {
 		this.#server.addMethod(
 			'completion/complete',
@@ -462,14 +504,27 @@ export class McpServer {
 		});
 	}
 	/**
-	 * @param {JSONRPCRequest} request
+	 * @param {JSONRPCResponse | JSONRPCRequest} message
 	 * @param {string} [session_id]
-	 * @returns {ReturnType<JSONRPCServer['receive']>}
+	 * @returns {ReturnType<JSONRPCServer['receive']> | ReturnType<JSONRPCClient['receive'] | undefined>}
 	 */
-	receive(request, session_id) {
-		return this.#session_storage.run(
-			session_id,
-			async () => await this.#server.receive(request),
+	receive(message, session_id) {
+		// Validate the message first
+		const validated_message = v.safeParse(JSONRPCRequestSchema, message);
+
+		// Check if it's a request or response
+		if (validated_message.success) {
+			return this.#session_storage.run(
+				session_id,
+				async () =>
+					await this.#server.receive(validated_message.output),
+			);
+		}
+		// It's a response - handle with client
+		const validated_response = v.parse(JSONRPCResponseSchema, message);
+		this.#lazyily_create_client();
+		return this.#session_storage.run(session_id, async () =>
+			this.#client?.receive(validated_response),
 		);
 	}
 
@@ -494,6 +549,13 @@ export class McpServer {
 				},
 			);
 		}
+	}
+
+	/**
+	 * Refresh roots list from client
+	 */
+	async refreshRoots() {
+		await this.#refresh_roots();
 	}
 
 	/**

@@ -158,6 +158,8 @@ server.resource(
 		uri: 'file:///src/resource.txt',
 	},
 	async () => {
+		console.error('roots', server.roots);
+
 		return {
 			contents: [
 				{

@@ -692,10 +692,75 @@ export const InitializeRequestSchema: v.LooseObjectSchema<{
         readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
 }, undefined>;
+/**
+ * @typedef {v.InferInput<typeof ClientCapabilitiesSchema>} ClientCapabilities
+ */
+/**
+ * @typedef {v.InferInput<typeof InitializeRequestSchema>} InitializeRequest
+ */
+/**
+ * @typedef {v.InferInput<typeof CallToolResultSchema>} CallToolResult
+ */
+/**
+ * @typedef {v.InferInput<typeof ReadResourceResultSchema>} ReadResourceResult
+ */
+/**
+ * @typedef {v.InferInput<typeof GetPromptResultSchema>} GetPromptResult
+ */
+/**
+ * @typedef {v.InferInput<typeof CompleteResultSchema>} CompleteResult
+ */
+/**
+ * JSON-RPC 2.0 Request
+ */
+export const JSONRPCRequestSchema: v.LooseObjectSchema<{
+    readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+    readonly method: v.StringSchema<undefined>;
+    readonly params: v.OptionalSchema<v.UnionSchema<[v.ArraySchema<v.UnknownSchema, undefined>, v.LooseObjectSchema<{}, undefined>], undefined>, undefined>;
+    readonly id: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.NumberSchema<undefined>, v.NullSchema<undefined>], undefined>, undefined>;
+}, undefined>;
+/**
+ * JSON-RPC 2.0 Response Success
+ */
+export const JSONRPCResponseSuccessSchema: v.LooseObjectSchema<{
+    readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+    readonly result: v.UnknownSchema;
+    readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.NumberSchema<undefined>, v.NullSchema<undefined>], undefined>;
+}, undefined>;
+/**
+ * JSON-RPC 2.0 Response Error
+ */
+export const JSONRPCResponseErrorSchema: v.LooseObjectSchema<{
+    readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+    readonly error: v.LooseObjectSchema<{
+        readonly code: v.NumberSchema<undefined>;
+        readonly message: v.StringSchema<undefined>;
+        readonly data: v.OptionalSchema<v.UnknownSchema, undefined>;
+    }, undefined>;
+    readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.NumberSchema<undefined>, v.NullSchema<undefined>], undefined>;
+}, undefined>;
+/**
+ * JSON-RPC 2.0 Response (Success or Error)
+ */
+export const JSONRPCResponseSchema: v.UnionSchema<[v.LooseObjectSchema<{
+    readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+    readonly result: v.UnknownSchema;
+    readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.NumberSchema<undefined>, v.NullSchema<undefined>], undefined>;
+}, undefined>, v.LooseObjectSchema<{
+    readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+    readonly error: v.LooseObjectSchema<{
+        readonly code: v.NumberSchema<undefined>;
+        readonly message: v.StringSchema<undefined>;
+        readonly data: v.OptionalSchema<v.UnknownSchema, undefined>;
+    }, undefined>;
+    readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.NumberSchema<undefined>, v.NullSchema<undefined>], undefined>;
+}, undefined>], undefined>;
 export type ClientCapabilities = v.InferInput<typeof ClientCapabilitiesSchema>;
 export type InitializeRequest = v.InferInput<typeof InitializeRequestSchema>;
 export type CallToolResult = v.InferInput<typeof CallToolResultSchema>;
 export type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
 export type GetPromptResult = v.InferInput<typeof GetPromptResultSchema>;
 export type CompleteResult = v.InferInput<typeof CompleteResultSchema>;
+export type JSONRPCRequest = v.InferInput<typeof JSONRPCRequestSchema>;
+export type JSONRPCResponse = v.InferInput<typeof JSONRPCResponseSchema>;
 import * as v from 'valibot';
