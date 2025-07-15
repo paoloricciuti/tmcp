@@ -19,25 +19,25 @@ tmcp offers significant advantages over the official MCP SDK:
 
 tmcp works with all major schema validation libraries through its adapter system:
 
-- **Zod** - `@tmcpkit/adapter-zod`
-- **Valibot** - `@tmcpkit/adapter-valibot`
-- **ArkType** - `@tmcpkit/adapter-arktype`
-- **Effect Schema** - `@tmcpkit/adapter-effect`
-- **Zod v3** - `@tmcpkit/adapter-zod-v3`
+- **Zod** - `@tmcp/adapter-zod`
+- **Valibot** - `@tmcp/adapter-valibot`
+- **ArkType** - `@tmcp/adapter-arktype`
+- **Effect Schema** - `@tmcp/adapter-effect`
+- **Zod v3** - `@tmcp/adapter-zod-v3`
 
 ## Installation
 
 ```bash
 pnpm install tmcp
 # Choose your preferred schema library adapter
-ènpm install @tmcpkit/adapter-zod zod
+ènpm install @tmcp/adapter-zod zod
 ```
 
 ## Quick Start
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { ZodJsonSchemaAdapter } from '@tmcpkit/adapter-zod';
+import { ZodJsonSchemaAdapter } from '@tmcp/adapter-zod';
 import { z } from 'zod';
 
 const adapter = new ZodJsonSchemaAdapter();

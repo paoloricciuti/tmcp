@@ -1,17 +1,17 @@
-# @tmcpkit/adapter-arktype
+# @tmcp/adapter-arktype
 
 ArkType adapter for TMCP JSON Schema conversion.
 
 ## Installation
 
 ```bash
-npm install @tmcpkit/adapter-arktype arktype tmcp
+npm install @tmcp/adapter-arktype arktype tmcp
 ```
 
 ## Usage
 
 ```javascript
-import { ArktypeJsonSchemaAdapter } from '@tmcpkit/adapter-arktype';
+import { ArktypeJsonSchemaAdapter } from '@tmcp/adapter-arktype';
 import { type } from 'arktype';
 
 const adapter = new ArktypeJsonSchemaAdapter();
@@ -32,7 +32,7 @@ console.log(jsonSchema);
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { ArktypeJsonSchemaAdapter } from '@tmcpkit/adapter-arktype';
+import { ArktypeJsonSchemaAdapter } from '@tmcp/adapter-arktype';
 import { type } from 'arktype';
 
 const adapter = new ArktypeJsonSchemaAdapter();
@@ -63,10 +63,12 @@ server.tool(
 	},
 	async ({ name, age, email }) => {
 		return {
-			content: [{ 
-				type: 'text', 
-				text: `Created user: ${name}, age ${age}, email ${email}` 
-			}]
+			content: [
+				{
+					type: 'text',
+					text: `Created user: ${name}, age ${age}, email ${email}`,
+				},
+			],
 		};
 	},
 );
@@ -77,7 +79,7 @@ server.tool(
 ### Complex Type Definitions
 
 ```javascript
-import { ArktypeJsonSchemaAdapter } from '@tmcpkit/adapter-arktype';
+import { ArktypeJsonSchemaAdapter } from '@tmcp/adapter-arktype';
 import { type } from 'arktype';
 
 const adapter = new ArktypeJsonSchemaAdapter();

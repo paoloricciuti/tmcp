@@ -101,6 +101,7 @@ The server implements full MCP capabilities:
 ### McpServer Class (`packages/tmcp/src/index.js`)
 
 The main server class uses private fields (`#`) for encapsulation and implements:
+
 - Session management with `AsyncLocalStorage`
 - Client capabilities tracking per session
 - JSON-RPC protocol handling via `json-rpc-2.0`
@@ -108,6 +109,7 @@ The main server class uses private fields (`#`) for encapsulation and implements
 - Event-driven architecture with `EventTarget`
 
 ### Key Methods:
+
 - `.tool(definition, handler)` - Register tools with schema validation
 - `.prompt(definition, handler)` - Register prompts with completion support
 - `.resource(definition, handler)` - Register static resources
@@ -119,18 +121,21 @@ The main server class uses private fields (`#`) for encapsulation and implements
 ### Transport Layers
 
 The monorepo includes transport implementations:
+
 - `packages/transport-stdio/` - Standard I/O transport
 - `packages/transport-http/` - HTTP transport
 
 ## Workspace Structure
 
 This is a pnpm workspace configured in `pnpm-workspace.yaml`:
+
 - `packages/*` - Core packages and adapters
 - `apps/*` - Example applications (playground)
 
 ## Publishing Process
 
 Uses Changesets for version management:
+
 - Create changesets with `pnpm changeset`
 - Release with `pnpm release` (runs `changeset publish`)
-- All packages published to npm with `@tmcpkit/` scope except core `tmcp`
+- All packages published to npm with `@tmcp/` scope except core `tmcp`

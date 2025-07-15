@@ -1,4 +1,4 @@
-# @tmcpkit/adapter-effect
+# @tmcp/adapter-effect
 
 ## 0.1.2
 

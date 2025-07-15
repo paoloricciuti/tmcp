@@ -1,17 +1,17 @@
-# @tmcpkit/adapter-effect
+# @tmcp/adapter-effect
 
 Effect Schema adapter for TMCP JSON Schema conversion.
 
 ## Installation
 
 ```bash
-npm install @tmcpkit/adapter-effect effect tmcp
+npm install @tmcp/adapter-effect effect tmcp
 ```
 
 ## Usage
 
 ```javascript
-import { EffectJsonSchemaAdapter } from '@tmcpkit/adapter-effect';
+import { EffectJsonSchemaAdapter } from '@tmcp/adapter-effect';
 import * as S from 'effect/Schema';
 
 const adapter = new EffectJsonSchemaAdapter();
@@ -32,7 +32,7 @@ console.log(jsonSchema);
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { EffectJsonSchemaAdapter } from '@tmcpkit/adapter-effect';
+import { EffectJsonSchemaAdapter } from '@tmcp/adapter-effect';
 import * as S from 'effect/Schema';
 
 const adapter = new EffectJsonSchemaAdapter();
@@ -63,10 +63,12 @@ server.tool(
 	},
 	async ({ name, age, email }) => {
 		return {
-			content: [{ 
-				type: 'text', 
-				text: `Created user: ${name}, age ${age}, email ${email}` 
-			}]
+			content: [
+				{
+					type: 'text',
+					text: `Created user: ${name}, age ${age}, email ${email}`,
+				},
+			],
 		};
 	},
 );
@@ -77,7 +79,7 @@ server.tool(
 ### Custom JSON Schema Options
 
 ```javascript
-import { EffectJsonSchemaAdapter } from '@tmcpkit/adapter-effect';
+import { EffectJsonSchemaAdapter } from '@tmcp/adapter-effect';
 import * as S from 'effect/Schema';
 
 const adapter = new EffectJsonSchemaAdapter();

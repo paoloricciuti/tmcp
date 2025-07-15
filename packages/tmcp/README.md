@@ -19,25 +19,25 @@ tmcp offers significant advantages over the official MCP SDK:
 
 tmcp works with all major schema validation libraries through its adapter system:
 
-- **Zod** - `@tmcpkit/adapter-zod`
-- **Valibot** - `@tmcpkit/adapter-valibot`
-- **ArkType** - `@tmcpkit/adapter-arktype`
-- **Effect Schema** - `@tmcpkit/adapter-effect`
-- **Zod v3** - `@tmcpkit/adapter-zod-v3`
+- **Zod** - `@tmcp/adapter-zod`
+- **Valibot** - `@tmcp/adapter-valibot`
+- **ArkType** - `@tmcp/adapter-arktype`
+- **Effect Schema** - `@tmcp/adapter-effect`
+- **Zod v3** - `@tmcp/adapter-zod-v3`
 
 ## Installation
 
 ```bash
 pnpm install tmcp
 # Choose your preferred schema library adapter
-pnpm install @tmcpkit/adapter-zod zod
+pnpm install @tmcp/adapter-zod zod
 ```
 
 ## Quick Start
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { ZodJsonSchemaAdapter } from '@tmcpkit/adapter-zod';
+import { ZodJsonSchemaAdapter } from '@tmcp/adapter-zod';
 import { z } from 'zod';
 
 const adapter = new ZodJsonSchemaAdapter();
@@ -71,13 +71,21 @@ server.tool(
 	async ({ operation, a, b }) => {
 		switch (operation) {
 			case 'add':
-				return { content: [{ type: 'text', text: `${a} + ${b} = ${a + b}` }] };
+				return {
+					content: [{ type: 'text', text: `${a} + ${b} = ${a + b}` }],
+				};
 			case 'subtract':
-				return { content: [{ type: 'text', text: `${a} - ${b} = ${a - b}` }] };
+				return {
+					content: [{ type: 'text', text: `${a} - ${b} = ${a - b}` }],
+				};
 			case 'multiply':
-				return { content: [{ type: 'text', text: `${a} × ${b} = ${a * b}` }] };
+				return {
+					content: [{ type: 'text', text: `${a} × ${b} = ${a * b}` }],
+				};
 			case 'divide':
-				return { content: [{ type: 'text', text: `${a} ÷ ${b} = ${a / b}` }] };
+				return {
+					content: [{ type: 'text', text: `${a} ÷ ${b} = ${a / b}` }],
+				};
 		}
 	},
 );
@@ -218,9 +226,9 @@ const result = await server.message({
 	messages: [
 		{
 			role: 'user',
-			content: { type: 'text', text: 'Hello!' }
-		}
-	]
+			content: { type: 'text', text: 'Hello!' },
+		},
+	],
 });
 ```
 
@@ -261,21 +269,23 @@ server.on('send', ({ request, context }) => {
 
 ```javascript
 // Elicitation - Request structured data from client
-const userData = await server.elicitation(z.object({
-	name: z.string(),
-	age: z.number(),
-	preferences: z.array(z.string())
-}));
+const userData = await server.elicitation(
+	z.object({
+		name: z.string(),
+		age: z.number(),
+		preferences: z.array(z.string()),
+	}),
+);
 
 // Message sampling - Request AI responses
 const aiResponse = await server.message({
 	messages: [
 		{
 			role: 'user',
-			content: { type: 'text', text: 'Explain quantum computing' }
-		}
+			content: { type: 'text', text: 'Explain quantum computing' },
+		},
 	],
-	maxTokens: 100
+	maxTokens: 100,
 });
 
 // Roots management - Access client's filesystem roots
@@ -304,7 +314,7 @@ server.resource(
 	{
 		name: 'file-watcher',
 		description: 'Watch file changes',
-		uri: 'file://watched/file.txt'
+		uri: 'file://watched/file.txt',
 	},
 	async (uri) => {
 		return {
@@ -312,11 +322,11 @@ server.resource(
 				{
 					uri,
 					mimeType: 'text/plain',
-					text: await readFile(uri)
-				}
-			]
+					text: await readFile(uri),
+				},
+			],
 		};
-	}
+	},
 );
 
 // Notify subscribers when resource changes
@@ -336,7 +346,7 @@ server.tool(
 		schema: z.object({ name: z.string() }),
 	},
 	async ({ name }) => ({
-		content: [{ type: 'text', text: `Hello ${name}` }]
+		content: [{ type: 'text', text: `Hello ${name}` }],
 	}),
 );
 
@@ -346,7 +356,7 @@ server.tool(
 		schema: v.object({ age: v.number() }),
 	},
 	async ({ age }) => ({
-		content: [{ type: 'text', text: `Age: ${age}` }]
+		content: [{ type: 'text', text: `Age: ${age}` }],
 	}),
 );
 ```
@@ -381,27 +391,35 @@ server.prompt(
 		}),
 		complete: {
 			genre: (arg, context) => {
-				const genres = ['fantasy', 'sci-fi', 'mystery', 'romance', 'thriller'];
-				const filtered = genres.filter(g => g.startsWith(arg.toLowerCase()));
-				
+				const genres = [
+					'fantasy',
+					'sci-fi',
+					'mystery',
+					'romance',
+					'thriller',
+				];
+				const filtered = genres.filter((g) =>
+					g.startsWith(arg.toLowerCase()),
+				);
+
 				return {
 					completion: {
 						values: filtered,
 						total: filtered.length,
-						hasMore: false
-					}
+						hasMore: false,
+					},
 				};
 			},
 			length: (arg, context) => {
 				const lengths = ['short', 'medium', 'long'];
-				const filtered = lengths.filter(l => l.includes(arg));
-				
+				const filtered = lengths.filter((l) => l.includes(arg));
+
 				return {
 					completion: {
 						values: filtered,
 						total: filtered.length,
-						hasMore: false
-					}
+						hasMore: false,
+					},
 				};
 			},
 			character: (arg, context) => {
@@ -410,22 +428,22 @@ server.prompt(
 					fantasy: ['wizard', 'dragon', 'knight', 'elf'],
 					'sci-fi': ['robot', 'alien', 'cyborg', 'space-explorer'],
 					mystery: ['detective', 'suspect', 'witness', 'victim'],
-					default: ['hero', 'villain', 'sidekick', 'mentor']
+					default: ['hero', 'villain', 'sidekick', 'mentor'],
 				};
-				
+
 				const genre = context.params?.genre || 'default';
 				const charList = characters[genre] || characters.default;
-				const filtered = charList.filter(c => c.includes(arg));
-				
+				const filtered = charList.filter((c) => c.includes(arg));
+
 				return {
 					completion: {
 						values: filtered,
 						total: filtered.length,
-						hasMore: false
-					}
+						hasMore: false,
+					},
 				};
-			}
-		}
+			},
+		},
 	},
 	async (input) => {
 		return {
@@ -435,12 +453,12 @@ server.prompt(
 					role: 'user',
 					content: {
 						type: 'text',
-						text: `Write a ${input.length} ${input.genre} story featuring a ${input.character}.`
-					}
-				}
-			]
+						text: `Write a ${input.length} ${input.genre} story featuring a ${input.character}.`,
+					},
+				},
+			],
 		};
-	}
+	},
 );
 ```
 
@@ -456,14 +474,14 @@ server.template(
 			userId: (arg, context) => {
 				// Filter users based on the current input
 				const allUsers = ['user1', 'user2', 'user3', 'admin-user'];
-				const filtered = allUsers.filter(id => id.includes(arg));
-				
+				const filtered = allUsers.filter((id) => id.includes(arg));
+
 				return {
 					completion: {
 						values: filtered.slice(0, 10), // Limit to 10 results
 						total: filtered.length,
-						hasMore: filtered.length > 10
-					}
+						hasMore: filtered.length > 10,
+					},
 				};
 			},
 		},
@@ -496,14 +514,14 @@ server.template(
 			projectId: (arg, context) => {
 				// Static list of project IDs
 				const projects = ['web-app', 'mobile-app', 'api-server'];
-				const filtered = projects.filter(p => p.includes(arg));
-				
+				const filtered = projects.filter((p) => p.includes(arg));
+
 				return {
 					completion: {
 						values: filtered,
 						total: filtered.length,
-						hasMore: false
-					}
+						hasMore: false,
+					},
 				};
 			},
 			filePath: async (arg, context) => {
@@ -514,37 +532,40 @@ server.template(
 						completion: {
 							values: [],
 							total: 0,
-							hasMore: false
-						}
+							hasMore: false,
+						},
 					};
 				}
-				
+
 				// Simulate fetching files from filesystem
 				const files = await getProjectFiles(projectId);
-				const filtered = files.filter(f => f.includes(arg));
-				
+				const filtered = files.filter((f) => f.includes(arg));
+
 				return {
 					completion: {
 						values: filtered.slice(0, 20),
 						total: filtered.length,
-						hasMore: filtered.length > 20
-					}
+						hasMore: filtered.length > 20,
+					},
 				};
-			}
-		}
+			},
+		},
 	},
 	async (uri, params) => {
-		const content = await readProjectFile(params.projectId, params.filePath);
+		const content = await readProjectFile(
+			params.projectId,
+			params.filePath,
+		);
 		return {
 			contents: [
 				{
 					uri,
 					mimeType: 'text/plain',
-					text: content
-				}
-			]
+					text: content,
+				},
+			],
 		};
-	}
+	},
 );
 
 // Completion with pagination support
@@ -554,25 +575,25 @@ server.prompt(
 		description: 'Search through large document collection',
 		schema: z.object({
 			query: z.string(),
-			category: z.string()
+			category: z.string(),
 		}),
 		complete: {
 			category: (arg, context) => {
 				// Large category list with pagination
 				const allCategories = generateCategoryList(); // Assume this returns 500+ items
-				const filtered = allCategories.filter(c => 
-					c.toLowerCase().includes(arg.toLowerCase())
+				const filtered = allCategories.filter((c) =>
+					c.toLowerCase().includes(arg.toLowerCase()),
 				);
-				
+
 				return {
 					completion: {
 						values: filtered.slice(0, 50), // Show first 50 matches
 						total: filtered.length,
-						hasMore: filtered.length > 50
-					}
+						hasMore: filtered.length > 50,
+					},
 				};
-			}
-		}
+			},
+		},
 	},
 	async (input) => {
 		const results = await searchDocuments(input.query, input.category);
@@ -583,12 +604,12 @@ server.prompt(
 					role: 'user',
 					content: {
 						type: 'text',
-						text: `Found ${results.length} documents matching "${input.query}"`
-					}
-				}
-			]
+						text: `Found ${results.length} documents matching "${input.query}"`,
+					},
+				},
+			],
 		};
-	}
+	},
 );
 ```
 
@@ -621,10 +642,12 @@ server.tool(
 		const { user, preferences, tags } = input;
 		const result = await createUser(user, preferences, tags);
 		return {
-			content: [{ 
-				type: 'text', 
-				text: `User created: ${user.name} (${user.email})` 
-			}]
+			content: [
+				{
+					type: 'text',
+					text: `User created: ${user.name} (${user.email})`,
+				},
+			],
 		};
 	},
 );

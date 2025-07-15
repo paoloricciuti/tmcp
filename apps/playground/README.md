@@ -6,7 +6,7 @@ A comprehensive playground MCP server for testing the tmcp library with Valibot 
 
 - **TypeScript Implementation**: Built with TypeScript (.ts files) for type safety
 - **TMCP Library**: Uses the tmcp package for MCP server implementation
-- **Valibot Validation**: Uses Valibot and the @tmcpkit/adapter-valibot for schema validation
+- **Valibot Validation**: Uses Valibot and the @tmcp/adapter-valibot for schema validation
 - **Stdio Communication**: Communicates via stdio for use with MCP Inspector
 - **Real-time Updates**: Demonstrates resource subscriptions and change notifications
 - **Template Resources**: Shows dynamic URI template resources
@@ -15,24 +15,32 @@ A comprehensive playground MCP server for testing the tmcp library with Valibot 
 ## Tools
 
 ### `add_numbers`
+
 Adds two numbers together with Valibot schema validation.
+
 - **Parameters**: `a` (number), `b` (number)
 - **Returns**: Sum of the two numbers
 
 ### `greet`
+
 Generate a greeting message with optional formal parameter.
+
 - **Parameters**: `name` (string), `formal` (boolean, optional)
 - **Returns**: Personalized greeting message
 
 ### `get_time`
+
 Get the current time (no schema validation).
+
 - **Parameters**: None
 - **Returns**: Current ISO timestamp
 
 ## Prompts
 
 ### `story_prompt`
+
 Generate a creative story prompt with topic and length parameters.
+
 - **Parameters**: `topic` (string), `length` ('short'|'medium'|'long', optional)
 - **Features**: Includes completion support for length parameter
 - **Returns**: Story prompt with description and messages
@@ -40,12 +48,16 @@ Generate a creative story prompt with topic and length parameters.
 ## Resources
 
 ### `playground_info` (`file:///src/resource.txt`)
+
 Information about this playground server loaded from a local file.
+
 - **Features**: File watching with automatic change notifications
 - **Demonstrates**: Resource subscriptions and real-time updates
 
 ### `playground_template` (`playground://template/{name}/{action}`)
+
 A template resource for testing dynamic URI parameters.
+
 - **Parameters**: `name` (string), `action` (string)
 - **Features**: Completion support for both parameters
 - **Demonstrates**: URI template resources with parameter extraction
@@ -53,15 +65,18 @@ A template resource for testing dynamic URI parameters.
 ## Advanced Features Demonstrated
 
 ### Real-time Notifications
+
 - Resource change notifications when `src/resource.txt` is modified
 - Automatic subscription management for connected clients
 
 ### Client Capabilities
+
 - Elicitation requests for structured data input
 - Message sampling for AI-powered responses
 - Roots management for filesystem access
 
 ### Completion Support
+
 - Parameter completion for prompt arguments
 - URI template parameter completion
 - Dynamic completion value generation
@@ -69,11 +84,13 @@ A template resource for testing dynamic URI parameters.
 ## Usage with MCP Inspector
 
 1. Build the project:
+
     ```bash
     pnpm build
     ```
 
 2. Start the server:
+
     ```bash
     node dist/index.js
     ```
@@ -86,12 +103,12 @@ Add to your Claude Desktop configuration:
 
 ```json
 {
-  "mcpServers": {
-    "tmcp-playground": {
-      "command": "node",
-      "args": ["path/to/tmcp/apps/playground/dist/index.js"]
-    }
-  }
+	"mcpServers": {
+		"tmcp-playground": {
+			"command": "node",
+			"args": ["path/to/tmcp/apps/playground/dist/index.js"]
+		}
+	}
 }
 ```
 
@@ -114,16 +131,19 @@ pnpm typecheck
 ## Testing Features
 
 ### Resource Subscriptions
+
 1. Subscribe to `file:///src/resource.txt` in MCP Inspector
 2. Modify the `src/resource.txt` file
 3. Observe real-time change notifications
 
 ### Template Resources
-1. Access `playground://template/test/run` 
+
+1. Access `playground://template/test/run`
 2. Try different parameter combinations
 3. Use completion to discover available parameters
 
 ### Prompt Completion
+
 1. Use the `story_prompt` prompt
 2. Start typing a length parameter
 3. Observe completion suggestions
@@ -131,6 +151,7 @@ pnpm typecheck
 ## Architecture
 
 The playground demonstrates:
+
 - **Schema-first design** with Valibot validation
 - **Event-driven architecture** with resource subscriptions
 - **Type-safe development** with TypeScript

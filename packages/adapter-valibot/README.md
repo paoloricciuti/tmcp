@@ -1,17 +1,17 @@
-# @tmcpkit/adapter-valibot
+# @tmcp/adapter-valibot
 
 Valibot adapter for TMCP JSON Schema conversion.
 
 ## Installation
 
 ```bash
-npm install @tmcpkit/adapter-valibot valibot tmcp
+npm install @tmcp/adapter-valibot valibot tmcp
 ```
 
 ## Usage
 
 ```javascript
-import { ValibotJsonSchemaAdapter } from '@tmcpkit/adapter-valibot';
+import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import * as v from 'valibot';
 
 const adapter = new ValibotJsonSchemaAdapter();
@@ -32,7 +32,7 @@ console.log(jsonSchema);
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { ValibotJsonSchemaAdapter } from '@tmcpkit/adapter-valibot';
+import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import * as v from 'valibot';
 
 const adapter = new ValibotJsonSchemaAdapter();
@@ -63,10 +63,12 @@ server.tool(
 	},
 	async ({ name, age, email }) => {
 		return {
-			content: [{ 
-				type: 'text', 
-				text: `Created user: ${name}, age ${age}, email ${email}` 
-			}]
+			content: [
+				{
+					type: 'text',
+					text: `Created user: ${name}, age ${age}, email ${email}`,
+				},
+			],
 		};
 	},
 );
@@ -77,7 +79,7 @@ server.tool(
 ### Custom Validation and Metadata
 
 ```javascript
-import { ValibotJsonSchemaAdapter } from '@tmcpkit/adapter-valibot';
+import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import * as v from 'valibot';
 
 const adapter = new ValibotJsonSchemaAdapter();
@@ -91,7 +93,7 @@ const userSchema = v.object({
 		v.object({
 			theme: v.picklist(['light', 'dark']),
 			notifications: v.boolean(),
-		})
+		}),
 	),
 });
 
@@ -120,7 +122,10 @@ const companySchema = v.object({
 	name: v.string(),
 	employees: v.array(userSchema),
 	contacts: v.array(contactSchema),
-	founded: v.pipe(v.date(), v.transform((date) => date.toISOString())),
+	founded: v.pipe(
+		v.date(),
+		v.transform((date) => date.toISOString()),
+	),
 });
 ```
 

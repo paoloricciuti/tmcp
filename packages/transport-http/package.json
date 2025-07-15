@@ -1,5 +1,5 @@
 {
-	"name": "@tmcpkit/transport-http",
+	"name": "@tmcp/transport-http",
 	"version": "0.1.1",
 	"description": "Transport for TMCP using HTTP",
 	"type": "module",

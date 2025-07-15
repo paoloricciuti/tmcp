@@ -1,22 +1,22 @@
-# @tmcpkit/transport-stdio
+# @tmcp/transport-stdio
 
 A Standard I/O (stdio) transport implementation for TMCP (TypeScript Model Context Protocol) servers. This package provides a clean, easy-to-use interface for running MCP servers that communicate via stdin/stdout, making them compatible with MCP Inspector and other MCP clients.
 
 ## Installation
 
 ```bash
-npm install @tmcpkit/transport-stdio tmcp
+npm install @tmcp/transport-stdio tmcp
 # or
-pnpm add @tmcpkit/transport-stdio tmcp
+pnpm add @tmcp/transport-stdio tmcp
 # or
-yarn add @tmcpkit/transport-stdio tmcp
+yarn add @tmcp/transport-stdio tmcp
 ```
 
 ## Usage
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { StdioTransport } from '@tmcpkit/transport-stdio';
+import { StdioTransport } from '@tmcp/transport-stdio';
 
 // Create your MCP server
 const server = new McpServer(
@@ -104,8 +104,8 @@ This transport is designed to work seamlessly with [MCP Inspector](https://githu
 #!/usr/bin/env node
 
 import { McpServer } from 'tmcp';
-import { StdioTransport } from '@tmcpkit/transport-stdio';
-import { ZodJsonSchemaAdapter } from '@tmcpkit/adapter-zod';
+import { StdioTransport } from '@tmcp/transport-stdio';
+import { ZodJsonSchemaAdapter } from '@tmcp/adapter-zod';
 import { z } from 'zod';
 
 const server = new McpServer(
@@ -180,9 +180,9 @@ pnpm lint
 ## Related Packages
 
 - [`tmcp`](../tmcp) - Core TMCP server implementation
-- [`@tmcpkit/adapter-zod`](../adapter-zod) - Zod schema adapter
-- [`@tmcpkit/adapter-valibot`](../adapter-valibot) - Valibot schema adapter
-- [`@tmcpkit/adapter-arktype`](../adapter-arktype) - ArkType schema adapter
+- [`@tmcp/adapter-zod`](../adapter-zod) - Zod schema adapter
+- [`@tmcp/adapter-valibot`](../adapter-valibot) - Valibot schema adapter
+- [`@tmcp/adapter-arktype`](../adapter-arktype) - ArkType schema adapter
 
 ## License
 

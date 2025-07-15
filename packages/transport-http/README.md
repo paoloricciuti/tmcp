@@ -1,15 +1,15 @@
-# @tmcpkit/transport-http
+# @tmcp/transport-http
 
 An HTTP transport implementation for TMCP (TypeScript Model Context Protocol) servers. This package provides HTTP Streaming based communication for MCP servers over HTTP, enabling web-based clients to interact with your MCP server through standard HTTP requests.
 
 ## Installation
 
 ```bash
-npm install @tmcpkit/transport-http tmcp
+npm install @tmcp/transport-http tmcp
 # or
-pnpm add @tmcpkit/transport-http tmcp
+pnpm add @tmcp/transport-http tmcp
 # or
-yarn add @tmcpkit/transport-http tmcp
+yarn add @tmcp/transport-http tmcp
 ```
 
 ## Usage
@@ -18,7 +18,7 @@ yarn add @tmcpkit/transport-http tmcp
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { HttpTransport } from '@tmcpkit/transport-http';
+import { HttpTransport } from '@tmcp/transport-http';
 
 // Create your MCP server
 const server = new McpServer(
@@ -210,7 +210,7 @@ data: {"jsonrpc":"2.0","id":1,"result":{"tools":[...]}}
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { HttpTransport } from '@tmcpkit/transport-http';
+import { HttpTransport } from '@tmcp/transport-http';
 
 const server = new McpServer(/* ... */);
 const transport = new HttpTransport(server);
@@ -230,7 +230,7 @@ Bun.serve({
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { HttpTransport } from '@tmcpkit/transport-http';
+import { HttpTransport } from '@tmcp/transport-http';
 
 const server = new McpServer(/* ... */);
 const transport = new HttpTransport(server);
@@ -274,9 +274,9 @@ pnpm lint
 ## Related Packages
 
 - [`tmcp`](../tmcp) - Core TMCP server implementation
-- [`@tmcpkit/transport-stdio`](../transport-stdio) - Standard I/O transport
-- [`@tmcpkit/adapter-zod`](../adapter-zod) - Zod schema adapter
-- [`@tmcpkit/adapter-valibot`](../adapter-valibot) - Valibot schema adapter
+- [`@tmcp/transport-stdio`](../transport-stdio) - Standard I/O transport
+- [`@tmcp/adapter-zod`](../adapter-zod) - Zod schema adapter
+- [`@tmcp/adapter-valibot`](../adapter-valibot) - Valibot schema adapter
 
 ## License
 

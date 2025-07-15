@@ -1,4 +1,4 @@
-# @tmcpkit/adapter-zod
+# @tmcp/adapter-zod
 
 ## 0.1.3
 

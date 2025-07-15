@@ -1,4 +1,4 @@
-# @tmcpkit/adapter-valibot
+# @tmcp/adapter-valibot
 
 ## 0.1.2
 

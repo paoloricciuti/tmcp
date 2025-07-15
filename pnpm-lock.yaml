@@ -35,10 +35,10 @@ importers:
 
   apps/playground:
     dependencies:
-      '@tmcpkit/adapter-valibot':
+      '@tmcp/adapter-valibot':
         specifier: workspace:^
         version: link:../../packages/adapter-valibot
-      '@tmcpkit/transport-stdio':
+      '@tmcp/transport-stdio':
         specifier: workspace:^
         version: link:../../packages/transport-stdio
       tmcp:

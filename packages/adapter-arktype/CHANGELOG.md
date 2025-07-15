@@ -1,4 +1,4 @@
-# @tmcpkit/adapter-arktype
+# @tmcp/adapter-arktype
 
 ## 0.1.2
 

@@ -1,4 +1,4 @@
-# @tmcpkit/transport-stdio
+# @tmcp/transport-stdio
 
 ## 0.1.1
 

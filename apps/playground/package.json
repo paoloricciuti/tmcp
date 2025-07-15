@@ -13,8 +13,8 @@
 		"inspect": "mcp-inspector"
 	},
 	"dependencies": {
-		"@tmcpkit/adapter-valibot": "workspace:^",
-		"@tmcpkit/transport-stdio": "workspace:^",
+		"@tmcp/adapter-valibot": "workspace:^",
+		"@tmcp/transport-stdio": "workspace:^",
 		"tmcp": "workspace:^",
 		"valibot": "^1.1.0"
 	},

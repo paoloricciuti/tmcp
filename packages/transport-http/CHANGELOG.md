@@ -1,4 +1,4 @@
-# @tmcpkit/transport-http
+# @tmcp/transport-http
 
 ## 0.1.1
 

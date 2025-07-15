@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { McpServer } from 'tmcp';
-import { StdioTransport } from '@tmcpkit/transport-stdio';
-import { ValibotJsonSchemaAdapter } from '@tmcpkit/adapter-valibot';
+import { StdioTransport } from '@tmcp/transport-stdio';
+import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import fs from 'node:fs/promises';
 import * as v from 'valibot';
 
