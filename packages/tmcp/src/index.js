@@ -291,7 +291,7 @@ export class McpServer {
 				[...this.#tools].map(async ([name, tool]) => {
 					return {
 						name,
-						title: tool.description,
+						title: tool.title || tool.description,
 						description: tool.description,
 						inputSchema: tool.schema
 							? await this.#options.adapter.toJsonSchema(
@@ -352,7 +352,7 @@ export class McpServer {
 					const required = arguments_schema.required ?? [];
 					return {
 						name,
-						title: prompt.description,
+						title: prompt.title || prompt.description,
 						description: prompt.description,
 						arguments: keys.map((key) => {
 							const property = arguments_schema.properties?.[key];
@@ -441,11 +441,12 @@ export class McpServer {
 			const all_resources = [];
 
 			// Add static resources
-			for (const [uri, { description, name, ...resource }] of this
+			for (const [uri, { description, name, title, ...resource }] of this
 				.#resources) {
 				if (!resource.template) {
 					all_resources.push({
 						name,
+						title: title || description,
 						description,
 						uri,
 					});
@@ -479,17 +480,18 @@ export class McpServer {
 		this.#server.addMethod('resources/templates/list', async () => {
 			return {
 				resourceTemplates: [...this.#resources].reduce(
-					(arr, [uri, { description, name, template }]) => {
+					(arr, [uri, { description, name, title, template }]) => {
 						if (template) {
 							arr.push({
 								name,
+								title: title || description,
 								description,
 								uriTemplate: uri,
 							});
 						}
 						return arr;
 					},
-					/** @type {Array<{name: string, description: string, uriTemplate: string}>} */ ([]),
+					/** @type {Array<{name: string, title: string, description: string, uriTemplate: string}>} */ ([]),
 				),
 			};
 		});
@@ -573,25 +575,26 @@ export class McpServer {
 	}
 	/**
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
+	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)} execute
 	 */
-	tool({ name, description, schema }, execute) {
+	tool({ name, description, title, schema }, execute) {
 		if (this.#options.capabilities?.tools?.listChanged) {
 			this.#notify('notifications/tools/list_changed', {});
 		}
 		this.#tools.set(name, {
 			description,
+			title,
 			schema,
 			execute,
 		});
 	}
 	/**
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
+	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} execute
 	 */
-	prompt({ name, description, schema, complete }, execute) {
+	prompt({ name, description, title, schema, complete }, execute) {
 		if (complete) {
 			this.#completions['ref/prompt'].set(name, complete);
 		}
@@ -600,6 +603,7 @@ export class McpServer {
 		}
 		this.#prompts.set(name, {
 			description,
+			title,
 			schema,
 			execute,
 		});
@@ -620,13 +624,14 @@ export class McpServer {
 		this.#resources.set(uri, resource);
 	}
 	/**
-	 * @param {{ name: string; description: string; uri: string }} options
+	 * @param {{ name: string; description: string; title?: string; uri: string }} options
 	 * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
-	resource({ name, description, uri }, execute) {
+	resource({ name, description, title, uri }, execute) {
 		this.#resource({
 			name,
 			description,
+			title,
 			uri,
 			execute,
 			template: false,
@@ -635,16 +640,17 @@ export class McpServer {
 	/**
 	 * @template {string} TUri
 	 * @template {ExtractURITemplateVariables<TUri>} TVariables
-	 * @param {{ name: string; description: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
+	 * @param {{ name: string; description: string; title?: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
 	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
 	template(
-		{ name, description, uri, complete, list: list_resources },
+		{ name, description, title, uri, complete, list: list_resources },
 		execute,
 	) {
 		this.#resource({
 			name,
 			description,
+			title,
 			uri,
 			execute,
 			complete,

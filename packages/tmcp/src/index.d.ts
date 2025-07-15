@@ -44,43 +44,47 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
     on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): void;
     /**
      * @template {StandardSchema | undefined} [TSchema=undefined]
-     * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
+     * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
      * @param {TSchema extends undefined ? (()=>Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)} execute
      */
-    tool<TSchema extends StandardSchema | undefined = undefined>({ name, description, schema }: {
+    tool<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema }: {
         name: string;
         description: string;
+        title?: string;
         schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
     }, execute: TSchema extends undefined ? (() => Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)): void;
     /**
      * @template {StandardSchema | undefined} [TSchema=undefined]
-     * @param {{ name: string; description: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
+     * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
      * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} execute
      */
-    prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, schema, complete }: {
+    prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete }: {
         name: string;
         description: string;
+        title?: string;
         schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
         complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>>;
     }, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): void;
     /**
-     * @param {{ name: string; description: string; uri: string }} options
+     * @param {{ name: string; description: string; title?: string; uri: string }} options
      * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} execute
      */
-    resource({ name, description, uri }: {
+    resource({ name, description, title, uri }: {
         name: string;
         description: string;
+        title?: string;
         uri: string;
     }, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): void;
     /**
      * @template {string} TUri
      * @template {ExtractURITemplateVariables<TUri>} TVariables
-     * @param {{ name: string; description: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
+     * @param {{ name: string; description: string; title?: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
      * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} execute
      */
-    template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, uri, complete, list: list_resources }: {
+    template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, title, uri, complete, list: list_resources }: {
         name: string;
         description: string;
+        title?: string;
         uri: TUri;
         complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
         list?: () => Promise<Array<Resource>> | Array<Resource>;

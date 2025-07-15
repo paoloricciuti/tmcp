@@ -13,6 +13,7 @@ import {
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
+	title?: string;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<CallToolResult> | CallToolResult;
@@ -26,6 +27,7 @@ export type Completion = (
 export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
+	title?: string;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<GetPromptResult> | GetPromptResult;
@@ -36,6 +38,7 @@ export type StoredResource =
 			description: string;
 			name: string;
 			template: true;
+			title?: string;
 			list_resources?: () =>
 				| Promise<Array<Resource>>
 				| Array<Resource>;
@@ -48,6 +51,7 @@ export type StoredResource =
 			description: string;
 			name: string;
 			template: false;
+			title?: string;
 			execute: (
 				uri: string,
 			) => Promise<ReadResourceResult> | ReadResourceResult;
