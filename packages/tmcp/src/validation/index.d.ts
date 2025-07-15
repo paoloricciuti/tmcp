@@ -1,4 +1,20 @@
 /**
+ * Base metadata interface for common properties across resources, tools, prompts, and implementations.
+ */
+export const BaseMetadataSchema: v.LooseObjectSchema<{
+    /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+    readonly name: v.StringSchema<undefined>;
+    /**
+     * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+     * even by those unfamiliar with domain-specific terminology.
+     *
+     * If not provided, the name should be used for display (except for Tool,
+     * where `annotations.title` should be given precedence over using `name`,
+     * if present).
+     */
+    readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+}, undefined>;
+/**
  * Text provided to or from an LLM.
  */
 export const TextContentSchema: v.LooseObjectSchema<{
@@ -150,9 +166,6 @@ export const EmbeddedResourceSchema: v.LooseObjectSchema<{
  * A resource that the server is capable of reading, included in a prompt or tool call result.
  */
 export const ResourceLinkSchema: v.LooseObjectSchema<{
-    /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-    readonly name: v.StringSchema<undefined>;
-    readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     /**
      * The URI of this resource.
      */
@@ -170,6 +183,17 @@ export const ResourceLinkSchema: v.LooseObjectSchema<{
      * See [MCP specification] for notes on _meta usage.
      */
     readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+    readonly name: v.StringSchema<undefined>;
+    /**
+     * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+     * even by those unfamiliar with domain-specific terminology.
+     *
+     * If not provided, the name should be used for display (except for Tool,
+     * where `annotations.title` should be given precedence over using `name`,
+     * if present).
+     */
+    readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 }, undefined>;
 /**
  * A content block that can be used in prompts and tool results.
@@ -213,9 +237,6 @@ export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
      */
     readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 }, undefined>, v.LooseObjectSchema<{
-    /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-    readonly name: v.StringSchema<undefined>;
-    readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     /**
      * The URI of this resource.
      */
@@ -233,6 +254,17 @@ export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
      * See [MCP specification] for notes on _meta usage.
      */
     readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+    readonly name: v.StringSchema<undefined>;
+    /**
+     * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+     * even by those unfamiliar with domain-specific terminology.
+     *
+     * If not provided, the name should be used for display (except for Tool,
+     * where `annotations.title` should be given precedence over using `name`,
+     * if present).
+     */
+    readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 }, undefined>, v.LooseObjectSchema<{
     readonly type: v.LiteralSchema<"resource", undefined>;
     readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
@@ -275,6 +307,159 @@ export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
      */
     readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 }, undefined>], undefined>;
+/**
+ * A known resource that the server is capable of reading.
+ */
+export const ResourceSchema: v.LooseObjectSchema<{
+    /**
+     * The URI of this resource.
+     */
+    readonly uri: v.StringSchema<undefined>;
+    /**
+     * A description of what this resource represents.
+     *
+     * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
+     */
+    readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    /**
+     * The MIME type of this resource, if known.
+     */
+    readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    /**
+     * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+     * for notes on _meta usage.
+     */
+    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+    readonly name: v.StringSchema<undefined>;
+    /**
+     * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+     * even by those unfamiliar with domain-specific terminology.
+     *
+     * If not provided, the name should be used for display (except for Tool,
+     * where `annotations.title` should be given precedence over using `name`,
+     * if present).
+     */
+    readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+}, undefined>;
+/**
+ * A template description for resources available on the server.
+ */
+export const ResourceTemplateSchema: v.LooseObjectSchema<{
+    /**
+     * A URI template (according to RFC 6570) that can be used to construct resource URIs.
+     */
+    readonly uriTemplate: v.StringSchema<undefined>;
+    /**
+     * A description of what this template is for.
+     *
+     * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
+     */
+    readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    /**
+     * The MIME type for all resources that match this template. This should only be included if all resources matching this template have the same type.
+     */
+    readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    /**
+     * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+     * for notes on _meta usage.
+     */
+    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+    readonly name: v.StringSchema<undefined>;
+    /**
+     * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+     * even by those unfamiliar with domain-specific terminology.
+     *
+     * If not provided, the name should be used for display (except for Tool,
+     * where `annotations.title` should be given precedence over using `name`,
+     * if present).
+     */
+    readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+}, undefined>;
+/**
+ * An opaque token representing the pagination position.
+ */
+export const CursorSchema: v.StringSchema<undefined>;
+/**
+ * Base schema for all JSON-RPC result objects.
+ */
+export const ResultSchema: v.LooseObjectSchema<{
+    /**
+     * See [MCP specification] for notes on _meta usage.
+     */
+    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+}, undefined>;
+/**
+ * Base schema for paginated request parameters.
+ */
+export const PaginatedRequestSchema: v.LooseObjectSchema<{
+    /**
+     * An opaque token representing the pagination position to start from.
+     * If omitted, pagination starts from the beginning.
+     */
+    readonly cursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+}, undefined>;
+/**
+ * Base schema for paginated result responses.
+ */
+export const PaginatedResultSchema: v.LooseObjectSchema<{
+    /**
+     * An opaque token representing the pagination position after the last returned result.
+     * If present, there may be more results available.
+     */
+    readonly nextCursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    /**
+     * See [MCP specification] for notes on _meta usage.
+     */
+    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+}, undefined>;
+/**
+ * The server's response to a resources/list request from the client.
+ */
+export const ListResourcesResultSchema: v.LooseObjectSchema<{
+    readonly resources: v.ArraySchema<v.LooseObjectSchema<{
+        /**
+         * The URI of this resource.
+         */
+        readonly uri: v.StringSchema<undefined>;
+        /**
+         * A description of what this resource represents.
+         *
+         * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
+         */
+        readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        /**
+         * The MIME type of this resource, if known.
+         */
+        readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        /**
+         * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+         * for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+        readonly name: v.StringSchema<undefined>;
+        /**
+         * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+         * even by those unfamiliar with domain-specific terminology.
+         *
+         * If not provided, the name should be used for display (except for Tool,
+         * where `annotations.title` should be given precedence over using `name`,
+         * if present).
+         */
+        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    }, undefined>, undefined>;
+    /**
+     * An opaque token representing the pagination position after the last returned result.
+     * If present, there may be more results available.
+     */
+    readonly nextCursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    /**
+     * See [MCP specification] for notes on _meta usage.
+     */
+    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+}, undefined>;
 /**
  * Describes a message returned as part of a prompt.
  */
@@ -319,9 +504,6 @@ export const PromptMessageSchema: v.LooseObjectSchema<{
          */
         readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
     }, undefined>, v.LooseObjectSchema<{
-        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-        readonly name: v.StringSchema<undefined>;
-        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
         /**
          * The URI of this resource.
          */
@@ -339,6 +521,17 @@ export const PromptMessageSchema: v.LooseObjectSchema<{
          * See [MCP specification] for notes on _meta usage.
          */
         readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+        readonly name: v.StringSchema<undefined>;
+        /**
+         * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+         * even by those unfamiliar with domain-specific terminology.
+         *
+         * If not provided, the name should be used for display (except for Tool,
+         * where `annotations.title` should be given precedence over using `name`,
+         * if present).
+         */
+        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     }, undefined>, v.LooseObjectSchema<{
         readonly type: v.LiteralSchema<"resource", undefined>;
         readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
@@ -435,9 +628,6 @@ export const SamplingMessageSchema: v.LooseObjectSchema<{
          */
         readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
     }, undefined>, v.LooseObjectSchema<{
-        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-        readonly name: v.StringSchema<undefined>;
-        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
         /**
          * The URI of this resource.
          */
@@ -455,6 +645,17 @@ export const SamplingMessageSchema: v.LooseObjectSchema<{
          * See [MCP specification] for notes on _meta usage.
          */
         readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+        readonly name: v.StringSchema<undefined>;
+        /**
+         * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+         * even by those unfamiliar with domain-specific terminology.
+         *
+         * If not provided, the name should be used for display (except for Tool,
+         * where `annotations.title` should be given precedence over using `name`,
+         * if present).
+         */
+        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     }, undefined>, v.LooseObjectSchema<{
         readonly type: v.LiteralSchema<"resource", undefined>;
         readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
@@ -572,9 +773,6 @@ export const CreateMessageRequestSchema: v.LooseObjectSchema<{
              */
             readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
         }, undefined>, v.LooseObjectSchema<{
-            /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-            readonly name: v.StringSchema<undefined>;
-            readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
             /**
              * The URI of this resource.
              */
@@ -592,6 +790,17 @@ export const CreateMessageRequestSchema: v.LooseObjectSchema<{
              * See [MCP specification] for notes on _meta usage.
              */
             readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+            readonly name: v.StringSchema<undefined>;
+            /**
+             * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+             * even by those unfamiliar with domain-specific terminology.
+             *
+             * If not provided, the name should be used for display (except for Tool,
+             * where `annotations.title` should be given precedence over using `name`,
+             * if present).
+             */
+            readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
         }, undefined>, v.LooseObjectSchema<{
             readonly type: v.LiteralSchema<"resource", undefined>;
             readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
@@ -744,9 +953,6 @@ export const CreateMessageResultSchema: v.LooseObjectSchema<{
          */
         readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
     }, undefined>, v.LooseObjectSchema<{
-        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-        readonly name: v.StringSchema<undefined>;
-        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
         /**
          * The URI of this resource.
          */
@@ -764,6 +970,17 @@ export const CreateMessageResultSchema: v.LooseObjectSchema<{
          * See [MCP specification] for notes on _meta usage.
          */
         readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+        readonly name: v.StringSchema<undefined>;
+        /**
+         * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+         * even by those unfamiliar with domain-specific terminology.
+         *
+         * If not provided, the name should be used for display (except for Tool,
+         * where `annotations.title` should be given precedence over using `name`,
+         * if present).
+         */
+        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     }, undefined>, v.LooseObjectSchema<{
         readonly type: v.LiteralSchema<"resource", undefined>;
         readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
@@ -853,9 +1070,6 @@ export const CallToolResultSchema: v.LooseObjectSchema<{
          */
         readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
     }, undefined>, v.LooseObjectSchema<{
-        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-        readonly name: v.StringSchema<undefined>;
-        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
         /**
          * The URI of this resource.
          */
@@ -873,6 +1087,17 @@ export const CallToolResultSchema: v.LooseObjectSchema<{
          * See [MCP specification] for notes on _meta usage.
          */
         readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+        readonly name: v.StringSchema<undefined>;
+        /**
+         * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+         * even by those unfamiliar with domain-specific terminology.
+         *
+         * If not provided, the name should be used for display (except for Tool,
+         * where `annotations.title` should be given precedence over using `name`,
+         * if present).
+         */
+        readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     }, undefined>, v.LooseObjectSchema<{
         readonly type: v.LiteralSchema<"resource", undefined>;
         readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
@@ -1015,9 +1240,6 @@ export const GetPromptResultSchema: v.LooseObjectSchema<{
              */
             readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
         }, undefined>, v.LooseObjectSchema<{
-            /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-            readonly name: v.StringSchema<undefined>;
-            readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
             /**
              * The URI of this resource.
              */
@@ -1035,6 +1257,17 @@ export const GetPromptResultSchema: v.LooseObjectSchema<{
              * See [MCP specification] for notes on _meta usage.
              */
             readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+            readonly name: v.StringSchema<undefined>;
+            /**
+             * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+             * even by those unfamiliar with domain-specific terminology.
+             *
+             * If not provided, the name should be used for display (except for Tool,
+             * where `annotations.title` should be given precedence over using `name`,
+             * if present).
+             */
+            readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
         }, undefined>, v.LooseObjectSchema<{
             readonly type: v.LiteralSchema<"resource", undefined>;
             readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
@@ -1244,6 +1477,9 @@ export const InitializeResponseSchema: v.LooseObjectSchema<{
  * @typedef {v.InferInput<typeof ModelHintSchema>} ModelHint
  */
 /**
+ * @typedef {v.InferInput<typeof ResourceSchema>} Resource
+ */
+/**
  * JSON-RPC 2.0 Request
  */
 export const JSONRPCRequestSchema: v.LooseObjectSchema<{
@@ -1310,6 +1546,7 @@ export type CreateMessageResult = v.InferInput<typeof CreateMessageResultSchema>
 export type ModelPreferences = v.InferInput<typeof ModelPreferencesSchema>;
 export type SamplingMessage = v.InferInput<typeof SamplingMessageSchema>;
 export type ModelHint = v.InferInput<typeof ModelHintSchema>;
+export type Resource = v.InferInput<typeof ResourceSchema>;
 export type JSONRPCRequest = v.InferInput<typeof JSONRPCRequestSchema>;
 export type JSONRPCResponse = v.InferInput<typeof JSONRPCResponseSchema>;
 import * as v from 'valibot';

@@ -7,6 +7,7 @@ import {
 	ReadResourceResult,
 	CompleteResult,
 	InitializeRequest,
+	Resource
 } from '../validation/index.js';
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
@@ -30,11 +31,14 @@ export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	) => Promise<GetPromptResult> | GetPromptResult;
 };
 
-export type Resource =
+export type StoredResource =
 	| {
 			description: string;
 			name: string;
 			template: true;
+			list_resources?: () =>
+				| Promise<Array<Resource>>
+				| Array<Resource>;
 			execute: (
 				uri: string,
 				params: Record<string, string | string[]>,

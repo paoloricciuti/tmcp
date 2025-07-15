@@ -2,6 +2,24 @@
 import * as v from 'valibot';
 import { ProtocolVersionSchema } from './version.js';
 
+/* Base Metadata */
+/**
+ * Base metadata interface for common properties across resources, tools, prompts, and implementations.
+ */
+export const BaseMetadataSchema = v.looseObject({
+	/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+	name: v.string(),
+	/**
+	 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+	 * even by those unfamiliar with domain-specific terminology.
+	 *
+	 * If not provided, the name should be used for display (except for Tool,
+	 * where `annotations.title` should be given precedence over using `name`,
+	 * if present).
+	 */
+	title: v.optional(v.string()),
+});
+
 /**
  * Text provided to or from an LLM.
  */
@@ -127,9 +145,7 @@ export const EmbeddedResourceSchema = v.looseObject({
  * A resource that the server is capable of reading, included in a prompt or tool call result.
  */
 export const ResourceLinkSchema = v.looseObject({
-	/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-	name: v.string(),
-	title: v.optional(v.string()),
+	...BaseMetadataSchema.entries,
 	/**
 	 * The URI of this resource.
 	 */
@@ -159,6 +175,121 @@ export const ContentBlockSchema = v.union([
 	ResourceLinkSchema,
 	EmbeddedResourceSchema,
 ]);
+
+/**
+ * A known resource that the server is capable of reading.
+ */
+export const ResourceSchema = v.looseObject({
+	...BaseMetadataSchema.entries,
+	/**
+	 * The URI of this resource.
+	 */
+	uri: v.string(),
+
+	/**
+	 * A description of what this resource represents.
+	 *
+	 * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
+	 */
+	description: v.optional(v.string()),
+
+	/**
+	 * The MIME type of this resource, if known.
+	 */
+	mimeType: v.optional(v.string()),
+
+	/**
+	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+	 * for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
+});
+
+/**
+ * A template description for resources available on the server.
+ */
+export const ResourceTemplateSchema = v.looseObject({
+	...BaseMetadataSchema.entries,
+	/**
+	 * A URI template (according to RFC 6570) that can be used to construct resource URIs.
+	 */
+	uriTemplate: v.string(),
+
+	/**
+	 * A description of what this template is for.
+	 *
+	 * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
+	 */
+	description: v.optional(v.string()),
+
+	/**
+	 * The MIME type for all resources that match this template. This should only be included if all resources matching this template have the same type.
+	 */
+	mimeType: v.optional(v.string()),
+
+	/**
+	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+	 * for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
+});
+
+/**
+ * An opaque token representing the pagination position.
+ */
+export const CursorSchema = v.string();
+
+/**
+ * Base schema for all JSON-RPC result objects.
+ */
+export const ResultSchema = v.looseObject({
+	/**
+	 * See [MCP specification] for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
+});
+
+/**
+ * Base schema for paginated request parameters.
+ */
+export const PaginatedRequestSchema = v.looseObject({
+	/**
+	 * An opaque token representing the pagination position to start from.
+	 * If omitted, pagination starts from the beginning.
+	 */
+	cursor: v.optional(CursorSchema),
+});
+
+/**
+ * Base schema for paginated result responses.
+ */
+export const PaginatedResultSchema = v.looseObject({
+	/**
+	 * An opaque token representing the pagination position after the last returned result.
+	 * If present, there may be more results available.
+	 */
+	nextCursor: v.optional(CursorSchema),
+	/**
+	 * See [MCP specification] for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
+});
+
+/**
+ * The server's response to a resources/list request from the client.
+ */
+export const ListResourcesResultSchema = v.looseObject({
+	resources: v.array(ResourceSchema),
+	/**
+	 * An opaque token representing the pagination position after the last returned result.
+	 * If present, there may be more results available.
+	 */
+	nextCursor: v.optional(CursorSchema),
+	/**
+	 * See [MCP specification] for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
+});
 
 /**
  * Describes a message returned as part of a prompt.
@@ -477,6 +608,10 @@ export const InitializeResponseSchema = v.looseObject({
 
 /**
  * @typedef {v.InferInput<typeof ModelHintSchema>} ModelHint
+ */
+
+/**
+ * @typedef {v.InferInput<typeof ResourceSchema>} Resource
  */
 
 /**

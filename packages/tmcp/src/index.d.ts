@@ -75,14 +75,15 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
     /**
      * @template {string} TUri
      * @template {ExtractURITemplateVariables<TUri>} TVariables
-     * @param {{ name: string; description: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>> }} options
+     * @param {{ name: string; description: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
      * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} execute
      */
-    template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, uri, complete }: {
+    template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, uri, complete, list: list_resources }: {
         name: string;
         description: string;
         uri: TUri;
         complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
+        list?: () => Promise<Array<Resource>> | Array<Resource>;
     }, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
     /**
      * @param {JSONRPCResponse | JSONRPCRequest} message
@@ -122,6 +123,7 @@ import type { Completion } from "./internal/internal.js";
 import type { GetPromptResult } from "./validation/index.js";
 import type { ReadResourceResult } from "./validation/index.js";
 import type { ExtractURITemplateVariables } from "./internal/uri-template.js";
+import type { Resource } from "./validation/index.js";
 import type { JSONRPCResponse } from "./validation/index.js";
 import type { JSONRPCRequest } from "json-rpc-2.0";
 import { JSONRPCServer } from 'json-rpc-2.0';

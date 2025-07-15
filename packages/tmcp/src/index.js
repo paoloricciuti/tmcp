@@ -3,8 +3,8 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequest, CreateMessageResult } from "./validation/index.js";
- * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequest, CreateMessageResult, Resource } from "./validation/index.js";
+ * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -80,7 +80,7 @@ export class McpServer {
 	 */
 	#prompts = new Map();
 	/**
-	 * @type {Map<string, Resource>}
+	 * @type {Map<string, StoredResource>}
 	 */
 	#resources = new Map();
 	#templates = new UriTemplateMatcher();
@@ -438,19 +438,22 @@ export class McpServer {
 		}
 
 		this.#server.addMethod('resources/list', async ({ cursor } = {}) => {
-			const all_resources = [...this.#resources].reduce(
-				(arr, [uri, { description, name, template }]) => {
-					if (!template) {
-						arr.push({
-							name,
-							description,
-							uri,
-						});
-					}
-					return arr;
-				},
-				/** @type {Array<{name: string, description: string, uri: string}>} */ ([]),
-			);
+			const all_resources = [];
+
+			// Add static resources
+			for (const [uri, { description, name, ...resource }] of this
+				.#resources) {
+				if (!resource.template) {
+					all_resources.push({
+						name,
+						description,
+						uri,
+					});
+				} else if (resource.list_resources) {
+					const template_resources = await resource.list_resources();
+					all_resources.push(...template_resources);
+				}
+			}
 
 			const pagination_options = this.#options.pagination?.resources;
 			if (!pagination_options || pagination_options.size == null) {
@@ -602,7 +605,7 @@ export class McpServer {
 		});
 	}
 	/**
-	 * @type {(resource: Resource & {complete?: Partial<Record<string,Completion>>, uri: string})=> void}
+	 * @type {(resource: StoredResource & {complete?: Partial<Record<string,Completion>>, uri: string})=> void}
 	 */
 	#resource({ uri, complete, ...resource }) {
 		if (complete) {
@@ -632,16 +635,20 @@ export class McpServer {
 	/**
 	 * @template {string} TUri
 	 * @template {ExtractURITemplateVariables<TUri>} TVariables
-	 * @param {{ name: string; description: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>> }} options
+	 * @param {{ name: string; description: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
 	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
-	template({ name, description, uri, complete }, execute) {
+	template(
+		{ name, description, uri, complete, list: list_resources },
+		execute,
+	) {
 		this.#resource({
 			name,
 			description,
 			uri,
 			execute,
 			complete,
+			list_resources,
 			template: true,
 		});
 	}

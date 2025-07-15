@@ -8,3 +8,4 @@ pnpm-lock.yaml
 yarn.lock
 .git/
 .DS_Store
+*.d.ts

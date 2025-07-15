@@ -201,6 +201,20 @@ server.template(
 		description: 'A template resource for testing',
 		name: 'playground_template',
 		uri: 'playground://template/{name}/{action}',
+		list: () => {
+			return [
+				{
+					name: 'example',
+					uri: 'playground://template/example/action',
+					mimeType: 'text/plain',
+				},
+				{
+					name: 'example2',
+					uri: 'playground://template/example/action2',
+					mimeType: 'text/plain',
+				},
+			];
+		},
 		complete: {
 			name: (arg) => {
 				return {
