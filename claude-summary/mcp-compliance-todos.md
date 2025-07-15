@@ -52,20 +52,6 @@
     - `packages/tmcp/src/validation/index.js` (batch validation)
 - **Estimated effort**: 1-2 days
 
-### 4. HTTP Transport Security Enhancements
-
-- **Status**: ❌ Missing
-- **Description**: Add required security headers and HTTPS enforcement
-- **Requirements**:
-    - Protocol version headers (required in 2025-06-18)
-    - HTTPS enforcement
-    - Origin validation for DNS rebinding protection
-    - Proper error handling with HTTP status codes
-- **Files to modify**:
-    - `packages/transport-http/src/index.js` (security headers)
-    - `packages/transport-http/src/middleware/` (new security middleware)
-- **Estimated effort**: 3-5 days
-
 ### 5. Authorization Framework
 
 - **Status**: ❌ Missing
@@ -103,7 +89,7 @@
 
 ### 7. Pagination Support
 
-- **Status**: ❌ Missing
+- **Status**: ✅ Done
 - **Description**: Implement cursor-based pagination for list operations
 - **Requirements**:
     - Cursor-based pagination (not page numbers)

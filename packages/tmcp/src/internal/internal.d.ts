@@ -57,6 +57,10 @@ export type ServerOptions<TSchema extends StandardSchemaV1> = {
 	};
 	instructions?: string;
 	adapter: JsonSchemaAdapter<TSchema>;
+	pagination?: {
+		resources?: { size?: number };
+		prompts?: { size?: number };
+	};
 };
 
 export type ServerInfo = {

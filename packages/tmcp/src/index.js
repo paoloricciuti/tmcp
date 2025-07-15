@@ -1,5 +1,6 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
+ * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequest, CreateMessageResult } from "./validation/index.js";
@@ -26,6 +27,35 @@ import {
 	negotiate_protocol_version,
 } from './validation/version.js';
 import { should_version_negotiation_fail } from './validation/version.js';
+
+/**
+ * @type {SqidsType | undefined}
+ */
+let Sqids;
+
+async function get_sqids() {
+	if (!Sqids) {
+		Sqids = new (await import('sqids')).default();
+	}
+	return Sqids;
+}
+
+/**
+ * Encode a cursor for pagination
+ * @param {number} offset
+ */
+async function encode_cursor(offset) {
+	return (await get_sqids()).encode([offset]);
+}
+
+/**
+ * Decode a cursor from pagination
+ * @param {string} cursor
+ */
+async function decode_cursor(cursor) {
+	const [decoded] = (await get_sqids()).decode(cursor);
+	return decoded;
+}
 
 /**
  * @typedef {ClientCapabilitiesType} ClientCapabilities
@@ -305,8 +335,8 @@ export class McpServer {
 	 */
 	#init_prompts() {
 		if (!this.#options.capabilities?.prompts) return;
-		this.#server.addMethod('prompts/list', async () => {
-			const available_prompts = await Promise.all(
+		this.#server.addMethod('prompts/list', async ({ cursor } = {}) => {
+			const all_prompts = await Promise.all(
 				[...this.#prompts].map(async ([name, prompt]) => {
 					const arguments_schema = prompt.schema
 						? await this.#options.adapter.toJsonSchema(
@@ -339,8 +369,26 @@ export class McpServer {
 					};
 				}),
 			);
+
+			const pagination_options = this.#options.pagination?.prompts;
+			if (!pagination_options || pagination_options.size == null) {
+				return { prompts: all_prompts };
+			}
+
+			const page_length = pagination_options.size;
+			const offset = cursor ? await decode_cursor(cursor) : 0;
+			const start_index = offset;
+			const end_index = start_index + page_length;
+
+			const prompts = all_prompts.slice(start_index, end_index);
+			const has_next = end_index < all_prompts.length;
+			const next_cursor = has_next
+				? await encode_cursor(end_index)
+				: null;
+
 			return {
-				prompts: available_prompts,
+				prompts,
+				...(next_cursor && { nextCursor: next_cursor }),
 			};
 		});
 		this.#server.addMethod(
@@ -389,21 +437,40 @@ export class McpServer {
 			});
 		}
 
-		this.#server.addMethod('resources/list', async () => {
+		this.#server.addMethod('resources/list', async ({ cursor } = {}) => {
+			const all_resources = [...this.#resources].reduce(
+				(arr, [uri, { description, name, template }]) => {
+					if (!template) {
+						arr.push({
+							name,
+							description,
+							uri,
+						});
+					}
+					return arr;
+				},
+				/** @type {Array<{name: string, description: string, uri: string}>} */ ([]),
+			);
+
+			const pagination_options = this.#options.pagination?.resources;
+			if (!pagination_options || pagination_options.size == null) {
+				return { resources: all_resources };
+			}
+
+			const page_length = pagination_options.size;
+			const offset = cursor ? await decode_cursor(cursor) : 0;
+			const start_index = offset;
+			const end_index = start_index + page_length;
+
+			const resources = all_resources.slice(start_index, end_index);
+			const has_next = end_index < all_resources.length;
+			const next_cursor = has_next
+				? await encode_cursor(end_index)
+				: null;
+
 			return {
-				resources: [...this.#resources].reduce(
-					(arr, [uri, { description, name, template }]) => {
-						if (!template) {
-							arr.push({
-								name,
-								description,
-								uri,
-							});
-						}
-						return arr;
-					},
-					/** @type {Array<{name: string, description: string, uri: string}>} */ ([]),
-				),
+				resources,
+				...(next_cursor && { nextCursor: next_cursor }),
 			};
 		});
 		this.#server.addMethod('resources/templates/list', async () => {
