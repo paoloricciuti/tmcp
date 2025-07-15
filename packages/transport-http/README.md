@@ -278,6 +278,10 @@ pnpm lint
 - [`@tmcp/adapter-zod`](../adapter-zod) - Zod schema adapter
 - [`@tmcp/adapter-valibot`](../adapter-valibot) - Valibot schema adapter
 
+## Acknowledgments
+
+Huge thanks to Sean O'Bannon that provided us with the `@tmcp` scope on npm.
+
 ## License
 
 MIT

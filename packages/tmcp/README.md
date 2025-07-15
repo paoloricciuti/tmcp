@@ -657,6 +657,10 @@ server.tool(
 
 Contributions are welcome! Please see our [contributing guidelines](../../CONTRIBUTING.md) for details.
 
+## Acknowledgments
+
+Huge thanks to Sean O'Bannon that provided us with the `@tmcp` scope on npm.
+
 ## License
 
 MIT © Paolo Ricciuti

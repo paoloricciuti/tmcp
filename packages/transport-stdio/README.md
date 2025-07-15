@@ -184,6 +184,10 @@ pnpm lint
 - [`@tmcp/adapter-valibot`](../adapter-valibot) - Valibot schema adapter
 - [`@tmcp/adapter-arktype`](../adapter-arktype) - ArkType schema adapter
 
+## Acknowledgments
+
+Huge thanks to Sean O'Bannon that provided us with the `@tmcp` scope on npm.
+
 ## License
 
 MIT

@@ -158,3 +158,7 @@ The playground demonstrates:
 - **Production-ready patterns** for MCP server development
 
 This playground serves as both a testing ground and a reference implementation for building MCP servers with the tmcp library.
+
+## Acknowledgments
+
+Huge thanks to Sean O'Bannon that provided us with the `@tmcp` scope on npm.

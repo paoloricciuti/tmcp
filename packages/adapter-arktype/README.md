@@ -140,3 +140,7 @@ A class that extends the base `JsonSchemaAdapter` from TMCP and provides ArkType
 - **Easy integration** - Drop-in replacement for other TMCP adapters
 - **Runtime validation** - Leverages ArkType's powerful runtime type checking
 - **String-based types** - Intuitive string-based type definitions
+
+## Acknowledgments
+
+Huge thanks to Sean O'Bannon that provided us with the `@tmcp` scope on npm.

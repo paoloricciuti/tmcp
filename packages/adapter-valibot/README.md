@@ -152,3 +152,7 @@ A class that extends the base `JsonSchemaAdapter` from TMCP and provides Valibot
 - **Rich validation** - Preserves validation rules and transformations
 - **Easy integration** - Drop-in replacement for other TMCP adapters
 - **Performance** - Efficient schema conversion using Valibot's built-in utilities
+
+## Acknowledgments
+
+Huge thanks to Sean O'Bannon that provided us with the `@tmcp` scope on npm.

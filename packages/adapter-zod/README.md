@@ -143,3 +143,7 @@ A class that extends the base `JsonSchemaAdapter` from TMCP and provides Zod-spe
 - **Rich metadata** - Preserves descriptions, defaults, and validation rules
 - **Easy integration** - Drop-in replacement for other TMCP adapters
 - **Battle-tested** - Uses the well-maintained `zod-to-json-schema` library
+
+## Acknowledgments
+
+Huge thanks to Sean O'Bannon that provided us with the `@tmcp` scope on npm.

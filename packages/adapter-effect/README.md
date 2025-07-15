@@ -161,3 +161,7 @@ A class that extends the base `JsonSchemaAdapter` from TMCP and provides Effect 
 - **Rich metadata** - Preserves annotations, descriptions, and validation rules
 - **Easy integration** - Drop-in replacement for other TMCP adapters
 - **Native JSON Schema** - Uses Effect's built-in JSON Schema generation
+
+## Acknowledgments
+
+Huge thanks to Sean O'Bannon that provided us with the `@tmcp` scope on npm.
