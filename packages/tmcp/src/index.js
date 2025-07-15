@@ -5,21 +5,27 @@
  * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequest, CreateMessageResult } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, Resource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
-import { JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
+import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { UriTemplateMatcher } from 'uri-template-matcher';
+import * as v from 'valibot';
 import {
 	CallToolResultSchema,
-	ReadResourceResultSchema,
-	GetPromptResultSchema,
 	CompleteResultSchema,
+	CreateMessageRequestSchema,
+	CreateMessageResultSchema,
+	GetPromptResultSchema,
 	InitializeRequestSchema,
 	JSONRPCRequestSchema,
 	JSONRPCResponseSchema,
-	CreateMessageRequestSchema,
-	CreateMessageResultSchema,
+	McpError,
+	ReadResourceResultSchema,
 } from './validation/index.js';
-import { AsyncLocalStorage } from 'node:async_hooks';
-import * as v from 'valibot';
+import {
+	get_supported_versions,
+	negotiate_protocol_version,
+} from './validation/version.js';
+import { should_version_negotiation_fail } from './validation/version.js';
 
 /**
  * @typedef {ClientCapabilitiesType} ClientCapabilities
@@ -83,34 +89,101 @@ export class McpServer {
 	#client_capabilities_map = new Map();
 
 	/**
+	 * @type {Map<string|undefined, string>}
+	 */
+	#negotiated_protocol_versions = new Map();
+
+	/**
 	 * @param {ServerInfo} server_info
 	 * @param {ServerOptions<StandardSchema>} options
 	 */
 	constructor(server_info, options) {
 		this.#options = options;
 		this.#server.addMethod('initialize', (initialize_request) => {
-			const validated_initialize = v.parse(
-				InitializeRequestSchema,
-				initialize_request,
-			);
-			this.#client_capabilities_map.set(
-				this.#session_id,
-				validated_initialize.capabilities,
-			);
-			this.#event_target.dispatchEvent(
-				new CustomEvent('initialize', {
-					detail: validated_initialize,
-				}),
-			);
-			// Trigger initial roots request if client supports it
-			if (validated_initialize.capabilities?.roots) {
-				this.#refresh_roots();
+			try {
+				// Validate basic request format
+				const validated_initialize = v.parse(
+					InitializeRequestSchema,
+					initialize_request,
+				);
+
+				const session_id = this.#session_id;
+
+				// Validate protocol version format
+				if (
+					should_version_negotiation_fail(
+						validated_initialize.protocolVersion,
+					)
+				) {
+					// Return JSON-RPC error for invalid protocol version format
+					const error = new McpError(
+						-32602,
+						'Invalid protocol version format',
+					);
+					throw error;
+				}
+
+				// Negotiate protocol version
+				const negotiated_version = negotiate_protocol_version(
+					validated_initialize.protocolVersion,
+				);
+
+				// Store negotiated protocol version
+				this.#negotiated_protocol_versions.set(
+					session_id,
+					negotiated_version,
+				);
+
+				// Store client capabilities
+				this.#client_capabilities_map.set(
+					session_id,
+					validated_initialize.capabilities,
+				);
+
+				// Dispatch initialization event
+				this.#event_target.dispatchEvent(
+					new CustomEvent('initialize', {
+						detail: validated_initialize,
+					}),
+				);
+
+				// Trigger initial roots request if client supports it
+				if (validated_initialize.capabilities?.roots) {
+					this.#refresh_roots();
+				}
+
+				// Return server response with negotiated version and capabilities
+				return {
+					protocolVersion: negotiated_version,
+					...options,
+					serverInfo: server_info,
+				};
+			} catch (error) {
+				// Enhanced error handling for initialization failures
+				if (error instanceof McpError) {
+					// Already has JSON-RPC error code, re-throw
+					throw error;
+				}
+
+				if (
+					/** @type {Error} */ (error).message?.includes(
+						'Protocol version',
+					)
+				) {
+					const rpc_error = new McpError(
+						-32602,
+						`Protocol version validation failed: ${/** @type {Error} */ (error).message}. Server supports: ${get_supported_versions().join(', ')}`,
+					);
+					throw rpc_error;
+				}
+
+				// General initialization error
+				const rpc_error = new McpError(
+					-32603,
+					`Initialization failed: ${/** @type {Error} */ (error).message}`,
+				);
+				throw rpc_error;
 			}
-			return {
-				protocolVersion: validated_initialize.protocolVersion,
-				...options,
-				serverInfo: server_info,
-			};
 		});
 		this.#server.addMethod('ping', () => {
 			return {};

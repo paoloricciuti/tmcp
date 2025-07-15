@@ -1,5 +1,6 @@
 /* eslint-disable jsdoc/no-undefined-types */
 import * as v from 'valibot';
+import { ProtocolVersionSchema } from './version.js';
 
 /**
  * Text provided to or from an LLM.
@@ -348,15 +349,94 @@ export const ClientCapabilitiesSchema = v.looseObject({
 	),
 	sampling: v.optional(v.looseObject({})),
 	elicitation: v.optional(v.looseObject({})),
+	experimental: v.optional(v.looseObject({})),
+});
+
+/**
+ * Client implementation information
+ */
+export const ClientInfoSchema = v.looseObject({
+	name: v.string(),
+	version: v.string(),
+	/**
+	 * See [MCP specification] for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
 });
 
 export const InitializeRequestSchema = v.looseObject({
-	protocolVersion: v.string(),
+	protocolVersion: ProtocolVersionSchema, // Use flexible validation for negotiation
 	capabilities: ClientCapabilitiesSchema,
+	clientInfo: v.optional(ClientInfoSchema),
+});
+
+/**
+ * Server capabilities that can be declared during initialization
+ */
+export const ServerCapabilitiesSchema = v.looseObject({
+	prompts: v.optional(
+		v.looseObject({
+			listChanged: v.optional(v.boolean()),
+		}),
+	),
+	resources: v.optional(
+		v.looseObject({
+			subscribe: v.optional(v.boolean()),
+			listChanged: v.optional(v.boolean()),
+		}),
+	),
+	tools: v.optional(
+		v.looseObject({
+			listChanged: v.optional(v.boolean()),
+		}),
+	),
+	logging: v.optional(v.looseObject({})),
+	experimental: v.optional(v.looseObject({})),
+});
+
+/**
+ * Server implementation information
+ */
+export const ServerInfoSchema = v.looseObject({
+	name: v.string(),
+	version: v.string(),
+	/**
+	 * See [MCP specification] for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
+});
+
+/**
+ * Initialize response schema
+ */
+export const InitializeResponseSchema = v.looseObject({
+	protocolVersion: v.string(),
+	capabilities: ServerCapabilitiesSchema,
+	serverInfo: ServerInfoSchema,
+	/**
+	 * See [MCP specification] for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
 });
 
 /**
  * @typedef {v.InferInput<typeof ClientCapabilitiesSchema>} ClientCapabilities
+ */
+
+/**
+ * @typedef {v.InferInput<typeof ServerCapabilitiesSchema>} ServerCapabilities
+ */
+
+/**
+ * @typedef {v.InferInput<typeof ClientInfoSchema>} ClientInfo
+ */
+
+/**
+ * @typedef {v.InferInput<typeof ServerInfoSchema>} ServerInfo
+ */
+
+/**
+ * @typedef {v.InferInput<typeof InitializeResponseSchema>} InitializeResponse
  */
 
 /**
@@ -446,3 +526,23 @@ export const JSONRPCResponseSchema = v.union([
 /**
  * @typedef {v.InferInput<typeof JSONRPCResponseSchema>} JSONRPCResponse
  */
+
+// Export only necessary version utilities
+export {
+	ProtocolVersionSchema,
+	SupportedProtocolVersionSchema,
+	get_supported_versions,
+	negotiate_protocol_version,
+	should_version_negotiation_fail,
+} from './version.js';
+
+export class McpError extends Error {
+	/**
+	 * @param {number} code
+	 * @param {string} message
+	 */
+	constructor(code, message) {
+		super(`MCP error ${code}: ${message}`);
+		this.name = 'McpError';
+	}
+}

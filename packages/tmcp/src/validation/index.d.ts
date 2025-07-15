@@ -1106,19 +1106,112 @@ export const ClientCapabilitiesSchema: v.LooseObjectSchema<{
     }, undefined>, undefined>;
     readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
     readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+}, undefined>;
+/**
+ * Client implementation information
+ */
+export const ClientInfoSchema: v.LooseObjectSchema<{
+    readonly name: v.StringSchema<undefined>;
+    readonly version: v.StringSchema<undefined>;
+    /**
+     * See [MCP specification] for notes on _meta usage.
+     */
+    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 export const InitializeRequestSchema: v.LooseObjectSchema<{
-    readonly protocolVersion: v.StringSchema<undefined>;
+    readonly protocolVersion: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.RegexAction<string, "Protocol version must be in YYYY-MM-DD format">]>;
     readonly capabilities: v.LooseObjectSchema<{
         readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
             readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
         }, undefined>, undefined>;
         readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
         readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
+    readonly clientInfo: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly name: v.StringSchema<undefined>;
+        readonly version: v.StringSchema<undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, undefined>;
+}, undefined>;
+/**
+ * Server capabilities that can be declared during initialization
+ */
+export const ServerCapabilitiesSchema: v.LooseObjectSchema<{
+    readonly prompts: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+    }, undefined>, undefined>;
+    readonly resources: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly subscribe: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+        readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+    }, undefined>, undefined>;
+    readonly tools: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+    }, undefined>, undefined>;
+    readonly logging: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+}, undefined>;
+/**
+ * Server implementation information
+ */
+export const ServerInfoSchema: v.LooseObjectSchema<{
+    readonly name: v.StringSchema<undefined>;
+    readonly version: v.StringSchema<undefined>;
+    /**
+     * See [MCP specification] for notes on _meta usage.
+     */
+    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+}, undefined>;
+/**
+ * Initialize response schema
+ */
+export const InitializeResponseSchema: v.LooseObjectSchema<{
+    readonly protocolVersion: v.StringSchema<undefined>;
+    readonly capabilities: v.LooseObjectSchema<{
+        readonly prompts: v.OptionalSchema<v.LooseObjectSchema<{
+            readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+        }, undefined>, undefined>;
+        readonly resources: v.OptionalSchema<v.LooseObjectSchema<{
+            readonly subscribe: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+            readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+        }, undefined>, undefined>;
+        readonly tools: v.OptionalSchema<v.LooseObjectSchema<{
+            readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+        }, undefined>, undefined>;
+        readonly logging: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>;
+    readonly serverInfo: v.LooseObjectSchema<{
+        readonly name: v.StringSchema<undefined>;
+        readonly version: v.StringSchema<undefined>;
+        /**
+         * See [MCP specification] for notes on _meta usage.
+         */
+        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    }, undefined>;
+    /**
+     * See [MCP specification] for notes on _meta usage.
+     */
+    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * @typedef {v.InferInput<typeof ClientCapabilitiesSchema>} ClientCapabilities
+ */
+/**
+ * @typedef {v.InferInput<typeof ServerCapabilitiesSchema>} ServerCapabilities
+ */
+/**
+ * @typedef {v.InferInput<typeof ClientInfoSchema>} ClientInfo
+ */
+/**
+ * @typedef {v.InferInput<typeof ServerInfoSchema>} ServerInfo
+ */
+/**
+ * @typedef {v.InferInput<typeof InitializeResponseSchema>} InitializeResponse
  */
 /**
  * @typedef {v.InferInput<typeof InitializeRequestSchema>} InitializeRequest
@@ -1195,7 +1288,18 @@ export const JSONRPCResponseSchema: v.UnionSchema<[v.LooseObjectSchema<{
     }, undefined>;
     readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.NumberSchema<undefined>, v.NullSchema<undefined>], undefined>;
 }, undefined>], undefined>;
+export class McpError extends Error {
+    /**
+     * @param {number} code
+     * @param {string} message
+     */
+    constructor(code: number, message: string);
+}
 export type ClientCapabilities = v.InferInput<typeof ClientCapabilitiesSchema>;
+export type ServerCapabilities = v.InferInput<typeof ServerCapabilitiesSchema>;
+export type ClientInfo = v.InferInput<typeof ClientInfoSchema>;
+export type ServerInfo = v.InferInput<typeof ServerInfoSchema>;
+export type InitializeResponse = v.InferInput<typeof InitializeResponseSchema>;
 export type InitializeRequest = v.InferInput<typeof InitializeRequestSchema>;
 export type CallToolResult = v.InferInput<typeof CallToolResultSchema>;
 export type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
@@ -1209,3 +1313,4 @@ export type ModelHint = v.InferInput<typeof ModelHintSchema>;
 export type JSONRPCRequest = v.InferInput<typeof JSONRPCRequestSchema>;
 export type JSONRPCResponse = v.InferInput<typeof JSONRPCResponseSchema>;
 import * as v from 'valibot';
+export { ProtocolVersionSchema, SupportedProtocolVersionSchema, get_supported_versions, negotiate_protocol_version, should_version_negotiation_fail } from "./version.js";

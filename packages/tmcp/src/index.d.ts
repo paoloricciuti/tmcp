@@ -29,6 +29,9 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
         elicitation?: {} & {
             [key: string]: unknown;
         };
+        experimental?: {} & {
+            [key: string]: unknown;
+        };
     } & {
         [key: string]: unknown;
     };
