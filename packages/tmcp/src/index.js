@@ -17,6 +17,7 @@ import {
 	CreateMessageResultSchema,
 	GetPromptResultSchema,
 	InitializeRequestParamsSchema,
+	JSONRPCNotificationSchema,
 	JSONRPCRequestSchema,
 	JSONRPCResponseSchema,
 	McpError,
@@ -682,7 +683,10 @@ export class McpServer {
 	 */
 	receive(message, session_id) {
 		// Validate the message first
-		const validated_message = v.safeParse(JSONRPCRequestSchema, message);
+		const validated_message = v.safeParse(
+			v.union([JSONRPCRequestSchema, JSONRPCNotificationSchema]),
+			message,
+		);
 
 		// Check if it's a request or response
 		if (validated_message.success) {
