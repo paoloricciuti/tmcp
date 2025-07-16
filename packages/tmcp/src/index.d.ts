@@ -18,9 +18,7 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
         name?: string;
     }>;
     currentClientCapabilities(): {
-        roots?: {
-            listChanged?: boolean;
-        } & {
+        experimental?: {} & {
             [key: string]: unknown;
         };
         sampling?: {} & {
@@ -29,7 +27,9 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
         elicitation?: {} & {
             [key: string]: unknown;
         };
-        experimental?: {} & {
+        roots?: {
+            listChanged?: boolean;
+        } & {
             [key: string]: unknown;
         };
     } & {
@@ -113,10 +113,10 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
     elicitation<TSchema extends StandardSchema>(schema: TSchema): Promise<StandardSchemaV1.InferOutput<TSchema>>;
     /**
      * Request language model sampling from the client
-     * @param {CreateMessageRequest} request
+     * @param {CreateMessageRequestParams} request
      * @returns {Promise<CreateMessageResult>}
      */
-    message(request: CreateMessageRequest): Promise<CreateMessageResult>;
+    message(request: CreateMessageRequestParams): Promise<CreateMessageResult>;
     #private;
 }
 export type ClientCapabilities = ClientCapabilitiesType;
@@ -133,7 +133,7 @@ import type { JSONRPCRequest } from "json-rpc-2.0";
 import { JSONRPCServer } from 'json-rpc-2.0';
 import { JSONRPCClient } from 'json-rpc-2.0';
 import type { SubscriptionsKeys } from "./internal/internal.js";
-import type { CreateMessageRequest } from "./validation/index.js";
+import type { CreateMessageRequestParams } from "./validation/index.js";
 import type { CreateMessageResult } from "./validation/index.js";
 import type { ServerInfo } from "./internal/internal.js";
 import type { ServerOptions } from "./internal/internal.js";

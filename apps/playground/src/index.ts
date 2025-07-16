@@ -75,7 +75,6 @@ server.tool(
 	async (input) => {
 		const greeting = input.formal ? 'Good day' : 'Hello';
 		return {
-			skibidi: true,
 			content: [
 				{
 					type: 'text',

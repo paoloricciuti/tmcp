@@ -3,7 +3,7 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequest, CreateMessageResult, Resource } from "./validation/index.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
@@ -13,10 +13,10 @@ import * as v from 'valibot';
 import {
 	CallToolResultSchema,
 	CompleteResultSchema,
-	CreateMessageRequestSchema,
+	CreateMessageRequestParamsSchema,
 	CreateMessageResultSchema,
 	GetPromptResultSchema,
-	InitializeRequestSchema,
+	InitializeRequestParamsSchema,
 	JSONRPCRequestSchema,
 	JSONRPCResponseSchema,
 	McpError,
@@ -133,7 +133,7 @@ export class McpServer {
 			try {
 				// Validate basic request format
 				const validated_initialize = v.parse(
-					InitializeRequestSchema,
+					InitializeRequestParamsSchema,
 					initialize_request,
 				);
 
@@ -746,7 +746,7 @@ export class McpServer {
 
 	/**
 	 * Request language model sampling from the client
-	 * @param {CreateMessageRequest} request
+	 * @param {CreateMessageRequestParams} request
 	 * @returns {Promise<CreateMessageResult>}
 	 */
 	async message(request) {
@@ -756,7 +756,10 @@ export class McpServer {
 		this.#lazyily_create_client();
 
 		// Validate the request
-		const validated_request = v.parse(CreateMessageRequestSchema, request);
+		const validated_request = v.parse(
+			CreateMessageRequestParamsSchema,
+			request,
+		);
 
 		// Make the request to the client
 		const response = await this.#client?.request(

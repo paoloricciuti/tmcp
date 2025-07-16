@@ -6,7 +6,7 @@ import {
 	CallToolResult,
 	ReadResourceResult,
 	CompleteResult,
-	InitializeRequest,
+	InitializeRequestParams,
 	Resource
 } from '../validation/index.js';
 
@@ -86,5 +86,5 @@ export type McpEvents = {
 			sessions?: string[] | undefined;
 		};
 	}) => void;
-	initialize: (initialize_request: InitializeRequest) => void;
+	initialize: (initialize_request: InitializeRequestParams) => void;
 };
