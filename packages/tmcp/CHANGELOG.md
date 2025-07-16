@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.6.2
+
+### Patch Changes
+
+- d35f9b0: fix: better errors
+
 ## 1.6.1
 
 ### Patch Changes
