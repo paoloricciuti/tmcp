@@ -7,7 +7,9 @@ import {
 	ReadResourceResult,
 	CompleteResult,
 	InitializeRequestParams,
-	Resource
+	Resource,
+	ServerCapabilities,
+	LoggingLevel
 } from '../validation/index.js';
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
@@ -58,17 +60,16 @@ export type StoredResource =
 	  };
 
 export type ServerOptions<TSchema extends StandardSchemaV1> = {
-	capabilities?: {
-		tools?: { listChanged?: boolean };
-		resources?: { listChanged?: boolean; subscribe?: boolean };
-		prompts?: { listChanged?: boolean };
-	};
+	capabilities?: ServerCapabilities;
 	instructions?: string;
 	adapter: JsonSchemaAdapter<TSchema>;
 	pagination?: {
 		resources?: { size?: number };
 		prompts?: { size?: number };
 	};
+	logging?: {
+		default: LoggingLevel;
+	}
 };
 
 export type ServerInfo = {

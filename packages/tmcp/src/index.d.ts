@@ -117,6 +117,13 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
      * @returns {Promise<CreateMessageResult>}
      */
     message(request: CreateMessageRequestParams): Promise<CreateMessageResult>;
+    /**
+     * Log a message to the client if logging is enabled and the level is appropriate
+     * @param {LoggingLevel} level
+     * @param {unknown} data
+     * @param {string} [logger]
+     */
+    log(level: LoggingLevel, data: unknown, logger?: string): void;
     #private;
 }
 export type ClientCapabilities = ClientCapabilitiesType;
@@ -135,6 +142,7 @@ import { JSONRPCClient } from 'json-rpc-2.0';
 import type { SubscriptionsKeys } from "./internal/internal.js";
 import type { CreateMessageRequestParams } from "./validation/index.js";
 import type { CreateMessageResult } from "./validation/index.js";
+import type { LoggingLevel } from "./validation/index.js";
 import type { ServerInfo } from "./internal/internal.js";
 import type { ServerOptions } from "./internal/internal.js";
 import type { ClientCapabilities as ClientCapabilitiesType } from "./validation/index.js";

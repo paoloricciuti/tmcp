@@ -3,7 +3,7 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource } from "./validation/index.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
@@ -124,6 +124,11 @@ export class McpServer {
 	#negotiated_protocol_versions = new Map();
 
 	/**
+	 * @type {Map<string|undefined, LoggingLevel>}
+	 */
+	#session_log_levels = new Map();
+
+	/**
 	 * @param {ServerInfo} server_info
 	 * @param {ServerOptions<StandardSchema>} options
 	 */
@@ -226,6 +231,7 @@ export class McpServer {
 		this.#init_resources();
 		this.#init_roots();
 		this.#init_completion();
+		this.#init_logging();
 	}
 
 	get #session_id() {
@@ -574,6 +580,17 @@ export class McpServer {
 		);
 	}
 	/**
+	 *
+	 */
+	#init_logging() {
+		if (!this.#options.capabilities?.logging) return;
+
+		this.#server.addMethod('logging/setLevel', ({ level }) => {
+			this.#session_log_levels.set(this.#session_id, level);
+			return {};
+		});
+	}
+	/**
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)} execute
@@ -669,6 +686,18 @@ export class McpServer {
 
 		// Check if it's a request or response
 		if (validated_message.success) {
+			// we want to set a default log level for each session
+			// so that if the user calls `log` it can send a notification
+			// to each client that didn't explicitly set a log level too
+			if (
+				!!this.#options.capabilities?.logging &&
+				!this.#session_log_levels.has(session_id)
+			) {
+				this.#session_log_levels.set(
+					session_id,
+					this.#options.logging?.default ?? 'info',
+				);
+			}
 			return this.#session_storage.run(
 				session_id,
 				async () =>
@@ -772,5 +801,67 @@ export class McpServer {
 
 		// Validate and return the response
 		return v.parse(CreateMessageResultSchema, response);
+	}
+
+	/**
+	 * Log a message to the client if logging is enabled and the level is appropriate
+	 * @param {LoggingLevel} level
+	 * @param {unknown} data
+	 * @param {string} [logger]
+	 */
+	log(level, data, logger) {
+		if (!this.#options.capabilities?.logging) {
+			throw new Error(
+				"The server doesn't support logging, please enable it in capabilities",
+			);
+		}
+
+		const sessions = [];
+
+		for (let [session_id, session_log_level] of this.#session_log_levels) {
+			// Check if the current log level should be sent based on severity
+			if (this.#should_log(level, session_log_level)) {
+				sessions.push(session_id);
+			}
+		}
+
+		if (sessions.length === 0) return;
+
+		// Send the log notification to the client
+		this.#notify(
+			'notifications/message',
+			{
+				level,
+				data,
+				logger,
+			},
+			{
+				sessions,
+			},
+		);
+	}
+
+	/**
+	 * Check if a log message should be sent based on severity levels
+	 * @param {LoggingLevel} message_level
+	 * @param {LoggingLevel} session_level
+	 * @returns {boolean}
+	 */
+	#should_log(message_level, session_level) {
+		const levels = [
+			'debug',
+			'info',
+			'notice',
+			'warning',
+			'error',
+			'critical',
+			'alert',
+			'emergency',
+		];
+		const message_severity = levels.indexOf(message_level);
+		const session_severity = levels.indexOf(session_level);
+
+		// Send if message severity is equal to or higher than session level
+		return message_severity >= session_severity;
 	}
 }

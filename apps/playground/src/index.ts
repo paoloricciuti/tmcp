@@ -15,6 +15,7 @@ const server = new McpServer(
 	{
 		adapter: new ValibotJsonSchemaAdapter(),
 		capabilities: {
+			logging: {},
 			tools: {
 				listChanged: true,
 			},
@@ -191,6 +192,7 @@ const changed = fs.watch('./src/resource.txt');
 (async () => {
 	for await (let _ of changed) {
 		console.error('changed');
+		server.log('info', 'Resource changed, notifying clients');
 		server.changed('resource', 'file:///src/resource.txt');
 	}
 })();
