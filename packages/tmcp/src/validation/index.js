@@ -1530,3 +1530,6 @@ export const ServerResultSchema = v.union([
 /**
  * @typedef {v.InferInput<typeof LoggingLevelSchema>} LoggingLevel
  */
+/**
+ * @typedef {v.InferInput<typeof ToolAnnotationsSchema>} ToolAnnotations
+ */

@@ -9,13 +9,15 @@ import {
 	InitializeRequestParams,
 	Resource,
 	ServerCapabilities,
-	LoggingLevel
+	LoggingLevel,
+	ToolAnnotations
 } from '../validation/index.js';
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
 	title?: string;
+	annotations?: ToolAnnotations;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<CallToolResult> | CallToolResult;

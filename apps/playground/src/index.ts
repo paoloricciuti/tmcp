@@ -91,6 +91,9 @@ server.tool(
 	{
 		name: 'get_time',
 		description: 'Get the current time',
+		annotations: {
+			readOnlyHint: true,
+		},
 	},
 	async () => {
 		return {

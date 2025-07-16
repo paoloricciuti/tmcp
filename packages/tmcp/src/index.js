@@ -3,7 +3,7 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel } from "./validation/index.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
@@ -300,6 +300,7 @@ export class McpServer {
 						name,
 						title: tool.title || tool.description,
 						description: tool.description,
+						annotations: tool.annotations,
 						inputSchema: tool.schema
 							? await this.#options.adapter.toJsonSchema(
 									tool.schema,
@@ -519,7 +520,10 @@ export class McpServer {
 			}
 			if (resource.template) {
 				if (!params)
-					throw new McpError(-32602, 'Missing parameters for template resource');
+					throw new McpError(
+						-32602,
+						'Missing parameters for template resource',
+					);
 				return v.parse(
 					ReadResourceResultSchema,
 					await resource.execute(uri, params),
@@ -595,10 +599,10 @@ export class McpServer {
 	}
 	/**
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
+	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; annotations?: ToolAnnotations }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)} execute
 	 */
-	tool({ name, description, title, schema }, execute) {
+	tool({ name, description, title, schema, annotations }, execute) {
 		if (this.#options.capabilities?.tools?.listChanged) {
 			this.#notify('notifications/tools/list_changed', {});
 		}
@@ -607,6 +611,7 @@ export class McpServer {
 			title,
 			schema,
 			execute,
+			annotations,
 		});
 	}
 	/**

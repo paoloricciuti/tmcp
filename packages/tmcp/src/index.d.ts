@@ -44,14 +44,15 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
     on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): void;
     /**
      * @template {StandardSchema | undefined} [TSchema=undefined]
-     * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never }} options
+     * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; annotations?: ToolAnnotations }} options
      * @param {TSchema extends undefined ? (()=>Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)} execute
      */
-    tool<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema }: {
+    tool<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, annotations }: {
         name: string;
         description: string;
         title?: string;
         schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+        annotations?: ToolAnnotations;
     }, execute: TSchema extends undefined ? (() => Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)): void;
     /**
      * @template {StandardSchema | undefined} [TSchema=undefined]
@@ -129,6 +130,7 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
 export type ClientCapabilities = ClientCapabilitiesType;
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { McpEvents } from "./internal/internal.js";
+import type { ToolAnnotations } from "./validation/index.js";
 import type { CallToolResult } from "./validation/index.js";
 import type { Completion } from "./internal/internal.js";
 import type { GetPromptResult } from "./validation/index.js";

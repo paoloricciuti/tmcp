@@ -4315,4 +4315,5 @@ export type Resource = v.InferInput<typeof ResourceSchema>;
 export type JSONRPCRequest = v.InferInput<typeof JSONRPCRequestSchema>;
 export type JSONRPCResponse = v.InferInput<typeof JSONRPCResponseSchema>;
 export type LoggingLevel = v.InferInput<typeof LoggingLevelSchema>;
+export type ToolAnnotations = v.InferInput<typeof ToolAnnotationsSchema>;
 import * as v from 'valibot';
