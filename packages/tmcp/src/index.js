@@ -317,7 +317,7 @@ export class McpServer {
 			async ({ name, arguments: args }) => {
 				const tool = this.#tools.get(name);
 				if (!tool) {
-					throw new Error(`Tool ${name} not found`);
+					throw new McpError(-32601, `Tool ${name} not found`);
 				}
 				if (!tool.schema) {
 					return v.parse(CallToolResultSchema, await tool.execute());
@@ -326,7 +326,8 @@ export class McpServer {
 				if (validated_args instanceof Promise)
 					validated_args = await validated_args;
 				if (validated_args.issues) {
-					throw new Error(
+					throw new McpError(
+						-32602,
 						`Invalid arguments for tool ${name}: ${JSON.stringify(validated_args.issues)}`,
 					);
 				}
@@ -403,7 +404,7 @@ export class McpServer {
 			async ({ name, arguments: args }) => {
 				const prompt = this.#prompts.get(name);
 				if (!prompt) {
-					throw new Error(`Tool ${name} not found`);
+					throw new McpError(-32601, `Prompt ${name} not found`);
 				}
 				if (!prompt.schema) {
 					return v.parse(
@@ -415,8 +416,9 @@ export class McpServer {
 				if (validated_args instanceof Promise)
 					validated_args = await validated_args;
 				if (validated_args.issues) {
-					throw new Error(
-						`Invalid arguments for tool ${name}: ${JSON.stringify(validated_args.issues)}`,
+					throw new McpError(
+						-32602,
+						`Invalid arguments for prompt ${name}: ${JSON.stringify(validated_args.issues)}`,
 					);
 				}
 				return v.parse(
@@ -512,12 +514,12 @@ export class McpServer {
 					params = match.params;
 				}
 				if (!resource) {
-					throw new Error(`Resource ${uri} not found`);
+					throw new McpError(-32601, `Resource ${uri} not found`);
 				}
 			}
 			if (resource.template) {
 				if (!params)
-					throw new Error('Missing parameters for template resource');
+					throw new McpError(-32602, 'Missing parameters for template resource');
 				return v.parse(
 					ReadResourceResultSchema,
 					await resource.execute(uri, params),
@@ -753,7 +755,7 @@ export class McpServer {
 	 */
 	async elicitation(schema) {
 		if (!this.#client_capabilities?.elicitation)
-			throw new Error("Client doesn't support elicitation");
+			throw new McpError(-32601, "Client doesn't support elicitation");
 
 		this.#lazyily_create_client();
 		let validated_result = schema['~standard'].validate(
@@ -770,7 +772,8 @@ export class McpServer {
 		if (validated_result instanceof Promise)
 			validated_result = await validated_result;
 		if (validated_result.issues) {
-			throw new Error(
+			throw new McpError(
+				-32603,
 				`Invalid elicitation result: ${JSON.stringify(validated_result.issues)}`,
 			);
 		}
@@ -784,7 +787,7 @@ export class McpServer {
 	 */
 	async message(request) {
 		if (!this.#client_capabilities?.sampling)
-			throw new Error("Client doesn't support sampling");
+			throw new McpError(-32601, "Client doesn't support sampling");
 
 		this.#lazyily_create_client();
 
@@ -815,7 +818,8 @@ export class McpServer {
 	 */
 	log(level, data, logger) {
 		if (!this.#options.capabilities?.logging) {
-			throw new Error(
+			throw new McpError(
+				-32601,
 				"The server doesn't support logging, please enable it in capabilities",
 			);
 		}
