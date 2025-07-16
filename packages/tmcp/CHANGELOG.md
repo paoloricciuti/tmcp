@@ -1,5 +1,18 @@
 # tmcp
 
+## 1.6.0
+
+### Minor Changes
+
+- 2ba5afe: feat: version validation and negotiation
+- fa7c615: feat: add logging
+- e473636: feat: add pagination support
+- 2151837: feat: allow `list` in template resources
+
+### Patch Changes
+
+- 73aef3c: fix: allow user to pass `title`
+
 ## 1.5.0
 
 ### Minor Changes
