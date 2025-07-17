@@ -57,46 +57,97 @@ export class HttpTransport {
 	async respond(request) {
 		const sessions = this.#session;
 		const streams = this.#streams;
-
-		const body = await request.json();
+		const method = request.method;
 		const session_id =
 			request.headers.get('mcp-session-id') ||
 			this.#options.getSessionId();
-		const controller = sessions.get(session_id);
-		const response = await this.#server.receive(body, session_id);
 
-		if (controller) {
-			controller.enqueue('data: ' + JSON.stringify(response) + '\n\n');
+		// Handle DELETE request - disconnect session
+		if (method === 'DELETE') {
+			const controller = sessions.get(session_id);
+			if (controller) {
+				controller.close();
+				sessions.delete(session_id);
+				streams.delete(session_id);
+			}
 			return new Response(null, {
 				status: 204,
 				headers: {
-					'Content-Type': 'text/event-stream',
 					'mcp-session-id': session_id,
 				},
 			});
 		}
 
-		const stream = new ReadableStream({
-			start(controller) {
-				sessions.set(session_id, controller);
-				controller.enqueue(
-					'data: ' + JSON.stringify(response) + '\n\n',
-				);
-			},
-			cancel() {
-				sessions.delete(session_id);
-			},
-		});
+		// Handle GET request - establish long-lived connection for notifications
+		if (method === 'GET') {
+			// If session already exists, return existing stream
+			const existing_stream = streams.get(session_id);
+			if (existing_stream) {
+				return new Response(existing_stream, {
+					headers: {
+						'Content-Type': 'text/event-stream',
+						'Cache-Control': 'no-cache',
+						Connection: 'keep-alive',
+						'mcp-session-id': session_id,
+					},
+					status: 200,
+				});
+			}
 
-		streams.set(session_id, stream);
-		return new Response(stream, {
+			// Create new long-lived stream for notifications
+			const stream = new ReadableStream({
+				start(controller) {
+					sessions.set(session_id, controller);
+				},
+				cancel() {
+					sessions.delete(session_id);
+					streams.delete(session_id);
+				},
+			});
+
+			streams.set(session_id, stream);
+			return new Response(stream, {
+				headers: {
+					'Content-Type': 'text/event-stream',
+					'Cache-Control': 'no-cache',
+					Connection: 'keep-alive',
+					'mcp-session-id': session_id,
+				},
+				status: 200,
+			});
+		}
+
+		// Handle POST request - process message and respond through event stream
+		if (method === 'POST') {
+			const body = await request.json();
+			const response = await this.#server.receive(body, session_id);
+
+			// Create a short-lived stream that closes after sending the response
+			const stream = new ReadableStream({
+				start(controller) {
+					controller.enqueue(
+						'data: ' + JSON.stringify(response) + '\n\n',
+					);
+					controller.close();
+				},
+			});
+
+			return new Response(stream, {
+				headers: {
+					'Content-Type': 'text/event-stream',
+					'Cache-Control': 'no-cache',
+					'mcp-session-id': session_id,
+				},
+				status: 200,
+			});
+		}
+
+		// Method not supported
+		return new Response('Method not allowed', {
+			status: 405,
 			headers: {
-				'Content-Type': 'text/event-stream',
-				'Cache-Control': 'no-cache',
-				Connection: 'keep-alive',
-				'mcp-session-id': session_id,
+				Allow: 'GET, POST, DELETE',
 			},
-			status: 200,
 		});
 	}
 }
