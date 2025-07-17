@@ -30,14 +30,20 @@ tmcp works with all major schema validation libraries through its adapter system
 ```bash
 pnpm install tmcp
 # Choose your preferred schema library adapter
-ènpm install @tmcp/adapter-zod zod
+pnpm install @tmcp/adapter-zod zod
+# Choose your preferred transport
+pnpm install @tmcp/transport-stdio  # For CLI/desktop apps
+pnpm install @tmcp/transport-http   # For web-based clients
 ```
 
 ## Quick Start
 
+### Standard I/O Transport (CLI/Desktop)
+
 ```javascript
 import { McpServer } from 'tmcp';
 import { ZodJsonSchemaAdapter } from '@tmcp/adapter-zod';
+import { StdioTransport } from '@tmcp/transport-stdio';
 import { z } from 'zod';
 
 const adapter = new ZodJsonSchemaAdapter();
@@ -82,8 +88,38 @@ server.tool(
 	},
 );
 
-// Process incoming requests
-server.receive(request);
+// Start the server with stdio transport
+const transport = new StdioTransport(server);
+transport.listen();
+```
+
+### HTTP Transport (Web-based)
+
+```javascript
+import { McpServer } from 'tmcp';
+import { ZodJsonSchemaAdapter } from '@tmcp/adapter-zod';
+import { HttpTransport } from '@tmcp/transport-http';
+import { z } from 'zod';
+
+const adapter = new ZodJsonSchemaAdapter();
+const server = new McpServer(/* ... same server config ... */);
+
+// Add tools as above...
+
+// Create HTTP transport
+const transport = new HttpTransport(server);
+
+// Use with your preferred HTTP server (Bun example)
+Bun.serve({
+	port: 3000,
+	async fetch(req) {
+		const response = await transport.respond(req);
+		if (response === null) {
+			return new Response('Not Found', { status: 404 });
+		}
+		return response;
+	},
+});
 ```
 
 ## API Reference

@@ -4,6 +4,7 @@
 /**
  * @typedef {{
  * 	getSessionId: () => string
+ * 	path?: string
  * }} HttpTransportOptions
  */
 export class HttpTransport {
@@ -16,12 +17,13 @@ export class HttpTransport {
     /**
      *
      * @param {Request} request
-     * @returns
+     * @returns {Promise<Response | null>}
      */
-    respond(request: Request): Promise<Response>;
+    respond(request: Request): Promise<Response | null>;
     #private;
 }
 export type HttpTransportOptions = {
     getSessionId: () => string;
+    path?: string;
 };
 import type { McpServer } from "tmcp";

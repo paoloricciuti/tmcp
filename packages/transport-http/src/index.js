@@ -5,6 +5,7 @@
 /**
  * @typedef {{
  * 	getSessionId: () => string
+ * 	path?: string
  * }} HttpTransportOptions
  */
 
@@ -18,6 +19,11 @@ export class HttpTransport {
 	 * @type {HttpTransportOptions}
 	 */
 	#options;
+
+	/**
+	 * @type {string}
+	 */
+	#path;
 
 	/**
 	 * @type {Map<string, ReadableStreamDefaultController>}
@@ -38,6 +44,7 @@ export class HttpTransport {
 		this.#options = options || {
 			getSessionId: () => crypto.randomUUID(),
 		};
+		this.#path = this.#options.path || '/mcp';
 		this.#server.on('send', ({ request, context: { sessions } }) => {
 			for (let [session_id, controller] of this.#session.entries()) {
 				if (sessions === undefined || sessions.includes(session_id)) {
@@ -50,63 +57,35 @@ export class HttpTransport {
 	}
 
 	/**
+	 * @param {string} session_id
+	 */
+	#handle_delete(session_id) {
+		const controller = this.#session.get(session_id);
+		if (controller) {
+			controller.close();
+			this.#session.delete(session_id);
+			this.#streams.delete(session_id);
+		}
+		return new Response(null, {
+			status: 204,
+			headers: {
+				'mcp-session-id': session_id,
+			},
+		});
+	}
+
+	/**
 	 *
-	 * @param {Request} request
+	 * @param {string} session_id
 	 * @returns
 	 */
-	async respond(request) {
+	#handle_get(session_id) {
 		const sessions = this.#session;
 		const streams = this.#streams;
-		const method = request.method;
-		const session_id =
-			request.headers.get('mcp-session-id') ||
-			this.#options.getSessionId();
-
-		// Handle DELETE request - disconnect session
-		if (method === 'DELETE') {
-			const controller = sessions.get(session_id);
-			if (controller) {
-				controller.close();
-				sessions.delete(session_id);
-				streams.delete(session_id);
-			}
-			return new Response(null, {
-				status: 204,
-				headers: {
-					'mcp-session-id': session_id,
-				},
-			});
-		}
-
-		// Handle GET request - establish long-lived connection for notifications
-		if (method === 'GET') {
-			// If session already exists, return existing stream
-			const existing_stream = streams.get(session_id);
-			if (existing_stream) {
-				return new Response(existing_stream, {
-					headers: {
-						'Content-Type': 'text/event-stream',
-						'Cache-Control': 'no-cache',
-						Connection: 'keep-alive',
-						'mcp-session-id': session_id,
-					},
-					status: 200,
-				});
-			}
-
-			// Create new long-lived stream for notifications
-			const stream = new ReadableStream({
-				start(controller) {
-					sessions.set(session_id, controller);
-				},
-				cancel() {
-					sessions.delete(session_id);
-					streams.delete(session_id);
-				},
-			});
-
-			streams.set(session_id, stream);
-			return new Response(stream, {
+		// If session already exists, return existing stream
+		const existing_stream = this.#streams.get(session_id);
+		if (existing_stream) {
+			return new Response(existing_stream, {
 				headers: {
 					'Content-Type': 'text/event-stream',
 					'Cache-Control': 'no-cache',
@@ -117,10 +96,64 @@ export class HttpTransport {
 			});
 		}
 
-		// Handle POST request - process message and respond through event stream
-		if (method === 'POST') {
-			const body = await request.json();
+		// Create new long-lived stream for notifications
+		const stream = new ReadableStream({
+			start(controller) {
+				sessions.set(session_id, controller);
+			},
+			cancel() {
+				sessions.delete(session_id);
+				streams.delete(session_id);
+			},
+		});
+
+		streams.set(session_id, stream);
+		return new Response(stream, {
+			headers: {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+				Connection: 'keep-alive',
+				'mcp-session-id': session_id,
+			},
+			status: 200,
+		});
+	}
+
+	/**
+	 *
+	 * @param {string} session_id
+	 * @param {Request} request
+	 */
+	async #handle_post(session_id, request) {
+		// Check Content-Type header
+		const content_type = request.headers.get('content-type');
+		if (!content_type || !content_type.includes('application/json')) {
+			return new Response(
+				JSON.stringify({
+					jsonrpc: '2.0',
+					error: {
+						code: -32600,
+						message: 'Invalid Request',
+						data: 'Content-Type must be application/json',
+					},
+				}),
+				{
+					status: 415,
+					headers: {
+						'Content-Type': 'application/json',
+						'mcp-session-id': session_id,
+					},
+				},
+			);
+		}
+
+		try {
+			const body = await request.clone().json();
 			const response = await this.#server.receive(body, session_id);
+
+			// Determine status code based on response type
+			// 202 Accepted for notifications/responses, 200 OK for standard requests
+			const status = response == null || response.id == null ? 202 : 200;
 
 			// Create a short-lived stream that closes after sending the response
 			const stream = new ReadableStream({
@@ -138,16 +171,88 @@ export class HttpTransport {
 					'Cache-Control': 'no-cache',
 					'mcp-session-id': session_id,
 				},
-				status: 200,
+				status,
 			});
+		} catch (error) {
+			// Handle JSON parsing errors
+			return new Response(
+				JSON.stringify({
+					jsonrpc: '2.0',
+					error: {
+						code: -32700,
+						message: 'Parse error',
+						data: /** @type {Error} */ (error).message,
+					},
+				}),
+				{
+					status: 400,
+					headers: {
+						'Content-Type': 'application/json',
+						'mcp-session-id': session_id,
+					},
+				},
+			);
+		}
+	}
+
+	/**
+	 *
+	 * @param {string} method
+	 * @returns
+	 */
+	#handle_default(method) {
+		return new Response(
+			JSON.stringify({
+				jsonrpc: '2.0',
+				error: {
+					code: -32601,
+					message: 'Method not found',
+					data: `HTTP method ${method} not supported`,
+				},
+			}),
+			{
+				status: 405,
+				headers: {
+					'Content-Type': 'application/json',
+					Allow: 'GET, POST, DELETE',
+				},
+			},
+		);
+	}
+
+	/**
+	 *
+	 * @param {Request} request
+	 * @returns {Promise<Response | null>}
+	 */
+	async respond(request) {
+		const url = new URL(request.url);
+
+		// Check if the request path matches the configured MCP path
+		if (url.pathname !== this.#path) {
+			return null;
+		}
+		const method = request.method;
+		const session_id =
+			request.headers.get('mcp-session-id') ||
+			this.#options.getSessionId();
+
+		// Handle DELETE request - disconnect session
+		if (method === 'DELETE') {
+			return this.#handle_delete(session_id);
+		}
+
+		// Handle GET request - establish long-lived connection for notifications
+		if (method === 'GET') {
+			return this.#handle_get(session_id);
+		}
+
+		// Handle POST request - process message and respond through event stream
+		if (method === 'POST') {
+			return this.#handle_post(session_id, request);
 		}
 
 		// Method not supported
-		return new Response('Method not allowed', {
-			status: 405,
-			headers: {
-				Allow: 'GET, POST, DELETE',
-			},
-		});
+		return this.#handle_default(method);
 	}
 }

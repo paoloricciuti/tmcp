@@ -180,6 +180,7 @@ pnpm lint
 ## Related Packages
 
 - [`tmcp`](../tmcp) - Core TMCP server implementation
+- [`@tmcp/transport-http`](../transport-http) - HTTP transport for web-based clients
 - [`@tmcp/adapter-zod`](../adapter-zod) - Zod schema adapter
 - [`@tmcp/adapter-valibot`](../adapter-valibot) - Valibot schema adapter
 - [`@tmcp/adapter-arktype`](../adapter-arktype) - ArkType schema adapter

@@ -50,7 +50,7 @@ server.tool(
 	},
 );
 
-// Create the HTTP transport
+// Create the HTTP transport (defaults to '/mcp' path)
 const transport = new HttpTransport(server);
 
 // Use with your preferred HTTP server
@@ -58,25 +58,32 @@ const transport = new HttpTransport(server);
 import { createServer } from 'http';
 
 const httpServer = createServer(async (req, res) => {
-	if (req.method === 'POST' && req.url === '/mcp') {
-		try {
-			let body = '';
-			req.on('data', (chunk) => (body += chunk));
-			req.on('end', async () => {
-				const request = new Request('http://localhost/mcp', {
-					method: 'POST',
-					headers: req.headers,
-					body: body,
-				});
+	try {
+		let body = '';
+		req.on('data', (chunk) => (body += chunk));
+		req.on('end', async () => {
+			const request = new Request(`http://localhost${req.url}`, {
+				method: req.method,
+				headers: req.headers,
+				body: req.method === 'POST' ? body : undefined,
+			});
 
-				const response = await transport.respond(request);
+			const response = await transport.respond(request);
+			
+			// If response is null, the request wasn't for MCP
+			if (response === null) {
+				res.statusCode = 404;
+				res.end('Not Found');
+				return;
+			}
 
-				// Copy response to Node.js response
-				response.headers.forEach((value, key) => {
-					res.setHeader(key, value);
-				});
-				res.statusCode = response.status;
+			// Copy response to Node.js response
+			response.headers.forEach((value, key) => {
+				res.setHeader(key, value);
+			});
+			res.statusCode = response.status;
 
+			if (response.body) {
 				const reader = response.body.getReader();
 				const pump = async () => {
 					const { done, value } = await reader.read();
@@ -88,14 +95,13 @@ const httpServer = createServer(async (req, res) => {
 					pump();
 				};
 				pump();
-			});
-		} catch (error) {
-			res.statusCode = 500;
-			res.end('Internal Server Error');
-		}
-	} else {
-		res.statusCode = 404;
-		res.end('Not Found');
+			} else {
+				res.end();
+			}
+		});
+	} catch (error) {
+		res.statusCode = 500;
+		res.end('Internal Server Error');
 	}
 });
 
@@ -104,12 +110,14 @@ httpServer.listen(3000, () => {
 });
 ```
 
-### With Custom Session Management
+### With Custom Configuration
 
 ```javascript
 const transport = new HttpTransport(server, {
+	// Custom MCP endpoint path (default: '/mcp')
+	path: '/api/mcp',
+	// Custom session ID generation
 	getSessionId: () => {
-		// Custom session ID generation
 		return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 	},
 });
@@ -120,9 +128,11 @@ const transport = new HttpTransport(server, {
 - **🌐 HTTP/SSE Communication**: Uses Server-Sent Events for real-time bidirectional communication
 - **🔄 Session Management**: Maintains client sessions with automatic session ID generation
 - **📡 Streaming Responses**: Supports streaming responses through SSE
+- **🛤️ Configurable Path**: Customizable MCP endpoint path with automatic filtering
 - **🔧 Framework Agnostic**: Works with any HTTP server framework (Fastify, Bun, Deno, etc.)
 - **⚡ Real-time Updates**: Server can push notifications and updates to connected clients
 - **🛡️ Error Handling**: Graceful error handling for malformed requests
+- **🔀 Multiple HTTP Methods**: Supports GET (notifications), POST (messages), and DELETE (disconnect)
 
 ## API
 
@@ -146,14 +156,15 @@ Creates a new HTTP transport instance.
 ```typescript
 interface HttpTransportOptions {
 	getSessionId: () => string; // Custom session ID generator
+	path?: string; // MCP endpoint path (default: '/mcp')
 }
 ```
 
 #### Methods
 
-##### `respond(request: Request): Promise<Response>`
+##### `respond(request: Request): Promise<Response | null>`
 
-Processes an HTTP request and returns a Response with Server-Sent Events.
+Processes an HTTP request and returns a Response with Server-Sent Events, or null if the request path doesn't match the configured MCP path.
 
 **Parameters:**
 
@@ -161,12 +172,21 @@ Processes an HTTP request and returns a Response with Server-Sent Events.
 
 **Returns:**
 
-- A Response object with SSE stream for ongoing communication
+- A Response object with SSE stream for ongoing communication, or null if the request path doesn't match the MCP endpoint
+
+**HTTP Methods:**
+
+- **POST**: Processes MCP messages and returns short-lived event stream responses
+- **GET**: Establishes long-lived connections for server notifications
+- **DELETE**: Disconnects sessions and cleans up resources
 
 ## Protocol Details
 
-### Request Format
+### HTTP Methods
 
+The transport supports three HTTP methods:
+
+#### POST - Message Processing
 Clients send JSON-RPC messages via HTTP POST requests:
 
 ```http
@@ -182,9 +202,27 @@ mcp-session-id: optional-session-id
 }
 ```
 
-### Response Format
+Response: Short-lived event stream that closes after sending the response:
 
-The server responds with Server-Sent Events:
+```http
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Cache-Control: no-cache
+mcp-session-id: generated-or-provided-session-id
+
+data: {"jsonrpc":"2.0","id":1,"result":{"tools":[...]}}
+
+```
+
+#### GET - Notification Stream
+Establishes long-lived connections for server notifications:
+
+```http
+GET /mcp HTTP/1.1
+mcp-session-id: optional-session-id
+```
+
+Response: Long-lived event stream for server notifications:
 
 ```http
 HTTP/1.1 200 OK
@@ -193,8 +231,23 @@ Cache-Control: no-cache
 Connection: keep-alive
 mcp-session-id: generated-or-provided-session-id
 
-data: {"jsonrpc":"2.0","id":1,"result":{"tools":[...]}}
+data: {"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
 
+```
+
+#### DELETE - Session Disconnect
+Disconnects a session and cleans up resources:
+
+```http
+DELETE /mcp HTTP/1.1
+mcp-session-id: session-to-disconnect
+```
+
+Response:
+
+```http
+HTTP/1.1 204 No Content
+mcp-session-id: session-to-disconnect
 ```
 
 ### Session Management
@@ -218,10 +271,11 @@ const transport = new HttpTransport(server);
 Bun.serve({
 	port: 3000,
 	async fetch(req) {
-		if (req.method === 'POST' && new URL(req.url).pathname === '/mcp') {
-			return await transport.respond(req);
+		const response = await transport.respond(req);
+		if (response === null) {
+			return new Response('Not Found', { status: 404 });
 		}
-		return new Response('Not Found', { status: 404 });
+		return response;
 	},
 });
 ```
@@ -236,10 +290,11 @@ const server = new McpServer(/* ... */);
 const transport = new HttpTransport(server);
 
 Deno.serve({ port: 3000 }, async (req) => {
-	if (req.method === 'POST' && new URL(req.url).pathname === '/mcp') {
-		return await transport.respond(req);
+	const response = await transport.respond(req);
+	if (response === null) {
+		return new Response('Not Found', { status: 404 });
 	}
-	return new Response('Not Found', { status: 404 });
+	return response;
 });
 ```
 
