@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.7.0
+
+### Minor Changes
+
+- d921480: feat: add tool annotations
+
 ## 1.6.2
 
 ### Patch Changes
