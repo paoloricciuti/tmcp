@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.2.1
+
+### Patch Changes
+
+- f5d8390: fix: optional `getSessionId`
+
 ## 0.2.0
 
 ### Minor Changes
