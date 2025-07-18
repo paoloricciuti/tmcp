@@ -4,7 +4,7 @@
 
 /**
  * @typedef {{
- * 	getSessionId: () => string
+ * 	getSessionId?: () => string
  * 	path?: string
  * }} HttpTransportOptions
  */
@@ -16,7 +16,7 @@ export class HttpTransport {
 	#server;
 
 	/**
-	 * @type {HttpTransportOptions}
+	 * @type {Required<HttpTransportOptions>}
 	 */
 	#options;
 
@@ -41,10 +41,12 @@ export class HttpTransport {
 	 */
 	constructor(server, options) {
 		this.#server = server;
-		this.#options = options || {
-			getSessionId: () => crypto.randomUUID(),
-		};
-		this.#path = this.#options.path || '/mcp';
+		const { getSessionId = () => crypto.randomUUID(), path = '/mcp' } =
+			options ?? {
+				getSessionId: () => crypto.randomUUID(),
+			};
+		this.#options = { getSessionId, path };
+		this.#path = path;
 		this.#server.on('send', ({ request, context: { sessions } }) => {
 			for (let [session_id, controller] of this.#session.entries()) {
 				if (sessions === undefined || sessions.includes(session_id)) {

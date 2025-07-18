@@ -196,6 +196,15 @@ importers:
         specifier: workspace:^
         version: link:../tmcp
 
+  packages/transport-sse:
+    devDependencies:
+      publint:
+        specifier: ^0.3.12
+        version: 0.3.12
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
+
   packages/transport-stdio:
     devDependencies:
       '@types/node':

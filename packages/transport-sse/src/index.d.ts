@@ -1,29 +1,33 @@
 /**
- * @import { McpServer, ClientCapabilities } from "tmcp";
+ * @import { McpServer } from "tmcp";
  */
 /**
  * @typedef {{
  * 	getSessionId?: () => string
  * 	path?: string
- * }} HttpTransportOptions
+ * 	endpoint?: string
+ * }} SseTransportOptions
  */
-export class HttpTransport {
+export class SseTransport {
     /**
-     *
      * @param {McpServer<any>} server
-     * @param {HttpTransportOptions} [options]
+     * @param {SseTransportOptions} [options]
      */
-    constructor(server: McpServer<any>, options?: HttpTransportOptions);
+    constructor(server: McpServer<any>, options?: SseTransportOptions);
     /**
-     *
      * @param {Request} request
      * @returns {Promise<Response | null>}
      */
     respond(request: Request): Promise<Response | null>;
+    /**
+     * Close all active sessions
+     */
+    close(): void;
     #private;
 }
-export type HttpTransportOptions = {
+export type SseTransportOptions = {
     getSessionId?: () => string;
     path?: string;
+    endpoint?: string;
 };
 import type { McpServer } from "tmcp";
