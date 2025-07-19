@@ -5,7 +5,7 @@
 	"main": "src/index.js",
 	"type": "module",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
+		"test": "vitest",
 		"typecheck": "tsc --noEmit",
 		"generate:types": "find ./src -name \"*.d.ts\" -not -path \"./src/internal/*\" -delete && tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint",
 		"prepublish": "pnpm generate:types"
@@ -42,6 +42,7 @@
 		"@standard-schema/spec": "^1.0.0",
 		"@types/json-schema": "^7.0.15",
 		"@types/node": "^24.0.13",
-		"publint": "^0.3.12"
+		"publint": "^0.3.12",
+		"vitest": "^3.2.4"
 	}
 }
