@@ -270,13 +270,18 @@ export class McpServer {
 			this.#lazyily_create_client();
 		}
 
-		this.#event_target.addEventListener(
-			event,
-			(e) => {
-				callback(/** @type {CustomEvent} */ (e).detail);
-			},
-			options,
-		);
+		/**
+		 * @param {Event} e
+		 */
+		const listener = (e) => {
+			callback(/** @type {CustomEvent} */ (e).detail);
+		};
+
+		this.#event_target.addEventListener(event, listener, options);
+
+		return () => {
+			this.#event_target.removeEventListener(event, listener, options);
+		};
 	}
 
 	/**

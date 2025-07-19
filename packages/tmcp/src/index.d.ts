@@ -41,7 +41,7 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
      * @param {McpEvents[TEvent]} callback
      * @param {AddEventListenerOptions} [options]
      */
-    on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): void;
+    on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): () => void;
     /**
      * @template {StandardSchema | undefined} [TSchema=undefined]
      * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; annotations?: ToolAnnotations }} options
