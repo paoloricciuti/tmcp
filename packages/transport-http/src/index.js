@@ -87,15 +87,24 @@ export class HttpTransport {
 		// If session already exists, return existing stream
 		const existing_stream = this.#streams.get(session_id);
 		if (existing_stream) {
-			return new Response(existing_stream, {
-				headers: {
-					'Content-Type': 'text/event-stream',
-					'Cache-Control': 'no-cache',
-					Connection: 'keep-alive',
-					'mcp-session-id': session_id,
+			return new Response(
+				JSON.stringify({
+					jsonrpc: '2.0',
+					error: {
+						code: -32000,
+						message:
+							'Conflict: Only one SSE stream is allowed per session',
+					},
+					id: null,
+				}),
+				{
+					headers: {
+						'Content-Type': 'application/json',
+						'mcp-session-id': session_id,
+					},
+					status: 409,
 				},
-				status: 200,
-			});
+			);
 		}
 
 		// Create new long-lived stream for notifications

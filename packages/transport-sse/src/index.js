@@ -152,7 +152,7 @@ export class SseTransport {
 		}
 
 		try {
-			const body = await request.json();
+			const body = await request.clone().json();
 			const response = await this.#server.receive(body, session_id);
 
 			const controller = this.#sessions.get(session_id);
