@@ -1,5 +1,16 @@
 # @tmcp/transport-http
 
+## 0.3.0
+
+### Minor Changes
+
+- 3847654: fix: answer with conflict for second SSE connection
+
+### Patch Changes
+
+- Updated dependencies [1b50780]
+    - tmcp@1.7.1
+
 ## 0.2.1
 
 ### Patch Changes

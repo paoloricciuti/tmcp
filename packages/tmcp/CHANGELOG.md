@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.7.1
+
+### Patch Changes
+
+- 1b50780: fix: return off function from `on`
+
 ## 1.7.0
 
 ### Minor Changes
