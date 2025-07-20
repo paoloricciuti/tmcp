@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.4.1
+
+### Patch Changes
+
+- 77d3257: fix: respond immediately to allow for requests from the server
+
 ## 0.4.0
 
 ### Minor Changes
