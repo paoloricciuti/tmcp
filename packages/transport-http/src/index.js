@@ -189,17 +189,27 @@ export class HttpTransport {
 				},
 			});
 
-			const response = await this.#controller_storage.run(
-				controller,
-				() => this.#server.receive(body, session_id),
-			);
+			const handle = async () => {
+				const response = await this.#controller_storage.run(
+					controller,
+					() => this.#server.receive(body, session_id),
+				);
 
-			controller?.enqueue('data: ' + JSON.stringify(response) + '\n\n');
-			controller?.close();
+				controller?.enqueue(
+					'data: ' + JSON.stringify(response) + '\n\n',
+				);
+				controller?.close();
+			};
+
+			handle();
+
+			const messages = Array.isArray(body) ? body : [body];
 
 			// Determine status code based on response type
 			// 202 Accepted for notifications/responses, 200 OK for standard requests
-			const status = response == null || response.id == null ? 202 : 200;
+			const status = !messages.some((message) => message.id != null)
+				? 202
+				: 200;
 
 			return new Response(stream, {
 				headers: {
