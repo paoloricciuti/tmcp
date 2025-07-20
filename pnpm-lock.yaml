@@ -192,6 +192,9 @@ importers:
 
   packages/transport-http:
     devDependencies:
+      '@types/node':
+        specifier: ^24.0.15
+        version: 24.0.15
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -1090,6 +1093,9 @@ packages:
 
   '@types/node@24.0.13':
     resolution: {integrity: sha512-Qm9OYVOFHFYg3wJoTSrz80hoec5Lia/dPp84do3X7dZvLikQvM1YpmvTBEdIr/e+U8HTkFjLHLnl78K/qjf+jQ==}
+
+  '@types/node@24.0.15':
+    resolution: {integrity: sha512-oaeTSbCef7U/z7rDeJA138xpG3NuKc64/rZ2qmUFkFJmnMsAPaluIifqyWd8hSSMxyP9oie3dLAqYPblag9KgA==}
 
   '@typescript-eslint/types@8.36.0':
     resolution: {integrity: sha512-xGms6l5cTJKQPZOKM75Dl9yBfNdGeLRsIyufewnxT4vZTrjC0ImQT4fj8QmtJK84F58uSh5HVBSANwcfiXxABQ==}
@@ -3382,6 +3388,10 @@ snapshots:
       undici-types: 6.21.0
 
   '@types/node@24.0.13':
+    dependencies:
+      undici-types: 7.8.0
+
+  '@types/node@24.0.15':
     dependencies:
       undici-types: 7.8.0
 

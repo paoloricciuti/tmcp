@@ -1,12 +1,3 @@
-/**
- * @import { McpServer, ClientCapabilities } from "tmcp";
- */
-/**
- * @typedef {{
- * 	getSessionId?: () => string
- * 	path?: string
- * }} HttpTransportOptions
- */
 export class HttpTransport {
     /**
      *
