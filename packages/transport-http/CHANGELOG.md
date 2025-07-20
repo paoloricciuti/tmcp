@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.4.0
+
+### Minor Changes
+
+- 8f09cd2: fix: send requests back on the same stream if available
+
 ## 0.3.0
 
 ### Minor Changes
