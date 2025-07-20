@@ -37,7 +37,9 @@ class MockAdapter extends JsonSchemaAdapter {
  */
 const mock_schema = {
 	'~standard': {
-		validate: vi.fn().mockResolvedValue({ value: { test: 'value' } }),
+		validate: vi
+			.fn()
+			.mockImplementation((input) => Promise.resolve({ value: input })),
 		vendor: 'mock',
 		version: 1,
 	},
@@ -925,6 +927,685 @@ describe('McpServer', () => {
 	describe('refresh roots', () => {
 		it('should refresh roots', async () => {
 			await expect(server.refreshRoots()).resolves.toBeUndefined();
+		});
+	});
+
+	describe('multi-session functionality', () => {
+		describe('session initialization', () => {
+			it('should handle multiple session initializations independently', async () => {
+				const session1_init = request({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-06-18',
+						capabilities: { roots: { listChanged: true } },
+						clientInfo: { name: 'client-1', version: '1.0.0' },
+					},
+				});
+
+				const session2_init = request({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-06-18',
+						capabilities: { tools: { listChanged: true } },
+						clientInfo: { name: 'client-2', version: '2.0.0' },
+					},
+				});
+
+				const [result1, result2] = await Promise.all([
+					server.receive(session1_init, 'session-1'),
+					server.receive(session2_init, 'session-2'),
+				]);
+
+				expect(result1).toEqual({
+					jsonrpc: '2.0',
+					id: 1,
+					result: expect.objectContaining({
+						protocolVersion: '2025-06-18',
+						serverInfo: server_info,
+					}),
+				});
+
+				expect(result2).toEqual({
+					jsonrpc: '2.0',
+					id: 1,
+					result: expect.objectContaining({
+						protocolVersion: '2025-06-18',
+						serverInfo: server_info,
+					}),
+				});
+			});
+
+			it.todo(
+				'should track client capabilities per session',
+				async () => {
+					// Initialize two sessions with different capabilities
+					await server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 1,
+							method: 'initialize',
+							params: {
+								protocolVersion: '2025-06-18',
+								capabilities: { roots: {} },
+								clientInfo: {
+									name: 'client-1',
+									version: '1.0.0',
+								},
+							},
+						}),
+						'session-with-roots',
+					);
+
+					await server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 1,
+							method: 'initialize',
+							params: {
+								protocolVersion: '2025-06-18',
+								capabilities: { elicitation: {} },
+								clientInfo: {
+									name: 'client-2',
+									version: '1.0.0',
+								},
+							},
+						}),
+						'session-with-tools',
+					);
+
+					// Verify that sessions maintain different capability contexts
+					// This is internal behavior that would be tested through side effects
+					expect(server).toBeInstanceOf(McpServer);
+				},
+			);
+		});
+
+		describe('session isolation', () => {
+			beforeEach(async () => {
+				// Initialize multiple sessions
+				const sessions = ['session-a', 'session-b', 'session-c'];
+				await Promise.all(
+					sessions.map((sessionId) =>
+						server.receive(
+							request({
+								jsonrpc: '2.0',
+								id: 1,
+								method: 'initialize',
+								params: {
+									protocolVersion: '2025-06-18',
+									capabilities: {},
+									clientInfo: {
+										name: `client-${sessionId}`,
+										version: '1.0.0',
+									},
+								},
+							}),
+							sessionId,
+						),
+					),
+				);
+			});
+
+			it('should handle tool calls across multiple sessions simultaneously', async () => {
+				const tool_handler = vi.fn().mockImplementation((args) => ({
+					content: [
+						{
+							type: 'text',
+							text: `Tool executed with: ${JSON.stringify(args || {})}`,
+						},
+					],
+				}));
+
+				server.tool(
+					{
+						name: 'multi-session-tool',
+						description: 'A tool for multi-session testing',
+						schema: mock_schema,
+					},
+					tool_handler,
+				);
+
+				// Call the same tool from different sessions with different arguments
+				const call_requests = [
+					{
+						request: request({
+							jsonrpc: '2.0',
+							id: 2,
+							method: 'tools/call',
+							params: {
+								name: 'multi-session-tool',
+								arguments: { test: 'session-a-data' },
+							},
+						}),
+						session: 'session-a',
+					},
+					{
+						request: request({
+							jsonrpc: '2.0',
+							id: 2,
+							method: 'tools/call',
+							params: {
+								name: 'multi-session-tool',
+								arguments: { test: 'session-b-data' },
+							},
+						}),
+						session: 'session-b',
+					},
+					{
+						request: request({
+							jsonrpc: '2.0',
+							id: 2,
+							method: 'tools/call',
+							params: {
+								name: 'multi-session-tool',
+								arguments: { test: 'session-c-data' },
+							},
+						}),
+						session: 'session-c',
+					},
+				];
+
+				const results = await Promise.all(
+					call_requests.map(({ request, session }) =>
+						server.receive(request, session),
+					),
+				);
+
+				// Verify each session got its own result
+				expect(results[0].result.content[0].text).toContain(
+					'session-a-data',
+				);
+				expect(results[1].result.content[0].text).toContain(
+					'session-b-data',
+				);
+				expect(results[2].result.content[0].text).toContain(
+					'session-c-data',
+				);
+
+				// Verify the tool was called 3 times with different arguments
+				expect(tool_handler).toHaveBeenCalledTimes(3);
+				expect(tool_handler).toHaveBeenNthCalledWith(1, {
+					test: 'session-a-data',
+				});
+				expect(tool_handler).toHaveBeenNthCalledWith(2, {
+					test: 'session-b-data',
+				});
+				expect(tool_handler).toHaveBeenNthCalledWith(3, {
+					test: 'session-c-data',
+				});
+			});
+
+			it('should handle prompt calls across multiple sessions simultaneously', async () => {
+				const prompt_handler = vi.fn().mockImplementation((args) => ({
+					messages: [
+						{
+							role: 'user',
+							content: {
+								type: 'text',
+								text: `Prompt executed with: ${JSON.stringify(args || {})}`,
+							},
+						},
+					],
+				}));
+
+				server.prompt(
+					{
+						name: 'multi-session-prompt',
+						description: 'A prompt for multi-session testing',
+						schema: mock_schema,
+					},
+					prompt_handler,
+				);
+
+				const prompt_requests = [
+					{
+						request: request({
+							jsonrpc: '2.0',
+							id: 3,
+							method: 'prompts/get',
+							params: {
+								name: 'multi-session-prompt',
+								arguments: { sessionData: 'session-a-prompt' },
+							},
+						}),
+						session: 'session-a',
+					},
+					{
+						request: request({
+							jsonrpc: '2.0',
+							id: 3,
+							method: 'prompts/get',
+							params: {
+								name: 'multi-session-prompt',
+								arguments: { sessionData: 'session-b-prompt' },
+							},
+						}),
+						session: 'session-b',
+					},
+				];
+
+				const results = await Promise.all(
+					prompt_requests.map(({ request, session }) =>
+						server.receive(request, session),
+					),
+				);
+
+				expect(results[0].result.messages[0].content.text).toContain(
+					'session-a-prompt',
+				);
+				expect(results[1].result.messages[0].content.text).toContain(
+					'session-b-prompt',
+				);
+
+				expect(prompt_handler).toHaveBeenCalledTimes(2);
+				expect(prompt_handler).toHaveBeenNthCalledWith(1, {
+					sessionData: 'session-a-prompt',
+				});
+				expect(prompt_handler).toHaveBeenNthCalledWith(2, {
+					sessionData: 'session-b-prompt',
+				});
+			});
+
+			it('should handle resource subscriptions per session', async () => {
+				const resource_handler = vi.fn().mockResolvedValue({
+					contents: [
+						{
+							uri: 'test://multi-session-resource',
+							text: 'content',
+						},
+					],
+				});
+
+				server.resource(
+					{
+						name: 'multi-session-resource',
+						description: 'A resource for multi-session testing',
+						uri: 'test://multi-session-resource',
+					},
+					resource_handler,
+				);
+
+				server.resource(
+					{
+						name: 'one-session-resource',
+						description: 'A resource for one-session testing',
+						uri: 'test://one-session-resource',
+					},
+					() => {
+						return {
+							contents: [],
+						};
+					},
+				);
+
+				const on = vi.fn();
+				const off = server.on('send', on);
+
+				// Subscribe from different sessions
+				const subscribe_requests = [
+					{
+						request: request({
+							jsonrpc: '2.0',
+							id: 4,
+							method: 'resources/subscribe',
+							params: { uri: 'test://multi-session-resource' },
+						}),
+						session: 'session-a',
+					},
+					{
+						request: request({
+							jsonrpc: '2.0',
+							id: 4,
+							method: 'resources/subscribe',
+							params: { uri: 'test://multi-session-resource' },
+						}),
+						session: 'session-b',
+					},
+				];
+
+				const results = await Promise.all(
+					subscribe_requests.map(({ request, session }) =>
+						server.receive(request, session),
+					),
+				);
+
+				server.receive(
+					request(
+						request({
+							jsonrpc: '2.0',
+							id: 4,
+							method: 'resources/subscribe',
+							params: { uri: 'test://one-session-resource' },
+						}),
+					),
+					'session-a',
+				);
+
+				expect(results[0]).toEqual({
+					jsonrpc: '2.0',
+					id: 4,
+					result: {},
+				});
+				expect(results[1]).toEqual({
+					jsonrpc: '2.0',
+					id: 4,
+					result: {},
+				});
+
+				server.changed('resource', 'test://multi-session-resource');
+
+				expect(on).toHaveBeenCalledWith({
+					context: {
+						sessions: ['session-a', 'session-b'],
+					},
+					request: {
+						jsonrpc: '2.0',
+						method: 'notifications/resources/updated',
+						params: {
+							title: 'multi-session-resource',
+							uri: 'test://multi-session-resource',
+						},
+					},
+				});
+
+				// change a resource only subscribed to from a and verify only session-a
+				// is sent to the send event
+
+				server.changed('resource', 'test://one-session-resource');
+
+				expect(on).toHaveBeenNthCalledWith(2, {
+					context: {
+						sessions: ['session-a'],
+					},
+					request: {
+						jsonrpc: '2.0',
+						method: 'notifications/resources/updated',
+						params: {
+							title: 'one-session-resource',
+							uri: 'test://one-session-resource',
+						},
+					},
+				});
+
+				off();
+			});
+		});
+
+		describe('concurrent operations', () => {
+			beforeEach(async () => {
+				// Initialize sessions
+				await Promise.all([
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 1,
+							method: 'initialize',
+							params: {
+								protocolVersion: '2025-06-18',
+								capabilities: {},
+								clientInfo: {
+									name: 'concurrent-client-1',
+									version: '1.0.0',
+								},
+							},
+						}),
+						'concurrent-session-1',
+					),
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 1,
+							method: 'initialize',
+							params: {
+								protocolVersion: '2025-06-18',
+								capabilities: {},
+								clientInfo: {
+									name: 'concurrent-client-2',
+									version: '1.0.0',
+								},
+							},
+						}),
+						'concurrent-session-2',
+					),
+				]);
+			});
+
+			it('should handle concurrent tool registrations and calls', async () => {
+				const tool1 = vi.fn().mockResolvedValue({
+					content: [{ type: 'text', text: 'tool1 result' }],
+				});
+				const tool2 = vi.fn().mockResolvedValue({
+					content: [{ type: 'text', text: 'tool2 result' }],
+				});
+
+				// Register tools concurrently
+				server.tool(
+					{ name: 'concurrent-tool-1', description: 'Tool 1' },
+					tool1,
+				);
+				server.tool(
+					{ name: 'concurrent-tool-2', description: 'Tool 2' },
+					tool2,
+				);
+
+				// Call tools concurrently from different sessions
+				const concurrent_calls = await Promise.all([
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 2,
+							method: 'tools/call',
+							params: { name: 'concurrent-tool-1' },
+						}),
+						'concurrent-session-1',
+					),
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 2,
+							method: 'tools/call',
+							params: { name: 'concurrent-tool-2' },
+						}),
+						'concurrent-session-2',
+					),
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 3,
+							method: 'tools/list',
+						}),
+						'concurrent-session-1',
+					),
+				]);
+
+				expect(concurrent_calls[0].result.content[0].text).toBe(
+					'tool1 result',
+				);
+				expect(concurrent_calls[1].result.content[0].text).toBe(
+					'tool2 result',
+				);
+				expect(concurrent_calls[2].result.tools).toHaveLength(2);
+
+				expect(tool1).toHaveBeenCalledTimes(1);
+				expect(tool2).toHaveBeenCalledTimes(1);
+			});
+
+			it('should handle mixed request types concurrently', async () => {
+				// Setup tools, prompts, and resources
+				server.tool(
+					{ name: 'mixed-tool', description: 'Mixed test tool' },
+					vi.fn().mockResolvedValue({
+						content: [{ type: 'text', text: 'tool executed' }],
+					}),
+				);
+
+				server.prompt(
+					{ name: 'mixed-prompt', description: 'Mixed test prompt' },
+					vi.fn().mockResolvedValue({
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'prompt executed',
+								},
+							},
+						],
+					}),
+				);
+
+				server.resource(
+					{
+						name: 'mixed-resource',
+						description: 'Mixed test resource',
+						uri: 'test://mixed-resource',
+					},
+					vi.fn().mockResolvedValue({
+						contents: [
+							{
+								uri: 'test://mixed-resource',
+								text: 'resource content',
+							},
+						],
+					}),
+				);
+
+				// Execute different types of requests concurrently
+				const mixed_results = await Promise.all([
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 10,
+							method: 'tools/call',
+							params: { name: 'mixed-tool' },
+						}),
+						'concurrent-session-1',
+					),
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 11,
+							method: 'prompts/get',
+							params: { name: 'mixed-prompt' },
+						}),
+						'concurrent-session-2',
+					),
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 12,
+							method: 'resources/read',
+							params: { uri: 'test://mixed-resource' },
+						}),
+						'concurrent-session-1',
+					),
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 13,
+							method: 'ping',
+						}),
+						'concurrent-session-2',
+					),
+				]);
+
+				expect(mixed_results[0].result.content[0].text).toBe(
+					'tool executed',
+				);
+				expect(mixed_results[1].result.messages[0].content.text).toBe(
+					'prompt executed',
+				);
+				expect(mixed_results[2].result.contents[0].text).toBe(
+					'resource content',
+				);
+				expect(mixed_results[3].result).toEqual({});
+			});
+		});
+
+		describe('session state management', () => {
+			it('should maintain separate logging states per session', async () => {
+				// Initialize sessions
+				await Promise.all([
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 1,
+							method: 'initialize',
+							params: {
+								protocolVersion: '2025-06-18',
+								capabilities: {},
+								clientInfo: {
+									name: 'log-client-1',
+									version: '1.0.0',
+								},
+							},
+						}),
+						'log-session-1',
+					),
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 1,
+							method: 'initialize',
+							params: {
+								protocolVersion: '2025-06-18',
+								capabilities: {},
+								clientInfo: {
+									name: 'log-client-2',
+									version: '1.0.0',
+								},
+							},
+						}),
+						'log-session-2',
+					),
+				]);
+
+				// Set different log levels for different sessions
+				await Promise.all([
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 2,
+							method: 'logging/setLevel',
+							params: { level: 'debug' },
+						}),
+						'log-session-1',
+					),
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 2,
+							method: 'logging/setLevel',
+							params: { level: 'error' },
+						}),
+						'log-session-2',
+					),
+				]);
+
+				const on = vi.fn();
+				const off = server.on('send', on);
+
+				// only sessions with debug level should receive this
+				server.log('info', 'This is an info message');
+				expect(on).toHaveBeenCalledWith({
+					context: {
+						sessions: ['log-session-1'],
+					},
+					request: {
+						jsonrpc: '2.0',
+						method: 'notifications/message',
+						params: {
+							level: 'info',
+							data: 'This is an info message',
+						},
+					},
+				});
+				off();
+			});
 		});
 	});
 });

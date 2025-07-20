@@ -63,6 +63,7 @@ cd packages/adapter-zod && pnpm generate:types  # Generate types for specific ad
 - `json-rpc-2.0` - JSON-RPC protocol handling
 - `uri-template-matcher` - URI template matching for resources
 - `valibot` - Internal validation (not exposed to users)
+- `sqids` - Short unique ID generation
 
 ### Development
 
@@ -124,6 +125,7 @@ The monorepo includes transport implementations:
 
 - `packages/transport-stdio/` - Standard I/O transport
 - `packages/transport-http/` - HTTP transport
+- `packages/transport-sse/` - Server-Sent Events transport
 
 ## Workspace Structure
 
