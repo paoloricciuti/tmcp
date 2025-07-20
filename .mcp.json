@@ -1,0 +1,8 @@
+{
+	"mcpServers": {
+		"context-coder": {
+			"command": "npx",
+			"args": ["-y", "context-coder", "--mini", "--stdio"]
+		}
+	}
+}
