@@ -35,14 +35,14 @@ export const ProgressTokenSchema = v.union([
  */
 export const CursorSchema = v.string();
 
-const RequestMetaSchema = v.object({
+const RequestMetaSchema = v.looseObject({
 	/**
 	 * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
 	 */
 	progressToken: v.optional(ProgressTokenSchema),
 });
 
-const BaseRequestParamsSchema = v.object({
+const BaseRequestParamsSchema = v.looseObject({
 	_meta: v.optional(RequestMetaSchema),
 });
 
@@ -51,12 +51,12 @@ export const RequestSchema = v.object({
 	params: v.optional(BaseRequestParamsSchema),
 });
 
-const BaseNotificationParamsSchema = v.object({
+const BaseNotificationParamsSchema = v.looseObject({
 	/**
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 });
 export const NotificationSchema = v.object({
 	method: v.string(),
@@ -67,7 +67,7 @@ export const ResultSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 });
 
 /**
