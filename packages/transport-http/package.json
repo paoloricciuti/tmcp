@@ -7,7 +7,8 @@
 	"types": "src/index.d.ts",
 	"scripts": {
 		"generate:types": "tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint",
-		"prepublish": "pnpm generate:types"
+		"prepublish": "pnpm generate:types",
+		"test": "vitest --run"
 	},
 	"exports": {
 		".": {
@@ -30,9 +31,13 @@
 		"directory": "packages/transport-http"
 	},
 	"devDependencies": {
+		"@modelcontextprotocol/sdk": "^1.16.0",
+		"@tmcp/adapter-valibot": "^0.1.2",
 		"@types/node": "^24.0.15",
 		"publint": "^0.3.12",
-		"tmcp": "workspace:^"
+		"tmcp": "workspace:^",
+		"valibot": "^1.1.0",
+		"vitest": "^3.2.4"
 	},
 	"publishConfig": {
 		"access": "public"
