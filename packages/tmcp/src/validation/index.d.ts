@@ -19,8 +19,8 @@ export const ProgressTokenSchema: v.UnionSchema<[v.StringSchema<undefined>, v.Sc
 export const CursorSchema: v.StringSchema<undefined>;
 export const RequestSchema: v.ObjectSchema<{
     readonly method: v.StringSchema<undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -30,20 +30,20 @@ export const RequestSchema: v.ObjectSchema<{
 }, undefined>;
 export const NotificationSchema: v.ObjectSchema<{
     readonly method: v.StringSchema<undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>;
-export const ResultSchema: v.LooseObjectSchema<{
+export const ResultSchema: v.ObjectSchema<{
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * A uniquely identifying ID for a request in JSON-RPC.
@@ -54,8 +54,8 @@ export const RequestIdSchema: v.UnionSchema<[v.StringSchema<undefined>, v.Schema
  */
 export const JSONRPCRequestSchema: v.ObjectSchema<{
     readonly method: v.StringSchema<undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -70,12 +70,12 @@ export const JSONRPCRequestSchema: v.ObjectSchema<{
  */
 export const JSONRPCNotificationSchema: v.ObjectSchema<{
     readonly method: v.StringSchema<undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
     readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
 }, undefined>;
@@ -85,12 +85,12 @@ export const JSONRPCNotificationSchema: v.ObjectSchema<{
 export const JSONRPCResponseSchema: v.StrictObjectSchema<{
     readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
     readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
-    readonly result: v.LooseObjectSchema<{
+    readonly result: v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
 }, undefined>;
 /**
@@ -116,8 +116,8 @@ export const JSONRPCErrorSchema: v.StrictObjectSchema<{
 }, undefined>;
 export const JSONRPCMessageSchema: v.UnionSchema<[v.ObjectSchema<{
     readonly method: v.StringSchema<undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -128,23 +128,23 @@ export const JSONRPCMessageSchema: v.UnionSchema<[v.ObjectSchema<{
     readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
 }, undefined>, v.ObjectSchema<{
     readonly method: v.StringSchema<undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
     readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
 }, undefined>, v.StrictObjectSchema<{
     readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
     readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
-    readonly result: v.LooseObjectSchema<{
+    readonly result: v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
 }, undefined>, v.StrictObjectSchema<{
     readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
@@ -172,7 +172,7 @@ export const EmptyResultSchema: v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * This notification can be sent by either side to indicate that it is cancelling a previously-issued request.
@@ -183,9 +183,9 @@ export const EmptyResultSchema: v.StrictObjectSchema<{
  *
  * A client MUST NOT attempt to cancel its `initialize` request.
  */
-export const CancelledNotificationSchema: v.LooseObjectSchema<{
+export const CancelledNotificationSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/cancelled", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The ID of the request to cancel.
          *
@@ -200,13 +200,13 @@ export const CancelledNotificationSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
 }, undefined>;
 /**
  * Base metadata interface for common properties across resources, tools, prompts, and implementations.
  */
-export const BaseMetadataSchema: v.LooseObjectSchema<{
+export const BaseMetadataSchema: v.ObjectSchema<{
     /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
     readonly name: v.StringSchema<undefined>;
     /**
@@ -222,7 +222,7 @@ export const BaseMetadataSchema: v.LooseObjectSchema<{
 /**
  * Describes the name and version of an MCP implementation.
  */
-export const ImplementationSchema: v.LooseObjectSchema<{
+export const ImplementationSchema: v.ObjectSchema<{
     readonly version: v.StringSchema<undefined>;
     /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
     readonly name: v.StringSchema<undefined>;
@@ -239,58 +239,58 @@ export const ImplementationSchema: v.LooseObjectSchema<{
 /**
  * Capabilities a client may support. Known capabilities are defined here, in this schema, but this is not a closed set: any client can define its own, additional capabilities.
  */
-export const ClientCapabilitiesSchema: v.LooseObjectSchema<{
+export const ClientCapabilitiesSchema: v.ObjectSchema<{
     /**
      * Experimental, non-standard capabilities that the client supports.
      */
-    readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /**
      * Present if the client supports sampling from an LLM.
      */
-    readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly sampling: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /**
      * Present if the client supports eliciting user input.
      */
-    readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /**
      * Present if the client supports listing roots.
      */
-    readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly roots: v.OptionalSchema<v.ObjectSchema<{
         /**
          * Whether the client supports issuing notifications for changes to the roots list.
          */
         readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>;
-export const InitializeRequestParamsSchema: v.LooseObjectSchema<{
+export const InitializeRequestParamsSchema: v.ObjectSchema<{
     /**
      * The latest version of the Model Context Protocol that the client supports. The client MAY decide to support older versions as well.
      */
     readonly protocolVersion: v.StringSchema<undefined>;
-    readonly capabilities: v.LooseObjectSchema<{
+    readonly capabilities: v.ObjectSchema<{
         /**
          * Experimental, non-standard capabilities that the client supports.
          */
-        readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * Present if the client supports sampling from an LLM.
          */
-        readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly sampling: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * Present if the client supports eliciting user input.
          */
-        readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * Present if the client supports listing roots.
          */
-        readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly roots: v.OptionalSchema<v.ObjectSchema<{
             /**
              * Whether the client supports issuing notifications for changes to the roots list.
              */
             readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-    readonly clientInfo: v.LooseObjectSchema<{
+    readonly clientInfo: v.ObjectSchema<{
         readonly version: v.StringSchema<undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
@@ -304,7 +304,7 @@ export const InitializeRequestParamsSchema: v.LooseObjectSchema<{
          */
         readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     }, undefined>;
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{
         /**
          * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
          */
@@ -314,37 +314,37 @@ export const InitializeRequestParamsSchema: v.LooseObjectSchema<{
 /**
  * This request is sent from the client to the server when it first connects, asking it to begin initialization.
  */
-export const InitializeRequestSchema: v.LooseObjectSchema<{
+export const InitializeRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"initialize", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The latest version of the Model Context Protocol that the client supports. The client MAY decide to support older versions as well.
          */
         readonly protocolVersion: v.StringSchema<undefined>;
-        readonly capabilities: v.LooseObjectSchema<{
+        readonly capabilities: v.ObjectSchema<{
             /**
              * Experimental, non-standard capabilities that the client supports.
              */
-            readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             /**
              * Present if the client supports sampling from an LLM.
              */
-            readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly sampling: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             /**
              * Present if the client supports eliciting user input.
              */
-            readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             /**
              * Present if the client supports listing roots.
              */
-            readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
+            readonly roots: v.OptionalSchema<v.ObjectSchema<{
                 /**
                  * Whether the client supports issuing notifications for changes to the roots list.
                  */
                 readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
             }, undefined>, undefined>;
         }, undefined>;
-        readonly clientInfo: v.LooseObjectSchema<{
+        readonly clientInfo: v.ObjectSchema<{
             readonly version: v.StringSchema<undefined>;
             /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
             readonly name: v.StringSchema<undefined>;
@@ -358,7 +358,7 @@ export const InitializeRequestSchema: v.LooseObjectSchema<{
              */
             readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
         }, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -369,23 +369,23 @@ export const InitializeRequestSchema: v.LooseObjectSchema<{
 /**
  * Capabilities that a server may support. Known capabilities are defined here, in this schema, but this is not a closed set: any server can define its own, additional capabilities.
  */
-export const ServerCapabilitiesSchema: v.LooseObjectSchema<{
+export const ServerCapabilitiesSchema: v.ObjectSchema<{
     /**
      * Experimental, non-standard capabilities that the server supports.
      */
-    readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /**
      * Present if the server supports sending log messages to the client.
      */
-    readonly logging: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly logging: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /**
      * Present if the server supports sending completions to the client.
      */
-    readonly completions: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly completions: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /**
      * Present if the server offers any prompt templates.
      */
-    readonly prompts: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly prompts: v.OptionalSchema<v.ObjectSchema<{
         /**
          * Whether this server supports issuing notifications for changes to the prompt list.
          */
@@ -394,7 +394,7 @@ export const ServerCapabilitiesSchema: v.LooseObjectSchema<{
     /**
      * Present if the server offers any resources to read.
      */
-    readonly resources: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly resources: v.OptionalSchema<v.ObjectSchema<{
         /**
          * Whether this server supports clients subscribing to resource updates.
          */
@@ -407,7 +407,7 @@ export const ServerCapabilitiesSchema: v.LooseObjectSchema<{
     /**
      * Present if the server offers any tools to call.
      */
-    readonly tools: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly tools: v.OptionalSchema<v.ObjectSchema<{
         /**
          * Whether this server supports issuing notifications for changes to the tool list.
          */
@@ -417,28 +417,28 @@ export const ServerCapabilitiesSchema: v.LooseObjectSchema<{
 /**
  * After receiving an initialize request from the client, the server sends this response.
  */
-export const InitializeResultSchema: v.LooseObjectSchema<{
+export const InitializeResultSchema: v.ObjectSchema<{
     /**
      * The version of the Model Context Protocol that the server wants to use. This may not match the version that the client requested. If the client cannot support this version, it MUST disconnect.
      */
     readonly protocolVersion: v.StringSchema<undefined>;
-    readonly capabilities: v.LooseObjectSchema<{
+    readonly capabilities: v.ObjectSchema<{
         /**
          * Experimental, non-standard capabilities that the server supports.
          */
-        readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * Present if the server supports sending log messages to the client.
          */
-        readonly logging: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly logging: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * Present if the server supports sending completions to the client.
          */
-        readonly completions: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly completions: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * Present if the server offers any prompt templates.
          */
-        readonly prompts: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly prompts: v.OptionalSchema<v.ObjectSchema<{
             /**
              * Whether this server supports issuing notifications for changes to the prompt list.
              */
@@ -447,7 +447,7 @@ export const InitializeResultSchema: v.LooseObjectSchema<{
         /**
          * Present if the server offers any resources to read.
          */
-        readonly resources: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly resources: v.OptionalSchema<v.ObjectSchema<{
             /**
              * Whether this server supports clients subscribing to resource updates.
              */
@@ -460,14 +460,14 @@ export const InitializeResultSchema: v.LooseObjectSchema<{
         /**
          * Present if the server offers any tools to call.
          */
-        readonly tools: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly tools: v.OptionalSchema<v.ObjectSchema<{
             /**
              * Whether this server supports issuing notifications for changes to the tool list.
              */
             readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-    readonly serverInfo: v.LooseObjectSchema<{
+    readonly serverInfo: v.ObjectSchema<{
         readonly version: v.StringSchema<undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
@@ -491,28 +491,28 @@ export const InitializeResultSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * This notification is sent from the client to the server after initialization has finished.
  */
-export const InitializedNotificationSchema: v.LooseObjectSchema<{
+export const InitializedNotificationSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/initialized", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>;
 /**
  * A ping, issued by either the server or the client, to check that the other party is still alive. The receiver must promptly respond, or else may be disconnected.
  */
-export const PingRequestSchema: v.LooseObjectSchema<{
+export const PingRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"ping", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -520,7 +520,7 @@ export const PingRequestSchema: v.LooseObjectSchema<{
         }, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>;
-export const ProgressSchema: v.LooseObjectSchema<{
+export const ProgressSchema: v.ObjectSchema<{
     /**
      * The progress thus far. This should increase every time progress is made, even if the total is unknown.
      */
@@ -537,7 +537,7 @@ export const ProgressSchema: v.LooseObjectSchema<{
 /**
  * An out-of-band notification used to inform the receiver of a progress update for a long-running request.
  */
-export const ProgressNotificationSchema: v.LooseObjectSchema<{
+export const ProgressNotificationSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/progress", undefined>;
     readonly params: v.ObjectSchema<{
         /**
@@ -560,17 +560,17 @@ export const ProgressNotificationSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
 }, undefined>;
-export const PaginatedRequestSchema: v.LooseObjectSchema<{
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+export const PaginatedRequestSchema: v.ObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * An opaque token representing the current pagination position.
          * If provided, the server should return results starting after this cursor.
          */
         readonly cursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -579,7 +579,7 @@ export const PaginatedRequestSchema: v.LooseObjectSchema<{
     }, undefined>, undefined>;
     readonly method: v.StringSchema<undefined>;
 }, undefined>;
-export const PaginatedResultSchema: v.LooseObjectSchema<{
+export const PaginatedResultSchema: v.ObjectSchema<{
     /**
      * An opaque token representing the pagination position after the last returned result.
      * If present, there may be more results available.
@@ -589,12 +589,12 @@ export const PaginatedResultSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * The contents of a specific resource or sub-resource.
  */
-export const ResourceContentsSchema: v.LooseObjectSchema<{
+export const ResourceContentsSchema: v.ObjectSchema<{
     /**
      * The URI of this resource.
      */
@@ -607,9 +607,9 @@ export const ResourceContentsSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
-export const TextResourceContentsSchema: v.LooseObjectSchema<{
+export const TextResourceContentsSchema: v.ObjectSchema<{
     /**
      * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
      */
@@ -626,9 +626,9 @@ export const TextResourceContentsSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
-export const BlobResourceContentsSchema: v.LooseObjectSchema<{
+export const BlobResourceContentsSchema: v.ObjectSchema<{
     /**
      * A base64-encoded string representing the binary data of the item.
      */
@@ -645,12 +645,12 @@ export const BlobResourceContentsSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * A known resource that the server is capable of reading.
  */
-export const ResourceSchema: v.LooseObjectSchema<{
+export const ResourceSchema: v.ObjectSchema<{
     /**
      * The URI of this resource.
      */
@@ -669,7 +669,7 @@ export const ResourceSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
     readonly name: v.StringSchema<undefined>;
     /**
@@ -685,7 +685,7 @@ export const ResourceSchema: v.LooseObjectSchema<{
 /**
  * A template description for resources available on the server.
  */
-export const ResourceTemplateSchema: v.LooseObjectSchema<{
+export const ResourceTemplateSchema: v.ObjectSchema<{
     /**
      * A URI template (according to RFC 6570) that can be used to construct resource URIs.
      */
@@ -704,7 +704,7 @@ export const ResourceTemplateSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
     readonly name: v.StringSchema<undefined>;
     /**
@@ -720,15 +720,15 @@ export const ResourceTemplateSchema: v.LooseObjectSchema<{
 /**
  * Sent from the client to request a list of resources the server has.
  */
-export const ListResourcesRequestSchema: v.LooseObjectSchema<{
+export const ListResourcesRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"resources/list", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * An opaque token representing the current pagination position.
          * If provided, the server should return results starting after this cursor.
          */
         readonly cursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -739,8 +739,8 @@ export const ListResourcesRequestSchema: v.LooseObjectSchema<{
 /**
  * The server's response to a resources/list request from the client.
  */
-export const ListResourcesResultSchema: v.LooseObjectSchema<{
-    readonly resources: v.ArraySchema<v.LooseObjectSchema<{
+export const ListResourcesResultSchema: v.ObjectSchema<{
+    readonly resources: v.ArraySchema<v.ObjectSchema<{
         /**
          * The URI of this resource.
          */
@@ -759,7 +759,7 @@ export const ListResourcesResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -781,20 +781,20 @@ export const ListResourcesResultSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * Sent from the client to request a list of resource templates the server has.
  */
-export const ListResourceTemplatesRequestSchema: v.LooseObjectSchema<{
+export const ListResourceTemplatesRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"resources/templates/list", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * An opaque token representing the current pagination position.
          * If provided, the server should return results starting after this cursor.
          */
         readonly cursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -805,8 +805,8 @@ export const ListResourceTemplatesRequestSchema: v.LooseObjectSchema<{
 /**
  * The server's response to a resources/templates/list request from the client.
  */
-export const ListResourceTemplatesResultSchema: v.LooseObjectSchema<{
-    readonly resourceTemplates: v.ArraySchema<v.LooseObjectSchema<{
+export const ListResourceTemplatesResultSchema: v.ObjectSchema<{
+    readonly resourceTemplates: v.ArraySchema<v.ObjectSchema<{
         /**
          * A URI template (according to RFC 6570) that can be used to construct resource URIs.
          */
@@ -825,7 +825,7 @@ export const ListResourceTemplatesResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -847,19 +847,19 @@ export const ListResourceTemplatesResultSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * Sent from the client to the server, to read a specific resource URI.
  */
-export const ReadResourceRequestSchema: v.LooseObjectSchema<{
+export const ReadResourceRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"resources/read", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The URI of the resource to read. The URI can use any protocol; it is up to the server how to interpret it.
          */
         readonly uri: v.StringSchema<undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -870,8 +870,8 @@ export const ReadResourceRequestSchema: v.LooseObjectSchema<{
 /**
  * The server's response to a resources/read request from the client.
  */
-export const ReadResourceResultSchema: v.LooseObjectSchema<{
-    readonly contents: v.ArraySchema<v.UnionSchema<[v.LooseObjectSchema<{
+export const ReadResourceResultSchema: v.ObjectSchema<{
+    readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
         /**
          * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
          */
@@ -888,8 +888,8 @@ export const ReadResourceResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         /**
          * A base64-encoded string representing the binary data of the item.
          */
@@ -906,38 +906,38 @@ export const ReadResourceResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>, undefined>;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * An optional notification from the server to the client, informing it that the list of resources it can read from has changed. This may be issued by servers without any previous subscription from the client.
  */
-export const ResourceListChangedNotificationSchema: v.LooseObjectSchema<{
+export const ResourceListChangedNotificationSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/resources/list_changed", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>;
 /**
  * Sent from the client to request resources/updated notifications from the server whenever a particular resource changes.
  */
-export const SubscribeRequestSchema: v.LooseObjectSchema<{
+export const SubscribeRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"resources/subscribe", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The URI of the resource to subscribe to. The URI can use any protocol; it is up to the server how to interpret it.
          */
         readonly uri: v.StringSchema<undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -948,14 +948,14 @@ export const SubscribeRequestSchema: v.LooseObjectSchema<{
 /**
  * Sent from the client to request cancellation of resources/updated notifications from the server. This should follow a previous resources/subscribe request.
  */
-export const UnsubscribeRequestSchema: v.LooseObjectSchema<{
+export const UnsubscribeRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"resources/unsubscribe", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The URI of the resource to unsubscribe from.
          */
         readonly uri: v.StringSchema<undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -966,9 +966,9 @@ export const UnsubscribeRequestSchema: v.LooseObjectSchema<{
 /**
  * A notification from the server to the client, informing it that a resource has changed and may need to be read again. This should only be sent if the client previously sent a resources/subscribe request.
  */
-export const ResourceUpdatedNotificationSchema: v.LooseObjectSchema<{
+export const ResourceUpdatedNotificationSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/resources/updated", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The URI of the resource that has been updated. This might be a sub-resource of the one that the client actually subscribed to.
          */
@@ -977,13 +977,13 @@ export const ResourceUpdatedNotificationSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
 }, undefined>;
 /**
  * Describes an argument that a prompt can accept.
  */
-export const PromptArgumentSchema: v.LooseObjectSchema<{
+export const PromptArgumentSchema: v.ObjectSchema<{
     /**
      * The name of the argument.
      */
@@ -1000,7 +1000,7 @@ export const PromptArgumentSchema: v.LooseObjectSchema<{
 /**
  * A prompt or prompt template that the server offers.
  */
-export const PromptSchema: v.LooseObjectSchema<{
+export const PromptSchema: v.ObjectSchema<{
     /**
      * An optional description of what this prompt provides
      */
@@ -1008,7 +1008,7 @@ export const PromptSchema: v.LooseObjectSchema<{
     /**
      * A list of arguments to use for templating the prompt.
      */
-    readonly arguments: v.OptionalSchema<v.ArraySchema<v.LooseObjectSchema<{
+    readonly arguments: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
         /**
          * The name of the argument.
          */
@@ -1026,7 +1026,7 @@ export const PromptSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
     readonly name: v.StringSchema<undefined>;
     /**
@@ -1042,15 +1042,15 @@ export const PromptSchema: v.LooseObjectSchema<{
 /**
  * Sent from the client to request a list of prompts and prompt templates the server has.
  */
-export const ListPromptsRequestSchema: v.LooseObjectSchema<{
+export const ListPromptsRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"prompts/list", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * An opaque token representing the current pagination position.
          * If provided, the server should return results starting after this cursor.
          */
         readonly cursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -1061,8 +1061,8 @@ export const ListPromptsRequestSchema: v.LooseObjectSchema<{
 /**
  * The server's response to a prompts/list request from the client.
  */
-export const ListPromptsResultSchema: v.LooseObjectSchema<{
-    readonly prompts: v.ArraySchema<v.LooseObjectSchema<{
+export const ListPromptsResultSchema: v.ObjectSchema<{
+    readonly prompts: v.ArraySchema<v.ObjectSchema<{
         /**
          * An optional description of what this prompt provides
          */
@@ -1070,7 +1070,7 @@ export const ListPromptsResultSchema: v.LooseObjectSchema<{
         /**
          * A list of arguments to use for templating the prompt.
          */
-        readonly arguments: v.OptionalSchema<v.ArraySchema<v.LooseObjectSchema<{
+        readonly arguments: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
             /**
              * The name of the argument.
              */
@@ -1088,7 +1088,7 @@ export const ListPromptsResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -1110,14 +1110,14 @@ export const ListPromptsResultSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * Used by the client to get a prompt provided by the server.
  */
-export const GetPromptRequestSchema: v.LooseObjectSchema<{
+export const GetPromptRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"prompts/get", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The name of the prompt or prompt template.
          */
@@ -1126,7 +1126,7 @@ export const GetPromptRequestSchema: v.LooseObjectSchema<{
          * Arguments to use for templating the prompt.
          */
         readonly arguments: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.StringSchema<undefined>, undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -1137,7 +1137,7 @@ export const GetPromptRequestSchema: v.LooseObjectSchema<{
 /**
  * Text provided to or from an LLM.
  */
-export const TextContentSchema: v.LooseObjectSchema<{
+export const TextContentSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"text", undefined>;
     /**
      * The text content of the message.
@@ -1147,12 +1147,12 @@ export const TextContentSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * An image provided to or from an LLM.
  */
-export const ImageContentSchema: v.LooseObjectSchema<{
+export const ImageContentSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"image", undefined>;
     /**
      * The base64-encoded image data.
@@ -1166,12 +1166,12 @@ export const ImageContentSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * An Audio provided to or from an LLM.
  */
-export const AudioContentSchema: v.LooseObjectSchema<{
+export const AudioContentSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"audio", undefined>;
     /**
      * The base64-encoded audio data.
@@ -1185,14 +1185,14 @@ export const AudioContentSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * The contents of a resource, embedded into a prompt or tool call result.
  */
-export const EmbeddedResourceSchema: v.LooseObjectSchema<{
+export const EmbeddedResourceSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"resource", undefined>;
-    readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+    readonly resource: v.UnionSchema<[v.ObjectSchema<{
         /**
          * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
          */
@@ -1209,8 +1209,8 @@ export const EmbeddedResourceSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         /**
          * A base64-encoded string representing the binary data of the item.
          */
@@ -1227,20 +1227,20 @@ export const EmbeddedResourceSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * A resource that the server is capable of reading, included in a prompt or tool call result.
  *
  * Note: resource links returned by tools are not guaranteed to appear in the results of `resources/list` requests.
  */
-export const ResourceLinkSchema: v.LooseObjectSchema<{
+export const ResourceLinkSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"resource_link", undefined>;
     /**
      * The URI of this resource.
@@ -1260,7 +1260,7 @@ export const ResourceLinkSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
     readonly name: v.StringSchema<undefined>;
     /**
@@ -1276,7 +1276,7 @@ export const ResourceLinkSchema: v.LooseObjectSchema<{
 /**
  * A content block that can be used in prompts and tool results.
  */
-export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
+export const ContentBlockSchema: v.UnionSchema<[v.ObjectSchema<{
     readonly type: v.LiteralSchema<"text", undefined>;
     /**
      * The text content of the message.
@@ -1286,8 +1286,8 @@ export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
     readonly type: v.LiteralSchema<"image", undefined>;
     /**
      * The base64-encoded image data.
@@ -1301,8 +1301,8 @@ export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
     readonly type: v.LiteralSchema<"audio", undefined>;
     /**
      * The base64-encoded audio data.
@@ -1316,8 +1316,8 @@ export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
     readonly type: v.LiteralSchema<"resource_link", undefined>;
     /**
      * The URI of this resource.
@@ -1337,7 +1337,7 @@ export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
     readonly name: v.StringSchema<undefined>;
     /**
@@ -1349,9 +1349,9 @@ export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
      * if present).
      */
     readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly type: v.LiteralSchema<"resource", undefined>;
-    readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+    readonly resource: v.UnionSchema<[v.ObjectSchema<{
         /**
          * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
          */
@@ -1368,8 +1368,8 @@ export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         /**
          * A base64-encoded string representing the binary data of the item.
          */
@@ -1386,20 +1386,20 @@ export const ContentBlockSchema: v.UnionSchema<[v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>], undefined>;
 /**
  * Describes a message returned as part of a prompt.
  */
-export const PromptMessageSchema: v.LooseObjectSchema<{
+export const PromptMessageSchema: v.ObjectSchema<{
     readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
-    readonly content: v.UnionSchema<[v.LooseObjectSchema<{
+    readonly content: v.UnionSchema<[v.ObjectSchema<{
         readonly type: v.LiteralSchema<"text", undefined>;
         /**
          * The text content of the message.
@@ -1409,8 +1409,8 @@ export const PromptMessageSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"image", undefined>;
         /**
          * The base64-encoded image data.
@@ -1424,8 +1424,8 @@ export const PromptMessageSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"audio", undefined>;
         /**
          * The base64-encoded audio data.
@@ -1439,8 +1439,8 @@ export const PromptMessageSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"resource_link", undefined>;
         /**
          * The URI of this resource.
@@ -1460,7 +1460,7 @@ export const PromptMessageSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -1472,9 +1472,9 @@ export const PromptMessageSchema: v.LooseObjectSchema<{
          * if present).
          */
         readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"resource", undefined>;
-        readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+        readonly resource: v.UnionSchema<[v.ObjectSchema<{
             /**
              * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
              */
@@ -1491,8 +1491,8 @@ export const PromptMessageSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             /**
              * A base64-encoded string representing the binary data of the item.
              */
@@ -1509,26 +1509,26 @@ export const PromptMessageSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         }, undefined>], undefined>;
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>;
 }, undefined>;
 /**
  * The server's response to a prompts/get request from the client.
  */
-export const GetPromptResultSchema: v.LooseObjectSchema<{
+export const GetPromptResultSchema: v.ObjectSchema<{
     /**
      * An optional description for the prompt.
      */
     readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-    readonly messages: v.ArraySchema<v.LooseObjectSchema<{
+    readonly messages: v.ArraySchema<v.ObjectSchema<{
         readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
-        readonly content: v.UnionSchema<[v.LooseObjectSchema<{
+        readonly content: v.UnionSchema<[v.ObjectSchema<{
             readonly type: v.LiteralSchema<"text", undefined>;
             /**
              * The text content of the message.
@@ -1538,8 +1538,8 @@ export const GetPromptResultSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"image", undefined>;
             /**
              * The base64-encoded image data.
@@ -1553,8 +1553,8 @@ export const GetPromptResultSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"audio", undefined>;
             /**
              * The base64-encoded audio data.
@@ -1568,8 +1568,8 @@ export const GetPromptResultSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"resource_link", undefined>;
             /**
              * The URI of this resource.
@@ -1589,7 +1589,7 @@ export const GetPromptResultSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
             readonly name: v.StringSchema<undefined>;
             /**
@@ -1601,9 +1601,9 @@ export const GetPromptResultSchema: v.LooseObjectSchema<{
              * if present).
              */
             readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"resource", undefined>;
-            readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+            readonly resource: v.UnionSchema<[v.ObjectSchema<{
                 /**
                  * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
                  */
@@ -1620,8 +1620,8 @@ export const GetPromptResultSchema: v.LooseObjectSchema<{
                  * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
                  * for notes on _meta usage.
                  */
-                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+                readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+            }, undefined>, v.ObjectSchema<{
                 /**
                  * A base64-encoded string representing the binary data of the item.
                  */
@@ -1638,32 +1638,32 @@ export const GetPromptResultSchema: v.LooseObjectSchema<{
                  * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
                  * for notes on _meta usage.
                  */
-                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+                readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             }, undefined>], undefined>;
             /**
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         }, undefined>], undefined>;
     }, undefined>, undefined>;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * An optional notification from the server to the client, informing it that the list of prompts it offers has changed. This may be issued by servers without any previous subscription from the client.
  */
-export const PromptListChangedNotificationSchema: v.LooseObjectSchema<{
+export const PromptListChangedNotificationSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/prompts/list_changed", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>;
 /**
@@ -1676,7 +1676,7 @@ export const PromptListChangedNotificationSchema: v.LooseObjectSchema<{
  * Clients should never make tool use decisions based on ToolAnnotations
  * received from untrusted servers.
  */
-export const ToolAnnotationsSchema: v.LooseObjectSchema<{
+export const ToolAnnotationsSchema: v.ObjectSchema<{
     /**
      * A human-readable title for the tool.
      */
@@ -1718,7 +1718,7 @@ export const ToolAnnotationsSchema: v.LooseObjectSchema<{
 /**
  * Definition for a tool the client can call.
  */
-export const ToolSchema: v.LooseObjectSchema<{
+export const ToolSchema: v.ObjectSchema<{
     /**
      * A human-readable description of the tool.
      */
@@ -1726,24 +1726,24 @@ export const ToolSchema: v.LooseObjectSchema<{
     /**
      * A JSON Schema object defining the expected parameters for the tool.
      */
-    readonly inputSchema: v.LooseObjectSchema<{
+    readonly inputSchema: v.ObjectSchema<{
         readonly type: v.LiteralSchema<"object", undefined>;
-        readonly properties: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly properties: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
     }, undefined>;
     /**
      * An optional JSON Schema object defining the structure of the tool's output returned in
      * the structuredContent field of a CallToolResult.
      */
-    readonly outputSchema: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly outputSchema: v.OptionalSchema<v.ObjectSchema<{
         readonly type: v.LiteralSchema<"object", undefined>;
-        readonly properties: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly properties: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
     }, undefined>, undefined>;
     /**
      * Optional additional tool information.
      */
-    readonly annotations: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly annotations: v.OptionalSchema<v.ObjectSchema<{
         /**
          * A human-readable title for the tool.
          */
@@ -1786,7 +1786,7 @@ export const ToolSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
     readonly name: v.StringSchema<undefined>;
     /**
@@ -1802,15 +1802,15 @@ export const ToolSchema: v.LooseObjectSchema<{
 /**
  * Sent from the client to request a list of tools the server has.
  */
-export const ListToolsRequestSchema: v.LooseObjectSchema<{
+export const ListToolsRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"tools/list", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * An opaque token representing the current pagination position.
          * If provided, the server should return results starting after this cursor.
          */
         readonly cursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -1821,8 +1821,8 @@ export const ListToolsRequestSchema: v.LooseObjectSchema<{
 /**
  * The server's response to a tools/list request from the client.
  */
-export const ListToolsResultSchema: v.LooseObjectSchema<{
-    readonly tools: v.ArraySchema<v.LooseObjectSchema<{
+export const ListToolsResultSchema: v.ObjectSchema<{
+    readonly tools: v.ArraySchema<v.ObjectSchema<{
         /**
          * A human-readable description of the tool.
          */
@@ -1830,24 +1830,24 @@ export const ListToolsResultSchema: v.LooseObjectSchema<{
         /**
          * A JSON Schema object defining the expected parameters for the tool.
          */
-        readonly inputSchema: v.LooseObjectSchema<{
+        readonly inputSchema: v.ObjectSchema<{
             readonly type: v.LiteralSchema<"object", undefined>;
-            readonly properties: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly properties: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
         }, undefined>;
         /**
          * An optional JSON Schema object defining the structure of the tool's output returned in
          * the structuredContent field of a CallToolResult.
          */
-        readonly outputSchema: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly outputSchema: v.OptionalSchema<v.ObjectSchema<{
             readonly type: v.LiteralSchema<"object", undefined>;
-            readonly properties: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly properties: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
         }, undefined>, undefined>;
         /**
          * Optional additional tool information.
          */
-        readonly annotations: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly annotations: v.OptionalSchema<v.ObjectSchema<{
             /**
              * A human-readable title for the tool.
              */
@@ -1890,7 +1890,7 @@ export const ListToolsResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -1912,19 +1912,19 @@ export const ListToolsResultSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * The server's response to a tool call.
  */
-export const CallToolResultSchema: v.LooseObjectSchema<{
+export const CallToolResultSchema: v.ObjectSchema<{
     /**
      * A list of content objects that represent the result of the tool call.
      *
      * If the Tool does not define an outputSchema, this field MUST be present in the result.
      * For backwards compatibility, this field is always present, but it may be empty.
      */
-    readonly content: v.OptionalSchema<v.ArraySchema<v.UnionSchema<[v.LooseObjectSchema<{
+    readonly content: v.OptionalSchema<v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
         readonly type: v.LiteralSchema<"text", undefined>;
         /**
          * The text content of the message.
@@ -1934,8 +1934,8 @@ export const CallToolResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"image", undefined>;
         /**
          * The base64-encoded image data.
@@ -1949,8 +1949,8 @@ export const CallToolResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"audio", undefined>;
         /**
          * The base64-encoded audio data.
@@ -1964,8 +1964,8 @@ export const CallToolResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"resource_link", undefined>;
         /**
          * The URI of this resource.
@@ -1985,7 +1985,7 @@ export const CallToolResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -1997,9 +1997,9 @@ export const CallToolResultSchema: v.LooseObjectSchema<{
          * if present).
          */
         readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"resource", undefined>;
-        readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+        readonly resource: v.UnionSchema<[v.ObjectSchema<{
             /**
              * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
              */
@@ -2016,8 +2016,8 @@ export const CallToolResultSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             /**
              * A base64-encoded string representing the binary data of the item.
              */
@@ -2034,20 +2034,20 @@ export const CallToolResultSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         }, undefined>], undefined>;
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>, undefined>, readonly []>;
     /**
      * An object containing structured tool output.
      *
      * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
      */
-    readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly structuredContent: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /**
      * Whether the tool call ended in an error.
      *
@@ -2067,19 +2067,19 @@ export const CallToolResultSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * CallToolResultSchema extended with backwards compatibility to protocol version 2024-10-07.
  */
-export const CompatibilityCallToolResultSchema: v.UnionSchema<[v.LooseObjectSchema<{
+export const CompatibilityCallToolResultSchema: v.UnionSchema<[v.ObjectSchema<{
     /**
      * A list of content objects that represent the result of the tool call.
      *
      * If the Tool does not define an outputSchema, this field MUST be present in the result.
      * For backwards compatibility, this field is always present, but it may be empty.
      */
-    readonly content: v.OptionalSchema<v.ArraySchema<v.UnionSchema<[v.LooseObjectSchema<{
+    readonly content: v.OptionalSchema<v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
         readonly type: v.LiteralSchema<"text", undefined>;
         /**
          * The text content of the message.
@@ -2089,8 +2089,8 @@ export const CompatibilityCallToolResultSchema: v.UnionSchema<[v.LooseObjectSche
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"image", undefined>;
         /**
          * The base64-encoded image data.
@@ -2104,8 +2104,8 @@ export const CompatibilityCallToolResultSchema: v.UnionSchema<[v.LooseObjectSche
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"audio", undefined>;
         /**
          * The base64-encoded audio data.
@@ -2119,8 +2119,8 @@ export const CompatibilityCallToolResultSchema: v.UnionSchema<[v.LooseObjectSche
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"resource_link", undefined>;
         /**
          * The URI of this resource.
@@ -2140,7 +2140,7 @@ export const CompatibilityCallToolResultSchema: v.UnionSchema<[v.LooseObjectSche
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -2152,9 +2152,9 @@ export const CompatibilityCallToolResultSchema: v.UnionSchema<[v.LooseObjectSche
          * if present).
          */
         readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"resource", undefined>;
-        readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+        readonly resource: v.UnionSchema<[v.ObjectSchema<{
             /**
              * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
              */
@@ -2171,8 +2171,8 @@ export const CompatibilityCallToolResultSchema: v.UnionSchema<[v.LooseObjectSche
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             /**
              * A base64-encoded string representing the binary data of the item.
              */
@@ -2189,20 +2189,20 @@ export const CompatibilityCallToolResultSchema: v.UnionSchema<[v.LooseObjectSche
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         }, undefined>], undefined>;
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>, undefined>, readonly []>;
     /**
      * An object containing structured tool output.
      *
      * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
      */
-    readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly structuredContent: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /**
      * Whether the tool call ended in an error.
      *
@@ -2222,24 +2222,24 @@ export const CompatibilityCallToolResultSchema: v.UnionSchema<[v.LooseObjectSche
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
     readonly toolResult: v.UnknownSchema;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>], undefined>;
 /**
  * Used by the client to invoke a tool provided by the server.
  */
-export const CallToolRequestSchema: v.LooseObjectSchema<{
+export const CallToolRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"tools/call", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         readonly name: v.StringSchema<undefined>;
         readonly arguments: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.UnknownSchema, undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -2250,14 +2250,14 @@ export const CallToolRequestSchema: v.LooseObjectSchema<{
 /**
  * An optional notification from the server to the client, informing it that the list of tools it offers has changed. This may be issued by servers without any previous subscription from the client.
  */
-export const ToolListChangedNotificationSchema: v.LooseObjectSchema<{
+export const ToolListChangedNotificationSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/tools/list_changed", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>;
 /**
@@ -2267,14 +2267,14 @@ export const LoggingLevelSchema: v.PicklistSchema<["debug", "info", "notice", "w
 /**
  * A request from the client to the server, to enable or adjust logging.
  */
-export const SetLevelRequestSchema: v.LooseObjectSchema<{
+export const SetLevelRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"logging/setLevel", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The level of logging that the client wants to receive from the server. The server should send all logs at this level and higher (i.e., more severe) to the client as notifications/logging/message.
          */
         readonly level: v.PicklistSchema<["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"], undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -2285,9 +2285,9 @@ export const SetLevelRequestSchema: v.LooseObjectSchema<{
 /**
  * Notification of a log message passed from server to client. If no logging/setLevel request has been sent from the client, the server MAY decide which messages to send automatically.
  */
-export const LoggingMessageNotificationSchema: v.LooseObjectSchema<{
+export const LoggingMessageNotificationSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/message", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The severity of this log message.
          */
@@ -2304,13 +2304,13 @@ export const LoggingMessageNotificationSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
 }, undefined>;
 /**
  * Hints to use for model selection.
  */
-export const ModelHintSchema: v.LooseObjectSchema<{
+export const ModelHintSchema: v.ObjectSchema<{
     /**
      * A hint for a model name.
      */
@@ -2319,11 +2319,11 @@ export const ModelHintSchema: v.LooseObjectSchema<{
 /**
  * The server's preferences for model selection, requested of the client during sampling.
  */
-export const ModelPreferencesSchema: v.LooseObjectSchema<{
+export const ModelPreferencesSchema: v.ObjectSchema<{
     /**
      * Optional hints to use for model selection.
      */
-    readonly hints: v.OptionalSchema<v.ArraySchema<v.LooseObjectSchema<{
+    readonly hints: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
         /**
          * A hint for a model name.
          */
@@ -2345,9 +2345,9 @@ export const ModelPreferencesSchema: v.LooseObjectSchema<{
 /**
  * Describes a message issued to or received from an LLM API.
  */
-export const SamplingMessageSchema: v.LooseObjectSchema<{
+export const SamplingMessageSchema: v.ObjectSchema<{
     readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
-    readonly content: v.UnionSchema<[v.LooseObjectSchema<{
+    readonly content: v.UnionSchema<[v.ObjectSchema<{
         readonly type: v.LiteralSchema<"text", undefined>;
         /**
          * The text content of the message.
@@ -2357,8 +2357,8 @@ export const SamplingMessageSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"image", undefined>;
         /**
          * The base64-encoded image data.
@@ -2372,8 +2372,8 @@ export const SamplingMessageSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"audio", undefined>;
         /**
          * The base64-encoded audio data.
@@ -2387,13 +2387,13 @@ export const SamplingMessageSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>;
 }, undefined>;
-export const CreateMessageRequestParamsSchema: v.LooseObjectSchema<{
-    readonly messages: v.ArraySchema<v.LooseObjectSchema<{
+export const CreateMessageRequestParamsSchema: v.ObjectSchema<{
+    readonly messages: v.ArraySchema<v.ObjectSchema<{
         readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
-        readonly content: v.UnionSchema<[v.LooseObjectSchema<{
+        readonly content: v.UnionSchema<[v.ObjectSchema<{
             readonly type: v.LiteralSchema<"text", undefined>;
             /**
              * The text content of the message.
@@ -2403,8 +2403,8 @@ export const CreateMessageRequestParamsSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"image", undefined>;
             /**
              * The base64-encoded image data.
@@ -2418,8 +2418,8 @@ export const CreateMessageRequestParamsSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"audio", undefined>;
             /**
              * The base64-encoded audio data.
@@ -2433,7 +2433,7 @@ export const CreateMessageRequestParamsSchema: v.LooseObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         }, undefined>], undefined>;
     }, undefined>, undefined>;
     /**
@@ -2453,15 +2453,15 @@ export const CreateMessageRequestParamsSchema: v.LooseObjectSchema<{
     /**
      * Optional metadata to pass through to the LLM provider. The format of this metadata is provider-specific.
      */
-    readonly metadata: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly metadata: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /**
      * The server's preferences for which model to select.
      */
-    readonly modelPreferences: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly modelPreferences: v.OptionalSchema<v.ObjectSchema<{
         /**
          * Optional hints to use for model selection.
          */
-        readonly hints: v.OptionalSchema<v.ArraySchema<v.LooseObjectSchema<{
+        readonly hints: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
             /**
              * A hint for a model name.
              */
@@ -2480,7 +2480,7 @@ export const CreateMessageRequestParamsSchema: v.LooseObjectSchema<{
          */
         readonly intelligencePriority: v.OptionalSchema<v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.MinValueAction<number, 0, undefined>, v.MaxValueAction<number, 1, undefined>]>, undefined>;
     }, undefined>, undefined>;
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{
         /**
          * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
          */
@@ -2490,12 +2490,12 @@ export const CreateMessageRequestParamsSchema: v.LooseObjectSchema<{
 /**
  * A request from the server to sample an LLM via the client. The client has full discretion over which model to select. The client should also inform the user before beginning sampling, to allow them to inspect the request (human in the loop) and decide whether to approve it.
  */
-export const CreateMessageRequestSchema: v.LooseObjectSchema<{
+export const CreateMessageRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"sampling/createMessage", undefined>;
-    readonly params: v.LooseObjectSchema<{
-        readonly messages: v.ArraySchema<v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
+        readonly messages: v.ArraySchema<v.ObjectSchema<{
             readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
-            readonly content: v.UnionSchema<[v.LooseObjectSchema<{
+            readonly content: v.UnionSchema<[v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"text", undefined>;
                 /**
                  * The text content of the message.
@@ -2505,8 +2505,8 @@ export const CreateMessageRequestSchema: v.LooseObjectSchema<{
                  * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
                  * for notes on _meta usage.
                  */
-                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+                readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+            }, undefined>, v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"image", undefined>;
                 /**
                  * The base64-encoded image data.
@@ -2520,8 +2520,8 @@ export const CreateMessageRequestSchema: v.LooseObjectSchema<{
                  * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
                  * for notes on _meta usage.
                  */
-                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+                readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+            }, undefined>, v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"audio", undefined>;
                 /**
                  * The base64-encoded audio data.
@@ -2535,7 +2535,7 @@ export const CreateMessageRequestSchema: v.LooseObjectSchema<{
                  * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
                  * for notes on _meta usage.
                  */
-                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+                readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             }, undefined>], undefined>;
         }, undefined>, undefined>;
         /**
@@ -2555,15 +2555,15 @@ export const CreateMessageRequestSchema: v.LooseObjectSchema<{
         /**
          * Optional metadata to pass through to the LLM provider. The format of this metadata is provider-specific.
          */
-        readonly metadata: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly metadata: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * The server's preferences for which model to select.
          */
-        readonly modelPreferences: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly modelPreferences: v.OptionalSchema<v.ObjectSchema<{
             /**
              * Optional hints to use for model selection.
              */
-            readonly hints: v.OptionalSchema<v.ArraySchema<v.LooseObjectSchema<{
+            readonly hints: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
                 /**
                  * A hint for a model name.
                  */
@@ -2582,7 +2582,7 @@ export const CreateMessageRequestSchema: v.LooseObjectSchema<{
              */
             readonly intelligencePriority: v.OptionalSchema<v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.MinValueAction<number, 0, undefined>, v.MaxValueAction<number, 1, undefined>]>, undefined>;
         }, undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -2593,7 +2593,7 @@ export const CreateMessageRequestSchema: v.LooseObjectSchema<{
 /**
  * The client's response to a sampling/create_message request from the server. The client should inform the user before returning the sampled message, to allow them to inspect the response (human in the loop) and decide whether to allow the server to see it.
  */
-export const CreateMessageResultSchema: v.LooseObjectSchema<{
+export const CreateMessageResultSchema: v.ObjectSchema<{
     /**
      * The name of the model that generated the message.
      */
@@ -2603,7 +2603,7 @@ export const CreateMessageResultSchema: v.LooseObjectSchema<{
      */
     readonly stopReason: v.OptionalSchema<v.UnionSchema<[v.PicklistSchema<["endTurn", "stopSequence", "maxTokens"], undefined>, v.StringSchema<undefined>], undefined>, undefined>;
     readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
-    readonly content: v.VariantSchema<"type", [v.LooseObjectSchema<{
+    readonly content: v.VariantSchema<"type", [v.ObjectSchema<{
         readonly type: v.LiteralSchema<"text", undefined>;
         /**
          * The text content of the message.
@@ -2613,8 +2613,8 @@ export const CreateMessageResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"image", undefined>;
         /**
          * The base64-encoded image data.
@@ -2628,8 +2628,8 @@ export const CreateMessageResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"audio", undefined>;
         /**
          * The base64-encoded audio data.
@@ -2643,18 +2643,18 @@ export const CreateMessageResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * Primitive schema definition for boolean fields.
  */
-export const BooleanSchemaSchema: v.LooseObjectSchema<{
+export const BooleanSchemaSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"boolean", undefined>;
     readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
@@ -2663,7 +2663,7 @@ export const BooleanSchemaSchema: v.LooseObjectSchema<{
 /**
  * Primitive schema definition for string fields.
  */
-export const StringSchemaSchema: v.LooseObjectSchema<{
+export const StringSchemaSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"string", undefined>;
     readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
@@ -2674,7 +2674,7 @@ export const StringSchemaSchema: v.LooseObjectSchema<{
 /**
  * Primitive schema definition for number fields.
  */
-export const NumberSchemaSchema: v.LooseObjectSchema<{
+export const NumberSchemaSchema: v.ObjectSchema<{
     readonly type: v.PicklistSchema<["number", "integer"], undefined>;
     readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
@@ -2684,7 +2684,7 @@ export const NumberSchemaSchema: v.LooseObjectSchema<{
 /**
  * Primitive schema definition for enum fields.
  */
-export const EnumSchemaSchema: v.LooseObjectSchema<{
+export const EnumSchemaSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"string", undefined>;
     readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
@@ -2694,25 +2694,25 @@ export const EnumSchemaSchema: v.LooseObjectSchema<{
 /**
  * Union of all primitive schema definitions.
  */
-export const PrimitiveSchemaDefinitionSchema: v.UnionSchema<[v.LooseObjectSchema<{
+export const PrimitiveSchemaDefinitionSchema: v.UnionSchema<[v.ObjectSchema<{
     readonly type: v.LiteralSchema<"boolean", undefined>;
     readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly default: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly type: v.LiteralSchema<"string", undefined>;
     readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly minLength: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
     readonly maxLength: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
     readonly format: v.OptionalSchema<v.PicklistSchema<["email", "uri", "date", "date-time"], undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly type: v.PicklistSchema<["number", "integer"], undefined>;
     readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly minimum: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
     readonly maximum: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly type: v.LiteralSchema<"string", undefined>;
     readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
     readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
@@ -2723,9 +2723,9 @@ export const PrimitiveSchemaDefinitionSchema: v.UnionSchema<[v.LooseObjectSchema
  * A request from the server to elicit user input via the client.
  * The client should present the message and form fields to the user.
  */
-export const ElicitRequestSchema: v.LooseObjectSchema<{
+export const ElicitRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"elicitation/create", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The message to present to the user.
          */
@@ -2733,27 +2733,27 @@ export const ElicitRequestSchema: v.LooseObjectSchema<{
         /**
          * The schema for the requested user input.
          */
-        readonly requestedSchema: v.LooseObjectSchema<{
+        readonly requestedSchema: v.ObjectSchema<{
             readonly type: v.LiteralSchema<"object", undefined>;
-            readonly properties: v.RecordSchema<v.StringSchema<undefined>, v.UnionSchema<[v.LooseObjectSchema<{
+            readonly properties: v.RecordSchema<v.StringSchema<undefined>, v.UnionSchema<[v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"boolean", undefined>;
                 readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly default: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+            }, undefined>, v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"string", undefined>;
                 readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly minLength: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
                 readonly maxLength: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
                 readonly format: v.OptionalSchema<v.PicklistSchema<["email", "uri", "date", "date-time"], undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+            }, undefined>, v.ObjectSchema<{
                 readonly type: v.PicklistSchema<["number", "integer"], undefined>;
                 readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly minimum: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
                 readonly maximum: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+            }, undefined>, v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"string", undefined>;
                 readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
@@ -2762,7 +2762,7 @@ export const ElicitRequestSchema: v.LooseObjectSchema<{
             }, undefined>], undefined>, undefined>;
             readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
         }, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -2773,7 +2773,7 @@ export const ElicitRequestSchema: v.LooseObjectSchema<{
 /**
  * The client's response to an elicitation/create request from the server.
  */
-export const ElicitResultSchema: v.LooseObjectSchema<{
+export const ElicitResultSchema: v.ObjectSchema<{
     /**
      * The user's response action.
      */
@@ -2786,12 +2786,12 @@ export const ElicitResultSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * A reference to a resource or resource template definition.
  */
-export const ResourceTemplateReferenceSchema: v.LooseObjectSchema<{
+export const ResourceTemplateReferenceSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"ref/resource", undefined>;
     /**
      * The URI or URI template of the resource.
@@ -2801,7 +2801,7 @@ export const ResourceTemplateReferenceSchema: v.LooseObjectSchema<{
 /**
  * @deprecated Use ResourceTemplateReferenceSchema instead
  */
-export const ResourceReferenceSchema: v.LooseObjectSchema<{
+export const ResourceReferenceSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"ref/resource", undefined>;
     /**
      * The URI or URI template of the resource.
@@ -2811,7 +2811,7 @@ export const ResourceReferenceSchema: v.LooseObjectSchema<{
 /**
  * Identifies a prompt.
  */
-export const PromptReferenceSchema: v.LooseObjectSchema<{
+export const PromptReferenceSchema: v.ObjectSchema<{
     readonly type: v.LiteralSchema<"ref/prompt", undefined>;
     /**
      * The name of the prompt or prompt template
@@ -2821,16 +2821,16 @@ export const PromptReferenceSchema: v.LooseObjectSchema<{
 /**
  * A request from the client to the server, to ask for completion options.
  */
-export const CompleteRequestSchema: v.LooseObjectSchema<{
+export const CompleteRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"completion/complete", undefined>;
-    readonly params: v.LooseObjectSchema<{
-        readonly ref: v.UnionSchema<[v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
+        readonly ref: v.UnionSchema<[v.ObjectSchema<{
             readonly type: v.LiteralSchema<"ref/prompt", undefined>;
             /**
              * The name of the prompt or prompt template
              */
             readonly name: v.StringSchema<undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"ref/resource", undefined>;
             /**
              * The URI or URI template of the resource.
@@ -2840,7 +2840,7 @@ export const CompleteRequestSchema: v.LooseObjectSchema<{
         /**
          * The argument's information
          */
-        readonly argument: v.LooseObjectSchema<{
+        readonly argument: v.ObjectSchema<{
             /**
              * The name of the argument
              */
@@ -2856,7 +2856,7 @@ export const CompleteRequestSchema: v.LooseObjectSchema<{
              */
             readonly arguments: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.StringSchema<undefined>, undefined>, undefined>;
         }, undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -2867,8 +2867,8 @@ export const CompleteRequestSchema: v.LooseObjectSchema<{
 /**
  * The server's response to a completion/complete request
  */
-export const CompleteResultSchema: v.LooseObjectSchema<{
-    readonly completion: v.LooseObjectSchema<{
+export const CompleteResultSchema: v.ObjectSchema<{
+    readonly completion: v.ObjectSchema<{
         /**
          * An array of completion values. Must not exceed 100 items.
          */
@@ -2886,12 +2886,12 @@ export const CompleteResultSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * Represents a root directory or file that the server can operate on.
  */
-export const RootSchema: v.LooseObjectSchema<{
+export const RootSchema: v.ObjectSchema<{
     /**
      * The URI identifying the root. This *must* start with file:// for now.
      */
@@ -2904,15 +2904,15 @@ export const RootSchema: v.LooseObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * Sent from the server to request a list of root URIs from the client.
  */
-export const ListRootsRequestSchema: v.LooseObjectSchema<{
+export const ListRootsRequestSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"roots/list", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -2923,8 +2923,8 @@ export const ListRootsRequestSchema: v.LooseObjectSchema<{
 /**
  * The client's response to a roots/list request from the server.
  */
-export const ListRootsResultSchema: v.LooseObjectSchema<{
-    readonly roots: v.ArraySchema<v.LooseObjectSchema<{
+export const ListRootsResultSchema: v.ObjectSchema<{
+    readonly roots: v.ArraySchema<v.ObjectSchema<{
         /**
          * The URI identifying the root. This *must* start with file:// for now.
          */
@@ -2937,68 +2937,68 @@ export const ListRootsResultSchema: v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>;
 /**
  * A notification from the client to the server, informing it that the list of roots has changed.
  */
-export const RootsListChangedNotificationSchema: v.LooseObjectSchema<{
+export const RootsListChangedNotificationSchema: v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/roots/list_changed", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>;
-export const ClientRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
+export const ClientRequestSchema: v.UnionSchema<[v.ObjectSchema<{
     readonly method: v.LiteralSchema<"ping", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"initialize", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The latest version of the Model Context Protocol that the client supports. The client MAY decide to support older versions as well.
          */
         readonly protocolVersion: v.StringSchema<undefined>;
-        readonly capabilities: v.LooseObjectSchema<{
+        readonly capabilities: v.ObjectSchema<{
             /**
              * Experimental, non-standard capabilities that the client supports.
              */
-            readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             /**
              * Present if the client supports sampling from an LLM.
              */
-            readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly sampling: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             /**
              * Present if the client supports eliciting user input.
              */
-            readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             /**
              * Present if the client supports listing roots.
              */
-            readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
+            readonly roots: v.OptionalSchema<v.ObjectSchema<{
                 /**
                  * Whether the client supports issuing notifications for changes to the roots list.
                  */
                 readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
             }, undefined>, undefined>;
         }, undefined>;
-        readonly clientInfo: v.LooseObjectSchema<{
+        readonly clientInfo: v.ObjectSchema<{
             readonly version: v.StringSchema<undefined>;
             /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
             readonly name: v.StringSchema<undefined>;
@@ -3012,23 +3012,23 @@ export const ClientRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
              */
             readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
         }, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"completion/complete", undefined>;
-    readonly params: v.LooseObjectSchema<{
-        readonly ref: v.UnionSchema<[v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
+        readonly ref: v.UnionSchema<[v.ObjectSchema<{
             readonly type: v.LiteralSchema<"ref/prompt", undefined>;
             /**
              * The name of the prompt or prompt template
              */
             readonly name: v.StringSchema<undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"ref/resource", undefined>;
             /**
              * The URI or URI template of the resource.
@@ -3038,7 +3038,7 @@ export const ClientRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
         /**
          * The argument's information
          */
-        readonly argument: v.LooseObjectSchema<{
+        readonly argument: v.ObjectSchema<{
             /**
              * The name of the argument
              */
@@ -3054,30 +3054,30 @@ export const ClientRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
              */
             readonly arguments: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.StringSchema<undefined>, undefined>, undefined>;
         }, undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"logging/setLevel", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The level of logging that the client wants to receive from the server. The server should send all logs at this level and higher (i.e., more severe) to the client as notifications/logging/message.
          */
         readonly level: v.PicklistSchema<["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"], undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"prompts/get", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The name of the prompt or prompt template.
          */
@@ -3086,121 +3086,121 @@ export const ClientRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
          * Arguments to use for templating the prompt.
          */
         readonly arguments: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.StringSchema<undefined>, undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"prompts/list", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * An opaque token representing the current pagination position.
          * If provided, the server should return results starting after this cursor.
          */
         readonly cursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"resources/list", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * An opaque token representing the current pagination position.
          * If provided, the server should return results starting after this cursor.
          */
         readonly cursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"resources/templates/list", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * An opaque token representing the current pagination position.
          * If provided, the server should return results starting after this cursor.
          */
         readonly cursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"resources/read", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The URI of the resource to read. The URI can use any protocol; it is up to the server how to interpret it.
          */
         readonly uri: v.StringSchema<undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"resources/subscribe", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The URI of the resource to subscribe to. The URI can use any protocol; it is up to the server how to interpret it.
          */
         readonly uri: v.StringSchema<undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"resources/unsubscribe", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The URI of the resource to unsubscribe from.
          */
         readonly uri: v.StringSchema<undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"tools/call", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         readonly name: v.StringSchema<undefined>;
         readonly arguments: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.UnknownSchema, undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"tools/list", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * An opaque token representing the current pagination position.
          * If provided, the server should return results starting after this cursor.
          */
         readonly cursor: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -3208,9 +3208,9 @@ export const ClientRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
         }, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>], undefined>;
-export const ClientNotificationSchema: v.UnionSchema<[v.LooseObjectSchema<{
+export const ClientNotificationSchema: v.UnionSchema<[v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/cancelled", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The ID of the request to cancel.
          *
@@ -3225,9 +3225,9 @@ export const ClientNotificationSchema: v.UnionSchema<[v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/progress", undefined>;
     readonly params: v.ObjectSchema<{
         /**
@@ -3250,25 +3250,25 @@ export const ClientNotificationSchema: v.UnionSchema<[v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/initialized", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/roots/list_changed", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>], undefined>;
 export const ClientResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
@@ -3276,8 +3276,8 @@ export const ClientResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
     /**
      * The name of the model that generated the message.
      */
@@ -3287,7 +3287,7 @@ export const ClientResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      */
     readonly stopReason: v.OptionalSchema<v.UnionSchema<[v.PicklistSchema<["endTurn", "stopSequence", "maxTokens"], undefined>, v.StringSchema<undefined>], undefined>, undefined>;
     readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
-    readonly content: v.VariantSchema<"type", [v.LooseObjectSchema<{
+    readonly content: v.VariantSchema<"type", [v.ObjectSchema<{
         readonly type: v.LiteralSchema<"text", undefined>;
         /**
          * The text content of the message.
@@ -3297,8 +3297,8 @@ export const ClientResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"image", undefined>;
         /**
          * The base64-encoded image data.
@@ -3312,8 +3312,8 @@ export const ClientResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"audio", undefined>;
         /**
          * The base64-encoded audio data.
@@ -3327,14 +3327,14 @@ export const ClientResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
     /**
      * The user's response action.
      */
@@ -3347,9 +3347,9 @@ export const ClientResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
-    readonly roots: v.ArraySchema<v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
+    readonly roots: v.ArraySchema<v.ObjectSchema<{
         /**
          * The URI identifying the root. This *must* start with file:// for now.
          */
@@ -3362,30 +3362,30 @@ export const ClientResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>], undefined>;
-export const ServerRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
+export const ServerRequestSchema: v.UnionSchema<[v.ObjectSchema<{
     readonly method: v.LiteralSchema<"ping", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"sampling/createMessage", undefined>;
-    readonly params: v.LooseObjectSchema<{
-        readonly messages: v.ArraySchema<v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
+        readonly messages: v.ArraySchema<v.ObjectSchema<{
             readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
-            readonly content: v.UnionSchema<[v.LooseObjectSchema<{
+            readonly content: v.UnionSchema<[v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"text", undefined>;
                 /**
                  * The text content of the message.
@@ -3395,8 +3395,8 @@ export const ServerRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
                  * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
                  * for notes on _meta usage.
                  */
-                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+                readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+            }, undefined>, v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"image", undefined>;
                 /**
                  * The base64-encoded image data.
@@ -3410,8 +3410,8 @@ export const ServerRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
                  * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
                  * for notes on _meta usage.
                  */
-                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+                readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+            }, undefined>, v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"audio", undefined>;
                 /**
                  * The base64-encoded audio data.
@@ -3425,7 +3425,7 @@ export const ServerRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
                  * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
                  * for notes on _meta usage.
                  */
-                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+                readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             }, undefined>], undefined>;
         }, undefined>, undefined>;
         /**
@@ -3445,15 +3445,15 @@ export const ServerRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
         /**
          * Optional metadata to pass through to the LLM provider. The format of this metadata is provider-specific.
          */
-        readonly metadata: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly metadata: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * The server's preferences for which model to select.
          */
-        readonly modelPreferences: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly modelPreferences: v.OptionalSchema<v.ObjectSchema<{
             /**
              * Optional hints to use for model selection.
              */
-            readonly hints: v.OptionalSchema<v.ArraySchema<v.LooseObjectSchema<{
+            readonly hints: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
                 /**
                  * A hint for a model name.
                  */
@@ -3472,16 +3472,16 @@ export const ServerRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
              */
             readonly intelligencePriority: v.OptionalSchema<v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.MinValueAction<number, 0, undefined>, v.MaxValueAction<number, 1, undefined>]>, undefined>;
         }, undefined>, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"elicitation/create", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The message to present to the user.
          */
@@ -3489,27 +3489,27 @@ export const ServerRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
         /**
          * The schema for the requested user input.
          */
-        readonly requestedSchema: v.LooseObjectSchema<{
+        readonly requestedSchema: v.ObjectSchema<{
             readonly type: v.LiteralSchema<"object", undefined>;
-            readonly properties: v.RecordSchema<v.StringSchema<undefined>, v.UnionSchema<[v.LooseObjectSchema<{
+            readonly properties: v.RecordSchema<v.StringSchema<undefined>, v.UnionSchema<[v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"boolean", undefined>;
                 readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly default: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+            }, undefined>, v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"string", undefined>;
                 readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly minLength: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
                 readonly maxLength: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
                 readonly format: v.OptionalSchema<v.PicklistSchema<["email", "uri", "date", "date-time"], undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+            }, undefined>, v.ObjectSchema<{
                 readonly type: v.PicklistSchema<["number", "integer"], undefined>;
                 readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly minimum: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
                 readonly maximum: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+            }, undefined>, v.ObjectSchema<{
                 readonly type: v.LiteralSchema<"string", undefined>;
                 readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
                 readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
@@ -3518,17 +3518,17 @@ export const ServerRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
             }, undefined>], undefined>, undefined>;
             readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
         }, undefined>;
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
             readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"roots/list", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{
             /**
              * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
              */
@@ -3536,9 +3536,9 @@ export const ServerRequestSchema: v.UnionSchema<[v.LooseObjectSchema<{
         }, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>], undefined>;
-export const ServerNotificationSchema: v.UnionSchema<[v.LooseObjectSchema<{
+export const ServerNotificationSchema: v.UnionSchema<[v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/cancelled", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The ID of the request to cancel.
          *
@@ -3553,9 +3553,9 @@ export const ServerNotificationSchema: v.UnionSchema<[v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/progress", undefined>;
     readonly params: v.ObjectSchema<{
         /**
@@ -3578,11 +3578,11 @@ export const ServerNotificationSchema: v.UnionSchema<[v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/message", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The severity of this log message.
          */
@@ -3599,11 +3599,11 @@ export const ServerNotificationSchema: v.UnionSchema<[v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/resources/updated", undefined>;
-    readonly params: v.LooseObjectSchema<{
+    readonly params: v.ObjectSchema<{
         /**
          * The URI of the resource that has been updated. This might be a sub-resource of the one that the client actually subscribed to.
          */
@@ -3612,34 +3612,34 @@ export const ServerNotificationSchema: v.UnionSchema<[v.LooseObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/resources/list_changed", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/tools/list_changed", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+}, undefined>, v.ObjectSchema<{
     readonly method: v.LiteralSchema<"notifications/prompts/list_changed", undefined>;
-    readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+    readonly params: v.OptionalSchema<v.ObjectSchema<{
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>, undefined>;
 }, undefined>], undefined>;
 export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
@@ -3647,29 +3647,29 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
     /**
      * The version of the Model Context Protocol that the server wants to use. This may not match the version that the client requested. If the client cannot support this version, it MUST disconnect.
      */
     readonly protocolVersion: v.StringSchema<undefined>;
-    readonly capabilities: v.LooseObjectSchema<{
+    readonly capabilities: v.ObjectSchema<{
         /**
          * Experimental, non-standard capabilities that the server supports.
          */
-        readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * Present if the server supports sending log messages to the client.
          */
-        readonly logging: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly logging: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * Present if the server supports sending completions to the client.
          */
-        readonly completions: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly completions: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /**
          * Present if the server offers any prompt templates.
          */
-        readonly prompts: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly prompts: v.OptionalSchema<v.ObjectSchema<{
             /**
              * Whether this server supports issuing notifications for changes to the prompt list.
              */
@@ -3678,7 +3678,7 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
         /**
          * Present if the server offers any resources to read.
          */
-        readonly resources: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly resources: v.OptionalSchema<v.ObjectSchema<{
             /**
              * Whether this server supports clients subscribing to resource updates.
              */
@@ -3691,14 +3691,14 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
         /**
          * Present if the server offers any tools to call.
          */
-        readonly tools: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly tools: v.OptionalSchema<v.ObjectSchema<{
             /**
              * Whether this server supports issuing notifications for changes to the tool list.
              */
             readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
         }, undefined>, undefined>;
     }, undefined>;
-    readonly serverInfo: v.LooseObjectSchema<{
+    readonly serverInfo: v.ObjectSchema<{
         readonly version: v.StringSchema<undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
@@ -3722,9 +3722,9 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
-    readonly completion: v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
+    readonly completion: v.ObjectSchema<{
         /**
          * An array of completion values. Must not exceed 100 items.
          */
@@ -3742,15 +3742,15 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
     /**
      * An optional description for the prompt.
      */
     readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-    readonly messages: v.ArraySchema<v.LooseObjectSchema<{
+    readonly messages: v.ArraySchema<v.ObjectSchema<{
         readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
-        readonly content: v.UnionSchema<[v.LooseObjectSchema<{
+        readonly content: v.UnionSchema<[v.ObjectSchema<{
             readonly type: v.LiteralSchema<"text", undefined>;
             /**
              * The text content of the message.
@@ -3760,8 +3760,8 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"image", undefined>;
             /**
              * The base64-encoded image data.
@@ -3775,8 +3775,8 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"audio", undefined>;
             /**
              * The base64-encoded audio data.
@@ -3790,8 +3790,8 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"resource_link", undefined>;
             /**
              * The URI of this resource.
@@ -3811,7 +3811,7 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
             readonly name: v.StringSchema<undefined>;
             /**
@@ -3823,9 +3823,9 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
              * if present).
              */
             readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+        }, undefined>, v.ObjectSchema<{
             readonly type: v.LiteralSchema<"resource", undefined>;
-            readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+            readonly resource: v.UnionSchema<[v.ObjectSchema<{
                 /**
                  * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
                  */
@@ -3842,8 +3842,8 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
                  * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
                  * for notes on _meta usage.
                  */
-                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-            }, undefined>, v.LooseObjectSchema<{
+                readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+            }, undefined>, v.ObjectSchema<{
                 /**
                  * A base64-encoded string representing the binary data of the item.
                  */
@@ -3860,22 +3860,22 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
                  * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
                  * for notes on _meta usage.
                  */
-                readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+                readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             }, undefined>], undefined>;
             /**
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         }, undefined>], undefined>;
     }, undefined>, undefined>;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
-    readonly prompts: v.ArraySchema<v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
+    readonly prompts: v.ArraySchema<v.ObjectSchema<{
         /**
          * An optional description of what this prompt provides
          */
@@ -3883,7 +3883,7 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
         /**
          * A list of arguments to use for templating the prompt.
          */
-        readonly arguments: v.OptionalSchema<v.ArraySchema<v.LooseObjectSchema<{
+        readonly arguments: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
             /**
              * The name of the argument.
              */
@@ -3901,7 +3901,7 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -3923,9 +3923,9 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
-    readonly resources: v.ArraySchema<v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
+    readonly resources: v.ArraySchema<v.ObjectSchema<{
         /**
          * The URI of this resource.
          */
@@ -3944,7 +3944,7 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -3966,9 +3966,9 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
-    readonly resourceTemplates: v.ArraySchema<v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
+    readonly resourceTemplates: v.ArraySchema<v.ObjectSchema<{
         /**
          * A URI template (according to RFC 6570) that can be used to construct resource URIs.
          */
@@ -3987,7 +3987,7 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -4009,9 +4009,9 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
-    readonly contents: v.ArraySchema<v.UnionSchema<[v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
+    readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
         /**
          * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
          */
@@ -4028,8 +4028,8 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         /**
          * A base64-encoded string representing the binary data of the item.
          */
@@ -4046,21 +4046,21 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>, undefined>;
     /**
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
     /**
      * A list of content objects that represent the result of the tool call.
      *
      * If the Tool does not define an outputSchema, this field MUST be present in the result.
      * For backwards compatibility, this field is always present, but it may be empty.
      */
-    readonly content: v.OptionalSchema<v.ArraySchema<v.UnionSchema<[v.LooseObjectSchema<{
+    readonly content: v.OptionalSchema<v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
         readonly type: v.LiteralSchema<"text", undefined>;
         /**
          * The text content of the message.
@@ -4070,8 +4070,8 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"image", undefined>;
         /**
          * The base64-encoded image data.
@@ -4085,8 +4085,8 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"audio", undefined>;
         /**
          * The base64-encoded audio data.
@@ -4100,8 +4100,8 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"resource_link", undefined>;
         /**
          * The URI of this resource.
@@ -4121,7 +4121,7 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -4133,9 +4133,9 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * if present).
          */
         readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
-    }, undefined>, v.LooseObjectSchema<{
+    }, undefined>, v.ObjectSchema<{
         readonly type: v.LiteralSchema<"resource", undefined>;
-        readonly resource: v.UnionSchema<[v.LooseObjectSchema<{
+        readonly resource: v.UnionSchema<[v.ObjectSchema<{
             /**
              * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
              */
@@ -4152,8 +4152,8 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-        }, undefined>, v.LooseObjectSchema<{
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+        }, undefined>, v.ObjectSchema<{
             /**
              * A base64-encoded string representing the binary data of the item.
              */
@@ -4170,20 +4170,20 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
              * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
              * for notes on _meta usage.
              */
-            readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         }, undefined>], undefined>;
         /**
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     }, undefined>], undefined>, undefined>, readonly []>;
     /**
      * An object containing structured tool output.
      *
      * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
      */
-    readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly structuredContent: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
     /**
      * Whether the tool call ended in an error.
      *
@@ -4203,9 +4203,9 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
-}, undefined>, v.LooseObjectSchema<{
-    readonly tools: v.ArraySchema<v.LooseObjectSchema<{
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+}, undefined>, v.ObjectSchema<{
+    readonly tools: v.ArraySchema<v.ObjectSchema<{
         /**
          * A human-readable description of the tool.
          */
@@ -4213,24 +4213,24 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
         /**
          * A JSON Schema object defining the expected parameters for the tool.
          */
-        readonly inputSchema: v.LooseObjectSchema<{
+        readonly inputSchema: v.ObjectSchema<{
             readonly type: v.LiteralSchema<"object", undefined>;
-            readonly properties: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly properties: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
         }, undefined>;
         /**
          * An optional JSON Schema object defining the structure of the tool's output returned in
          * the structuredContent field of a CallToolResult.
          */
-        readonly outputSchema: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly outputSchema: v.OptionalSchema<v.ObjectSchema<{
             readonly type: v.LiteralSchema<"object", undefined>;
-            readonly properties: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+            readonly properties: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
             readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
         }, undefined>, undefined>;
         /**
          * Optional additional tool information.
          */
-        readonly annotations: v.OptionalSchema<v.LooseObjectSchema<{
+        readonly annotations: v.OptionalSchema<v.ObjectSchema<{
             /**
              * A human-readable title for the tool.
              */
@@ -4273,7 +4273,7 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
          * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
          * for notes on _meta usage.
          */
-        readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+        readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
         /** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
         readonly name: v.StringSchema<undefined>;
         /**
@@ -4295,7 +4295,7 @@ export const ServerResultSchema: v.UnionSchema<[v.StrictObjectSchema<{
      * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
      * for notes on _meta usage.
      */
-    readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+    readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 }, undefined>], undefined>;
 export type ClientCapabilities = v.InferInput<typeof ClientCapabilitiesSchema>;
 export type ServerCapabilities = v.InferInput<typeof ServerCapabilitiesSchema>;

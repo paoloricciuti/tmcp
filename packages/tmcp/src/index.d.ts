@@ -18,22 +18,12 @@ export class McpServer<StandardSchema extends StandardSchemaV1> {
         name?: string;
     }>;
     currentClientCapabilities(): {
-        experimental?: {} & {
-            [key: string]: unknown;
-        };
-        sampling?: {} & {
-            [key: string]: unknown;
-        };
-        elicitation?: {} & {
-            [key: string]: unknown;
-        };
+        experimental?: {};
+        sampling?: {};
+        elicitation?: {};
         roots?: {
             listChanged?: boolean;
-        } & {
-            [key: string]: unknown;
         };
-    } & {
-        [key: string]: unknown;
     };
     /**
      * @template {keyof McpEvents} TEvent
