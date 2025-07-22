@@ -1,5 +1,13 @@
 # @tmcp/transport-http
 
+## 0.4.2
+
+### Patch Changes
+
+- 3108c37: chore: use `dts-buddy` to generate better types
+- Updated dependencies [3108c37]
+    - tmcp@1.8.1
+
 ## 0.4.1
 
 ### Patch Changes

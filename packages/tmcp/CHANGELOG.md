@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.8.1
+
+### Patch Changes
+
+- 3108c37: chore: use `dts-buddy` to generate better types
+
 ## 1.8.0
 
 ### Minor Changes
