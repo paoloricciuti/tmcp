@@ -1,5 +1,15 @@
 # tmcp
 
+## 1.8.0
+
+### Minor Changes
+
+- 3aad285: breaking: use `object` instead of `looseObject` to unify with official sdk stance
+
+### Patch Changes
+
+- 1ab5536: fix: losen up params validation
+
 ## 1.7.1
 
 ### Patch Changes
