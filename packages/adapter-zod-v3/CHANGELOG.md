@@ -1,5 +1,13 @@
 # @tmcp/adapter-zod-v3
 
+## 0.1.4
+
+### Patch Changes
+
+- 3108c37: chore: use `dts-buddy` to generate better types
+- Updated dependencies [3108c37]
+    - tmcp@1.8.1
+
 ## 0.1.3
 
 ### Patch Changes
