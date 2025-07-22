@@ -1,5 +1,13 @@
 # @tmcp/adapter-arktype
 
+## 0.1.3
+
+### Patch Changes
+
+- feb8f62: chore: use `dts-buddy` to generate better types
+- Updated dependencies [feb8f62]
+    - tmcp@1.8.1
+
 ## 0.1.2
 
 ### Patch Changes

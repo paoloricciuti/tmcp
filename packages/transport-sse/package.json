@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/transport-sse",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Transport for TMCP using Server-Sent Events",
 	"type": "module",
 	"main": "src/index.js",
