@@ -962,7 +962,7 @@ export const CallToolResultSchema = v.object({
 	 *
 	 * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
 	 */
-	structuredContent: v.optional(v.object({})),
+	structuredContent: v.optional(v.looseObject({})),
 
 	/**
 	 * Whether the tool call ended in an error.
