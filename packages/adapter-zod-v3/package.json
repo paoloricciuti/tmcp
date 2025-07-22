@@ -4,14 +4,14 @@
 	"description": "Zod v3 adapter for TMCP JSON Schema conversion",
 	"type": "module",
 	"main": "src/index.js",
-	"types": "src/index.d.ts",
+	"types": "src/types/index.d.ts",
 	"scripts": {
-		"generate:types": "tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint",
+		"generate:types": "dts-buddy && publint",
 		"prepublish": "pnpm generate:types"
 	},
 	"exports": {
 		".": {
-			"types": "./src/index.d.ts",
+			"types": "./src/types/index.d.ts",
 			"default": "./src/index.js"
 		},
 		"./package.json": "./package.json"
@@ -38,6 +38,7 @@
 		"directory": "packages/adapter-zod-v3"
 	},
 	"devDependencies": {
+		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^"
 	},

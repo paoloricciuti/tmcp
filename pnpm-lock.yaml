@@ -73,6 +73,9 @@ importers:
       '@types/node':
         specifier: ^24.0.13
         version: 24.0.13
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -89,6 +92,9 @@ importers:
         specifier: ^7.0.15
         version: 7.0.15
     devDependencies:
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(typescript@5.8.3)
       effect:
         specifier: ^3.16.12
         version: 3.16.12
@@ -111,6 +117,9 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0(typescript@5.8.3)
     devDependencies:
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -130,6 +139,9 @@ importers:
         specifier: ^4.0.5
         version: 4.0.5
     devDependencies:
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -152,6 +164,9 @@ importers:
         specifier: ^3.24.6
         version: 3.24.6(zod@3.25.76)
     devDependencies:
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -161,6 +176,9 @@ importers:
 
   packages/tmcp:
     dependencies:
+      '@standard-schema/spec':
+        specifier: ^1.0.0
+        version: 1.0.0
       json-rpc-2.0:
         specifier: ^1.7.1
         version: 1.7.1
@@ -174,15 +192,15 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0(typescript@5.8.3)
     devDependencies:
-      '@standard-schema/spec':
-        specifier: ^1.0.0
-        version: 1.0.0
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
       '@types/node':
         specifier: ^24.0.13
         version: 24.0.13
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -201,6 +219,9 @@ importers:
       '@types/node':
         specifier: ^24.0.15
         version: 24.0.15
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -216,6 +237,9 @@ importers:
 
   packages/transport-sse:
     devDependencies:
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -228,6 +252,9 @@ importers:
       '@types/node':
         specifier: ^24.0.13
         version: 24.0.13
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -543,12 +570,21 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
+  '@jridgewell/gen-mapping@0.3.12':
+    resolution: {integrity: sha512-OuLGC46TjB5BbN1dH8JULVVZY4WTdkF7tV9Ys6wLL1rubZnCMstOhNHueU5bLCrnRuDhKPDM4g6sw4Bel5Gzqg==}
+
   '@jridgewell/resolve-uri@3.1.2':
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
     engines: {node: '>=6.0.0'}
 
+  '@jridgewell/source-map@0.3.10':
+    resolution: {integrity: sha512-0pPkgz9dY+bijgistcTTJ5mR+ocqRXLuhXHYdzoMmmoJ2C9S46RCm2GMUbatPEUK9Yjy26IrAy8D/M00lLkv+Q==}
+
   '@jridgewell/sourcemap-codec@1.5.4':
     resolution: {integrity: sha512-VT2+G1VQs/9oz078bLrYbecdZKs912zQlkelYpuf+SXF+QvZDYJlbx/LSx+meSAwdDFnF8FVXW92AVjjkVmgFw==}
+
+  '@jridgewell/trace-mapping@0.3.29':
+    resolution: {integrity: sha512-uw6guiW/gcAGPDhLmd77/6lW8QLeiV5RUTsAX46Db6oLhGaVj4lhnPwb184s1bkc8kdVg/+h988dro8GRDpmYQ==}
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
@@ -1401,6 +1437,12 @@ packages:
     resolution: {integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==}
     engines: {node: '>=8'}
 
+  dts-buddy@0.6.2:
+    resolution: {integrity: sha512-KUmYrRKpVpjmnqM/JY93p1PWezMXodKCiMd5CFvfLtRCRc5i2GZiojrkVQXO2Dd8HeaU1C3sgTKDWxCEK5cyXA==}
+    hasBin: true
+    peerDependencies:
+      typescript: '>=5.0.4 <5.9'
+
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
     engines: {node: '>= 0.4'}
@@ -1797,9 +1839,16 @@ packages:
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
 
+  kleur@4.1.5:
+    resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
+    engines: {node: '>=6'}
+
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
+
+  locate-character@3.0.0:
+    resolution: {integrity: sha512-SW13ws7BjaeJ6p7Q6CO2nchbYEc3X3J6WrmTTDto7yMPqVSZTUyY5Tjbid+Ab8gLnATtygYtiDIJGQRRn2ZOiA==}
 
   locate-path@5.0.0:
     resolution: {integrity: sha512-t7hw9pI+WvuwNJXwk5zVHpyhIqzg2qTlklJOf0mVxGSbe3Fp2VieZcduNYjaLDoy6p9uGpQEGWG87WpMKlNq8g==}
@@ -2355,6 +2404,12 @@ packages:
     resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
     hasBin: true
 
+  ts-api-utils@1.4.3:
+    resolution: {integrity: sha512-i3eMG77UTMD0hZhgRS562pv83RC6ukSAC2GMNWc+9dieh/+jDM5u5YG+NHX6VNDRHQcHwmsTHctP9LhbC3WxVw==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      typescript: '>=4.2.0'
+
   ts-node@10.9.2:
     resolution: {integrity: sha512-f0FFpIdcHgn8zcPSbf1dRevwt047YMnaiJM3u2w2RewrB+fob/zePZcrOyQoLMMO7aBIddLcQIEK5dYjkLnGrQ==}
     hasBin: true
@@ -2897,9 +2952,24 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
+  '@jridgewell/gen-mapping@0.3.12':
+    dependencies:
+      '@jridgewell/sourcemap-codec': 1.5.4
+      '@jridgewell/trace-mapping': 0.3.29
+
   '@jridgewell/resolve-uri@3.1.2': {}
 
+  '@jridgewell/source-map@0.3.10':
+    dependencies:
+      '@jridgewell/gen-mapping': 0.3.12
+      '@jridgewell/trace-mapping': 0.3.29
+
   '@jridgewell/sourcemap-codec@1.5.4': {}
+
+  '@jridgewell/trace-mapping@0.3.29':
+    dependencies:
+      '@jridgewell/resolve-uri': 3.1.2
+      '@jridgewell/sourcemap-codec': 1.5.4
 
   '@jridgewell/trace-mapping@0.3.9':
     dependencies:
@@ -3720,6 +3790,18 @@ snapshots:
     dependencies:
       path-type: 4.0.0
 
+  dts-buddy@0.6.2(typescript@5.8.3):
+    dependencies:
+      '@jridgewell/source-map': 0.3.10
+      '@jridgewell/sourcemap-codec': 1.5.4
+      kleur: 4.1.5
+      locate-character: 3.0.0
+      magic-string: 0.30.17
+      sade: 1.8.1
+      tinyglobby: 0.2.14
+      ts-api-utils: 1.4.3(typescript@5.8.3)
+      typescript: 5.8.3
+
   dunder-proto@1.0.1:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -4164,10 +4246,14 @@ snapshots:
     dependencies:
       json-buffer: 3.0.1
 
+  kleur@4.1.5: {}
+
   levn@0.4.1:
     dependencies:
       prelude-ls: 1.2.1
       type-check: 0.4.0
+
+  locate-character@3.0.0: {}
 
   locate-path@5.0.0:
     dependencies:
@@ -4672,6 +4758,10 @@ snapshots:
   toidentifier@1.0.1: {}
 
   tree-kill@1.2.2: {}
+
+  ts-api-utils@1.4.3(typescript@5.8.3):
+    dependencies:
+      typescript: 5.8.3
 
   ts-node@10.9.2(@types/node@22.16.3)(typescript@5.8.3):
     dependencies:

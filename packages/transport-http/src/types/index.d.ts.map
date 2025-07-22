@@ -1,0 +1,15 @@
+{
+	"version": 3,
+	"file": "index.d.ts",
+	"names": [
+		"HttpTransport"
+	],
+	"sources": [
+		"../index.js"
+	],
+	"sourcesContent": [
+		null
+	],
+	"mappings": ";;cAaaA,aAAaA",
+	"ignoreList": []
+}

@@ -1,0 +1,15 @@
+{
+	"version": 3,
+	"file": "index.d.ts",
+	"names": [
+		"ZodJsonSchemaAdapter"
+	],
+	"sources": [
+		"../index.js"
+	],
+	"sourcesContent": [
+		null
+	],
+	"mappings": ";;;;;;;cAYaA,oBAAoBA",
+	"ignoreList": []
+}

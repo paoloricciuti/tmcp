@@ -4,10 +4,11 @@
 	"description": "The main tmcp library",
 	"main": "src/index.js",
 	"type": "module",
+	"types": "src/types/index.d.ts",
 	"scripts": {
 		"test": "vitest",
 		"typecheck": "tsc --noEmit",
-		"generate:types": "find ./src -name \"*.d.ts\" -not -path \"./src/internal/*\" -delete && tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint",
+		"generate:types": "dts-buddy && publint",
 		"prepublish": "pnpm generate:types"
 	},
 	"keywords": [],
@@ -23,25 +24,26 @@
 	],
 	"exports": {
 		".": {
-			"types": "./src/index.d.ts",
+			"types": "./src/types/index.d.ts",
 			"default": "./src/index.js"
 		},
 		"./adapter": {
-			"types": "./src/adapter.d.ts",
+			"types": "./src/types/index.d.ts",
 			"default": "./src/adapter.js"
 		},
 		"./package.json": "./package.json"
 	},
 	"dependencies": {
+		"@standard-schema/spec": "^1.0.0",
 		"json-rpc-2.0": "^1.7.1",
 		"sqids": "^0.3.0",
 		"uri-template-matcher": "^1.1.0",
 		"valibot": "^1.1.0"
 	},
 	"devDependencies": {
-		"@standard-schema/spec": "^1.0.0",
 		"@types/json-schema": "^7.0.15",
 		"@types/node": "^24.0.13",
+		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
 		"vitest": "^3.2.4"
 	}

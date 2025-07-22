@@ -1,0 +1,15 @@
+{
+	"version": 3,
+	"file": "index.d.ts",
+	"names": [
+		"StdioTransport"
+	],
+	"sources": [
+		"../index.js"
+	],
+	"sourcesContent": [
+		null
+	],
+	"mappings": ";;cAKaA,cAAcA",
+	"ignoreList": []
+}

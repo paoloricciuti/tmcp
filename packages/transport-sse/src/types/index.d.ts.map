@@ -1,0 +1,15 @@
+{
+	"version": 3,
+	"file": "index.d.ts",
+	"names": [
+		"SseTransport"
+	],
+	"sources": [
+		"../index.js"
+	],
+	"sourcesContent": [
+		null
+	],
+	"mappings": ";;;;;;cAYaA,YAAYA",
+	"ignoreList": []
+}

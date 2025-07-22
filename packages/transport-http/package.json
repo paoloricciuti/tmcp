@@ -4,19 +4,22 @@
 	"description": "Transport for TMCP using HTTP",
 	"type": "module",
 	"main": "src/index.js",
-	"types": "src/index.d.ts",
+	"types": "src/types/index.d.ts",
 	"scripts": {
-		"generate:types": "tsc ./src/*.js --declaration --emitDeclarationOnly --target esnext --allowJs --moduleresolution nodenext --module nodenext && publint",
+		"generate:types": "dts-buddy && publint",
 		"prepublish": "pnpm generate:types",
 		"test": "vitest --run"
 	},
 	"exports": {
 		".": {
-			"types": "./src/index.d.ts",
+			"types": "./src/types/index.d.ts",
 			"default": "./src/index.js"
 		},
 		"./package.json": "./package.json"
 	},
+	"files": [
+		"src/**/*"
+	],
 	"peerDependencies": {
 		"tmcp": "workspace:^"
 	},
@@ -34,6 +37,7 @@
 		"@modelcontextprotocol/sdk": "^1.16.0",
 		"@tmcp/adapter-valibot": "^0.1.2",
 		"@types/node": "^24.0.15",
+		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^",
 		"valibot": "^1.1.0",
