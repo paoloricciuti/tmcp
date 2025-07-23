@@ -1,5 +1,11 @@
 # @tmcp/adapter-zod-v3
 
+## 0.2.0
+
+### Minor Changes
+
+- b8b17e9: breaking: remove export default for adapters that have it
+
 ## 0.1.4
 
 ### Patch Changes
