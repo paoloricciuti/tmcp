@@ -20,8 +20,3 @@ export class ArktypeJsonSchemaAdapter extends JsonSchemaAdapter {
 		return /** @type {JSONSchema7} */ (schema.toJsonSchema());
 	}
 }
-
-/**
- * Default export for convenience
- */
-export default ArktypeJsonSchemaAdapter;

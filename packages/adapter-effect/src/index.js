@@ -22,8 +22,3 @@ export class EffectJsonSchemaAdapter extends JsonSchemaAdapter {
 		return /** @type {JSONSchema7} */ (JSONSchema.make(schema));
 	}
 }
-
-/**
- * Default export for convenience
- */
-export default EffectJsonSchemaAdapter;

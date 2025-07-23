@@ -4,7 +4,7 @@ declare module '@tmcp/adapter-arktype' {
 	 * ArkType adapter for converting ArkType schemas to JSON Schema format
 	 * 
 	 */
-	export default class ArktypeJsonSchemaAdapter_1 extends JsonSchemaAdapter<import("arktype").BaseType<unknown, {}>> {
+	export class ArktypeJsonSchemaAdapter extends JsonSchemaAdapter<import("arktype").BaseType<unknown, {}>> {
 		constructor();
 	}
 
