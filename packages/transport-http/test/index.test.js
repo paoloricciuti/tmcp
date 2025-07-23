@@ -42,6 +42,7 @@ beforeEach(async () => {
 		transport = new StreamableHTTPClientTransport(
 			new URL('http://localhost:3000/mcp'),
 		);
+		console.log('new transport');
 		client = new Client({
 			name: 'example-client',
 			version: '1.0.0',
@@ -266,7 +267,9 @@ describe('HTTP Transport', () => {
 				handler,
 			);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// @ts-ignore i'm patching the tool to add this promise so that i can await for the notification
+			// stream to be open before adding the tool
+			await transport.notification_stream_open;
 
 			mcp_server.tool(
 				{
@@ -289,8 +292,6 @@ describe('HTTP Transport', () => {
 				},
 			);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
 			const response = await client.listTools();
 
 			expect(response.tools).toContainEqual({
@@ -309,9 +310,11 @@ describe('HTTP Transport', () => {
 				title: 'New Test Tool',
 			});
 
-			expect(handler).toHaveBeenCalledWith({
-				method: 'notifications/tools/list_changed',
-				params: {},
+			await vi.waitFor(() => {
+				expect(handler).toHaveBeenCalledWith({
+					method: 'notifications/tools/list_changed',
+					params: {},
+				});
 			});
 
 			client.removeNotificationHandler(
@@ -426,7 +429,9 @@ describe('HTTP Transport', () => {
 				handler,
 			);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// @ts-ignore i'm patching the tool to add this promise so that i can await for the notification
+			// stream to be open before adding the tool
+			await transport.notification_stream_open;
 
 			mcp_server.prompt(
 				{
@@ -439,12 +444,16 @@ describe('HTTP Transport', () => {
 				}),
 			);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			expect(handler).toHaveBeenCalledWith({
-				method: 'notifications/prompts/list_changed',
-				params: {},
+			await vi.waitFor(() => {
+				expect(handler).toHaveBeenCalledWith({
+					method: 'notifications/prompts/list_changed',
+					params: {},
+				});
 			});
+
+			client.removeNotificationHandler(
+				PromptListChangedNotificationSchema.shape.method.value,
+			);
 		});
 	});
 
@@ -598,7 +607,9 @@ describe('HTTP Transport', () => {
 				handler,
 			);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// @ts-ignore i'm patching the tool to add this promise so that i can await for the notification
+			// stream to be open before adding the tool
+			await transport.notification_stream_open;
 
 			mcp_server.resource(
 				{
@@ -611,12 +622,16 @@ describe('HTTP Transport', () => {
 				}),
 			);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			expect(handler).toHaveBeenCalledWith({
-				method: 'notifications/resources/list_changed',
-				params: {},
+			await vi.waitFor(() => {
+				expect(handler).toHaveBeenCalledWith({
+					method: 'notifications/resources/list_changed',
+					params: {},
+				});
 			});
+
+			client.removeNotificationHandler(
+				ResourceListChangedNotificationSchema.shape.method.value,
+			);
 		});
 
 		it('receives notification when subscribed resource updates', async () => {
@@ -628,20 +643,26 @@ describe('HTTP Transport', () => {
 				handler,
 			);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// @ts-ignore i'm patching the tool to add this promise so that i can await for the notification
+			// stream to be open before adding the tool
+			await transport.notification_stream_open;
 
 			// Trigger resource change
 			mcp_server.changed('resource', 'test://resource');
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			expect(handler).toHaveBeenCalledWith({
-				method: 'notifications/resources/updated',
-				params: {
-					uri: 'test://resource',
-					title: 'test-resource',
-				},
+			await vi.waitFor(() => {
+				expect(handler).toHaveBeenCalledWith({
+					method: 'notifications/resources/updated',
+					params: {
+						uri: 'test://resource',
+						title: 'test-resource',
+					},
+				});
 			});
+
+			client.removeNotificationHandler(
+				ResourceUpdatedNotificationSchema.shape.method.value,
+			);
 		});
 	});
 

@@ -1,3 +1,6 @@
 packages:
-    - 'packages/*'
-    - 'apps/*'
+  - packages/*
+  - apps/*
+
+patchedDependencies:
+  '@modelcontextprotocol/sdk@1.16.0': patches/@modelcontextprotocol__sdk@1.16.0.patch
