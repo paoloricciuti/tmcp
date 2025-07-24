@@ -6,7 +6,7 @@ declare module '@tmcp/adapter-effect' {
 	 * Effect Schema adapter for converting Effect schemas to JSON Schema format
 	 * 
 	 */
-	export default class EffectJsonSchemaAdapter_1 extends JsonSchemaAdapter<StandardSchemaV1<any, any> & SchemaClass<any, any, never>> {
+	export class EffectJsonSchemaAdapter extends JsonSchemaAdapter<StandardSchemaV1<any, any> & SchemaClass<any, any, never>> {
 		constructor();
 	}
 

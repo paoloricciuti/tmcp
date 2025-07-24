@@ -1,9 +1,15 @@
 {
 	"version": 3,
 	"file": "index.d.ts",
-	"names": [],
-	"sources": [],
-	"sourcesContent": [],
-	"mappings": "",
+	"names": [
+		"EffectJsonSchemaAdapter"
+	],
+	"sources": [
+		"../index.js"
+	],
+	"sourcesContent": [
+		null
+	],
+	"mappings": ";;;;;;;;cAaaA,uBAAuBA",
 	"ignoreList": []
 }

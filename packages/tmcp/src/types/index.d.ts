@@ -115,75 +115,75 @@ declare module 'tmcp' {
 	/**
 	 * A successful (non-error) response to a request.
 	 */
-	const JSONRPCResponseSchema:StrictObjectSchema<{
-		readonly jsonrpc:LiteralSchema<"2.0", undefined>;
-		readonly id:UnionSchema<[StringSchema<undefined>,SchemaWithPipe<readonly [NumberSchema<undefined>,IntegerAction<number, undefined>]>], undefined>;
-		readonly result:ObjectSchema<{
+	const JSONRPCResponseSchema: v.StrictObjectSchema<{
+		readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+		readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
+		readonly result: v.ObjectSchema<{
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<LooseObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>;
 	}, undefined>;
 	/**
 	 * Capabilities a client may support. Known capabilities are defined here, in this schema, but this is not a closed set: any client can define its own, additional capabilities.
 	 */
-	const ClientCapabilitiesSchema:ObjectSchema<{
+	const ClientCapabilitiesSchema: v.ObjectSchema<{
 		/**
 		 * Experimental, non-standard capabilities that the client supports.
 		 */
-		readonly experimental:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+		readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the client supports sampling from an LLM.
 		 */
-		readonly sampling:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+		readonly sampling: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the client supports eliciting user input.
 		 */
-		readonly elicitation:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+		readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the client supports listing roots.
 		 */
-		readonly roots:OptionalSchema<ObjectSchema<{
+		readonly roots: v.OptionalSchema<v.ObjectSchema<{
 			/**
 			 * Whether the client supports issuing notifications for changes to the roots list.
 			 */
-			readonly listChanged:OptionalSchema<BooleanSchema<undefined>, undefined>;
+			readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		}, undefined>, undefined>;
 	}, undefined>;
-	const InitializeRequestParamsSchema:ObjectSchema<{
+	const InitializeRequestParamsSchema: v.ObjectSchema<{
 		/**
 		 * The latest version of the Model Context Protocol that the client supports. The client MAY decide to support older versions as well.
 		 */
-		readonly protocolVersion:StringSchema<undefined>;
-		readonly capabilities:ObjectSchema<{
+		readonly protocolVersion: v.StringSchema<undefined>;
+		readonly capabilities: v.ObjectSchema<{
 			/**
 			 * Experimental, non-standard capabilities that the client supports.
 			 */
-			readonly experimental:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+			readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			/**
 			 * Present if the client supports sampling from an LLM.
 			 */
-			readonly sampling:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+			readonly sampling: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			/**
 			 * Present if the client supports eliciting user input.
 			 */
-			readonly elicitation:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+			readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			/**
 			 * Present if the client supports listing roots.
 			 */
-			readonly roots:OptionalSchema<ObjectSchema<{
+			readonly roots: v.OptionalSchema<v.ObjectSchema<{
 				/**
 				 * Whether the client supports issuing notifications for changes to the roots list.
 				 */
-				readonly listChanged:OptionalSchema<BooleanSchema<undefined>, undefined>;
+				readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 			}, undefined>, undefined>;
 		}, undefined>;
-		readonly clientInfo:ObjectSchema<{
-			readonly version:StringSchema<undefined>;
+		readonly clientInfo: v.ObjectSchema<{
+			readonly version: v.StringSchema<undefined>;
 			/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-			readonly name:StringSchema<undefined>;
+			readonly name: v.StringSchema<undefined>;
 			/**
 			 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
 			 * even by those unfamiliar with domain-specific terminology.
@@ -192,88 +192,88 @@ declare module 'tmcp' {
 			 * where `annotations.title` should be given precedence over using `name`,
 			 * if present).
 			 */
-			readonly title:OptionalSchema<StringSchema<undefined>, undefined>;
+			readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 		}, undefined>;
-		readonly _meta:OptionalSchema<LooseObjectSchema<{
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
 			/**
 			 * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
 			 */
-			readonly progressToken:OptionalSchema<UnionSchema<[StringSchema<undefined>,SchemaWithPipe<readonly [NumberSchema<undefined>,IntegerAction<number, undefined>]>], undefined>, undefined>;
+			readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
 		}, undefined>, undefined>;
 	}, undefined>;
 	/**
 	 * Capabilities that a server may support. Known capabilities are defined here, in this schema, but this is not a closed set: any server can define its own, additional capabilities.
 	 */
-	const ServerCapabilitiesSchema:ObjectSchema<{
+	const ServerCapabilitiesSchema: v.ObjectSchema<{
 		/**
 		 * Experimental, non-standard capabilities that the server supports.
 		 */
-		readonly experimental:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+		readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the server supports sending log messages to the client.
 		 */
-		readonly logging:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+		readonly logging: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the server supports sending completions to the client.
 		 */
-		readonly completions:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+		readonly completions: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the server offers any prompt templates.
 		 */
-		readonly prompts:OptionalSchema<ObjectSchema<{
+		readonly prompts: v.OptionalSchema<v.ObjectSchema<{
 			/**
 			 * Whether this server supports issuing notifications for changes to the prompt list.
 			 */
-			readonly listChanged:OptionalSchema<BooleanSchema<undefined>, undefined>;
+			readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		}, undefined>, undefined>;
 		/**
 		 * Present if the server offers any resources to read.
 		 */
-		readonly resources:OptionalSchema<ObjectSchema<{
+		readonly resources: v.OptionalSchema<v.ObjectSchema<{
 			/**
 			 * Whether this server supports clients subscribing to resource updates.
 			 */
-			readonly subscribe:OptionalSchema<BooleanSchema<undefined>, undefined>;
+			readonly subscribe: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 			/**
 			 * Whether this server supports issuing notifications for changes to the resource list.
 			 */
-			readonly listChanged:OptionalSchema<BooleanSchema<undefined>, undefined>;
+			readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		}, undefined>, undefined>;
 		/**
 		 * Present if the server offers any tools to call.
 		 */
-		readonly tools:OptionalSchema<ObjectSchema<{
+		readonly tools: v.OptionalSchema<v.ObjectSchema<{
 			/**
 			 * Whether this server supports issuing notifications for changes to the tool list.
 			 */
-			readonly listChanged:OptionalSchema<BooleanSchema<undefined>, undefined>;
+			readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		}, undefined>, undefined>;
 	}, undefined>;
 	/**
 	 * A known resource that the server is capable of reading.
 	 */
-	const ResourceSchema:ObjectSchema<{
+	const ResourceSchema: v.ObjectSchema<{
 		/**
 		 * The URI of this resource.
 		 */
-		readonly uri:StringSchema<undefined>;
+		readonly uri: v.StringSchema<undefined>;
 		/**
 		 * A description of what this resource represents.
 		 *
 		 * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
 		 */
-		readonly description:OptionalSchema<StringSchema<undefined>, undefined>;
+		readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 		/**
 		 * The MIME type of this resource, if known.
 		 */
-		readonly mimeType:OptionalSchema<StringSchema<undefined>, undefined>;
+		readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 		/**
 		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 		 * for notes on _meta usage.
 		 */
-		readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+		readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-		readonly name:StringSchema<undefined>;
+		readonly name: v.StringSchema<undefined>;
 		/**
 		 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
 		 * even by those unfamiliar with domain-specific terminology.
@@ -282,129 +282,129 @@ declare module 'tmcp' {
 		 * where `annotations.title` should be given precedence over using `name`,
 		 * if present).
 		 */
-		readonly title:OptionalSchema<StringSchema<undefined>, undefined>;
+		readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 	}, undefined>;
 	/**
 	 * The server's response to a resources/read request from the client.
 	 */
-	const ReadResourceResultSchema:ObjectSchema<{
-		readonly contents:ArraySchema<UnionSchema<[ObjectSchema<{
+	const ReadResourceResultSchema: v.ObjectSchema<{
+		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
 			/**
 			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
 			 */
-			readonly text:StringSchema<undefined>;
+			readonly text: v.StringSchema<undefined>;
 			/**
 			 * The URI of this resource.
 			 */
-			readonly uri:StringSchema<undefined>;
+			readonly uri: v.StringSchema<undefined>;
 			/**
 			 * The MIME type of this resource, if known.
 			 */
-			readonly mimeType:OptionalSchema<StringSchema<undefined>, undefined>;
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-		}, undefined>,ObjectSchema<{
+			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
 			/**
 			 * A base64-encoded string representing the binary data of the item.
 			 */
-			readonly blob:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+			readonly blob: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 			/**
 			 * The URI of this resource.
 			 */
-			readonly uri:StringSchema<undefined>;
+			readonly uri: v.StringSchema<undefined>;
 			/**
 			 * The MIME type of this resource, if known.
 			 */
-			readonly mimeType:OptionalSchema<StringSchema<undefined>, undefined>;
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>, undefined>;
 		/**
 		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 		 * for notes on _meta usage.
 		 */
-		readonly _meta:OptionalSchema<LooseObjectSchema<{}, undefined>, undefined>;
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
 	/**
 	 * The server's response to a prompts/get request from the client.
 	 */
-	const GetPromptResultSchema:ObjectSchema<{
+	const GetPromptResultSchema: v.ObjectSchema<{
 		/**
 		 * An optional description for the prompt.
 		 */
-		readonly description:OptionalSchema<StringSchema<undefined>, undefined>;
-		readonly messages:ArraySchema<ObjectSchema<{
-			readonly role:PicklistSchema<["user", "assistant"], undefined>;
-			readonly content:UnionSchema<[ObjectSchema<{
-				readonly type:LiteralSchema<"text", undefined>;
+		readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+		readonly messages: v.ArraySchema<v.ObjectSchema<{
+			readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
+			readonly content: v.UnionSchema<[v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"text", undefined>;
 				/**
 				 * The text content of the message.
 				 */
-				readonly text:StringSchema<undefined>;
+				readonly text: v.StringSchema<undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-			}, undefined>,ObjectSchema<{
-				readonly type:LiteralSchema<"image", undefined>;
+				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"image", undefined>;
 				/**
 				 * The base64-encoded image data.
 				 */
-				readonly data:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+				readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 				/**
 				 * The MIME type of the image. Different providers may support different image types.
 				 */
-				readonly mimeType:StringSchema<undefined>;
+				readonly mimeType: v.StringSchema<undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-			}, undefined>,ObjectSchema<{
-				readonly type:LiteralSchema<"audio", undefined>;
+				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"audio", undefined>;
 				/**
 				 * The base64-encoded audio data.
 				 */
-				readonly data:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+				readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 				/**
 				 * The MIME type of the audio. Different providers may support different audio types.
 				 */
-				readonly mimeType:StringSchema<undefined>;
+				readonly mimeType: v.StringSchema<undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-			}, undefined>,ObjectSchema<{
-				readonly type:LiteralSchema<"resource_link", undefined>;
+				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"resource_link", undefined>;
 				/**
 				 * The URI of this resource.
 				 */
-				readonly uri:StringSchema<undefined>;
+				readonly uri: v.StringSchema<undefined>;
 				/**
 				 * A description of what this resource represents.
 				 *
 				 * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
 				 */
-				readonly description:OptionalSchema<StringSchema<undefined>, undefined>;
+				readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 				/**
 				 * The MIME type of this resource, if known.
 				 */
-				readonly mimeType:OptionalSchema<StringSchema<undefined>, undefined>;
+				readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 				/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-				readonly name:StringSchema<undefined>;
+				readonly name: v.StringSchema<undefined>;
 				/**
 				 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
 				 * even by those unfamiliar with domain-specific terminology.
@@ -413,58 +413,58 @@ declare module 'tmcp' {
 				 * where `annotations.title` should be given precedence over using `name`,
 				 * if present).
 				 */
-				readonly title:OptionalSchema<StringSchema<undefined>, undefined>;
-			}, undefined>,ObjectSchema<{
-				readonly type:LiteralSchema<"resource", undefined>;
-				readonly resource:UnionSchema<[ObjectSchema<{
+				readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"resource", undefined>;
+				readonly resource: v.UnionSchema<[v.ObjectSchema<{
 					/**
 					 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
 					 */
-					readonly text:StringSchema<undefined>;
+					readonly text: v.StringSchema<undefined>;
 					/**
 					 * The URI of this resource.
 					 */
-					readonly uri:StringSchema<undefined>;
+					readonly uri: v.StringSchema<undefined>;
 					/**
 					 * The MIME type of this resource, if known.
 					 */
-					readonly mimeType:OptionalSchema<StringSchema<undefined>, undefined>;
+					readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 					/**
 					 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 					 * for notes on _meta usage.
 					 */
-					readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-				}, undefined>,ObjectSchema<{
+					readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				}, undefined>, v.ObjectSchema<{
 					/**
 					 * A base64-encoded string representing the binary data of the item.
 					 */
-					readonly blob:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+					readonly blob: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 					/**
 					 * The URI of this resource.
 					 */
-					readonly uri:StringSchema<undefined>;
+					readonly uri: v.StringSchema<undefined>;
 					/**
 					 * The MIME type of this resource, if known.
 					 */
-					readonly mimeType:OptionalSchema<StringSchema<undefined>, undefined>;
+					readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 					/**
 					 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 					 * for notes on _meta usage.
 					 */
-					readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+					readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 				}, undefined>], undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			}, undefined>], undefined>;
 		}, undefined>, undefined>;
 		/**
 		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 		 * for notes on _meta usage.
 		 */
-		readonly _meta:OptionalSchema<LooseObjectSchema<{}, undefined>, undefined>;
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
 	/**
 	 * Additional properties describing a Tool to clients.
@@ -476,17 +476,17 @@ declare module 'tmcp' {
 	 * Clients should never make tool use decisions based on ToolAnnotations
 	 * received from untrusted servers.
 	 */
-	const ToolAnnotationsSchema:ObjectSchema<{
+	const ToolAnnotationsSchema: v.ObjectSchema<{
 		/**
 		 * A human-readable title for the tool.
 		 */
-		readonly title:OptionalSchema<StringSchema<undefined>, undefined>;
+		readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 		/**
 		 * If true, the tool does not modify its environment.
 		 *
 		 * Default: false
 		 */
-		readonly readOnlyHint:OptionalSchema<BooleanSchema<undefined>, undefined>;
+		readonly readOnlyHint: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		/**
 		 * If true, the tool may perform destructive updates to its environment.
 		 * If false, the tool performs only additive updates.
@@ -495,7 +495,7 @@ declare module 'tmcp' {
 		 *
 		 * Default: true
 		 */
-		readonly destructiveHint:OptionalSchema<BooleanSchema<undefined>, undefined>;
+		readonly destructiveHint: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		/**
 		 * If true, calling the tool repeatedly with the same arguments
 		 * will have no additional effect on the its environment.
@@ -504,7 +504,7 @@ declare module 'tmcp' {
 		 *
 		 * Default: false
 		 */
-		readonly idempotentHint:OptionalSchema<BooleanSchema<undefined>, undefined>;
+		readonly idempotentHint: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		/**
 		 * If true, this tool may interact with an "open world" of external
 		 * entities. If false, the tool's domain of interaction is closed.
@@ -513,82 +513,82 @@ declare module 'tmcp' {
 		 *
 		 * Default: true
 		 */
-		readonly openWorldHint:OptionalSchema<BooleanSchema<undefined>, undefined>;
+		readonly openWorldHint: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 	}, undefined>;
 	/**
 	 * The server's response to a tool call.
 	 */
-	const CallToolResultSchema:ObjectSchema<{
+	const CallToolResultSchema: v.ObjectSchema<{
 		/**
 		 * A list of content objects that represent the result of the tool call.
 		 *
 		 * If the Tool does not define an outputSchema, this field MUST be present in the result.
 		 * For backwards compatibility, this field is always present, but it may be empty.
 		 */
-		readonly content:OptionalSchema<ArraySchema<UnionSchema<[ObjectSchema<{
-			readonly type:LiteralSchema<"text", undefined>;
+		readonly content: v.OptionalSchema<v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"text", undefined>;
 			/**
 			 * The text content of the message.
 			 */
-			readonly text:StringSchema<undefined>;
+			readonly text: v.StringSchema<undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-		}, undefined>,ObjectSchema<{
-			readonly type:LiteralSchema<"image", undefined>;
+			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"image", undefined>;
 			/**
 			 * The base64-encoded image data.
 			 */
-			readonly data:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+			readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 			/**
 			 * The MIME type of the image. Different providers may support different image types.
 			 */
-			readonly mimeType:StringSchema<undefined>;
+			readonly mimeType: v.StringSchema<undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-		}, undefined>,ObjectSchema<{
-			readonly type:LiteralSchema<"audio", undefined>;
+			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"audio", undefined>;
 			/**
 			 * The base64-encoded audio data.
 			 */
-			readonly data:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+			readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 			/**
 			 * The MIME type of the audio. Different providers may support different audio types.
 			 */
-			readonly mimeType:StringSchema<undefined>;
+			readonly mimeType: v.StringSchema<undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-		}, undefined>,ObjectSchema<{
-			readonly type:LiteralSchema<"resource_link", undefined>;
+			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"resource_link", undefined>;
 			/**
 			 * The URI of this resource.
 			 */
-			readonly uri:StringSchema<undefined>;
+			readonly uri: v.StringSchema<undefined>;
 			/**
 			 * A description of what this resource represents.
 			 *
 			 * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
 			 */
-			readonly description:OptionalSchema<StringSchema<undefined>, undefined>;
+			readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 			/**
 			 * The MIME type of this resource, if known.
 			 */
-			readonly mimeType:OptionalSchema<StringSchema<undefined>, undefined>;
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
-			readonly name:StringSchema<undefined>;
+			readonly name: v.StringSchema<undefined>;
 			/**
 			 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
 			 * even by those unfamiliar with domain-specific terminology.
@@ -597,58 +597,58 @@ declare module 'tmcp' {
 			 * where `annotations.title` should be given precedence over using `name`,
 			 * if present).
 			 */
-			readonly title:OptionalSchema<StringSchema<undefined>, undefined>;
-		}, undefined>,ObjectSchema<{
-			readonly type:LiteralSchema<"resource", undefined>;
-			readonly resource:UnionSchema<[ObjectSchema<{
+			readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"resource", undefined>;
+			readonly resource: v.UnionSchema<[v.ObjectSchema<{
 				/**
 				 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
 				 */
-				readonly text:StringSchema<undefined>;
+				readonly text: v.StringSchema<undefined>;
 				/**
 				 * The URI of this resource.
 				 */
-				readonly uri:StringSchema<undefined>;
+				readonly uri: v.StringSchema<undefined>;
 				/**
 				 * The MIME type of this resource, if known.
 				 */
-				readonly mimeType:OptionalSchema<StringSchema<undefined>, undefined>;
+				readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-			}, undefined>,ObjectSchema<{
+				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
 				/**
 				 * A base64-encoded string representing the binary data of the item.
 				 */
-				readonly blob:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+				readonly blob: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 				/**
 				 * The URI of this resource.
 				 */
-				readonly uri:StringSchema<undefined>;
+				readonly uri: v.StringSchema<undefined>;
 				/**
 				 * The MIME type of this resource, if known.
 				 */
-				readonly mimeType:OptionalSchema<StringSchema<undefined>, undefined>;
+				readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			}, undefined>], undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>, undefined>, readonly []>;
 		/**
 		 * An object containing structured tool output.
 		 *
 		 * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
 		 */
-		readonly structuredContent:OptionalSchema<LooseObjectSchema<{}, undefined>, undefined>;
+		readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Whether the tool call ended in an error.
 		 *
@@ -663,212 +663,212 @@ declare module 'tmcp' {
 		 * server does not support tool calls, or any other exceptional conditions,
 		 * should be reported as an MCP error response.
 		 */
-		readonly isError:OptionalSchema<BooleanSchema<undefined>, undefined>;
+		readonly isError: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		/**
 		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 		 * for notes on _meta usage.
 		 */
-		readonly _meta:OptionalSchema<LooseObjectSchema<{}, undefined>, undefined>;
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
 	/**
 	 * The severity of a log message.
 	 */
-	const LoggingLevelSchema:PicklistSchema<["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"], undefined>;
-	const CreateMessageRequestParamsSchema:ObjectSchema<{
-		readonly messages:ArraySchema<ObjectSchema<{
-			readonly role:PicklistSchema<["user", "assistant"], undefined>;
-			readonly content:UnionSchema<[ObjectSchema<{
-				readonly type:LiteralSchema<"text", undefined>;
+	const LoggingLevelSchema: v.PicklistSchema<["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"], undefined>;
+	const CreateMessageRequestParamsSchema: v.ObjectSchema<{
+		readonly messages: v.ArraySchema<v.ObjectSchema<{
+			readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
+			readonly content: v.UnionSchema<[v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"text", undefined>;
 				/**
 				 * The text content of the message.
 				 */
-				readonly text:StringSchema<undefined>;
+				readonly text: v.StringSchema<undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-			}, undefined>,ObjectSchema<{
-				readonly type:LiteralSchema<"image", undefined>;
+				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"image", undefined>;
 				/**
 				 * The base64-encoded image data.
 				 */
-				readonly data:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+				readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 				/**
 				 * The MIME type of the image. Different providers may support different image types.
 				 */
-				readonly mimeType:StringSchema<undefined>;
+				readonly mimeType: v.StringSchema<undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-			}, undefined>,ObjectSchema<{
-				readonly type:LiteralSchema<"audio", undefined>;
+				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"audio", undefined>;
 				/**
 				 * The base64-encoded audio data.
 				 */
-				readonly data:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+				readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 				/**
 				 * The MIME type of the audio. Different providers may support different audio types.
 				 */
-				readonly mimeType:StringSchema<undefined>;
+				readonly mimeType: v.StringSchema<undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			}, undefined>], undefined>;
 		}, undefined>, undefined>;
 		/**
 		 * An optional system prompt the server wants to use for sampling. The client MAY modify or omit this prompt.
 		 */
-		readonly systemPrompt:OptionalSchema<StringSchema<undefined>, undefined>;
+		readonly systemPrompt: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 		/**
 		 * A request to include context from one or more MCP servers (including the caller), to be attached to the prompt. The client MAY ignore this request.
 		 */
-		readonly includeContext:OptionalSchema<PicklistSchema<["none", "thisServer", "allServers"], undefined>, undefined>;
-		readonly temperature:OptionalSchema<NumberSchema<undefined>, undefined>;
+		readonly includeContext: v.OptionalSchema<v.PicklistSchema<["none", "thisServer", "allServers"], undefined>, undefined>;
+		readonly temperature: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
 		/**
 		 * The maximum number of tokens to sample, as requested by the server. The client MAY choose to sample fewer tokens than requested.
 		 */
-		readonly maxTokens:SchemaWithPipe<readonly [NumberSchema<undefined>,IntegerAction<number, undefined>]>;
-		readonly stopSequences:OptionalSchema<ArraySchema<StringSchema<undefined>, undefined>, undefined>;
+		readonly maxTokens: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>;
+		readonly stopSequences: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
 		/**
 		 * Optional metadata to pass through to the LLM provider. The format of this metadata is provider-specific.
 		 */
-		readonly metadata:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+		readonly metadata: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * The server's preferences for which model to select.
 		 */
-		readonly modelPreferences:OptionalSchema<ObjectSchema<{
+		readonly modelPreferences: v.OptionalSchema<v.ObjectSchema<{
 			/**
 			 * Optional hints to use for model selection.
 			 */
-			readonly hints:OptionalSchema<ArraySchema<ObjectSchema<{
+			readonly hints: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
 				/**
 				 * A hint for a model name.
 				 */
-				readonly name:OptionalSchema<StringSchema<undefined>, undefined>;
+				readonly name: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 			}, undefined>, undefined>, undefined>;
 			/**
 			 * How much to prioritize cost when selecting a model.
 			 */
-			readonly costPriority:OptionalSchema<SchemaWithPipe<readonly [NumberSchema<undefined>,MinValueAction<number, 0, undefined>,MaxValueAction<number, 1, undefined>]>, undefined>;
+			readonly costPriority: v.OptionalSchema<v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.MinValueAction<number, 0, undefined>, v.MaxValueAction<number, 1, undefined>]>, undefined>;
 			/**
 			 * How much to prioritize sampling speed (latency) when selecting a model.
 			 */
-			readonly speedPriority:OptionalSchema<SchemaWithPipe<readonly [NumberSchema<undefined>,MinValueAction<number, 0, undefined>,MaxValueAction<number, 1, undefined>]>, undefined>;
+			readonly speedPriority: v.OptionalSchema<v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.MinValueAction<number, 0, undefined>, v.MaxValueAction<number, 1, undefined>]>, undefined>;
 			/**
 			 * How much to prioritize intelligence and capabilities when selecting a model.
 			 */
-			readonly intelligencePriority:OptionalSchema<SchemaWithPipe<readonly [NumberSchema<undefined>,MinValueAction<number, 0, undefined>,MaxValueAction<number, 1, undefined>]>, undefined>;
+			readonly intelligencePriority: v.OptionalSchema<v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.MinValueAction<number, 0, undefined>, v.MaxValueAction<number, 1, undefined>]>, undefined>;
 		}, undefined>, undefined>;
-		readonly _meta:OptionalSchema<LooseObjectSchema<{
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
 			/**
 			 * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
 			 */
-			readonly progressToken:OptionalSchema<UnionSchema<[StringSchema<undefined>,SchemaWithPipe<readonly [NumberSchema<undefined>,IntegerAction<number, undefined>]>], undefined>, undefined>;
+			readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
 		}, undefined>, undefined>;
 	}, undefined>;
 	/**
 	 * The client's response to a sampling/create_message request from the server. The client should inform the user before returning the sampled message, to allow them to inspect the response (human in the loop) and decide whether to allow the server to see it.
 	 */
-	const CreateMessageResultSchema:ObjectSchema<{
+	const CreateMessageResultSchema: v.ObjectSchema<{
 		/**
 		 * The name of the model that generated the message.
 		 */
-		readonly model:StringSchema<undefined>;
+		readonly model: v.StringSchema<undefined>;
 		/**
 		 * The reason why sampling stopped.
 		 */
-		readonly stopReason:OptionalSchema<UnionSchema<[PicklistSchema<["endTurn", "stopSequence", "maxTokens"], undefined>,StringSchema<undefined>], undefined>, undefined>;
-		readonly role:PicklistSchema<["user", "assistant"], undefined>;
-		readonly content:VariantSchema<"type", [ObjectSchema<{
-			readonly type:LiteralSchema<"text", undefined>;
+		readonly stopReason: v.OptionalSchema<v.UnionSchema<[v.PicklistSchema<["endTurn", "stopSequence", "maxTokens"], undefined>, v.StringSchema<undefined>], undefined>, undefined>;
+		readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
+		readonly content: v.VariantSchema<"type", [v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"text", undefined>;
 			/**
 			 * The text content of the message.
 			 */
-			readonly text:StringSchema<undefined>;
+			readonly text: v.StringSchema<undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-		}, undefined>,ObjectSchema<{
-			readonly type:LiteralSchema<"image", undefined>;
+			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"image", undefined>;
 			/**
 			 * The base64-encoded image data.
 			 */
-			readonly data:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+			readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 			/**
 			 * The MIME type of the image. Different providers may support different image types.
 			 */
-			readonly mimeType:StringSchema<undefined>;
+			readonly mimeType: v.StringSchema<undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
-		}, undefined>,ObjectSchema<{
-			readonly type:LiteralSchema<"audio", undefined>;
+			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"audio", undefined>;
 			/**
 			 * The base64-encoded audio data.
 			 */
-			readonly data:SchemaWithPipe<readonly [StringSchema<undefined>,Base64Action<string, undefined>]>;
+			readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
 			/**
 			 * The MIME type of the audio. Different providers may support different audio types.
 			 */
-			readonly mimeType:StringSchema<undefined>;
+			readonly mimeType: v.StringSchema<undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta:OptionalSchema<ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>;
 		/**
 		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 		 * for notes on _meta usage.
 		 */
-		readonly _meta:OptionalSchema<LooseObjectSchema<{}, undefined>, undefined>;
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
 	/**
 	 * The server's response to a completion/complete request
 	 */
-	const CompleteResultSchema:ObjectSchema<{
-		readonly completion:ObjectSchema<{
+	const CompleteResultSchema: v.ObjectSchema<{
+		readonly completion: v.ObjectSchema<{
 			/**
 			 * An array of completion values. Must not exceed 100 items.
 			 */
-			readonly values:SchemaWithPipe<readonly [ArraySchema<StringSchema<undefined>, undefined>,MaxLengthAction<string[], 100, undefined>]>;
+			readonly values: v.SchemaWithPipe<readonly [v.ArraySchema<v.StringSchema<undefined>, undefined>, v.MaxLengthAction<string[], 100, undefined>]>;
 			/**
 			 * The total number of completion options available. This can exceed the number of values actually sent in the response.
 			 */
-			readonly total:OptionalSchema<SchemaWithPipe<readonly [NumberSchema<undefined>,IntegerAction<number, undefined>]>, undefined>;
+			readonly total: v.OptionalSchema<v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>, undefined>;
 			/**
 			 * Indicates whether there are additional completion options beyond those provided in the current response, even if the exact total is unknown.
 			 */
-			readonly hasMore:OptionalSchema<BooleanSchema<undefined>, undefined>;
+			readonly hasMore: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		}, undefined>;
 		/**
 		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 		 * for notes on _meta usage.
 		 */
-		readonly _meta:OptionalSchema<LooseObjectSchema<{}, undefined>, undefined>;
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
-	type ClientCapabilities_1 =InferInput<typeof ClientCapabilitiesSchema>;
-	type ServerCapabilities =InferInput<typeof ServerCapabilitiesSchema>;
-	type InitializeRequestParams =InferInput<typeof InitializeRequestParamsSchema>;
-	type CallToolResult =InferInput<typeof CallToolResultSchema>;
-	type ReadResourceResult =InferInput<typeof ReadResourceResultSchema>;
-	type GetPromptResult =InferInput<typeof GetPromptResultSchema>;
-	type CompleteResult =InferInput<typeof CompleteResultSchema>;
-	type CreateMessageRequestParams =InferInput<typeof CreateMessageRequestParamsSchema>;
-	type CreateMessageResult =InferInput<typeof CreateMessageResultSchema>;
-	type Resource =InferInput<typeof ResourceSchema>;
-	type JSONRPCResponse =InferInput<typeof JSONRPCResponseSchema>;
-	type LoggingLevel =InferInput<typeof LoggingLevelSchema>;
-	type ToolAnnotations =InferInput<typeof ToolAnnotationsSchema>;
+	type ClientCapabilities_1 = v.InferInput<typeof ClientCapabilitiesSchema>;
+	type ServerCapabilities = v.InferInput<typeof ServerCapabilitiesSchema>;
+	type InitializeRequestParams = v.InferInput<typeof InitializeRequestParamsSchema>;
+	type CallToolResult = v.InferInput<typeof CallToolResultSchema>;
+	type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
+	type GetPromptResult = v.InferInput<typeof GetPromptResultSchema>;
+	type CompleteResult = v.InferInput<typeof CompleteResultSchema>;
+	type CreateMessageRequestParams = v.InferInput<typeof CreateMessageRequestParamsSchema>;
+	type CreateMessageResult = v.InferInput<typeof CreateMessageResultSchema>;
+	type Resource = v.InferInput<typeof ResourceSchema>;
+	type JSONRPCResponse = v.InferInput<typeof JSONRPCResponseSchema>;
+	type LoggingLevel = v.InferInput<typeof LoggingLevelSchema>;
+	type ToolAnnotations = v.InferInput<typeof ToolAnnotationsSchema>;
 	// Helper type to remove whitespace
 	type Trim<S extends string> = S extends ` ${infer R}`
 		? Trim<R>

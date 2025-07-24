@@ -20,8 +20,3 @@ export class ZodV3JsonSchemaAdapter extends JsonSchemaAdapter {
 		return /** @type {JSONSchema7} */ (zodToJsonSchema(schema));
 	}
 }
-
-/**
- * Default export for convenience
- */
-export default ZodV3JsonSchemaAdapter;

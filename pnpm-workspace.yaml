@@ -1,6 +1,7 @@
 packages:
-  - packages/*
-  - apps/*
+    - packages/*
+    - apps/*
 
 patchedDependencies:
-  '@modelcontextprotocol/sdk@1.16.0': patches/@modelcontextprotocol__sdk@1.16.0.patch
+    dts-buddy: patches/dts-buddy.patch
+    '@modelcontextprotocol/sdk@1.16.0': patches/@modelcontextprotocol__sdk@1.16.0.patch
