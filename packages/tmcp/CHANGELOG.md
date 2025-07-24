@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.8.2
+
+### Patch Changes
+
+- ccf38f8: fix: patch `dts-buddy` to properly generate types derived by `valibot`
+
 ## 1.8.1
 
 ### Patch Changes
