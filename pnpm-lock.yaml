@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  dts-buddy:
+    hash: 73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3
+    path: patches/dts-buddy.patch
+
 importers:
 
   .:
@@ -75,7 +80,7 @@ importers:
         version: 24.0.13
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(typescript@5.8.3)
+        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -94,7 +99,7 @@ importers:
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(typescript@5.8.3)
+        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
       effect:
         specifier: ^3.16.12
         version: 3.16.12
@@ -119,7 +124,7 @@ importers:
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(typescript@5.8.3)
+        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -141,7 +146,7 @@ importers:
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(typescript@5.8.3)
+        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -166,7 +171,7 @@ importers:
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(typescript@5.8.3)
+        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -200,7 +205,7 @@ importers:
         version: 24.0.13
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(typescript@5.8.3)
+        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -221,7 +226,7 @@ importers:
         version: 24.0.15
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(typescript@5.8.3)
+        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -239,7 +244,7 @@ importers:
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(typescript@5.8.3)
+        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -254,7 +259,7 @@ importers:
         version: 24.0.13
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(typescript@5.8.3)
+        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -3777,7 +3782,7 @@ snapshots:
     dependencies:
       path-type: 4.0.0
 
-  dts-buddy@0.6.2(typescript@5.8.3):
+  dts-buddy@0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3):
     dependencies:
       '@jridgewell/source-map': 0.3.10
       '@jridgewell/sourcemap-codec': 1.5.4
