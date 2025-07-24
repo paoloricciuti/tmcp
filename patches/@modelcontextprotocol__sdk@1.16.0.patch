@@ -1,0 +1,25 @@
+diff --git a/dist/esm/client/streamableHttp.js b/dist/esm/client/streamableHttp.js
+index 8dab847dc95360934d1427fa43551114df30c3ae..0730f8af7988facbc2e4d186d1fce7e534d40201 100644
+--- a/dist/esm/client/streamableHttp.js
++++ b/dist/esm/client/streamableHttp.js
+@@ -20,6 +20,12 @@ export class StreamableHTTPError extends Error {
+  * for receiving messages.
+  */
+ export class StreamableHTTPClientTransport {
++
++	#resolve;
++	notification_stream_open = new Promise((resolve)=>{
++		this.#resolve = resolve;
++	});
++
+     constructor(url, opts) {
+         var _a;
+         this._url = url;
+@@ -98,6 +104,7 @@ export class StreamableHTTPClientTransport {
+                 }
+                 throw new StreamableHTTPError(response.status, `Failed to open SSE stream: ${response.statusText}`);
+             }
++			this.#resolve();
+             this._handleSseStream(response.body, options, true);
+         }
+         catch (error) {

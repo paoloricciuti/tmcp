@@ -137,21 +137,37 @@ async function to_response(webResponse, res) {
 
 	// Handle body
 	if (webResponse.body) {
+		// Start the response immediately by sending headers
+		res.flushHeaders();
+
 		const reader = webResponse.body.getReader();
 
 		try {
 			while (true) {
 				const { done, value } = await reader.read();
-				if (done) break;
+				if (done) {
+					res.end();
+					break;
+				}
 
-				res.write(value);
+				if (!res.write(value)) {
+					await new Promise((resolve) => res.once('drain', resolve));
+				}
 			}
+		} catch (error) {
+			if (!res.headersSent) {
+				res.statusCode = 500;
+				res.end();
+			} else {
+				res.destroy();
+			}
+			throw error;
 		} finally {
 			reader.releaseLock();
 		}
+	} else {
+		res.end();
 	}
-
-	res.end();
 }
 
 // Create the server
