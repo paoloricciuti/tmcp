@@ -1,11 +1,13 @@
 /**
  * @import { McpServer, ClientCapabilities } from "tmcp";
+ * @import { OAuthHelper } from "@tmcp/auth";
  */
 
 /**
  * @typedef {{
  * 	getSessionId?: () => string
  * 	path?: string
+ * 	oauthHelper?: OAuthHelper
  * }} HttpTransportOptions
  */
 
@@ -18,7 +20,7 @@ export class HttpTransport {
 	#server;
 
 	/**
-	 * @type {Required<HttpTransportOptions>}
+	 * @type {Required<Omit<HttpTransportOptions, 'oauthHelper'>> & { oauthHelper?: OAuthHelper }}
 	 */
 	#options;
 
@@ -48,11 +50,11 @@ export class HttpTransport {
 	 */
 	constructor(server, options) {
 		this.#server = server;
-		const { getSessionId = () => crypto.randomUUID(), path = '/mcp' } =
+		const { getSessionId = () => crypto.randomUUID(), path = '/mcp', oauthHelper } =
 			options ?? {
 				getSessionId: () => crypto.randomUUID(),
 			};
-		this.#options = { getSessionId, path };
+		this.#options = { getSessionId, path, oauthHelper };
 		this.#path = path;
 		this.#server.on('send', ({ request, context: { sessions } }) => {
 			// use the current controller if the request has an id (it means it's a request and not a notification)
@@ -274,14 +276,61 @@ export class HttpTransport {
 	async respond(request) {
 		const url = new URL(request.url);
 
+		// Check if OAuth helper should handle this request
+		if (this.#options.oauthHelper && this.#options.oauthHelper.shouldHandleRequest(url.pathname, request.method)) {
+			try {
+				return await this.#options.oauthHelper.handleRequest(request);
+			} catch (error) {
+				return new Response(JSON.stringify({
+					error: 'server_error',
+					error_description: /** @type {Error} */ (error).message,
+				}), {
+					status: 500,
+					headers: { 'Content-Type': 'application/json' },
+				});
+			}
+		}
+
 		// Check if the request path matches the configured MCP path
 		if (url.pathname !== this.#path) {
 			return null;
 		}
+
 		const method = request.method;
 		const session_id =
 			request.headers.get('mcp-session-id') ||
 			this.#options.getSessionId();
+
+		// If OAuth is enabled, validate token for MCP requests
+		if (this.#options.oauthHelper && method === 'POST') {
+			try {
+				// Extract resource ID from OAuth helper's protected resource metadata
+				const metadata = await this.#options.oauthHelper.getProtectedResourceMetadata(request);
+				await this.#options.oauthHelper.validateRequestToken(request, metadata.resource);
+			} catch (error) {
+				// Return 401 Unauthorized with proper WWW-Authenticate header
+				const wwwAuthHeader = this.#options.oauthHelper.createWwwAuthenticateHeader(
+					'mcp-resource', // Default resource ID if metadata fails
+					'invalid_token',
+					/** @type {Error} */ (error).message
+				);
+				
+				return new Response(JSON.stringify({
+					jsonrpc: '2.0',
+					error: {
+						code: -32001,
+						message: 'Unauthorized',
+						data: /** @type {Error} */ (error).message,
+					},
+				}), {
+					status: 401,
+					headers: {
+						'Content-Type': 'application/json',
+						'WWW-Authenticate': wwwAuthHeader,
+					},
+				});
+			}
+		}
 
 		// Handle DELETE request - disconnect session
 		if (method === 'DELETE') {

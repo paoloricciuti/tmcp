@@ -11,3 +11,16 @@ index 8cbefe79df2d126866843d18f94397fb60d6b0c1..b0abd63a5f37500aaebb64e434342c56
  							result.remove(node.pos, result.original.indexOf('.', node.end) + 1);
  							const declaration = bundle
  								.get(binding.id)
+diff --git a/src/utils.js b/src/utils.js
+index 17f85e25780ae0dede2691f57da524664af48885..8751d5c969cef41d5a2a7aea6b54d7d197013a71 100644
+--- a/src/utils.js
++++ b/src/utils.js
+@@ -7,7 +7,7 @@ import * as tsu from 'ts-api-utils';
+ import { getLocator } from 'locate-character';
+ import { decode } from '@jridgewell/sourcemap-codec';
+ 
+-const preserved_jsdoc_tags = new Set(['default', 'deprecated', 'example']);
++const preserved_jsdoc_tags = new Set(['default', 'deprecated', 'example', 'abstract']);
+ 
+ /** @param {ts.Node} node */
+ export function get_jsdoc(node) {

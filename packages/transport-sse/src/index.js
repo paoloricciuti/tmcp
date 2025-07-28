@@ -1,5 +1,6 @@
 /**
  * @import { McpServer } from "tmcp";
+ * @import { OAuthHelper } from "@tmcp/auth";
  */
 
 /**
@@ -7,6 +8,7 @@
  * 	getSessionId?: () => string
  * 	path?: string
  * 	endpoint?: string
+ * 	oauthHelper?: OAuthHelper
  * }} SseTransportOptions
  */
 
@@ -17,7 +19,7 @@ export class SseTransport {
 	#server;
 
 	/**
-	 * @type {Required<SseTransportOptions>}
+	 * @type {Required<Omit<SseTransportOptions, 'oauthHelper'>> & { oauthHelper?: OAuthHelper }}
 	 */
 	#options;
 
@@ -51,6 +53,7 @@ export class SseTransport {
 			getSessionId = () => crypto.randomUUID(),
 			path = '/sse',
 			endpoint = '/message',
+			oauthHelper,
 		} = options ?? {
 			getSessionId: () => crypto.randomUUID(),
 			path: '/sse',
@@ -60,6 +63,7 @@ export class SseTransport {
 			getSessionId,
 			path,
 			endpoint,
+			oauthHelper,
 		};
 		this.#path = this.#options.path;
 		this.#endpoint = this.#options.endpoint;
@@ -129,6 +133,38 @@ export class SseTransport {
 	 * @param {Request} request
 	 */
 	async #handle_post(session_id, request) {
+		// If OAuth is enabled, validate token for MCP requests
+		if (this.#options.oauthHelper) {
+			try {
+				// Extract resource ID from OAuth helper's protected resource metadata
+				const metadata = await this.#options.oauthHelper.getProtectedResourceMetadata(request);
+				await this.#options.oauthHelper.validateRequestToken(request, metadata.resource);
+			} catch (error) {
+				// Return 401 Unauthorized with proper WWW-Authenticate header
+				const wwwAuthHeader = this.#options.oauthHelper.createWwwAuthenticateHeader(
+					'mcp-resource', // Default resource ID if metadata fails
+					'invalid_token',
+					/** @type {Error} */ (error).message
+				);
+				
+				return new Response(JSON.stringify({
+					jsonrpc: '2.0',
+					error: {
+						code: -32001,
+						message: 'Unauthorized',
+						data: /** @type {Error} */ (error).message,
+					},
+				}), {
+					status: 401,
+					headers: {
+						'Content-Type': 'application/json',
+						'WWW-Authenticate': wwwAuthHeader,
+						'mcp-session-id': session_id,
+					},
+				});
+			}
+		}
+
 		// Check Content-Type header
 		const content_type = request.headers.get('content-type');
 		if (!content_type || !content_type.includes('application/json')) {
@@ -239,6 +275,21 @@ export class SseTransport {
 	 */
 	async respond(request) {
 		const url = new URL(request.url);
+
+		// Check if OAuth helper should handle this request
+		if (this.#options.oauthHelper && this.#options.oauthHelper.shouldHandleRequest(url.pathname, request.method)) {
+			try {
+				return await this.#options.oauthHelper.handleRequest(request);
+			} catch (error) {
+				return new Response(JSON.stringify({
+					error: 'server_error',
+					error_description: /** @type {Error} */ (error).message,
+				}), {
+					status: 500,
+					headers: { 'Content-Type': 'application/json' },
+				});
+			}
+		}
 
 		// Check if the request path matches the configured SSE path
 		if (

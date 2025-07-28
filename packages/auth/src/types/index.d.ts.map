@@ -1,0 +1,18 @@
+{
+	"version": 3,
+	"file": "index.d.ts",
+	"names": [
+		"OAuthProvider",
+		"DefaultOAuthProvider"
+	],
+	"sources": [
+		"../oauth-helper.js",
+		"../default-oauth-helper.js"
+	],
+	"sourcesContent": [
+		null,
+		null
+	],
+	"mappings": ";;;;;;;;;;;;;cAeaA,aAAaA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cCFbC,oBAAoBA",
+	"ignoreList": []
+}

@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   dts-buddy:
-    hash: 73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3
+    hash: 07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b
     path: patches/dts-buddy.patch
 
 importers:
@@ -80,7 +80,7 @@ importers:
         version: 24.1.0
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -99,7 +99,7 @@ importers:
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
       effect:
         specifier: ^3.16.12
         version: 3.17.1
@@ -124,7 +124,7 @@ importers:
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -146,7 +146,7 @@ importers:
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -171,13 +171,56 @@ importers:
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
+
+  packages/auth:
+    dependencies:
+      '@standard-schema/spec':
+        specifier: ^1.0.0
+        version: 1.0.0
+      '@types/json-schema':
+        specifier: ^7.0.15
+        version: 7.0.15
+      pkce-challenge:
+        specifier: ^4.1.0
+        version: 4.1.0
+      valibot:
+        specifier: ^1.1.0
+        version: 1.1.0(typescript@5.8.3)
+    devDependencies:
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
+      '@types/node':
+        specifier: ^24.0.15
+        version: 24.1.0
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
+      publint:
+        specifier: ^0.3.12
+        version: 0.3.12
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.1.0)
+
+  packages/internal-ts-helpers:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.1.0
+        version: 24.1.0
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
 
   packages/tmcp:
     dependencies:
@@ -205,7 +248,7 @@ importers:
         version: 24.1.0
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -226,7 +269,7 @@ importers:
         version: 24.1.0
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -239,18 +282,26 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.1.0)
+    optionalDependencies:
+      '@tmcp/auth':
+        specifier: workspace:^
+        version: link:../auth
 
   packages/transport-sse:
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
+    optionalDependencies:
+      '@tmcp/auth':
+        specifier: workspace:^
+        version: link:../auth
 
   packages/transport-stdio:
     devDependencies:
@@ -259,7 +310,7 @@ importers:
         version: 24.1.0
       dts-buddy:
         specifier: ^0.6.2
-        version: 0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3)
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.12
@@ -3742,7 +3793,7 @@ snapshots:
     dependencies:
       path-type: 4.0.0
 
-  dts-buddy@0.6.2(patch_hash=73394f1f76f8ddad22c9543eb687127e84a3d4e69593290a799e4e91c17c92e3)(typescript@5.8.3):
+  dts-buddy@0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3):
     dependencies:
       '@jridgewell/source-map': 0.3.10
       '@jridgewell/sourcemap-codec': 1.5.4
