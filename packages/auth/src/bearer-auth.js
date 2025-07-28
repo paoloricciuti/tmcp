@@ -1,6 +1,6 @@
 /**
  * @import { AuthInfo } from './types.js'
- * @import { OAuthTokenVerifier } from './provider-interfaces.js'
+ * @import { OAuthTokenVerifier } from './internal.js'
  */
 
 import {
@@ -45,43 +45,49 @@ export class BearerAuth {
 	 */
 	async authenticate(request) {
 		try {
-			const authHeader = request.headers.get('authorization');
-			if (!authHeader) {
+			const auth_header = request.headers.get('authorization');
+			if (!auth_header) {
 				throw new InvalidTokenError('Missing Authorization header');
 			}
 
-			const [type, token] = authHeader.split(' ', 2);
+			const [type, token] = auth_header.split(' ', 2);
 			if (type.toLowerCase() !== 'bearer' || !token) {
-				throw new InvalidTokenError("Invalid Authorization header format, expected 'Bearer TOKEN'");
+				throw new InvalidTokenError(
+					"Invalid Authorization header format, expected 'Bearer TOKEN'",
+				);
 			}
 
-			const authInfo = await this.#options.verifier.verifyAccessToken(token);
+			const auth_info =
+				await this.#options.verifier.verifyAccessToken(token);
 
 			// Check if token has the required scopes (if any)
-			const requiredScopes = this.#options.requiredScopes || [];
-			if (requiredScopes.length > 0) {
-				const hasAllScopes = requiredScopes.every(scope =>
-					authInfo.scopes.includes(scope)
+			const required_scopes = this.#options.requiredScopes || [];
+			if (required_scopes.length > 0) {
+				const has_all_scopes = required_scopes.every((scope) =>
+					auth_info.scopes.includes(scope),
 				);
 
-				if (!hasAllScopes) {
+				if (!has_all_scopes) {
 					throw new InsufficientScopeError('Insufficient scope');
 				}
 			}
 
 			// Check if the token is set to expire or if it is expired
-			if (typeof authInfo.expiresAt !== 'number' || isNaN(authInfo.expiresAt)) {
+			if (
+				typeof auth_info.expiresAt !== 'number' ||
+				isNaN(auth_info.expiresAt)
+			) {
 				throw new InvalidTokenError('Token has no expiration time');
-			} else if (authInfo.expiresAt < Date.now() / 1000) {
+			} else if (auth_info.expiresAt < Date.now() / 1000) {
 				throw new InvalidTokenError('Token has expired');
 			}
 
 			return {
 				success: true,
-				authInfo,
+				authInfo: auth_info,
 			};
 		} catch (error) {
-			const errorResponse = this.#createErrorResponse(error);
+			const errorResponse = this.#create_error(error);
 			return {
 				success: false,
 				errorResponse,
@@ -91,26 +97,26 @@ export class BearerAuth {
 
 	/**
 	 * Create error response for authentication failures
-	 * @param {Error} error
+	 * @param {*} error
 	 * @returns {Response}
 	 */
-	#createErrorResponse(error) {
+	#create_error(error) {
 		if (error instanceof InvalidTokenError) {
-			const wwwAuthValue = this.#createWwwAuthenticateHeader(error);
+			const www_auth_value = this.#create_wwwauthenticate_header(error);
 			return new Response(JSON.stringify(error.toResponseObject()), {
 				status: 401,
 				headers: {
 					'Content-Type': 'application/json',
-					'WWW-Authenticate': wwwAuthValue,
+					'WWW-Authenticate': www_auth_value,
 				},
 			});
 		} else if (error instanceof InsufficientScopeError) {
-			const wwwAuthValue = this.#createWwwAuthenticateHeader(error);
+			const www_auth_value = this.#create_wwwauthenticate_header(error);
 			return new Response(JSON.stringify(error.toResponseObject()), {
 				status: 403,
 				headers: {
 					'Content-Type': 'application/json',
-					'WWW-Authenticate': wwwAuthValue,
+					'WWW-Authenticate': www_auth_value,
 				},
 			});
 		} else if (error instanceof ServerError) {
@@ -129,12 +135,15 @@ export class BearerAuth {
 			});
 		} else {
 			const serverError = new ServerError('Internal Server Error');
-			return new Response(JSON.stringify(serverError.toResponseObject()), {
-				status: 500,
-				headers: {
-					'Content-Type': 'application/json',
+			return new Response(
+				JSON.stringify(serverError.toResponseObject()),
+				{
+					status: 500,
+					headers: {
+						'Content-Type': 'application/json',
+					},
 				},
-			});
+			);
 		}
 	}
 
@@ -143,9 +152,9 @@ export class BearerAuth {
 	 * @param {OAuthError} error
 	 * @returns {string}
 	 */
-	#createWwwAuthenticateHeader(error) {
+	#create_wwwauthenticate_header(error) {
 		let value = `Bearer error="${error.errorCode}", error_description="${error.message}"`;
-		
+
 		if (this.#options.resourceMetadataUrl) {
 			value += `, resource_metadata="${this.#options.resourceMetadataUrl}"`;
 		}
@@ -156,7 +165,7 @@ export class BearerAuth {
 
 /**
  * Convenience function to create a Bearer auth middleware-like function
- * @param {BearerAuthOptions} options - Bearer auth configuration  
+ * @param {BearerAuthOptions} options - Bearer auth configuration
  * @returns {function(Request): Promise<BearerAuthResult>} Authentication function
  */
 export function createBearerAuth(options) {

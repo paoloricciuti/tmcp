@@ -6,7 +6,7 @@
 	"main": "src/index.js",
 	"types": "src/types/index.d.ts",
 	"scripts": {
-		"generate:types": "dts-buddy && node ./scripts/abstractify.js && publint",
+		"generate:types": "dts-buddy && publint",
 		"prepublish": "pnpm generate:types",
 		"test": "vitest --run"
 	},

@@ -1,6 +1,6 @@
 /**
  * @import { AuthInfo, AuthorizationParams, OAuthTokens, OAuthTokenRevocationRequest, OAuthClientInformationFull } from './types.js'
- * @import { OAuthServerProvider, OAuthRegisteredClientsStore } from './provider-interfaces.js'
+ * @import { OAuthServerProvider, OAuthRegisteredClientsStore } from './internal.js'
  */
 
 import * as v from 'valibot';
@@ -35,10 +35,10 @@ export class ProxyOAuthServerProvider {
 	#endpoints;
 
 	/** @type {function(string): Promise<AuthInfo>} */
-	#verifyAccessToken;
+	#verify_access_token;
 
 	/** @type {function(string): Promise<OAuthClientInformationFull | undefined>} */
-	#getClient;
+	#get_client;
 
 	/** @type {typeof fetch} */
 	#fetch;
@@ -51,21 +51,21 @@ export class ProxyOAuthServerProvider {
 	 */
 	constructor(options) {
 		this.#endpoints = options.endpoints;
-		this.#verifyAccessToken = options.verifyAccessToken;
-		this.#getClient = options.getClient;
+		this.#verify_access_token = options.verifyAccessToken;
+		this.#get_client = options.getClient;
 		this.#fetch = options.fetch || fetch;
 	}
 
 	/**
 	 * @returns {OAuthRegisteredClientsStore}
 	 */
-	get clientsStore() {
-		const registrationUrl = this.#endpoints.registrationUrl;
+	get clientStore() {
+		const registration_url = this.#endpoints.registrationUrl;
 		return {
-			getClient: this.#getClient,
-			...(registrationUrl && {
+			getClient: this.#get_client,
+			...(registration_url && {
 				registerClient: async (client) => {
-					const response = await this.#fetch(registrationUrl, {
+					const response = await this.#fetch(registration_url, {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
@@ -80,16 +80,16 @@ export class ProxyOAuthServerProvider {
 					}
 
 					const data = await response.json();
-					const parseResult = v.safeParse(
+					const parse_result = v.safeParse(
 						OAuthClientInformationFullSchema,
 						data,
 					);
-					if (!parseResult.success) {
+					if (!parse_result.success) {
 						throw new ServerError(
 							'Invalid client registration response',
 						);
 					}
-					return parseResult.output;
+					return parse_result.output;
 				},
 			}),
 		};
@@ -102,8 +102,8 @@ export class ProxyOAuthServerProvider {
 	 */
 	async authorize(client, params) {
 		// Build authorization URL
-		const targetUrl = new URL(this.#endpoints.authorizationUrl);
-		const searchParams = new URLSearchParams({
+		const target_url = new URL(this.#endpoints.authorizationUrl);
+		const search_params = new URLSearchParams({
 			client_id: client.client_id,
 			response_type: 'code',
 			redirect_uri: params.redirectUri,
@@ -112,29 +112,30 @@ export class ProxyOAuthServerProvider {
 		});
 
 		// Add optional parameters
-		if (params.state) searchParams.set('state', params.state);
+		if (params.state) search_params.set('state', params.state);
 		if (params.scopes?.length)
-			searchParams.set('scope', params.scopes.join(' '));
-		if (params.resource) searchParams.set('resource', params.resource.href);
+			search_params.set('scope', params.scopes.join(' '));
+		if (params.resource)
+			search_params.set('resource', params.resource.href);
 
-		targetUrl.search = searchParams.toString();
+		target_url.search = search_params.toString();
 
 		// Return redirect response
 		return new Response(null, {
 			status: 302,
 			headers: {
-				Location: targetUrl.toString(),
+				Location: target_url.toString(),
 			},
 		});
 	}
 
 	/**
 	 * @param {OAuthClientInformationFull} _client
-	 * @param {string} _authorizationCode
+	 * @param {string} _authorization_code
 	 * @returns {Promise<string>}
 	 */
 	// eslint-disable-next-line no-unused-vars
-	async challengeForAuthorizationCode(_client, _authorizationCode) {
+	async challengeForAuthorizationCode(_client, _authorization_code) {
 		// In a proxy setup, we don't store the code challenge ourselves
 		// Instead, we proxy the token request and let the upstream server validate it
 		return '';
@@ -142,35 +143,35 @@ export class ProxyOAuthServerProvider {
 
 	/**
 	 * @param {OAuthClientInformationFull} client
-	 * @param {string} authorizationCode
-	 * @param {string} [codeVerifier]
-	 * @param {string} [redirectUri]
+	 * @param {string} authorization_code
+	 * @param {string} [code_verifier]
+	 * @param {string} [redirect_uri]
 	 * @param {URL} [resource]
 	 * @returns {Promise<OAuthTokens>}
 	 */
 	async exchangeAuthorizationCode(
 		client,
-		authorizationCode,
-		codeVerifier,
-		redirectUri,
+		authorization_code,
+		code_verifier,
+		redirect_uri,
 		resource,
 	) {
 		const params = new URLSearchParams({
 			grant_type: 'authorization_code',
 			client_id: client.client_id,
-			code: authorizationCode,
+			code: authorization_code,
 		});
 
 		if (client.client_secret) {
 			params.append('client_secret', client.client_secret);
 		}
 
-		if (codeVerifier) {
-			params.append('code_verifier', codeVerifier);
+		if (code_verifier) {
+			params.append('code_verifier', code_verifier);
 		}
 
-		if (redirectUri) {
-			params.append('redirect_uri', redirectUri);
+		if (redirect_uri) {
+			params.append('redirect_uri', redirect_uri);
 		}
 
 		if (resource) {
@@ -190,11 +191,11 @@ export class ProxyOAuthServerProvider {
 		}
 
 		const data = await response.json();
-		const parseResult = v.safeParse(OAuthTokensSchema, data);
-		if (!parseResult.success) {
+		const parse_result = v.safeParse(OAuthTokensSchema, data);
+		if (!parse_result.success) {
 			throw new ServerError('Invalid token response');
 		}
-		return parseResult.output;
+		return parse_result.output;
 	}
 
 	/**
@@ -236,11 +237,11 @@ export class ProxyOAuthServerProvider {
 		}
 
 		const data = await response.json();
-		const parseResult = v.safeParse(OAuthTokensSchema, data);
-		if (!parseResult.success) {
+		const parse_result = v.safeParse(OAuthTokensSchema, data);
+		if (!parse_result.success) {
 			throw new ServerError('Invalid token response');
 		}
-		return parseResult.output;
+		return parse_result.output;
 	}
 
 	/**
@@ -248,7 +249,7 @@ export class ProxyOAuthServerProvider {
 	 * @returns {Promise<AuthInfo>}
 	 */
 	async verifyAccessToken(token) {
-		return this.#verifyAccessToken(token);
+		return this.#verify_access_token(token);
 	}
 
 	/**
@@ -257,8 +258,8 @@ export class ProxyOAuthServerProvider {
 	 * @returns {Promise<void>}
 	 */
 	async revokeToken(client, request) {
-		const revocationUrl = this.#endpoints.revocationUrl;
-		if (!revocationUrl) {
+		const revocation_url = this.#endpoints.revocationUrl;
+		if (!revocation_url) {
 			throw new Error('No revocation endpoint configured');
 		}
 
@@ -272,7 +273,7 @@ export class ProxyOAuthServerProvider {
 			params.set('token_type_hint', request.token_type_hint);
 		}
 
-		const response = await this.#fetch(revocationUrl, {
+		const response = await this.#fetch(revocation_url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded',

@@ -1,470 +1,318 @@
 declare module '@tmcp/auth' {
+    import * as v from 'valibot';
     /**
-     * @import { TokenPayload, AuthorizationServerMetadata, ProtectedResourceMetadata, ClientRegistrationRequest, ClientRegistrationResponse } from './types.js';
+     * Main OAuth Provider class that handles OAuth 2.1 requests using Web Request/Response APIs
      */
-    /**
-     * Abstract base class for OAuth 2.1 helpers that can be extended by users
-     * to provide custom OAuth implementations for MCP authorization.
-     *
-     * This class defines the interface that transport layers will use to handle
-     * OAuth 2.1 authorization according to the MCP specification.
-     *
-     * @abstract
-     */
-    export abstract class OAuthProvider {
+    export class OAuthProvider {
         /**
-         * Validates an access token and returns the token payload.
-         * This method should validate the token signature, expiration, audience, etc.
-         *
-         * @param token - The Bearer token to validate
-         * @param resource_id - The resource identifier for audience validation
-         * @returns The validated token payload
-         * @abstract
+         * @param config - OAuth provider configuration
          */
-        abstract validate(token: string, resource_id: string): Promise<TokenPayload>;
-        /**
-         * Returns OAuth 2.0 Authorization Server Metadata per RFC8414.
-         * This endpoint should be available at /.well-known/oauth-authorization-server
-         *
-         * @param request - The HTTP request for metadata
-         * @returns Authorization server metadata
-         * @abstract
-         */
-        abstract getAuthorizationMetadata(request: Request): Promise<AuthorizationServerMetadata>;
-        /**
-         * Returns OAuth 2.0 Protected Resource Metadata per RFC9728.
-         * This endpoint should be available at /.well-known/oauth-protected-resource
-         *
-         * @param request - The HTTP request for metadata
-         * @returns Protected resource metadata
-         * @abstract
-         */
-        abstract getResourceMetadata(request: Request): Promise<ProtectedResourceMetadata>;
-        /**
-         * Handles dynamic client registration per RFC7591.
-         * This method should register a new OAuth client and return the client credentials.
-         *
-         * @param request - The HTTP request containing client registration data
-         * @returns Client registration response
-         * @abstract
-         */
-        abstract register(request: Request): Promise<ClientRegistrationResponse>;
-        /**
-         * Handles OAuth 2.1 authorization requests.
-         * This method should validate the authorization request and either redirect
-         * to the authorization page or return an error.
-         *
-         * @param request - The HTTP authorization request
-         * @returns HTTP response (usually a redirect)
-         * @abstract
-         */
-        abstract authorize(request: Request): Promise<Response>;
-        /**
-         * Handles OAuth 2.1 token requests.
-         * This method should validate the token request and return access tokens.
-         *
-         * @param request - The HTTP token request
-         * @returns HTTP response with token or error
-         * @abstract
-         */
-        abstract token(request: Request): Promise<Response>;
+        constructor(config: OAuthProviderConfig);
         /**
          * Routes an OAuth request to the appropriate handler method.
-         * This is called by transport layers when should_handle returns true.
+         * Returns null if the request is not for this provider.
          *
          * @param request - The HTTP request to handle
-         * @returns HTTP response
+         * @returns HTTP response or null if not handled
          */
         respond(request: Request): Promise<Response | null>;
         #private;
     }
-    /**
-     * Complete OAuth 2.1 implementation with MCP specification compliance.
-     * This class provides a full-featured OAuth 2.1 authorization server and resource server
-     * that can be used out of the box or extended for custom implementations
-     *
-     */
-    export class DefaultOAuthProvider extends OAuthProvider implements OAuthProvider {
+    type OAuthProviderConfig = {
         /**
-         * @param config - OAuth configuration
+         * - OAuth server provider implementation
          */
-        constructor(config: OAuthConfig);
+        provider: OAuthServerProvider;
         /**
-         * Returns OAuth 2.0 Authorization Server Metadata per RFC8414.
-         * @returns Authorization server metadata
+         * - Issuer URL (must be HTTPS except localhost)
          */
-        getAuthorizationMetadata(): Promise<AuthorizationServerMetadata>;
+        issuerUrl: URL;
         /**
-         * Returns OAuth 2.0 Protected Resource Metadata per RFC9728.
-         * @returns Protected resource metadata
+         * - Base URL if different from issuer
          */
-        getResourceMetadata(): Promise<ProtectedResourceMetadata>;
-        #private;
-    }
-    /**
-     * Token payload returned after successful token validation
-     */
-    export type TokenPayload = {
+        baseUrl?: URL | undefined;
         /**
-         * - Subject identifier (user ID)
+         * - Documentation URL
          */
-        sub: string;
-        /**
-         * - Space-separated list of scopes
-         */
-        scope?: string | undefined;
-        /**
-         * - Audience(s) for the token
-         */
-        aud?: string[] | undefined;
-        /**
-         * - Token issuer
-         */
-        iss?: string | undefined;
-        /**
-         * - Expiration time (Unix timestamp)
-         */
-        exp?: number | undefined;
-        /**
-         * - Issued at time (Unix timestamp)
-         */
-        iat?: number | undefined;
-        /**
-         * - Client identifier
-         */
-        client_id?: string | undefined;
-        /**
-         * - Additional token claims
-         */
-        claims?: {
-            [x: string]: any;
-        } | undefined;
-    };
-    /**
-     * OAuth 2.0 Authorization Server Metadata per RFC8414
-     */
-    export type AuthorizationServerMetadata = {
-        /**
-         * - Authorization server issuer identifier
-         */
-        issuer: string;
-        /**
-         * - Authorization endpoint URL
-         */
-        authorization_endpoint: string;
-        /**
-         * - Token endpoint URL
-         */
-        token_endpoint?: string | undefined;
-        /**
-         * - Dynamic client registration endpoint
-         */
-        registration_endpoint?: string | undefined;
-        /**
-         * - JSON Web Key Set URI
-         */
-        jwks_uri?: string | undefined;
-        /**
-         * - Supported response types
-         */
-        response_types_supported: string[];
-        /**
-         * - Supported grant types
-         */
-        grant_types_supported?: string[] | undefined;
+        serviceDocumentationUrl?: URL | undefined;
         /**
          * - Supported scopes
          */
-        scopes_supported?: string[] | undefined;
-        /**
-         * - Supported PKCE methods
-         */
-        code_challenge_methods_supported?: string[] | undefined;
-        /**
-         * - Supported auth methods
-         */
-        token_endpoint_auth_methods_supported?: string[] | undefined;
-        /**
-         * - Request URI registration requirement
-         */
-        require_request_uri_registration?: boolean | undefined;
-        /**
-         * - Additional metadata fields
-         */
-        additionalMetadata?: {
-            [x: string]: any;
-        } | undefined;
-    };
-    /**
-     * OAuth 2.0 Protected Resource Metadata per RFC9728
-     */
-    export type ProtectedResourceMetadata = {
-        /**
-         * - Protected resource identifier
-         */
-        resource: string;
-        /**
-         * - List of authorization server issuer identifiers
-         */
-        authorization_servers?: string[] | undefined;
-        /**
-         * - Supported scopes for this resource
-         */
-        scopes_supported?: string[] | undefined;
-        /**
-         * - Supported bearer token methods
-         */
-        bearer_methods_supported?: string[] | undefined;
+        scopesSupported?: string[] | undefined;
         /**
          * - Human-readable resource name
          */
-        resource_name?: string | undefined;
+        resourceName?: string | undefined;
         /**
-         * - URL with resource documentation
+         * - Client secret expiry (default: 30 days)
          */
-        resource_documentation?: string | undefined;
+        clientSecretExpirySeconds?: number | undefined;
         /**
-         * - JSON Web Key Set URI for token validation
+         * - Generate client IDs (default: true)
          */
-        jwks_uri?: string | undefined;
+        clientIdGeneration?: boolean | undefined;
         /**
-         * - mTLS token binding support
+         * - Rate limits per endpoint
          */
-        tls_client_certificate_bound_access_tokens?: boolean | undefined;
-        /**
-         * - Additional metadata fields
-         */
-        additionalMetadata?: {
-            [x: string]: any;
-        } | undefined;
+        rateLimits?: Record<string, RateLimitConfig> | undefined;
     };
     /**
-     * Dynamic client registration request per RFC7591
+     * Implements an OAuth server that proxies requests to another OAuth server.
+     *
      */
-    export type ClientRegistrationRequest = {
+    export class ProxyOAuthServerProvider implements OAuthServerProvider {
         /**
-         * - Redirect URIs for the client
+         * @param options - Proxy configuration
          */
-        redirect_uris?: string[] | undefined;
-        /**
-         * - Response types the client will use
-         */
-        response_types?: string[] | undefined;
-        /**
-         * - Grant types the client will use
-         */
-        grant_types?: string[] | undefined;
-        /**
-         * - Application type (web, native)
-         */
-        application_type?: string | undefined;
-        /**
-         * - Contact information for the client
-         */
-        contacts?: string[] | undefined;
-        /**
-         * - Human-readable client name
-         */
-        client_name?: string | undefined;
-        /**
-         * - URI to client logo
-         */
-        logo_uri?: string | undefined;
-        /**
-         * - URI to client information page
-         */
-        client_uri?: string | undefined;
-        /**
-         * - URI to privacy policy
-         */
-        policy_uri?: string | undefined;
-        /**
-         * - URI to terms of service
-         */
-        tos_uri?: string | undefined;
-        /**
-         * - URI to client's JSON Web Key Set
-         */
-        jwks_uri?: string | undefined;
-        /**
-         * - Sector identifier URI for pairwise identifiers
-         */
-        sector_identifier_uri?: string | undefined;
-        /**
-         * - Subject identifier type (public, pairwise)
-         */
-        subject_type?: string | undefined;
-        /**
-         * - Token endpoint authentication method
-         */
-        token_endpoint_auth_method?: string | undefined;
-        /**
-         * - Scope values the client requests
-         */
-        scope?: string[] | undefined;
-        /**
-         * - Additional registration fields
-         */
-        additionalFields?: {
-            [x: string]: any;
-        } | undefined;
-    };
-    /**
-     * Dynamic client registration response per RFC7591
-     */
-    export type ClientRegistrationResponse = {
-        /**
-         * - Unique client identifier
-         */
-        client_id: string;
-        /**
-         * - Client secret (for confidential clients)
-         */
-        client_secret?: string | undefined;
-        /**
-         * - Time client identifier was issued
-         */
-        client_id_issued_at?: number | undefined;
-        /**
-         * - Time client secret expires (0 = never)
-         */
-        client_secret_expires_at?: number | undefined;
-        /**
-         * - Registered redirect URIs
-         */
-        redirect_uris?: string[] | undefined;
-        /**
-         * - Registered response types
-         */
-        response_types?: string[] | undefined;
-        /**
-         * - Registered grant types
-         */
-        grant_types?: string[] | undefined;
-        /**
-         * - Application type
-         */
-        application_type?: string | undefined;
-        /**
-         * - Contact information
-         */
-        contacts?: string[] | undefined;
-        /**
-         * - Client name
-         */
-        client_name?: string | undefined;
-        /**
-         * - Logo URI
-         */
-        logo_uri?: string | undefined;
-        /**
-         * - Client information URI
-         */
-        client_uri?: string | undefined;
-        /**
-         * - Privacy policy URI
-         */
-        policy_uri?: string | undefined;
-        /**
-         * - Terms of service URI
-         */
-        tos_uri?: string | undefined;
-        /**
-         * - Client JWKS URI
-         */
-        jwks_uri?: string | undefined;
-        /**
-         * - Sector identifier URI
-         */
-        sector_identifier_uri?: string | undefined;
-        /**
-         * - Subject identifier type
-         */
-        subject_type?: string | undefined;
-        /**
-         * - Token endpoint auth method
-         */
-        token_endpoint_auth_method?: string | undefined;
-        /**
-         * - Registration access token
-         */
-        registration_access_token?: string | undefined;
-        /**
-         * - Registration client URI
-         */
-        registration_client_uri?: string | undefined;
-        /**
-         * - Additional response fields
-         */
-        additionalFields?: {
-            [x: string]: any;
-        } | undefined;
-    };
-    /**
-     * OAuth 2.1 configuration for DefaultOAuthHelper
-     */
-    export type OAuthConfig = {
-        /**
-         * - OAuth issuer identifier
-         */
-        issuer: string;
-        /**
-         * - MCP resource identifier
-         */
-        resourceId: string;
+        constructor(options: ProxyOptions);
+        skipLocalPkceValidation: boolean;
+        get clientStore(): OAuthRegisteredClientsStore;
+        authorize(client: OAuthClientInformationFull, params: AuthorizationParams): Promise<Response>;
+        challengeForAuthorizationCode(_client: OAuthClientInformationFull, _authorization_code: string): Promise<string>;
+        exchangeAuthorizationCode(client: OAuthClientInformationFull, authorization_code: string, code_verifier?: string, redirect_uri?: string, resource?: URL): Promise<OAuthTokens>;
+        exchangeRefreshToken(client: OAuthClientInformationFull, refreshToken: string, scopes?: string[], resource?: URL): Promise<OAuthTokens>;
+        verifyAccessToken(token: string): Promise<AuthInfo>;
+        revokeToken(client: OAuthClientInformationFull, request: OAuthTokenRevocationRequest): Promise<void>;
+        #private;
+    }
+    type ProxyEndpoints = {
         /**
          * - Authorization endpoint URL
          */
-        authorizationEndpoint: string;
+        authorizationUrl: string;
         /**
          * - Token endpoint URL
          */
-        tokenEndpoint: string;
+        tokenUrl: string;
         /**
-         * - Pre-registered client ID
+         * - Token revocation endpoint URL
          */
-        clientId?: string | undefined;
+        revocationUrl?: string | undefined;
         /**
-         * - Client secret (for confidential clients)
+         * - Client registration endpoint URL
          */
-        clientSecret?: string | undefined;
+        registrationUrl?: string | undefined;
+    };
+    type ProxyOptions = {
         /**
-         * - JWKS endpoint for token validation
+         * - Individual endpoint URLs for proxying OAuth operations
          */
-        jwksUri?: string | undefined;
+        endpoints: ProxyEndpoints;
         /**
-         * - Supported scopes
+         * - Function to verify access tokens and return auth info
          */
-        scopes?: string[] | undefined;
+        verifyAccessToken: (arg0: string) => Promise<AuthInfo>;
         /**
-         * - Token expiry in seconds (default: 3600)
+         * - Function to fetch client information
          */
-        tokenExpiry?: number | undefined;
+        getClient: (arg0: string) => Promise<OAuthClientInformationFull | undefined>;
         /**
-         * - Enable dynamic client registration
+         * - Custom fetch implementation
          */
-        enableDynamicRegistration?: boolean | undefined;
-        /**
-         * - Allowed redirect URIs for registration
-         */
-        allowedRedirectUris?: string[] | undefined;
-        /**
-         * - Dynamic client registration endpoint
-         */
-        registrationEndpoint?: string | undefined;
-        /**
-         * - Additional configuration
-         */
-        additionalConfig?: {
-            [x: string]: any;
-        } | undefined;
+        fetch?: typeof fetch | undefined;
     };
     /**
-     * OAuth error response
+     * Convenience function to create a Bearer auth middleware-like function
+     * @param options - Bearer auth configuration
+     * @returns Authentication function
      */
-    export type OAuthError = {
+    export function createBearerAuth(options: BearerAuthOptions): (arg0: Request) => Promise<BearerAuthResult>;
+    /**
+     * Bearer token authentication helper for Web Request/Response APIs
+     */
+    export class BearerAuth {
         /**
-         * - Error code
+         * @param options - Bearer auth configuration
+         */
+        constructor(options: BearerAuthOptions);
+        /**
+         * Authenticates a request with Bearer token
+         * @param request - The HTTP request to authenticate
+         * @returns Authentication result
+         */
+        authenticate(request: Request): Promise<BearerAuthResult>;
+        #private;
+    }
+    type BearerAuthOptions = {
+        /**
+         * - A provider used to verify tokens
+         */
+        verifier: OAuthTokenVerifier;
+        /**
+         * - Optional scopes that the token must have
+         */
+        requiredScopes?: string[] | undefined;
+        /**
+         * - Optional resource metadata URL to include in WWW-Authenticate header
+         */
+        resourceMetadataUrl?: string | undefined;
+    };
+    type BearerAuthResult = {
+        /**
+         * - Whether authentication was successful
+         */
+        success: boolean;
+        /**
+         * - Auth info if successful
+         */
+        authInfo?: AuthInfo | undefined;
+        /**
+         * - Error response if unsuccessful
+         */
+        errorResponse?: Response | undefined;
+    };
+    /**
+     * Base class for all OAuth errors
+     */
+    export class OAuthError extends Error {
+        static errorCode: string;
+        /**
+         * @param message - Error message
+         * @param errorUri - Optional error URI
+         */
+        constructor(message: string, errorUri?: string);
+        errorUri: string | undefined;
+        /**
+         * Get the error code for this error type
+         * */
+        get errorCode(): string;
+        /**
+         * Converts the error to a standard OAuth error response object
+         * */
+        toResponseObject(): OAuthErrorResponse;
+    }
+    /**
+     * Invalid request error - The request is missing a required parameter,
+     * includes an invalid parameter value, includes a parameter more than once,
+     * or is otherwise malformed.
+     */
+    export class InvalidRequestError extends OAuthError {
+    }
+    /**
+     * Invalid client error - Client authentication failed (e.g., unknown client, no client
+     * authentication included, or unsupported authentication method).
+     */
+    export class InvalidClientError extends OAuthError {
+    }
+    /**
+     * Invalid grant error - The provided authorization grant or refresh token is
+     * invalid, expired, revoked, does not match the redirection URI used in the
+     * authorization request, or was issued to another client.
+     */
+    export class InvalidGrantError extends OAuthError {
+    }
+    /**
+     * Unauthorized client error - The authenticated client is not authorized to use
+     * this authorization grant type.
+     */
+    export class UnauthorizedClientError extends OAuthError {
+    }
+    /**
+     * Unsupported grant type error - The authorization grant type is not supported
+     * by the authorization server.
+     */
+    export class UnsupportedGrantTypeError extends OAuthError {
+    }
+    /**
+     * Invalid scope error - The requested scope is invalid, unknown, malformed, or
+     * exceeds the scope granted by the resource owner.
+     */
+    export class InvalidScopeError extends OAuthError {
+    }
+    /**
+     * Access denied error - The resource owner or authorization server denied the request.
+     */
+    export class AccessDeniedError extends OAuthError {
+    }
+    /**
+     * Server error - The authorization server encountered an unexpected condition
+     * that prevented it from fulfilling the request.
+     */
+    export class ServerError extends OAuthError {
+    }
+    /**
+     * Temporarily unavailable error - The authorization server is currently unable to
+     * handle the request due to a temporary overloading or maintenance of the server.
+     */
+    export class TemporarilyUnavailableError extends OAuthError {
+    }
+    /**
+     * Unsupported response type error - The authorization server does not support
+     * obtaining an authorization code using this method.
+     */
+    export class UnsupportedResponseTypeError extends OAuthError {
+    }
+    /**
+     * Unsupported token type error - The authorization server does not support
+     * the requested token type.
+     */
+    export class UnsupportedTokenTypeError extends OAuthError {
+    }
+    /**
+     * Invalid token error - The access token provided is expired, revoked, malformed,
+     * or invalid for other reasons.
+     */
+    export class InvalidTokenError extends OAuthError {
+    }
+    /**
+     * Method not allowed error - The HTTP method used is not allowed for this endpoint.
+     * (Custom, non-standard error)
+     */
+    export class MethodNotAllowedError extends OAuthError {
+    }
+    /**
+     * Too many requests error - Rate limit exceeded.
+     * (Custom, non-standard error based on RFC 6585)
+     */
+    export class TooManyRequestsError extends OAuthError {
+    }
+    /**
+     * Invalid client metadata error - The client metadata is invalid.
+     * (Custom error for dynamic client registration - RFC 7591)
+     */
+    export class InvalidClientMetadataError extends OAuthError {
+    }
+    /**
+     * Insufficient scope error - The request requires higher privileges than provided by the access token.
+     */
+    export class InsufficientScopeError extends OAuthError {
+    }
+    /**
+     * A utility class for defining one-off error codes
+     */
+    export class CustomOAuthError extends OAuthError {
+        /**
+         * @param customErrorCode - Custom error code
+         * @param message - Error message
+         * @param errorUri - Optional error URI
+         */
+        constructor(customErrorCode: string, message: string, errorUri?: string);
+        #private;
+    }
+    /**
+     * A full list of all OAuthErrors, enabling parsing from error responses
+     */
+    export const OAUTH_ERRORS: {
+        [InvalidRequestError.errorCode]: typeof InvalidRequestError;
+        [InvalidClientError.errorCode]: typeof InvalidClientError;
+        [InvalidGrantError.errorCode]: typeof InvalidGrantError;
+        [UnauthorizedClientError.errorCode]: typeof UnauthorizedClientError;
+        [UnsupportedGrantTypeError.errorCode]: typeof UnsupportedGrantTypeError;
+        [InvalidScopeError.errorCode]: typeof InvalidScopeError;
+        [AccessDeniedError.errorCode]: typeof AccessDeniedError;
+        [ServerError.errorCode]: typeof ServerError;
+        [TemporarilyUnavailableError.errorCode]: typeof TemporarilyUnavailableError;
+        [UnsupportedResponseTypeError.errorCode]: typeof UnsupportedResponseTypeError;
+        [UnsupportedTokenTypeError.errorCode]: typeof UnsupportedTokenTypeError;
+        [InvalidTokenError.errorCode]: typeof InvalidTokenError;
+        [MethodNotAllowedError.errorCode]: typeof MethodNotAllowedError;
+        [TooManyRequestsError.errorCode]: typeof TooManyRequestsError;
+        [InvalidClientMetadataError.errorCode]: typeof InvalidClientMetadataError;
+        [InsufficientScopeError.errorCode]: typeof InsufficientScopeError;
+    };
+    type OAuthErrorResponse = {
+        /**
+         * - The error code
          */
         error: string;
         /**
@@ -481,93 +329,309 @@ declare module '@tmcp/auth' {
         state?: string | undefined;
     };
     /**
-     * Authorization request parameters
+     * Schema for OAuth client metadata during registration
      */
-    export type AuthorizationRequest = {
+    export const OAuthClientMetadataSchema: v.ObjectSchema<{
+        readonly redirect_uris: v.SchemaWithPipe<readonly [
+            v.ArraySchema<v.SchemaWithPipe<readonly [
+                v.StringSchema<undefined>,
+                v.UrlAction<string, undefined>
+            ]>, undefined>,
+            v.MinLengthAction<string[], 1, "At least one redirect URI is required">
+        ]>;
+        readonly response_types: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+        readonly grant_types: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+        readonly application_type: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly contacts: v.OptionalSchema<v.ArraySchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.EmailAction<string, undefined>
+        ]>, undefined>, undefined>;
+        readonly client_name: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly logo_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly client_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly policy_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly tos_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly jwks_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly sector_identifier_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly subject_type: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly token_endpoint_auth_method: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly scope: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly software_id: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly software_version: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    }, undefined>;
+    /**
+     * Schema for full OAuth client information
+     */
+    export const OAuthClientInformationFullSchema: v.ObjectSchema<{
+        readonly client_id: v.StringSchema<undefined>;
+        readonly client_secret: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly client_id_issued_at: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
+        readonly client_secret_expires_at: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
+        readonly redirect_uris: v.ArraySchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly token_endpoint_auth_method: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly grant_types: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+        readonly response_types: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+        readonly client_name: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly client_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly logo_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly scope: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly contacts: v.OptionalSchema<v.ArraySchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.EmailAction<string, undefined>
+        ]>, undefined>, undefined>;
+        readonly tos_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly policy_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly jwks_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+        readonly software_id: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly software_version: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    }, undefined>;
+    /**
+     * Schema for OAuth token response
+     */
+    export const OAuthTokensSchema: v.ObjectSchema<{
+        readonly access_token: v.StringSchema<undefined>;
+        readonly token_type: v.StringSchema<undefined>;
+        readonly expires_in: v.OptionalSchema<v.NumberSchema<undefined>, undefined>;
+        readonly refresh_token: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly scope: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly id_token: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    }, undefined>;
+    /**
+     * Schema for token revocation request
+     */
+    export const OAuthTokenRevocationRequestSchema: v.ObjectSchema<{
+        readonly token: v.StringSchema<undefined>;
+        readonly token_type_hint: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    }, undefined>;
+    /**
+     * Schema for client authentication request
+     */
+    export const ClientAuthenticatedRequestSchema: v.ObjectSchema<{
+        readonly client_id: v.StringSchema<undefined>;
+        readonly client_secret: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    }, undefined>;
+    /**
+     * Schema for authorization request parameters (client validation phase)
+     */
+    export const ClientAuthorizationParamsSchema: v.ObjectSchema<{
+        readonly client_id: v.StringSchema<undefined>;
+        readonly redirect_uri: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+    }, undefined>;
+    /**
+     * Schema for authorization request parameters (request validation phase)
+     */
+    export const RequestAuthorizationParamsSchema: v.ObjectSchema<{
+        readonly response_type: v.LiteralSchema<"code", undefined>;
+        readonly code_challenge: v.StringSchema<undefined>;
+        readonly code_challenge_method: v.LiteralSchema<"S256", undefined>;
+        readonly scope: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly state: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly resource: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+    }, undefined>;
+    /**
+     * Schema for token request
+     */
+    export const TokenRequestSchema: v.ObjectSchema<{
+        readonly grant_type: v.StringSchema<undefined>;
+    }, undefined>;
+    /**
+     * Schema for authorization code grant
+     */
+    export const AuthorizationCodeGrantSchema: v.ObjectSchema<{
+        readonly code: v.StringSchema<undefined>;
+        readonly code_verifier: v.StringSchema<undefined>;
+        readonly redirect_uri: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly resource: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+    }, undefined>;
+    /**
+     * Schema for refresh token grant
+     */
+    export const RefreshTokenGrantSchema: v.ObjectSchema<{
+        readonly refresh_token: v.StringSchema<undefined>;
+        readonly scope: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly resource: v.OptionalSchema<v.SchemaWithPipe<readonly [
+            v.StringSchema<undefined>,
+            v.UrlAction<string, undefined>
+        ]>, undefined>;
+    }, undefined>;
+    /**
+     * Schema for OAuth error response
+     */
+    export const OAuthErrorResponseSchema: v.ObjectSchema<{
+        readonly error: v.StringSchema<undefined>;
+        readonly error_description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly error_uri: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+        readonly state: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+    }, undefined>;
+    /**
+     * Implements an end-to-end OAuth server.
+     */
+    interface OAuthServerProvider {
         /**
-         * - OAuth response type (usually 'code')
+         * A store used to read information about registered OAuth clients.
          */
-        response_type: string;
+        get clientStore(): OAuthRegisteredClientsStore;
         /**
-         * - Client identifier
+         * Begins the authorization flow, which can either be implemented by this server itself or via redirection to a separate authorization server.
+         *
+         * This server must eventually issue a redirect with an authorization response or an error response to the given redirect URI. Per OAuth 2.1:
+         * - In the successful case, the redirect MUST include the `code` and `state` (if present) query parameters.
+         * - In the error case, the redirect MUST include the `error` query parameter, and MAY include an optional `error_description` query parameter.
          */
-        client_id: string;
+        authorize(client: OAuthClientInformationFull, params: AuthorizationParams): Promise<Response>;
         /**
-         * - Redirect URI
+         * Returns the `codeChallenge` that was used when the indicated authorization began.
          */
-        redirect_uri?: string | undefined;
+        challengeForAuthorizationCode(client: OAuthClientInformationFull, authorizationCode: string): Promise<string>;
         /**
-         * - Requested scopes
+         * Exchanges an authorization code for an access token.
          */
-        scope?: string | undefined;
+        exchangeAuthorizationCode(client: OAuthClientInformationFull, authorizationCode: string, codeVerifier?: string, redirectUri?: string, resource?: URL): Promise<OAuthTokens>;
         /**
-         * - State parameter for CSRF protection
+         * Exchanges a refresh token for an access token.
+         */
+        exchangeRefreshToken(client: OAuthClientInformationFull, refreshToken: string, scopes?: string[], resource?: URL): Promise<OAuthTokens>;
+        /**
+         * Verifies an access token and returns information about it.
+         */
+        verifyAccessToken(token: string): Promise<AuthInfo>;
+        /**
+         * Revokes an access or refresh token. If unimplemented, token revocation is not supported (not recommended).
+         *
+         * If the given token is invalid or already revoked, this method should do nothing.
+         */
+        revokeToken?(client: OAuthClientInformationFull, request: OAuthTokenRevocationRequest): Promise<void>;
+        /**
+         * Whether to skip local PKCE validation.
+         *
+         * If true, the server will not perform PKCE validation locally and will pass the code_verifier to the upstream server.
+         *
+         * NOTE: This should only be true if the upstream server is performing the actual PKCE validation.
+         */
+        skipLocalPkceValidation?: boolean;
+    }
+    /**
+     * Stores information about registered OAuth clients for this server.
+     */
+    interface OAuthRegisteredClientsStore {
+        /**
+         * Returns information about a registered client, based on its ID.
+         */
+        getClient(clientId: string): OAuthClientInformationFull | undefined | Promise<OAuthClientInformationFull | undefined>;
+        /**
+         * Registers a new client with the server. The client ID and secret will be automatically generated by the library. A modified version of the client information can be returned to reflect specific values enforced by the server.
+         *
+         * NOTE: Implementations should NOT delete expired client secrets in-place. Auth middleware provided by this library will automatically check the `client_secret_expires_at` field and reject requests with expired secrets. Any custom logic for authenticating clients should check the `client_secret_expires_at` field as well.
+         *
+         * If unimplemented, dynamic client registration is unsupported.
+         */
+        registerClient?(client: Omit<OAuthClientInformationFull, "client_id" | "client_id_issued_at">): OAuthClientInformationFull | Promise<OAuthClientInformationFull>;
+    }
+    /**
+     * Slim implementation useful for token verification
+     */
+    interface OAuthTokenVerifier {
+        /**
+         * Verifies an access token and returns information about it.
+         */
+        verifyAccessToken(token: string): Promise<AuthInfo>;
+    }
+    type AuthInfo = {
+        /**
+         * - The access token
+         */
+        token: string;
+        /**
+         * - The client ID associated with this token
+         */
+        clientId: string;
+        /**
+         * - Scopes associated with this token
+         */
+        scopes: string[];
+        /**
+         * - When the token expires (in seconds since epoch)
+         */
+        expiresAt?: number | undefined;
+        /**
+         * - The RFC 8707 resource server identifier
+         */
+        resource?: URL | undefined;
+        /**
+         * - Additional data associated with the token
+         */
+        extra?: Record<string, unknown> | undefined;
+    };
+    type AuthorizationParams = {
+        /**
+         * - OAuth state parameter
          */
         state?: string | undefined;
         /**
+         * - Requested scopes
+         */
+        scopes?: string[] | undefined;
+        /**
          * - PKCE code challenge
          */
-        code_challenge?: string | undefined;
-        /**
-         * - PKCE challenge method
-         */
-        code_challenge_method?: string | undefined;
-        /**
-         * - MCP resource parameter
-         */
-        resource?: string | undefined;
-        /**
-         * - Additional parameters
-         */
-        additionalParams?: {
-            [x: string]: any;
-        } | undefined;
-    };
-    /**
-     * Token request parameters
-     */
-    export type TokenRequest = {
-        /**
-         * - Grant type (usually 'authorization_code')
-         */
-        grant_type: string;
-        /**
-         * - Authorization code
-         */
-        code?: string | undefined;
+        codeChallenge: string;
         /**
          * - Redirect URI
          */
-        redirect_uri?: string | undefined;
+        redirectUri: string;
         /**
-         * - Client identifier
+         * - Resource parameter
          */
-        client_id?: string | undefined;
-        /**
-         * - Client secret
-         */
-        client_secret?: string | undefined;
-        /**
-         * - PKCE code verifier
-         */
-        code_verifier?: string | undefined;
-        /**
-         * - MCP resource parameter
-         */
-        resource?: string | undefined;
-        /**
-         * - Additional parameters
-         */
-        additionalParams?: {
-            [x: string]: any;
-        } | undefined;
+        resource?: URL | undefined;
     };
-    /**
-     * Token response
-     */
-    export type TokenResponse = {
+    type OAuthTokens = {
         /**
-         * - Access token
+         * - The access token
          */
         access_token: string;
         /**
@@ -587,11 +651,103 @@ declare module '@tmcp/auth' {
          */
         scope?: string | undefined;
         /**
-         * - Additional response fields
+         * - ID token (OpenID Connect)
          */
-        additionalFields?: {
-            [x: string]: any;
-        } | undefined;
+        id_token?: string | undefined;
+    };
+    type OAuthTokenRevocationRequest = {
+        /**
+         * - The token to revoke
+         */
+        token: string;
+        /**
+         * - Hint about token type
+         */
+        token_type_hint?: string | undefined;
+    };
+    type OAuthClientInformationFull = {
+        /**
+         * - Unique client identifier
+         */
+        client_id: string;
+        /**
+         * - Client secret (for confidential clients)
+         */
+        client_secret?: string | undefined;
+        /**
+         * - When client ID was issued
+         */
+        client_id_issued_at?: number | undefined;
+        /**
+         * - When client secret expires (0 = never)
+         */
+        client_secret_expires_at?: number | undefined;
+        /**
+         * - Registered redirect URIs
+         */
+        redirect_uris: string[];
+        /**
+         * - Token endpoint auth method
+         */
+        token_endpoint_auth_method?: string | undefined;
+        /**
+         * - Registered grant types
+         */
+        grant_types?: string[] | undefined;
+        /**
+         * - Registered response types
+         */
+        response_types?: string[] | undefined;
+        /**
+         * - Human-readable client name
+         */
+        client_name?: string | undefined;
+        /**
+         * - Client information URI
+         */
+        client_uri?: string | undefined;
+        /**
+         * - Client logo URI
+         */
+        logo_uri?: string | undefined;
+        /**
+         * - Client's registered scopes
+         */
+        scope?: string | undefined;
+        /**
+         * - Contact information
+         */
+        contacts?: string[] | undefined;
+        /**
+         * - Terms of service URI
+         */
+        tos_uri?: string | undefined;
+        /**
+         * - Privacy policy URI
+         */
+        policy_uri?: string | undefined;
+        /**
+         * - Client's JSON Web Key Set URI
+         */
+        jwks_uri?: string | undefined;
+        /**
+         * - Software identifier
+         */
+        software_id?: string | undefined;
+        /**
+         * - Software version
+         */
+        software_version?: string | undefined;
+    };
+    type RateLimitConfig = {
+        /**
+         * - Time window in milliseconds
+         */
+        windowMs: number;
+        /**
+         * - Maximum requests per window
+         */
+        max: number;
     };
     export {};
 }

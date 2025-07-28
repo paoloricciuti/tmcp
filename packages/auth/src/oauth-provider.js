@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 /**
- * @import { AuthInfo, AuthorizationParams, OAuthTokens, OAuthTokenRevocationRequest, OAuthClientInformationFull, OAuthClientMetadata, RateLimitConfig, OAuthMetadata, OAuthProtectedResourceMetadata } from './types.js'
+ * @import { AuthorizationParams, OAuthClientInformationFull, RateLimitConfig, OAuthMetadata, OAuthProtectedResourceMetadata } from './types.js'
+ * @import { OAuthServerProvider } from './internal.js'
  */
 
 import crypto from 'node:crypto';
@@ -28,24 +29,6 @@ import {
 	RequestAuthorizationParamsSchema,
 	TokenRequestSchema,
 } from './schemas.js';
-
-/**
- * @typedef {Object} OAuthRegisteredClientsStore
- * @property {function(string): Promise<OAuthClientInformationFull | undefined>} getClient - Returns information about a registered client
- * @property {function(OAuthClientInformationFull): Promise<OAuthClientInformationFull>} [registerClient] - Registers a new client
- */
-
-/**
- * @typedef {Object} OAuthServerProvider
- * @property {OAuthRegisteredClientsStore} clients - Client store
- * @property {function(OAuthClientInformationFull, AuthorizationParams): Promise<Response>} authorize - Handle authorization
- * @property {function(OAuthClientInformationFull, string): Promise<string>} challengeForAuthorizationCode - Get PKCE challenge
- * @property {function(OAuthClientInformationFull, string, string=, string=, URL=): Promise<OAuthTokens>} exchangeAuthorizationCode - Exchange auth code
- * @property {function(OAuthClientInformationFull, string, string[]=, URL=): Promise<OAuthTokens>} exchangeRefreshToken - Exchange refresh token
- * @property {function(string): Promise<AuthInfo>} verifyAccessToken - Verify access token
- * @property {function(OAuthClientInformationFull, OAuthTokenRevocationRequest): Promise<void>} [revokeToken] - Revoke token
- * @property {boolean} [skipLocalPkceValidation] - Skip local PKCE validation
- */
 
 /**
  * @typedef {Object} OAuthProviderConfig
@@ -139,7 +122,7 @@ export class OAuthProvider {
 				case '/register':
 					if (
 						method === 'POST' &&
-						this.#config.provider.clients.registerClient
+						this.#config.provider.clientStore.registerClient
 					) {
 						return await this.#register(cloned_request);
 					}
@@ -258,7 +241,8 @@ export class OAuthProvider {
 
 			const { client_id, redirect_uri: redirect_uri_value } =
 				client_parse_result.output;
-			client = await this.#config.provider.clients.getClient(client_id);
+			client =
+				await this.#config.provider.clientStore.getClient(client_id);
 			if (!client) {
 				throw new InvalidClientError('Invalid client_id');
 			}
@@ -353,7 +337,8 @@ export class OAuthProvider {
 		}
 
 		const { client_id, client_secret } = client_result.output;
-		const client = await this.#config.provider.clients.getClient(client_id);
+		const client =
+			await this.#config.provider.clientStore.getClient(client_id);
 		if (!client) {
 			throw new InvalidClientError('Invalid client_id');
 		}
@@ -480,7 +465,7 @@ export class OAuthProvider {
 	 * @returns {Promise<Response>}
 	 */
 	async #register(request) {
-		if (!this.#config.provider.clients.registerClient) {
+		if (!this.#config.provider.clientStore.registerClient) {
 			return new Response(null, {
 				status: 404,
 			});
@@ -526,7 +511,7 @@ export class OAuthProvider {
 		}
 
 		const registered_client =
-			await this.#config.provider.clients.registerClient(
+			await this.#config.provider.clientStore.registerClient(
 				/** @type {OAuthClientInformationFull} */ (clientInfo),
 			);
 
@@ -565,7 +550,8 @@ export class OAuthProvider {
 		}
 
 		const { client_id, client_secret } = client_result.output;
-		const client = await this.#config.provider.clients.getClient(client_id);
+		const client =
+			await this.#config.provider.clientStore.getClient(client_id);
 		if (!client) {
 			throw new InvalidClientError('Invalid client_id');
 		}
@@ -662,7 +648,7 @@ export class OAuthProvider {
 			];
 		}
 
-		if (this.#config.provider.clients.registerClient) {
+		if (this.#config.provider.clientStore.registerClient) {
 			metadata.registration_endpoint = new URL(
 				'/register',
 				base_url,
