@@ -1,9 +1,10 @@
 declare module '@tmcp/auth' {
 	import * as v from 'valibot';
 	/**
+	 * @template {"you need to call `build` for the provider to take effect" | "built"} [T='you need to call `build` for the provider to take effect']
 	 * Main OAuth provider class - handles OAuth 2.1 requests with a clean fluent API
 	 */
-	export class OAuth {
+	export class OAuth<T extends "you need to call `build` for the provider to take effect" | "built" = "you need to call `build` for the provider to take effect"> {
 		/**
 		 * Create a new OAuth builder instance
 		 * @param issuerUrl - The OAuth issuer URL
@@ -23,47 +24,47 @@ declare module '@tmcp/auth' {
 		 * Set supported scopes
 		 * @param scopes - Supported scopes
 		 * */
-		scopes(...scopes: string[]): OAuth;
+		scopes(...scopes: string[]): OAuth<T>;
 		/**
 		 * Set OAuth handlers
 		 * @param handlers - OAuth handlers
 		 * */
-		handlers(handlers: SimplifiedHandlers_1): OAuth;
+		handlers(handlers: SimplifiedHandlers_1): OAuth<T>;
 		/**
 		 * Use in-memory client store with optional initial clients
 		 * @param clients - Initial clients
 		 * */
-		memory(clients?: OAuthClientInformationFull[]): OAuth;
+		memory(clients?: OAuthClientInformationFull[]): OAuth<T>;
 		/**
 		 * Use custom client store
 		 * @param store - Custom client store
 		 * */
-		clients(store: OAuthRegisteredClientsStore): OAuth;
+		clients(store: OAuthRegisteredClientsStore): OAuth<T>;
 		/**
 		 * Configure OAuth features
 		 * @param features - Feature configuration
 		 * */
-		features(features: FeatureConfig): OAuth;
+		features(features: FeatureConfig): OAuth<T>;
 		/**
 		 * Enable PKCE (enabled by default)
-		 * @param enabledtrue] - Whether to enable PKCE
+		 * @param get_code_challenge - A function that retrieves the original code challenge for a given authorization code
 		 * */
-		pkce(enabled?: boolean): OAuth;
+		pkce(get_code_challenge: FeatureConfig["pkce"]): OAuth<T>;
 		/**
 		 * Configure bearer token authentication
 		 * @param configtrue] - Bearer config
 		 * */
-		bearer(config?: boolean | string[] | BearerConfig): OAuth;
+		bearer(config?: boolean | string[] | BearerConfig): OAuth<T>;
 		/**
 		 * Configure CORS
 		 * @param configtrue] - CORS config
 		 * */
-		cors(config?: boolean | CorsConfig): OAuth;
+		cors(config?: boolean | CorsConfig): OAuth<T>;
 		/**
 		 * Enable dynamic client registration
 		 * @param enabledtrue] - Whether to enable registration
 		 * */
-		registration(enabled?: boolean): OAuth;
+		registration(enabled?: boolean): OAuth<T>;
 		/**
 		 * Configure rate limiting
 		 * @param limits - Rate limits
@@ -71,20 +72,18 @@ declare module '@tmcp/auth' {
 		rateLimit(limits: Record<string, {
 			windowMs: number;
 			max: number;
-		}>): OAuth;
-		/**
-		 * Auto-configure with sensible defaults
-		 * */
-		auto(): OAuth;
+		}>): OAuth<T>;
 		/**
 		 * Build the OAuth provider (same as this instance since we're standalone now)
 		 * */
-		build(): OAuth;
+		build(): OAuth<"built">;
 		/**
 		 * Handle HTTP requests for OAuth endpoints
 		 * @param request - HTTP request
 		 * */
 		respond(request: Request): Promise<Response | null>;
+		
+		[BUILT]: T;
 		#private;
 	}
 	type ExchangeAuthorizationCodeRequest = {
@@ -204,9 +203,9 @@ declare module '@tmcp/auth' {
 	};
 	type FeatureConfig = {
 		/**
-		 * - Enable PKCE
+		 * - Enable PKCE (it's also a function to retrieve the original code challenge for a given authorization code)
 		 */
-		pkce?: boolean | undefined;
+		pkce?: ((client: OAuthClientInformationFull, code: string) => Promise<string> | undefined) | undefined;
 		/**
 		 * - Bearer token config
 		 */
@@ -253,6 +252,16 @@ declare module '@tmcp/auth' {
 		 */
 		maxAge?: number | undefined;
 	};
+
+
+
+
+
+
+
+
+
+	const BUILT: unique symbol;
 	/**
 	 * Implements an OAuth server that proxies requests to another OAuth server.
 	 * 

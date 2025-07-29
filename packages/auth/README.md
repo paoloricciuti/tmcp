@@ -119,6 +119,51 @@ const simpleAuth = OAuth
   .build();
 ```
 
+## PKCE Code Challenge Retrieval
+
+When using PKCE (Proof Key for Code Exchange), you need to verify that the `code_verifier` provided during token exchange matches the `code_challenge` that was submitted during the initial authorization request. The `code_challenge_retrieval()` method allows you to provide a custom function to retrieve the original code challenge from your storage system.
+
+```javascript
+// In-memory storage for demonstration (use database/cache in production)
+const codeChallengeStore = new Map();
+
+const auth = OAuth
+  .issuer('https://auth.example.com')
+  .memory([/* your clients */])
+  .handlers({
+    async authorize(request) {
+      // Store the code challenge when issuing authorization code
+      const authCode = 'auth_' + Date.now();
+      codeChallengeStore.set(authCode, request.codeChallenge);
+      
+      const redirectUrl = new URL(request.redirectUri);
+      redirectUrl.searchParams.set('code', authCode);
+      return new Response(null, {
+        status: 302,
+        headers: { 'Location': redirectUrl.toString() }
+      });
+    },
+    // ... other handlers
+  })
+  // Configure PKCE code challenge retrieval
+  .code_challenge_retrieval(async (authorizationCode) => {
+    // Retrieve the original code challenge from your storage
+    const challenge = codeChallengeStore.get(authorizationCode);
+    if (!challenge) {
+      throw new Error('Code challenge not found');
+    }
+    return challenge;
+  })
+  .build();
+```
+
+**Key Points:**
+- The retrieval function receives the authorization code as a parameter
+- It should return the original `code_challenge` that was stored during authorization
+- If the challenge cannot be found, return a falsy value or throw an error
+- This function is only called when PKCE is enabled and a `code_verifier` is provided
+- Use your preferred storage mechanism (database, Redis, etc.) in production
+
 ## Legacy API (Deprecated)
 
 For backward compatibility, the legacy OAuthProvider is still available:

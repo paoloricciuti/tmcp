@@ -83,7 +83,7 @@ import { verifyChallenge } from 'pkce-challenge';
 
 /**
  * @typedef {Object} FeatureConfig
- * @property {boolean} [pkce=true] - Enable PKCE
+ * @property {(client: OAuthClientInformationFull, code: string) => Promise<string> | undefined} [pkce] - Enable PKCE (it's also a function to retrieve the original code challenge for a given authorization code)
  * @property {boolean | BearerConfig} [bearer=false] - Bearer token config
  * @property {boolean | CorsConfig} [cors=false] - CORS config
  * @property {boolean} [registration=false] - Dynamic client registration
@@ -100,10 +100,19 @@ import { verifyChallenge } from 'pkce-challenge';
  * @property {number} [maxAge] - Preflight cache duration
  */
 
+const BUILT = Symbol('built');
+
 /**
+ * @template {"you need to call `build` for the provider to take effect" | "built"} [T='you need to call `build` for the provider to take effect']
  * Main OAuth provider class - handles OAuth 2.1 requests with a clean fluent API
  */
 export class OAuth {
+	/**
+	 * @type {T}
+	 */
+	// @ts-ignore
+	[BUILT];
+
 	/** @type {string} */
 	#issuer_url;
 
@@ -171,7 +180,7 @@ export class OAuth {
 	/**
 	 * Set supported scopes
 	 * @param {...string} scopes - Supported scopes
-	 * @returns {OAuth}
+	 * @returns {OAuth<T>}
 	 */
 	scopes(...scopes) {
 		this.#scopes = scopes;
@@ -181,7 +190,7 @@ export class OAuth {
 	/**
 	 * Set OAuth handlers
 	 * @param {SimplifiedHandlers} handlers - OAuth handlers
-	 * @returns {OAuth}
+	 * @returns {OAuth<T>}
 	 */
 	handlers(handlers) {
 		this.#handlers = handlers;
@@ -191,7 +200,7 @@ export class OAuth {
 	/**
 	 * Use in-memory client store with optional initial clients
 	 * @param {OAuthClientInformationFull[]} [clients] - Initial clients
-	 * @returns {OAuth}
+	 * @returns {OAuth<T>}
 	 */
 	memory(clients = []) {
 		this.#client_store = new MemoryClientStore(clients);
@@ -201,7 +210,7 @@ export class OAuth {
 	/**
 	 * Use custom client store
 	 * @param {OAuthRegisteredClientsStore} store - Custom client store
-	 * @returns {OAuth}
+	 * @returns {OAuth<T>}
 	 */
 	clients(store) {
 		this.#client_store = store;
@@ -211,7 +220,7 @@ export class OAuth {
 	/**
 	 * Configure OAuth features
 	 * @param {FeatureConfig} features - Feature configuration
-	 * @returns {OAuth}
+	 * @returns {OAuth<T>}
 	 */
 	features(features) {
 		this.#features = { ...this.#features, ...features };
@@ -220,18 +229,18 @@ export class OAuth {
 
 	/**
 	 * Enable PKCE (enabled by default)
-	 * @param {boolean} [enabled=true] - Whether to enable PKCE
-	 * @returns {OAuth}
+	 * @param {FeatureConfig["pkce"]} get_code_challenge - A function that retrieves the original code challenge for a given authorization code
+	 * @returns {OAuth<T>}
 	 */
-	pkce(enabled = true) {
-		this.#features.pkce = enabled;
+	pkce(get_code_challenge) {
+		this.#features.pkce = get_code_challenge;
 		return this;
 	}
 
 	/**
 	 * Configure bearer token authentication
 	 * @param {boolean | string[] | BearerConfig} [config=true] - Bearer config
-	 * @returns {OAuth}
+	 * @returns {OAuth<T>}
 	 */
 	bearer(config = true) {
 		if (Array.isArray(config)) {
@@ -245,7 +254,7 @@ export class OAuth {
 	/**
 	 * Configure CORS
 	 * @param {boolean | CorsConfig} [config=true] - CORS config
-	 * @returns {OAuth}
+	 * @returns {OAuth<T>}
 	 */
 	cors(config = true) {
 		this.#features.cors = config;
@@ -255,7 +264,7 @@ export class OAuth {
 	/**
 	 * Enable dynamic client registration
 	 * @param {boolean} [enabled=true] - Whether to enable registration
-	 * @returns {OAuth}
+	 * @returns {OAuth<T>}
 	 */
 	registration(enabled = true) {
 		this.#features.registration = enabled;
@@ -265,7 +274,7 @@ export class OAuth {
 	/**
 	 * Configure rate limiting
 	 * @param {Record<string, {windowMs: number, max: number}>} limits - Rate limits
-	 * @returns {OAuth}
+	 * @returns {OAuth<T>}
 	 */
 	rateLimit(limits) {
 		this.#features.rateLimits = limits;
@@ -273,20 +282,8 @@ export class OAuth {
 	}
 
 	/**
-	 * Auto-configure with sensible defaults
-	 * @returns {OAuth}
-	 */
-	auto() {
-		return this.memory().features({
-			pkce: true,
-			cors: { origin: '*' },
-			bearer: true,
-		});
-	}
-
-	/**
 	 * Build the OAuth provider (same as this instance since we're standalone now)
-	 * @returns {OAuth}
+	 * @returns {OAuth<"built">}
 	 */
 	build() {
 		if (!this.#handlers) {
@@ -295,7 +292,7 @@ export class OAuth {
 		if (!this.#client_store) {
 			this.memory();
 		}
-		return this;
+		return /** @type {OAuth<"built">} */ (this);
 	}
 
 	/**
@@ -614,15 +611,29 @@ export class OAuth {
 						'code_verifier is required for PKCE',
 					);
 				}
-				if (
-					await verifyChallenge(
-						grant.code_challenge,
-						grant.code_verifier,
-					)
-				) {
-					throw new InvalidRequestError(
-						'Invalid code challenge or verifier',
+
+				// Get the original code challenge using the retriever function if provided
+				if (this.#features.pkce) {
+					const original_code_challenge = await this.#features.pkce(
+						client,
+						grant.code,
 					);
+					if (!original_code_challenge) {
+						throw new InvalidGrantError(
+							'Unable to retrieve code challenge for verification',
+						);
+					}
+
+					if (
+						!(await verifyChallenge(
+							grant.code_verifier,
+							original_code_challenge,
+						))
+					) {
+						throw new InvalidRequestError(
+							'Invalid code challenge or verifier',
+						);
+					}
 				}
 			}
 			tokens = await this.#handlers.exchange({

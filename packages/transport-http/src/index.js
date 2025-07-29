@@ -7,7 +7,7 @@
  * @typedef {{
  * 	getSessionId?: () => string
  * 	path?: string
- * 	oauth?: OAuth
+ * 	oauth?: OAuth<"built">
  * }} HttpTransportOptions
  */
 
@@ -43,7 +43,7 @@ export class HttpTransport {
 	#controller_storage = new AsyncLocalStorage();
 
 	/**
-	 * @type {OAuth | undefined}
+	 * @type {OAuth<"built"> | undefined}
 	 */
 	#oauth;
 

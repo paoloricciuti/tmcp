@@ -11,7 +11,7 @@ declare module '@tmcp/transport-http' {
 	export type HttpTransportOptions = {
 		getSessionId?: () => string;
 		path?: string;
-		oauth?: OAuth;
+		oauth?: OAuth<"built">;
 	};
 
 	export {};

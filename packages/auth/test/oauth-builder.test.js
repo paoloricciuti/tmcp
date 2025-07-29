@@ -180,26 +180,6 @@ describe('OAuth (Fluent Builder)', () => {
 			expect(provider).toBeDefined();
 		});
 
-		it('creates middleware function', () => {
-			const handlers = {
-				async authorize() {
-					return new Response(null, { status: 302, headers: { Location: 'https://example.com' } });
-				},
-				async exchange() {
-					return { access_token: 'token', token_type: 'bearer' };
-				},
-				async verify() {
-					return { token: 'token', clientId: 'client', scopes: [], expiresAt: Date.now() / 1000 + 3600 };
-				}
-			};
-
-			const middleware = OAuth
-				.create('https://auth.example.com')
-				.handlers(handlers)
-				.middleware();
-			
-			expect(typeof middleware).toBe('function');
-		});
 	});
 
 	describe('SimpleProvider integration', () => {
