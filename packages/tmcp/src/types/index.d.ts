@@ -11,6 +11,7 @@ declare module 'tmcp' {
 			uri: string;
 			name?: string;
 		}>;
+		get ctx(): Context;
 		currentClientCapabilities(): {
 			experimental?: {} | undefined;
 			sampling?: {} | undefined;
@@ -54,7 +55,7 @@ declare module 'tmcp' {
 			list?: () => Promise<Array<Resource>> | Array<Resource>;
 		}, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
 		
-		receive(message: JSONRPCResponse | JSONRPCRequest, session_id?: string): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
+		receive(message: JSONRPCResponse | JSONRPCRequest, ctx?: Context): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
 		/**
 		 * Send a notification for subscriptions
 		 * */
@@ -76,6 +77,41 @@ declare module 'tmcp' {
 		log(level: LoggingLevel, data: unknown, logger?: string): void;
 		#private;
 	}
+	/**
+	 * Information about a validated access token, provided to request handlers.
+	 */
+	export type AuthInfo = {
+		/**
+		 * - The access token.
+		 */
+		token: string;
+		/**
+		 * - The client ID associated with this token.
+		 */
+		clientId: string;
+		/**
+		 * - Scopes associated with this token.
+		 */
+		scopes: string[];
+		/**
+		 * - When the token expires (in seconds since epoch).
+		 */
+		expiresAt?: number | undefined;
+		/**
+		 * - The RFC 8707 resource server identifier for which this token is valid.
+		 * If set, this MUST match the MCP server's resource identifier (minus hash fragment).
+		 */
+		resource?: URL | undefined;
+		/**
+		 * - Additional data associated with the token.
+		 * This field should be used for any additional data that needs to be attached to the auth info.
+		 */
+		extra?: Record<string, unknown> | undefined;
+	};
+	export type Context = {
+		sessionId?: string | undefined;
+		auth?: AuthInfo | undefined;
+	};
 	export type ClientCapabilities = ClientCapabilities_1;
 	type Completion = (
 		query: string,

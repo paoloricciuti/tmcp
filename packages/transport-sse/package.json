@@ -19,6 +19,9 @@
 	"peerDependencies": {
 		"tmcp": "workspace:^"
 	},
+	"optionalDependencies": {
+		"@tmcp/auth": "workspace:^"
+	},
 	"keywords": [
 		"tmcp",
 		"sse",

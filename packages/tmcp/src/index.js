@@ -4,7 +4,7 @@
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations } from "./validation/index.js";
- * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
+ * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents, Context as ContextType } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -28,6 +28,25 @@ import {
 	negotiate_protocol_version,
 } from './validation/version.js';
 import { should_version_negotiation_fail } from './validation/version.js';
+
+/**
+ * Information about a validated access token, provided to request handlers.
+ * @typedef {Object} AuthInfo
+ * @property {string} token - The access token.
+ * @property {string} clientId - The client ID associated with this token.
+ * @property {string[]} scopes - Scopes associated with this token.
+ * @property {number} [expiresAt] - When the token expires (in seconds since epoch).
+ * @property {URL} [resource] - The RFC 8707 resource server identifier for which this token is valid.
+ *   If set, this MUST match the MCP server's resource identifier (minus hash fragment).
+ * @property {Record<string, unknown>} [extra] - Additional data associated with the token.
+ *   This field should be used for any additional data that needs to be attached to the auth info.
+ */
+
+/**
+ * @typedef {Object} Context
+ * @property {string} [sessionId]
+ * @property {AuthInfo} [auth]
+ */
 
 /**
  * @type {SqidsType | undefined}
@@ -110,9 +129,9 @@ export class McpServer {
 	};
 
 	/**
-	 * @type {AsyncLocalStorage<string | undefined>}
+	 * @type {AsyncLocalStorage<Context>}
 	 */
-	#session_storage = new AsyncLocalStorage();
+	#ctx_storage = new AsyncLocalStorage();
 
 	/**
 	 * @type {Map<string|undefined, ClientCapabilities>}
@@ -236,7 +255,11 @@ export class McpServer {
 	}
 
 	get #session_id() {
-		return this.#session_storage.getStore();
+		return this.#ctx_storage.getStore()?.sessionId;
+	}
+
+	get ctx() {
+		return this.#ctx_storage.getStore() ?? {};
 	}
 
 	get #client_capabilities() {
@@ -690,10 +713,10 @@ export class McpServer {
 	}
 	/**
 	 * @param {JSONRPCResponse | JSONRPCRequest} message
-	 * @param {string} [session_id]
+	 * @param {Context} [ctx]
 	 * @returns {ReturnType<JSONRPCServer['receive']> | ReturnType<JSONRPCClient['receive'] | undefined>}
 	 */
-	receive(message, session_id) {
+	receive(message, ctx) {
 		// Validate the message first
 		const validated_message = v.safeParse(
 			v.union([JSONRPCRequestSchema, JSONRPCNotificationSchema]),
@@ -707,15 +730,15 @@ export class McpServer {
 			// to each client that didn't explicitly set a log level too
 			if (
 				!!this.#options.capabilities?.logging &&
-				!this.#session_log_levels.has(session_id)
+				!this.#session_log_levels.has(ctx?.sessionId)
 			) {
 				this.#session_log_levels.set(
-					session_id,
+					ctx?.sessionId,
 					this.#options.logging?.default ?? 'info',
 				);
 			}
-			return this.#session_storage.run(
-				session_id,
+			return this.#ctx_storage.run(
+				ctx ?? {},
 				async () =>
 					await this.#server.receive(validated_message.output),
 			);
@@ -723,7 +746,7 @@ export class McpServer {
 		// It's a response - handle with client
 		const validated_response = v.parse(JSONRPCResponseSchema, message);
 		this.#lazyily_create_client();
-		return this.#session_storage.run(session_id, async () =>
+		return this.#ctx_storage.run(ctx ?? {}, async () =>
 			this.#client?.receive(validated_response),
 		);
 	}

@@ -1,7 +1,7 @@
 {
-	"name": "@tmcp/transport-http",
-	"version": "0.4.2",
-	"description": "Transport for TMCP using HTTP",
+	"name": "@tmcp/auth",
+	"version": "0.1.0",
+	"description": "OAuth 2.1 authorization helper for TMCP with MCP specification compliance",
 	"type": "module",
 	"main": "src/index.js",
 	"types": "src/types/index.d.ts",
@@ -23,25 +23,31 @@
 	"peerDependencies": {
 		"tmcp": "workspace:^"
 	},
+	"dependencies": {
+		"@standard-schema/spec": "^1.0.0",
+		"@types/json-schema": "^7.0.15",
+		"pkce-challenge": "^4.1.0",
+		"valibot": "^1.1.0"
+	},
 	"keywords": [
 		"tmcp",
-		"http",
-		"transport"
+		"oauth",
+		"oauth2",
+		"authorization",
+		"mcp",
+		"auth"
 	],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/paoloricciuti/tmcp.git",
-		"directory": "packages/transport-http"
+		"directory": "packages/auth"
 	},
 	"devDependencies": {
-		"@modelcontextprotocol/sdk": "^1.16.0",
-		"@tmcp/adapter-valibot": "workspace:^",
-		"@tmcp/auth": "workspace:^",
 		"@types/node": "^24.0.15",
+		"@tmcp/internal-ts-helpers": "workspace:^",
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^",
-		"valibot": "^1.1.0",
 		"vitest": "^3.2.4"
 	},
 	"publishConfig": {
