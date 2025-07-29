@@ -29,7 +29,7 @@ declare module '@tmcp/auth' {
 		 * Set OAuth handlers
 		 * @param handlers - OAuth handlers
 		 * */
-		handlers(handlers: SimplifiedHandlers_1): OAuth<T>;
+		handlers(handlers: SimplifiedHandlers): OAuth<T>;
 		/**
 		 * Use in-memory client store with optional initial clients
 		 * @param clients - Initial clients
@@ -167,7 +167,7 @@ declare module '@tmcp/auth' {
 		 */
 		resource?: URL | undefined;
 	};
-	type SimplifiedHandlers_1 = {
+	type SimplifiedHandlers = {
 		/**
 		 * - Handle authorization requests
 		 */
@@ -265,30 +265,63 @@ declare module '@tmcp/auth' {
 
 	const BUILT: unique symbol;
 	/**
-	 * Implements an OAuth server that proxies requests to another OAuth server.
-	 * 
+	 * Helper class that provides OAuth handlers for proxying to an upstream OAuth server.
+	 * Can be used with the OAuth fluent API or built directly into a complete OAuth instance.
+	 *
+	 * @example
+	 * // Direct build approach (recommended)
+	 * const proxy = new ProxyOAuthServerProvider({
+	 *   endpoints: {
+	 *     authorizationUrl: 'https://upstream.example.com/authorize',
+	 *     tokenUrl: 'https://upstream.example.com/token',
+	 *   },
+	 *   verify: async (token) => { ... },
+	 *   getClient: async (clientId) => { ... }
+	 * });
+	 *
+	 * const auth = proxy.build('https://proxy.example.com', {
+	 *   cors: true,
+	 *   bearer: ['read', 'write'],
+	 *   scopes: ['read', 'write', 'admin']
+	 * });
+	 *
+	 * @example
+	 * // Manual fluent API approach
+	 * const auth = OAuth
+	 *   .issuer('https://proxy.example.com')
+	 *   .clients(proxy.clientStore)
+	 *   .handlers(proxy.handlers())
+	 *   .cors(true)
+	 *   .build();
 	 */
 	export class ProxyOAuthServerProvider {
 		/**
 		 * @param options - Proxy configuration
 		 */
 		constructor(options: ProxyOptions);
-		
-		skipLocalPkceValidation: boolean;
-		
+		/**
+		 * Get a client store that proxies requests to the upstream server
+		 * */
 		get clientStore(): OAuthRegisteredClientsStore;
-		
-		authorize(client: OAuthClientInformationFull, params: AuthorizationParams): Promise<Response>;
-		
-		challengeForAuthorizationCode(_client: OAuthClientInformationFull, _authorization_code: string): Promise<string>;
-		
-		exchangeAuthorizationCode(client: OAuthClientInformationFull, authorization_code: string, code_verifier?: string, redirect_uri?: string, resource?: URL): Promise<OAuthTokens>;
-		
-		exchangeRefreshToken(client: OAuthClientInformationFull, refreshToken: string, scopes?: string[], resource?: URL): Promise<OAuthTokens>;
-		
-		verifyAccessToken(token: string): Promise<AuthInfo>;
-		
-		revokeToken(client: OAuthClientInformationFull, request: OAuthTokenRevocationRequest): Promise<void>;
+		/**
+		 * Get OAuth handlers for use with the new OAuth API
+		 * */
+		handlers(): SimplifiedHandlers;
+		/**
+		 * Build a complete OAuth instance with this proxy's configuration
+		 * @param issuer_url - The OAuth issuer URL for this proxy server
+		 * @param {Object} options - Optional configuration
+		 * */
+		build(issuer_url: string, options?: {
+			cors?: boolean | CorsConfig | undefined;
+			bearer?: boolean | string[] | BearerConfig | undefined;
+			scopes?: string[] | undefined;
+			registration?: boolean | undefined;
+			rateLimits?: Record<string, {
+				windowMs: number;
+				max: number;
+			}> | undefined;
+		}): OAuth<"built">;
 		#private;
 	}
 	type ProxyEndpoints = {
@@ -317,11 +350,11 @@ declare module '@tmcp/auth' {
 		/**
 		 * - Function to verify access tokens and return auth info
 		 */
-		verifyAccessToken: (arg0: string) => Promise<AuthInfo>;
+		verify: (token: string) => Promise<AuthInfo>;
 		/**
 		 * - Function to fetch client information
 		 */
-		getClient: (arg0: string) => Promise<OAuthClientInformationFull | undefined>;
+		getClient: (client_id: string) => Promise<OAuthClientInformationFull | undefined>;
 		/**
 		 * - Custom fetch implementation
 		 */
@@ -334,12 +367,12 @@ declare module '@tmcp/auth' {
 	export class SimpleProvider {
 		/**
 		 * Create a simple provider with pre-configured client
-		 * @param clientId - Client ID
-		 * @param clientSecret - Client secret
-		 * @param redirectUris - Redirect URIs
+		 * @param client_id - Client ID
+		 * @param client_secret - Client secret
+		 * @param redirect_uris - Redirect URIs
 		 * @param options - Additional options
 		 * */
-		static withClient(clientId: string, clientSecret: string, redirectUris: string[], options?: SimpleProviderOptions): SimpleProvider;
+		static withClient(client_id: string, client_secret: string, redirect_uris: string[], options?: SimpleProviderOptions): SimpleProvider;
 		/**
 		 * @param options - Provider options
 		 */
@@ -350,7 +383,7 @@ declare module '@tmcp/auth' {
 		 * Add a client to the store
 		 * @param client - Client to add
 		 */
-		addClient(client: OAuthClientInformationFull): void;
+		add_client(client: OAuthClientInformationFull): void;
 		/**
 		 * Get the handlers for use with OAuth builder
 		 * */
@@ -373,7 +406,7 @@ declare module '@tmcp/auth' {
 		/**
 		 * - Storage for refresh tokens
 		 */
-		refreshTokens?: Map<string, {
+		refresh_tokens?: Map<string, {
 			token: string;
 			clientId: string;
 			scopes: string[];
@@ -381,7 +414,7 @@ declare module '@tmcp/auth' {
 		/**
 		 * - Token expiry in seconds
 		 */
-		tokenExpiry?: number | undefined;
+		token_expiry?: number | undefined;
 	};
 	/**
 	 * @import { OAuthClientInformationFull } from './types.js'
@@ -393,14 +426,14 @@ declare module '@tmcp/auth' {
 	 */
 	export class MemoryClientStore implements OAuthRegisteredClientsStore {
 		/**
-		 * @param initialClients - Initial clients to store
+		 * @param initial_clients - Initial clients to store
 		 */
-		constructor(initialClients?: OAuthClientInformationFull[]);
+		constructor(initial_clients?: OAuthClientInformationFull[]);
 		/**
 		 * Get client by ID
-		 * @param clientId - Client ID
+		 * @param client_id - Client ID
 		 * */
-		getClient(clientId: string): Promise<OAuthClientInformationFull | undefined>;
+		getClient(client_id: string): Promise<OAuthClientInformationFull | undefined>;
 		/**
 		 * Register a new client
 		 * @param client - Client to register
@@ -741,28 +774,6 @@ declare module '@tmcp/auth' {
 		 */
 		extra?: Record<string, unknown> | undefined;
 	};
-	type AuthorizationParams = {
-		/**
-		 * - OAuth state parameter
-		 */
-		state?: string | undefined;
-		/**
-		 * - Requested scopes
-		 */
-		scopes?: string[] | undefined;
-		/**
-		 * - PKCE code challenge
-		 */
-		codeChallenge: string;
-		/**
-		 * - Redirect URI
-		 */
-		redirectUri: string;
-		/**
-		 * - Resource parameter
-		 */
-		resource?: URL | undefined;
-	};
 	type OAuthTokens = {
 		/**
 		 * - The access token
@@ -788,16 +799,6 @@ declare module '@tmcp/auth' {
 		 * - ID token (OpenID Connect)
 		 */
 		id_token?: string | undefined;
-	};
-	type OAuthTokenRevocationRequest = {
-		/**
-		 * - The token to revoke
-		 */
-		token: string;
-		/**
-		 * - Hint about token type
-		 */
-		token_type_hint?: string | undefined;
 	};
 	type OAuthClientInformationFull = {
 		/**
