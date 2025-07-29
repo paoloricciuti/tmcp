@@ -1,5 +1,14 @@
 # @tmcp/adapter-zod
 
+## 0.1.5
+
+### Patch Changes
+
+- a99b45a: fix: types
+- Updated dependencies [a99b45a]
+- Updated dependencies [a99b45a]
+    - tmcp@1.9.0
+
 ## 0.1.4
 
 ### Patch Changes

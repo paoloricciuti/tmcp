@@ -1,5 +1,17 @@
 # @tmcp/transport-http
 
+## 0.5.0
+
+### Minor Changes
+
+- a99b45a: feat: authentication
+
+### Patch Changes
+
+- Updated dependencies [a99b45a]
+- Updated dependencies [a99b45a]
+    - tmcp@1.9.0
+
 ## 0.4.2
 
 ### Patch Changes
