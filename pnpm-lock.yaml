@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  '@modelcontextprotocol/sdk@1.16.0':
+    hash: d28a5605908a71cdbaf9407d0d137ccc16f4d6c985717b202f88a6339e8e7631
+    path: patches/@modelcontextprotocol__sdk@1.16.0.patch
   dts-buddy:
     hash: 07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b
     path: patches/dts-buddy.patch
@@ -264,7 +267,7 @@ importers:
     devDependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.16.0
-        version: 1.17.0
+        version: 1.16.0(patch_hash=d28a5605908a71cdbaf9407d0d137ccc16f4d6c985717b202f88a6339e8e7631)
       '@tmcp/adapter-valibot':
         specifier: workspace:^
         version: link:../adapter-valibot
@@ -664,8 +667,8 @@ packages:
     engines: {node: '>=22.7.5'}
     hasBin: true
 
-  '@modelcontextprotocol/sdk@1.17.0':
-    resolution: {integrity: sha512-qFfbWFA7r1Sd8D697L7GkTd36yqDuTkvz0KfOGkgXR8EUhQn3/EDNIR/qUdQNMT8IjmasBvHWuXeisxtXTQT2g==}
+  '@modelcontextprotocol/sdk@1.16.0':
+    resolution: {integrity: sha512-8ofX7gkZcLj9H9rSd50mCgm3SSF8C7XoclxJuLoV0Cz3rEQ1tv9MZRYYvJtm9n1BiEQQMzSmE/w2AEkNacLYfg==}
     engines: {node: '>=18'}
 
   '@nodelib/fs.scandir@2.1.5':
@@ -3033,7 +3036,7 @@ snapshots:
 
   '@modelcontextprotocol/inspector-cli@0.16.1':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.17.0
+      '@modelcontextprotocol/sdk': 1.16.0(patch_hash=d28a5605908a71cdbaf9407d0d137ccc16f4d6c985717b202f88a6339e8e7631)
       commander: 13.1.0
       spawn-rx: 5.1.2
     transitivePeerDependencies:
@@ -3041,7 +3044,7 @@ snapshots:
 
   '@modelcontextprotocol/inspector-client@0.16.1':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.17.0
+      '@modelcontextprotocol/sdk': 1.16.0(patch_hash=d28a5605908a71cdbaf9407d0d137ccc16f4d6c985717b202f88a6339e8e7631)
       '@radix-ui/react-checkbox': 1.3.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-dialog': 1.1.14(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-icons': 1.3.2(react@18.3.1)
@@ -3074,7 +3077,7 @@ snapshots:
 
   '@modelcontextprotocol/inspector-server@0.16.1':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.17.0
+      '@modelcontextprotocol/sdk': 1.16.0(patch_hash=d28a5605908a71cdbaf9407d0d137ccc16f4d6c985717b202f88a6339e8e7631)
       cors: 2.8.5
       express: 5.1.0
       ws: 8.18.3
@@ -3089,7 +3092,7 @@ snapshots:
       '@modelcontextprotocol/inspector-cli': 0.16.1
       '@modelcontextprotocol/inspector-client': 0.16.1
       '@modelcontextprotocol/inspector-server': 0.16.1
-      '@modelcontextprotocol/sdk': 1.17.0
+      '@modelcontextprotocol/sdk': 1.16.0(patch_hash=d28a5605908a71cdbaf9407d0d137ccc16f4d6c985717b202f88a6339e8e7631)
       concurrently: 9.2.0
       open: 10.2.0
       shell-quote: 1.8.3
@@ -3108,7 +3111,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@modelcontextprotocol/sdk@1.17.0':
+  '@modelcontextprotocol/sdk@1.16.0(patch_hash=d28a5605908a71cdbaf9407d0d137ccc16f4d6c985717b202f88a6339e8e7631)':
     dependencies:
       ajv: 6.12.6
       content-type: 1.0.5
