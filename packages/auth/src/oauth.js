@@ -296,6 +296,23 @@ export class OAuth {
 	}
 
 	/**
+	 * @param {Request} request
+	 */
+	async verify(request) {
+		const auth_header = request.headers.get('authorization');
+		if (!auth_header) {
+			return null;
+		}
+
+		const [type, token] = auth_header.split(' ', 2);
+		if (type.toLowerCase() !== 'bearer' || !token) {
+			return null;
+		}
+
+		return this.#handlers.verify(token);
+	}
+
+	/**
 	 * Handle HTTP requests for OAuth endpoints
 	 * @param {Request} request - HTTP request
 	 * @returns {Promise<Response | null>}

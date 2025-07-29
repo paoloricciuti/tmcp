@@ -77,6 +77,8 @@ declare module '@tmcp/auth' {
 		 * Build the OAuth provider (same as this instance since we're standalone now)
 		 * */
 		build(): OAuth<"built">;
+		
+		verify(request: Request): Promise<AuthInfo | null>;
 		/**
 		 * Handle HTTP requests for OAuth endpoints
 		 * @param request - HTTP request

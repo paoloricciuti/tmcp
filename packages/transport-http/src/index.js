@@ -1,5 +1,5 @@
 /**
- * @import { McpServer } from "tmcp";
+ * @import { AuthInfo, McpServer } from "tmcp";
  * @import { OAuth  } from "@tmcp/auth";
  */
 
@@ -164,8 +164,9 @@ export class HttpTransport {
 	 *
 	 * @param {string} session_id
 	 * @param {Request} request
+	 * @param {AuthInfo | null} auth_info
 	 */
-	async #handle_post(session_id, request) {
+	async #handle_post(session_id, request, auth_info) {
 		// Check Content-Type header
 		const content_type = request.headers.get('content-type');
 		if (!content_type || !content_type.includes('application/json')) {
@@ -206,7 +207,11 @@ export class HttpTransport {
 			const handle = async () => {
 				const response = await this.#controller_storage.run(
 					controller,
-					() => this.#server.receive(body, session_id),
+					() =>
+						this.#server.receive(body, {
+							sessionId: session_id,
+							auth: auth_info ?? undefined,
+						}),
 				);
 
 				controller?.enqueue(
@@ -288,6 +293,11 @@ export class HttpTransport {
 	async respond(request) {
 		const url = new URL(request.url);
 
+		/**
+		 * @type {AuthInfo | null}
+		 */
+		let auth_info = null;
+
 		// Check if OAuth helper should handle this request
 		if (this.#oauth) {
 			try {
@@ -307,6 +317,7 @@ export class HttpTransport {
 					},
 				);
 			}
+			auth_info = await this.#oauth.verify(request);
 		}
 
 		// Check if the request path matches the configured MCP path
@@ -331,7 +342,7 @@ export class HttpTransport {
 
 		// Handle POST request - process message and respond through event stream
 		if (method === 'POST') {
-			return this.#handle_post(session_id, request);
+			return this.#handle_post(session_id, request, auth_info);
 		}
 
 		// Method not supported

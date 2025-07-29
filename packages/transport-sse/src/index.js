@@ -1,6 +1,6 @@
 /**
- * @import { McpServer } from "tmcp";
- * @import { OAuthHelper } from "@tmcp/auth";
+ * @import { AuthInfo, McpServer } from "tmcp";
+ * @import { OAuth } from "@tmcp/auth";
  */
 
 /**
@@ -8,7 +8,7 @@
  * 	getSessionId?: () => string
  * 	path?: string
  * 	endpoint?: string
- * 	oauthHelper?: OAuthHelper
+ * 	oauth?: OAuth<"built">
  * }} SseTransportOptions
  */
 
@@ -19,7 +19,7 @@ export class SseTransport {
 	#server;
 
 	/**
-	 * @type {Required<Omit<SseTransportOptions, 'oauthHelper'>> & { oauthHelper?: OAuthHelper }}
+	 * @type {Required<Omit<SseTransportOptions, 'oauth'>>}
 	 */
 	#options;
 
@@ -44,6 +44,11 @@ export class SseTransport {
 	#streams = new Map();
 
 	/**
+	 * @type {OAuth<"built"> | undefined}
+	 */
+	#oauth;
+
+	/**
 	 * @param {McpServer<any>} server
 	 * @param {SseTransportOptions} [options]
 	 */
@@ -53,17 +58,19 @@ export class SseTransport {
 			getSessionId = () => crypto.randomUUID(),
 			path = '/sse',
 			endpoint = '/message',
-			oauthHelper,
+			oauth,
 		} = options ?? {
 			getSessionId: () => crypto.randomUUID(),
 			path: '/sse',
 			endpoint: '/message',
 		};
+		if (oauth) {
+			this.#oauth = oauth;
+		}
 		this.#options = {
 			getSessionId,
 			path,
 			endpoint,
-			oauthHelper,
 		};
 		this.#path = this.#options.path;
 		this.#endpoint = this.#options.endpoint;
@@ -131,40 +138,9 @@ export class SseTransport {
 	/**
 	 * @param {string} session_id
 	 * @param {Request} request
+	 * @param {AuthInfo | null} auth_info
 	 */
-	async #handle_post(session_id, request) {
-		// If OAuth is enabled, validate token for MCP requests
-		if (this.#options.oauthHelper) {
-			try {
-				// Extract resource ID from OAuth helper's protected resource metadata
-				const metadata = await this.#options.oauthHelper.getProtectedResourceMetadata(request);
-				await this.#options.oauthHelper.validateRequestToken(request, metadata.resource);
-			} catch (error) {
-				// Return 401 Unauthorized with proper WWW-Authenticate header
-				const wwwAuthHeader = this.#options.oauthHelper.createWwwAuthenticateHeader(
-					'mcp-resource', // Default resource ID if metadata fails
-					'invalid_token',
-					/** @type {Error} */ (error).message
-				);
-				
-				return new Response(JSON.stringify({
-					jsonrpc: '2.0',
-					error: {
-						code: -32001,
-						message: 'Unauthorized',
-						data: /** @type {Error} */ (error).message,
-					},
-				}), {
-					status: 401,
-					headers: {
-						'Content-Type': 'application/json',
-						'WWW-Authenticate': wwwAuthHeader,
-						'mcp-session-id': session_id,
-					},
-				});
-			}
-		}
-
+	async #handle_post(session_id, request, auth_info) {
 		// Check Content-Type header
 		const content_type = request.headers.get('content-type');
 		if (!content_type || !content_type.includes('application/json')) {
@@ -189,7 +165,10 @@ export class SseTransport {
 
 		try {
 			const body = await request.clone().json();
-			const response = await this.#server.receive(body, session_id);
+			const response = await this.#server.receive(body, {
+				sessionId: session_id,
+				auth: auth_info ?? undefined,
+			});
 
 			const controller = this.#sessions.get(session_id);
 
@@ -276,19 +255,31 @@ export class SseTransport {
 	async respond(request) {
 		const url = new URL(request.url);
 
+		/**
+		 * @type {AuthInfo | null}
+		 */
+		let auth_info = null;
+
 		// Check if OAuth helper should handle this request
-		if (this.#options.oauthHelper && this.#options.oauthHelper.shouldHandleRequest(url.pathname, request.method)) {
+		if (this.#oauth) {
 			try {
-				return await this.#options.oauthHelper.handleRequest(request);
+				const response = await this.#oauth.respond(request);
+				if (response) {
+					return response;
+				}
 			} catch (error) {
-				return new Response(JSON.stringify({
-					error: 'server_error',
-					error_description: /** @type {Error} */ (error).message,
-				}), {
-					status: 500,
-					headers: { 'Content-Type': 'application/json' },
-				});
+				return new Response(
+					JSON.stringify({
+						error: 'server_error',
+						error_description: /** @type {Error} */ (error).message,
+					}),
+					{
+						status: 500,
+						headers: { 'Content-Type': 'application/json' },
+					},
+				);
 			}
+			auth_info = await this.#oauth.verify(request);
 		}
 
 		// Check if the request path matches the configured SSE path
@@ -318,7 +309,7 @@ export class SseTransport {
 
 		// Handle POST request - process message
 		if (method === 'POST') {
-			return this.#handle_post(session_id, request);
+			return this.#handle_post(session_id, request, auth_info);
 		}
 
 		// Method not supported

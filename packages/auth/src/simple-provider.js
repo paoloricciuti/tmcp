@@ -1,6 +1,6 @@
 /**
  * @import { AuthInfo, OAuthTokens, OAuthClientInformationFull } from './types.js'
- * @import { ExchangeRequest, AuthorizeRequest, SimplifiedHandlers } from './oauth-builder.js'
+ * @import { ExchangeRequest, AuthorizeRequest, SimplifiedHandlers, ExchangeAuthorizationCodeRequest, ExchangeRefreshTokenRequest } from './oauth.js'
  */
 
 import { InvalidTokenError, AccessDeniedError } from './errors.js';
@@ -21,16 +21,16 @@ import { MemoryClientStore } from './memory-store.js';
 export class SimpleProvider {
 	/** @type {MemoryClientStore} */
 	#clientStore;
-	
+
 	/** @type {Map<string, string>} */
 	#codes = new Map();
-	
+
 	/** @type {Map<string, AuthInfo>} */
 	#tokens = new Map();
-	
+
 	/** @type {Map<string, {token: string, clientId: string, scopes: string[]}>} */
 	#refreshTokens = new Map();
-	
+
 	/** @type {number} */
 	#tokenExpiry;
 
@@ -38,12 +38,12 @@ export class SimpleProvider {
 	 * @param {SimpleProviderOptions & {clients?: OAuthClientInformationFull[]}} [options] - Provider options
 	 */
 	constructor(options = {}) {
-		const { 
-			clients = [], 
-			codes, 
-			tokens, 
-			refreshTokens, 
-			tokenExpiry = 3600 
+		const {
+			clients = [],
+			codes,
+			tokens,
+			refreshTokens,
+			tokenExpiry = 3600,
 		} = options;
 
 		this.#clientStore = new MemoryClientStore(clients);
@@ -66,12 +66,12 @@ export class SimpleProvider {
 			client_id: clientId,
 			client_secret: clientSecret,
 			redirect_uris: redirectUris,
-			client_id_issued_at: Math.floor(Date.now() / 1000)
+			client_id_issued_at: Math.floor(Date.now() / 1000),
 		};
 
 		return new SimpleProvider({
 			...options,
-			clients: [client]
+			clients: [client],
 		});
 	}
 
@@ -92,7 +92,7 @@ export class SimpleProvider {
 			authorize: this.#authorize.bind(this),
 			exchange: this.#exchange.bind(this),
 			verify: this.#verify.bind(this),
-			revoke: this.#revoke.bind(this)
+			revoke: this.#revoke.bind(this),
 		};
 	}
 
@@ -110,7 +110,7 @@ export class SimpleProvider {
 	 * @returns {Promise<Response>}
 	 */
 	async #authorize(request) {
-		const { client, redirectUri, codeChallenge, state, scopes = [] } = request;
+		const { client, redirectUri, codeChallenge, state } = request;
 
 		// Validate redirect URI
 		if (!client.redirect_uris.includes(redirectUri)) {
@@ -119,7 +119,7 @@ export class SimpleProvider {
 
 		// Generate authorization code
 		const code = `code_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-		
+
 		// Store code challenge for later verification
 		this.#codes.set(code, codeChallenge);
 
@@ -133,8 +133,8 @@ export class SimpleProvider {
 		return new Response(null, {
 			status: 302,
 			headers: {
-				'Location': redirectUrl.toString()
-			}
+				Location: redirectUrl.toString(),
+			},
 		});
 	}
 
@@ -149,13 +149,15 @@ export class SimpleProvider {
 		} else if (request.type === 'refresh_token') {
 			return this.#exchangeRefreshToken(request);
 		}
-		
-		throw new Error(`Unsupported grant type: ${request.type}`);
+
+		throw new Error(
+			`Unsupported grant type: ${/** @type {*} */ (request).type}`,
+		);
 	}
 
 	/**
 	 * Exchange authorization code for tokens
-	 * @param {ExchangeRequest} request - Exchange request
+	 * @param {ExchangeAuthorizationCodeRequest} request - Exchange request
 	 * @returns {Promise<OAuthTokens>}
 	 */
 	async #exchangeAuthorizationCode(request) {
@@ -180,7 +182,7 @@ export class SimpleProvider {
 		// Generate tokens
 		const accessToken = `at_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
 		const refreshToken = `rt_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
-		
+
 		const expiresAt = Math.floor(Date.now() / 1000) + this.#tokenExpiry;
 
 		// Store token info
@@ -188,14 +190,14 @@ export class SimpleProvider {
 			token: accessToken,
 			clientId: client.client_id,
 			scopes: request.scopes || [],
-			expiresAt
+			expiresAt,
 		};
-		
+
 		this.#tokens.set(accessToken, authInfo);
 		this.#refreshTokens.set(refreshToken, {
 			token: accessToken,
 			clientId: client.client_id,
-			scopes: request.scopes || []
+			scopes: request.scopes || [],
 		});
 
 		return {
@@ -203,13 +205,13 @@ export class SimpleProvider {
 			token_type: 'bearer',
 			expires_in: this.#tokenExpiry,
 			refresh_token: refreshToken,
-			scope: request.scopes?.join(' ')
+			scope: request.scopes?.join(' '),
 		};
 	}
 
 	/**
 	 * Exchange refresh token for new access token
-	 * @param {ExchangeRequest} request - Exchange request
+	 * @param {ExchangeRefreshTokenRequest} request - Exchange request
 	 * @returns {Promise<OAuthTokens>}
 	 */
 	async #exchangeRefreshToken(request) {
@@ -230,7 +232,7 @@ export class SimpleProvider {
 		// Generate new access token
 		const newAccessToken = `at_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
 		const newRefreshToken = `rt_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
-		
+
 		const expiresAt = Math.floor(Date.now() / 1000) + this.#tokenExpiry;
 
 		// Store new token info
@@ -238,17 +240,17 @@ export class SimpleProvider {
 			token: newAccessToken,
 			clientId: client.client_id,
 			scopes: request.scopes || tokenInfo.scopes,
-			expiresAt
+			expiresAt,
 		};
-		
+
 		this.#tokens.set(newAccessToken, authInfo);
-		
+
 		// Update refresh token mapping
 		this.#refreshTokens.delete(refreshToken);
 		this.#refreshTokens.set(newRefreshToken, {
 			token: newAccessToken,
 			clientId: client.client_id,
-			scopes: request.scopes || tokenInfo.scopes
+			scopes: request.scopes || tokenInfo.scopes,
 		});
 
 		return {
@@ -256,7 +258,7 @@ export class SimpleProvider {
 			token_type: 'bearer',
 			expires_in: this.#tokenExpiry,
 			refresh_token: newRefreshToken,
-			scope: (request.scopes || tokenInfo.scopes).join(' ')
+			scope: (request.scopes || tokenInfo.scopes).join(' '),
 		};
 	}
 
