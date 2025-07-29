@@ -113,11 +113,11 @@ describe('OAuth (Fluent Builder)', () => {
 			 */
 			const handlers = {
 				async authorize(request) {
-					const redirectUrl = new URL(request.redirectUri);
-					redirectUrl.searchParams.set('code', 'test-code');
+					const redirect_url = new URL(request.redirectUri);
+					redirect_url.searchParams.set('code', 'test-code');
 					return new Response(null, {
 						status: 302,
-						headers: { Location: redirectUrl.toString() },
+						headers: { Location: redirect_url.toString() },
 					});
 				},
 				async exchange() {

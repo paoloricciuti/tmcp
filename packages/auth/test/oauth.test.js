@@ -123,11 +123,11 @@ describe('OAuth', () => {
 			 */
 			const handlers = {
 				async authorize(request) {
-					const redirectUrl = new URL(request.redirectUri);
-					redirectUrl.searchParams.set('code', 'test-code');
+					const redirect_url = new URL(request.redirectUri);
+					redirect_url.searchParams.set('code', 'test-code');
 					return new Response(null, {
 						status: 302,
-						headers: { Location: redirectUrl.toString() },
+						headers: { Location: redirect_url.toString() },
 					});
 				},
 				async exchange() {
@@ -167,14 +167,14 @@ describe('OAuth', () => {
 			 */
 			const handlers = {
 				async authorize(request) {
-					const redirectUrl = new URL(request.redirectUri);
-					redirectUrl.searchParams.set('code', 'test-code');
+					const redirect_url = new URL(request.redirectUri);
+					redirect_url.searchParams.set('code', 'test-code');
 					if (request.state) {
-						redirectUrl.searchParams.set('state', request.state);
+						redirect_url.searchParams.set('state', request.state);
 					}
 					return new Response(null, {
 						status: 302,
-						headers: { Location: redirectUrl.toString() },
+						headers: { Location: redirect_url.toString() },
 					});
 				},
 				async exchange(grant) {
