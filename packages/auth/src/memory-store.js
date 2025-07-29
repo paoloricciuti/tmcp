@@ -12,21 +12,21 @@ export class MemoryClientStore {
 	#clients = new Map();
 
 	/**
-	 * @param {OAuthClientInformationFull[]} [initialClients] - Initial clients to store
+	 * @param {OAuthClientInformationFull[]} [initial_clients] - Initial clients to store
 	 */
-	constructor(initialClients = []) {
-		for (const client of initialClients) {
+	constructor(initial_clients = []) {
+		for (const client of initial_clients) {
 			this.#clients.set(client.client_id, client);
 		}
 	}
 
 	/**
 	 * Get client by ID
-	 * @param {string} clientId - Client ID
+	 * @param {string} client_id - Client ID
 	 * @returns {Promise<OAuthClientInformationFull | undefined>}
 	 */
-	async getClient(clientId) {
-		return this.#clients.get(clientId);
+	async getClient(client_id) {
+		return this.#clients.get(client_id);
 	}
 
 	/**
@@ -35,17 +35,17 @@ export class MemoryClientStore {
 	 * @returns {Promise<OAuthClientInformationFull>}
 	 */
 	async registerClient(client) {
-		const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-		const issuedAt = Math.floor(Date.now() / 1000);
-		
-		const fullClient = {
+		const client_id = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+		const issued_at = Math.floor(Date.now() / 1000);
+
+		const full_client = {
 			...client,
-			client_id: clientId,
-			client_id_issued_at: issuedAt
+			client_id: client_id,
+			client_id_issued_at: issued_at,
 		};
 
-		this.#clients.set(clientId, fullClient);
-		return fullClient;
+		this.#clients.set(client_id, full_client);
+		return full_client;
 	}
 
 	/**
