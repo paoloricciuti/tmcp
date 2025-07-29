@@ -11,7 +11,7 @@ OAuth 2.1 authorization helper for MCP with Web Request support and valibot vali
 - **MCP Compatible**: Designed specifically for Model Context Protocol servers
 - **Unified API**: Single `respond()` method handles all OAuth endpoints
 - **Lightweight**: Minimal dependencies, no Express required
-- **Bearer Authentication**: Built-in Bearer token validation helpers
+- **Bearer Authentication**: Integrated Bearer token validation in the main provider
 - **Proxy Support**: Built-in proxy provider for upstream OAuth servers
 
 ## Installation
@@ -149,7 +149,11 @@ const oauthProvider = new OAuthProvider({
   resourceName,                // Optional: Human-readable resource name
   clientSecretExpirySeconds,   // Optional: Client secret expiry (default: 30 days)
   clientIdGeneration,          // Optional: Generate client IDs (default: true)
-  rateLimits                   // Optional: Rate limiting per endpoint
+  rateLimits,                  // Optional: Rate limiting per endpoint
+  bearerToken: {               // Optional: Bearer token authentication config
+    requiredScopes,            //   Optional: Array of required scopes
+    resourceMetadataUrl        //   Optional: Resource metadata URL for WWW-Authenticate header
+  }
 });
 ```
 
@@ -214,37 +218,39 @@ const oauthProvider = new OAuthProvider({
 
 ## Bearer Authentication
 
-Use the built-in Bearer authentication helper to protect your API endpoints:
+Bearer token authentication is now integrated directly into the `OAuthProvider`. Configure it during provider setup:
 
 ```javascript
-import { BearerAuth } from '@tmcp/auth';
-
-const bearerAuth = new BearerAuth({
-  verifier: {
-    async verifyAccessToken(token) {
-      // Verify the token and return auth info
-      return {
-        token,
-        clientId: 'client-id',
-        scopes: ['read', 'write'],
-        expiresAt: Date.now() / 1000 + 3600
-      };
-    }
-  },
-  requiredScopes: ['read'], // Optional: require specific scopes
-  resourceMetadataUrl: 'https://api.example.com/.well-known/oauth-protected-resource'
+const oauthProvider = new OAuthProvider({
+  provider,
+  issuerUrl: new URL('https://auth.example.com'),
+  scopesSupported: ['read', 'write'],
+  resourceName: 'My API',
+  // Configure bearer token authentication
+  bearerToken: {
+    requiredScopes: ['read'], // Optional: require specific scopes
+    resourceMetadataUrl: 'https://api.example.com/.well-known/oauth-protected-resource'
+  }
 });
 
-async function protectedEndpoint(request) {
-  const authResult = await bearerAuth.authenticate(request);
-  if (!authResult.success) {
-    return authResult.errorResponse; // Return auth error
+// The provider will automatically handle Bearer token authentication
+async function handleAllRequests(request) {
+  const response = await oauthProvider.respond(request);
+  if (response) {
+    // OAuth request handled (including bearer token validation)
+    return response;
   }
-
-  // Access granted - use authResult.authInfo
-  return new Response('Protected data', { status: 200 });
+  
+  // Handle other application requests...
+  return new Response('Not Found', { status: 404 });
 }
 ```
+
+**How it works:**
+- When `bearerToken` config is provided, the provider automatically validates Bearer tokens
+- For requests with valid tokens, `respond()` returns `null` (letting your app handle the request)
+- For requests with invalid tokens, it returns appropriate error responses
+- OAuth endpoints (`/authorize`, `/token`, etc.) are still handled normally
 
 ## Proxy Provider
 

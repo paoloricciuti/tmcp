@@ -162,13 +162,3 @@ export class BearerAuth {
 		return value;
 	}
 }
-
-/**
- * Convenience function to create a Bearer auth middleware-like function
- * @param {BearerAuthOptions} options - Bearer auth configuration
- * @returns {function(Request): Promise<BearerAuthResult>} Authentication function
- */
-export function createBearerAuth(options) {
-	const bearerAuth = new BearerAuth(options);
-	return (request) => bearerAuth.authenticate(request);
-}

@@ -257,6 +257,10 @@ importers:
         version: 3.2.4(@types/node@24.1.0)
 
   packages/transport-http:
+    dependencies:
+      '@tmcp/auth':
+        specifier: workspace:^
+        version: link:../auth
     devDependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.16.0
@@ -282,10 +286,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.1.0)
-    optionalDependencies:
-      '@tmcp/auth':
-        specifier: workspace:^
-        version: link:../auth
 
   packages/transport-sse:
     devDependencies:

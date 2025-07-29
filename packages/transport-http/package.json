@@ -23,9 +23,6 @@
 	"peerDependencies": {
 		"tmcp": "workspace:^"
 	},
-	"optionalDependencies": {
-		"@tmcp/auth": "workspace:^"
-	},
 	"keywords": [
 		"tmcp",
 		"http",
@@ -39,6 +36,7 @@
 	"devDependencies": {
 		"@modelcontextprotocol/sdk": "^1.16.0",
 		"@tmcp/adapter-valibot": "workspace:^",
+		"@tmcp/auth": "workspace:^",
 		"@types/node": "^24.0.15",
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",

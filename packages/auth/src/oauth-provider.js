@@ -13,6 +13,8 @@ import {
 	InvalidGrantError,
 	InvalidRequestError,
 	InvalidScopeError,
+	InvalidTokenError,
+	InsufficientScopeError,
 	MethodNotAllowedError,
 	OAuthError,
 	ServerError,
@@ -31,6 +33,13 @@ import {
 } from './schemas.js';
 
 /**
+ * @typedef {Object} BearerTokenConfig
+ * @property {string[]} uris - List of URIs that require Bearer token authentication
+ * @property {string[]} [requiredScopes] - Optional scopes that the token must have
+ * @property {string} [resourceMetadataUrl] - Optional resource metadata URL to include in WWW-Authenticate header
+ */
+
+/**
  * @typedef {Object} OAuthProviderConfig
  * @property {OAuthServerProvider} provider - OAuth server provider implementation
  * @property {URL} issuerUrl - Issuer URL (must be HTTPS except localhost)
@@ -41,6 +50,7 @@ import {
  * @property {number} [clientSecretExpirySeconds] - Client secret expiry (default: 30 days)
  * @property {boolean} [clientIdGeneration] - Generate client IDs (default: true)
  * @property {Record<string, RateLimitConfig>} [rateLimits] - Rate limits per endpoint
+ * @property {BearerTokenConfig} [bearerToken] - Bearer token authentication configuration
  */
 
 /**
@@ -102,6 +112,29 @@ export class OAuthProvider {
 		);
 		if (rate_limit_response) {
 			return rate_limit_response;
+		}
+
+		// Bearer token authentication check (if configured)
+		if (
+			this.#config.bearerToken &&
+			this.#config.bearerToken.uris.includes(pathname)
+		) {
+			const auth_header = cloned_request.headers.get('authorization');
+			if (
+				auth_header &&
+				auth_header.toLowerCase().startsWith('bearer ')
+			) {
+				const bearer_response =
+					await this.#authenticate_bearer_token(cloned_request);
+				if (bearer_response.success) {
+					// Token is valid, continue processing request but don't handle OAuth endpoints
+					// This allows protected resource endpoints to be handled elsewhere
+					return null;
+				} else {
+					// Token is invalid, return error response
+					return bearer_response.error;
+				}
+			}
 		}
 
 		try {
@@ -806,5 +839,130 @@ export class OAuthProvider {
 					`${issue.path?.map((p) => p.key).join('.')}: ${issue.message}`,
 			)
 			.join(', ');
+	}
+
+	/**
+	 * Authenticate bearer token from request
+	 * @param {Request} request
+	 * @returns {Promise<{ success: true, authInfo: import('./types.js').AuthInfo } | { success: false, error: Response }>}
+	 */
+	async #authenticate_bearer_token(request) {
+		try {
+			const auth_header = request.headers.get('authorization');
+			if (!auth_header) {
+				throw new InvalidTokenError('Missing Authorization header');
+			}
+
+			const [type, token] = auth_header.split(' ', 2);
+			if (type.toLowerCase() !== 'bearer' || !token) {
+				throw new InvalidTokenError(
+					"Invalid Authorization header format, expected 'Bearer TOKEN'",
+				);
+			}
+
+			const auth_info =
+				await this.#config.provider.verifyAccessToken(token);
+
+			// Check if token has the required scopes (if any)
+			const required_scopes =
+				this.#config.bearerToken?.requiredScopes || [];
+			if (required_scopes.length > 0) {
+				const has_all_scopes = required_scopes.every((scope) =>
+					auth_info.scopes.includes(scope),
+				);
+
+				if (!has_all_scopes) {
+					throw new InsufficientScopeError('Insufficient scope');
+				}
+			}
+
+			// Check if the token is set to expire or if it is expired
+			if (
+				typeof auth_info.expiresAt !== 'number' ||
+				isNaN(auth_info.expiresAt)
+			) {
+				throw new InvalidTokenError('Token has no expiration time');
+			} else if (auth_info.expiresAt < Date.now() / 1000) {
+				throw new InvalidTokenError('Token has expired');
+			}
+
+			return {
+				success: true,
+				authInfo: auth_info,
+			};
+		} catch (err) {
+			const error = this.#create_bearer_error(err);
+			return {
+				success: false,
+				error,
+			};
+		}
+	}
+
+	/**
+	 * Create error response for bearer token authentication failures
+	 * @param {*} error
+	 * @returns {Response}
+	 */
+	#create_bearer_error(error) {
+		if (error instanceof InvalidTokenError) {
+			const www_auth_value = this.#create_wwwauthenticate_header(error);
+			return new Response(JSON.stringify(error.toResponseObject()), {
+				status: 401,
+				headers: {
+					'Content-Type': 'application/json',
+					'WWW-Authenticate': www_auth_value,
+				},
+			});
+		} else if (error instanceof InsufficientScopeError) {
+			const www_auth_value = this.#create_wwwauthenticate_header(error);
+			return new Response(JSON.stringify(error.toResponseObject()), {
+				status: 403,
+				headers: {
+					'Content-Type': 'application/json',
+					'WWW-Authenticate': www_auth_value,
+				},
+			});
+		} else if (error instanceof ServerError) {
+			return new Response(JSON.stringify(error.toResponseObject()), {
+				status: 500,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
+		} else if (error instanceof OAuthError) {
+			return new Response(JSON.stringify(error.toResponseObject()), {
+				status: 400,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
+		} else {
+			const serverError = new ServerError('Internal Server Error');
+			return new Response(
+				JSON.stringify(serverError.toResponseObject()),
+				{
+					status: 500,
+					headers: {
+						'Content-Type': 'application/json',
+					},
+				},
+			);
+		}
+	}
+
+	/**
+	 * Create WWW-Authenticate header value for bearer token errors
+	 * @param {OAuthError} error
+	 * @returns {string}
+	 */
+	#create_wwwauthenticate_header(error) {
+		let value = `Bearer error="${error.errorCode}", error_description="${error.message}"`;
+
+		if (this.#config.bearerToken?.resourceMetadataUrl) {
+			value += `, resource_metadata="${this.#config.bearerToken.resourceMetadataUrl}"`;
+		}
+
+		return value;
 	}
 }

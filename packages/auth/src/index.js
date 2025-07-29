@@ -2,14 +2,22 @@
  * @file OAuth 2.1 authorization helper for MCP with Web Request support and valibot validation
  */
 
+/**
+ * @import { OAuthServerProvider as OAuthServerProviderType, OAuthRegisteredClientsStore as OAuthRegisteredClientsStoreType } from "./internal.js"
+ * @import { OAuthProviderConfig as OAuthProviderConfigType } from "./oauth-provider.js"
+ */
+
+/**
+ * @typedef {OAuthServerProviderType} OAuthServerProvider
+ * @typedef {OAuthRegisteredClientsStoreType} OAuthRegisteredClientsStore
+ * @typedef {OAuthProviderConfigType} OAuthProviderConfig
+ */
+
 // Main OAuth Provider
 export { OAuthProvider } from './oauth-provider.js';
 
 // Provider implementations
 export { ProxyOAuthServerProvider } from './proxy-provider.js';
-
-// Authentication helpers
-export { BearerAuth, createBearerAuth } from './bearer-auth.js';
 
 // Error classes
 export {
@@ -51,4 +59,3 @@ export {
 
 // Type definitions (JSDoc imports)
 export {} from './types.js';
-export {} from './provider-interfaces.js';
