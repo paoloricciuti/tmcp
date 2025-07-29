@@ -1,5 +1,12 @@
 # tmcp
 
+## 1.9.0
+
+### Minor Changes
+
+- a99b45a: breaking: accept context with auth info as second argument of receive
+- a99b45a: feat: authentication
+
 ## 1.8.2
 
 ### Patch Changes
