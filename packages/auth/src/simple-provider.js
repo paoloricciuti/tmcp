@@ -10,8 +10,8 @@ import { MemoryClientStore } from './memory-store.js';
  * @typedef {Object} SimpleProviderOptions
  * @property {Map<string, string>} [codes] - Storage for authorization codes and their challenges
  * @property {Map<string, AuthInfo>} [tokens] - Storage for access tokens
- * @property {Map<string, {token: string, clientId: string, scopes: string[]}>} [refreshTokens] - Storage for refresh tokens
- * @property {number} [tokenExpiry=3600] - Token expiry in seconds
+ * @property {Map<string, {token: string, clientId: string, scopes: string[]}>} [refresh_tokens] - Storage for refresh tokens
+ * @property {number} [token_expiry=3600] - Token expiry in seconds
  */
 
 /**
@@ -42,30 +42,30 @@ export class SimpleProvider {
 			clients = [],
 			codes,
 			tokens,
-			refreshTokens,
-			tokenExpiry = 3600,
+			refresh_tokens,
+			token_expiry = 3600,
 		} = options;
 
 		this.#clientStore = new MemoryClientStore(clients);
 		this.#codes = codes || new Map();
 		this.#tokens = tokens || new Map();
-		this.#refreshTokens = refreshTokens || new Map();
-		this.#tokenExpiry = tokenExpiry;
+		this.#refreshTokens = refresh_tokens || new Map();
+		this.#tokenExpiry = token_expiry;
 	}
 
 	/**
 	 * Create a simple provider with pre-configured client
-	 * @param {string} clientId - Client ID
-	 * @param {string} clientSecret - Client secret
-	 * @param {string[]} redirectUris - Redirect URIs
+	 * @param {string} client_id - Client ID
+	 * @param {string} client_secret - Client secret
+	 * @param {string[]} redirect_uris - Redirect URIs
 	 * @param {SimpleProviderOptions} [options] - Additional options
 	 * @returns {SimpleProvider}
 	 */
-	static withClient(clientId, clientSecret, redirectUris, options = {}) {
+	static withClient(client_id, client_secret, redirect_uris, options = {}) {
 		const client = {
-			client_id: clientId,
-			client_secret: clientSecret,
-			redirect_uris: redirectUris,
+			client_id: client_id,
+			client_secret: client_secret,
+			redirect_uris: redirect_uris,
 			client_id_issued_at: Math.floor(Date.now() / 1000),
 		};
 
@@ -79,7 +79,7 @@ export class SimpleProvider {
 	 * Add a client to the store
 	 * @param {OAuthClientInformationFull} client - Client to add
 	 */
-	addClient(client) {
+	add_client(client) {
 		this.#clientStore.addClient(client);
 	}
 
@@ -110,10 +110,15 @@ export class SimpleProvider {
 	 * @returns {Promise<Response>}
 	 */
 	async #authorize(request) {
-		const { client, redirectUri, codeChallenge, state } = request;
+		const {
+			client,
+			redirectUri: redirect_uri,
+			codeChallenge: code_challenge,
+			state,
+		} = request;
 
 		// Validate redirect URI
-		if (!client.redirect_uris.includes(redirectUri)) {
+		if (!client.redirect_uris.includes(redirect_uri)) {
 			throw new AccessDeniedError('Invalid redirect URI');
 		}
 
@@ -121,19 +126,19 @@ export class SimpleProvider {
 		const code = `code_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 		// Store code challenge for later verification
-		this.#codes.set(code, codeChallenge);
+		this.#codes.set(code, code_challenge);
 
 		// Build redirect URL
-		const redirectUrl = new URL(redirectUri);
-		redirectUrl.searchParams.set('code', code);
+		const redirect_url = new URL(redirect_uri);
+		redirect_url.searchParams.set('code', code);
 		if (state) {
-			redirectUrl.searchParams.set('state', state);
+			redirect_url.searchParams.set('state', state);
 		}
 
 		return new Response(null, {
 			status: 302,
 			headers: {
-				Location: redirectUrl.toString(),
+				Location: redirect_url.toString(),
 			},
 		});
 	}
@@ -168,8 +173,8 @@ export class SimpleProvider {
 		}
 
 		// Verify code exists and get stored challenge
-		const storedChallenge = this.#codes.get(code);
-		if (!storedChallenge) {
+		const stored_challenge = this.#codes.get(code);
+		if (!stored_challenge) {
 			throw new Error('Invalid or expired authorization code');
 		}
 
@@ -180,31 +185,31 @@ export class SimpleProvider {
 		this.#codes.delete(code);
 
 		// Generate tokens
-		const accessToken = `at_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
-		const refreshToken = `rt_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
+		const access_token = `at_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
+		const refresh_token = `rt_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
 
-		const expiresAt = Math.floor(Date.now() / 1000) + this.#tokenExpiry;
+		const expires_at = Math.floor(Date.now() / 1000) + this.#tokenExpiry;
 
 		// Store token info
-		const authInfo = {
-			token: accessToken,
+		const auth_info = {
+			token: access_token,
 			clientId: client.client_id,
 			scopes: request.scopes || [],
-			expiresAt,
+			expiresAt: expires_at,
 		};
 
-		this.#tokens.set(accessToken, authInfo);
-		this.#refreshTokens.set(refreshToken, {
-			token: accessToken,
+		this.#tokens.set(access_token, auth_info);
+		this.#refreshTokens.set(refresh_token, {
+			token: access_token,
 			clientId: client.client_id,
 			scopes: request.scopes || [],
 		});
 
 		return {
-			access_token: accessToken,
+			access_token: access_token,
 			token_type: 'bearer',
 			expires_in: this.#tokenExpiry,
-			refresh_token: refreshToken,
+			refresh_token: refresh_token,
 			scope: request.scopes?.join(' '),
 		};
 	}
@@ -215,50 +220,50 @@ export class SimpleProvider {
 	 * @returns {Promise<OAuthTokens>}
 	 */
 	async #exchangeRefreshToken(request) {
-		const { client, refreshToken } = request;
+		const { client, refreshToken: refresh_token } = request;
 
-		if (!refreshToken) {
+		if (!refresh_token) {
 			throw new Error('Missing refresh token');
 		}
 
-		const tokenInfo = this.#refreshTokens.get(refreshToken);
-		if (!tokenInfo || tokenInfo.clientId !== client.client_id) {
+		const token_info = this.#refreshTokens.get(refresh_token);
+		if (!token_info || token_info.clientId !== client.client_id) {
 			throw new Error('Invalid refresh token');
 		}
 
 		// Revoke old access token
-		this.#tokens.delete(tokenInfo.token);
+		this.#tokens.delete(token_info.token);
 
 		// Generate new access token
-		const newAccessToken = `at_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
-		const newRefreshToken = `rt_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
+		const new_access_token = `at_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
+		const new_refresh_token = `rt_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
 
-		const expiresAt = Math.floor(Date.now() / 1000) + this.#tokenExpiry;
+		const expires_at = Math.floor(Date.now() / 1000) + this.#tokenExpiry;
 
 		// Store new token info
-		const authInfo = {
-			token: newAccessToken,
+		const auth_info = {
+			token: new_access_token,
 			clientId: client.client_id,
-			scopes: request.scopes || tokenInfo.scopes,
-			expiresAt,
+			scopes: request.scopes || token_info.scopes,
+			expiresAt: expires_at,
 		};
 
-		this.#tokens.set(newAccessToken, authInfo);
+		this.#tokens.set(new_access_token, auth_info);
 
 		// Update refresh token mapping
-		this.#refreshTokens.delete(refreshToken);
-		this.#refreshTokens.set(newRefreshToken, {
-			token: newAccessToken,
+		this.#refreshTokens.delete(refresh_token);
+		this.#refreshTokens.set(new_refresh_token, {
+			token: new_access_token,
 			clientId: client.client_id,
-			scopes: request.scopes || tokenInfo.scopes,
+			scopes: request.scopes || token_info.scopes,
 		});
 
 		return {
-			access_token: newAccessToken,
+			access_token: new_access_token,
 			token_type: 'bearer',
 			expires_in: this.#tokenExpiry,
-			refresh_token: newRefreshToken,
-			scope: (request.scopes || tokenInfo.scopes).join(' '),
+			refresh_token: new_refresh_token,
+			scope: (request.scopes || token_info.scopes).join(' '),
 		};
 	}
 
@@ -268,18 +273,18 @@ export class SimpleProvider {
 	 * @returns {Promise<AuthInfo>}
 	 */
 	async #verify(token) {
-		const authInfo = this.#tokens.get(token);
-		if (!authInfo) {
+		const auth_info = this.#tokens.get(token);
+		if (!auth_info) {
 			throw new InvalidTokenError('Token not found');
 		}
 
 		// Check if token is expired
-		if (authInfo.expiresAt && authInfo.expiresAt < Date.now() / 1000) {
+		if (auth_info.expiresAt && auth_info.expiresAt < Date.now() / 1000) {
 			this.#tokens.delete(token);
 			throw new InvalidTokenError('Token has expired');
 		}
 
-		return authInfo;
+		return auth_info;
 	}
 
 	/**
@@ -292,17 +297,17 @@ export class SimpleProvider {
 		const { token } = request;
 
 		// Try to revoke as access token
-		const authInfo = this.#tokens.get(token);
-		if (authInfo && authInfo.clientId === client.client_id) {
+		const auth_info = this.#tokens.get(token);
+		if (auth_info && auth_info.clientId === client.client_id) {
 			this.#tokens.delete(token);
 			return;
 		}
 
 		// Try to revoke as refresh token
-		const refreshInfo = this.#refreshTokens.get(token);
-		if (refreshInfo && refreshInfo.clientId === client.client_id) {
+		const refresh_info = this.#refreshTokens.get(token);
+		if (refresh_info && refresh_info.clientId === client.client_id) {
 			// Also revoke associated access token
-			this.#tokens.delete(refreshInfo.token);
+			this.#tokens.delete(refresh_info.token);
 			this.#refreshTokens.delete(token);
 			return;
 		}
