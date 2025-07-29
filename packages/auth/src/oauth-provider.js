@@ -40,6 +40,16 @@ import {
  */
 
 /**
+ * @typedef {Object} CorsConfig
+ * @property {string | string[]} [origin] - Allowed origins (default: '*')
+ * @property {string[]} [methods] - Allowed methods (default: ['GET', 'POST', 'OPTIONS'])
+ * @property {string[]} [allowedHeaders] - Allowed headers (default: ['Content-Type', 'Authorization'])
+ * @property {string[]} [exposedHeaders] - Exposed headers
+ * @property {boolean} [credentials] - Allow credentials (default: false)
+ * @property {number} [maxAge] - Preflight cache duration in seconds (default: 86400)
+ */
+
+/**
  * @typedef {Object} OAuthProviderConfig
  * @property {OAuthServerProvider} provider - OAuth server provider implementation
  * @property {URL} issuerUrl - Issuer URL (must be HTTPS except localhost)
@@ -51,6 +61,7 @@ import {
  * @property {boolean} [clientIdGeneration] - Generate client IDs (default: true)
  * @property {Record<string, RateLimitConfig>} [rateLimits] - Rate limits per endpoint
  * @property {BearerTokenConfig} [bearerToken] - Bearer token authentication configuration
+ * @property {CorsConfig} [cors] - CORS configuration
  */
 
 /**
@@ -109,6 +120,7 @@ export class OAuthProvider {
 		const rate_limit_response = this.#check_rate_limit(
 			pathname,
 			this.#get_client_id(cloned_request),
+			cloned_request,
 		);
 		if (rate_limit_response) {
 			return rate_limit_response;
@@ -120,6 +132,11 @@ export class OAuthProvider {
 			this.#config.bearerToken.uris.includes(pathname)
 		) {
 			const auth_header = cloned_request.headers.get('authorization');
+			if (!auth_header) {
+				return this.#create_bearer_error(
+					new InvalidTokenError('Missing Authorization header'),
+				);
+			}
 			if (
 				auth_header &&
 				auth_header.toLowerCase().startsWith('bearer ')
@@ -135,6 +152,11 @@ export class OAuthProvider {
 					return bearer_response.error;
 				}
 			}
+		}
+
+		// Handle CORS preflight requests
+		if (method === 'OPTIONS' && this.#config.cors) {
+			return this.#handle_preflight(cloned_request, pathname);
 		}
 
 		try {
@@ -189,9 +211,9 @@ export class OAuthProvider {
 			}
 
 			// Method not allowed for this endpoint
-			return this.#not_allowed(pathname, method);
+			return this.#not_allowed(pathname, method, cloned_request);
 		} catch (error) {
-			return this.#handle_error(error);
+			return this.#handle_error(error, cloned_request);
 		}
 	}
 
@@ -210,9 +232,10 @@ export class OAuthProvider {
 	 * Check rate limits for an endpoint
 	 * @param {string} pathname
 	 * @param {string} clientId
+	 * @param {Request} [request]
 	 * @returns {Response | null}
 	 */
-	#check_rate_limit(pathname, clientId) {
+	#check_rate_limit(pathname, clientId, request) {
 		const config = this.#config.rateLimits?.[pathname];
 		if (!config) return null;
 
@@ -228,13 +251,21 @@ export class OAuthProvider {
 		// Clean old entries (simplified - in production use a more efficient approach)
 		if (client_requests > config.max) {
 			const error = new TooManyRequestsError('Rate limit exceeded');
-			return new Response(JSON.stringify(error.toResponseObject()), {
-				status: 429,
-				headers: {
-					'Content-Type': 'application/json',
-					'Retry-After': Math.ceil(config.windowMs / 1000).toString(),
+			const response = new Response(
+				JSON.stringify(error.toResponseObject()),
+				{
+					status: 429,
+					headers: {
+						'Content-Type': 'application/json',
+						'Retry-After': Math.ceil(
+							config.windowMs / 1000,
+						).toString(),
+					},
 				},
-			});
+			);
+			return request
+				? this.#apply_cors_headers(response, request)
+				: response;
 		}
 
 		endpoint_store.set(clientId, client_requests + 1);
@@ -294,7 +325,7 @@ export class OAuthProvider {
 			}
 		} catch (error) {
 			// Pre-redirect errors - return direct response
-			return this.#handle_error(error);
+			return this.#handle_error(error, request);
 		}
 
 		// Phase 2: Validate other parameters
@@ -343,7 +374,11 @@ export class OAuthProvider {
 			};
 
 			// Call provider's authorize method
-			return await this.#config.provider.authorize(client, auth_params);
+			const response = await this.#config.provider.authorize(
+				client,
+				auth_params,
+			);
+			return this.#apply_cors_headers(response, request);
 		} catch (error) {
 			// Post-redirect errors - redirect with error parameters
 			return this.#create_error_redirect(redirect_uri, error, state);
@@ -444,14 +479,14 @@ export class OAuthProvider {
 						resource ? new URL(resource) : undefined,
 					);
 
-				return new Response(JSON.stringify(tokens), {
+				const response = new Response(JSON.stringify(tokens), {
 					status: 200,
 					headers: {
 						'Content-Type': 'application/json',
 						'Cache-Control': 'no-store',
-						'Access-Control-Allow-Origin': '*',
 					},
 				});
+				return this.#apply_cors_headers(response, request);
 			}
 
 			case 'refresh_token': {
@@ -475,14 +510,14 @@ export class OAuthProvider {
 					resource ? new URL(resource) : undefined,
 				);
 
-				return new Response(JSON.stringify(tokens), {
+				const response = new Response(JSON.stringify(tokens), {
 					status: 200,
 					headers: {
 						'Content-Type': 'application/json',
 						'Cache-Control': 'no-store',
-						'Access-Control-Allow-Origin': '*',
 					},
 				});
+				return this.#apply_cors_headers(response, request);
 			}
 
 			default:
@@ -548,14 +583,14 @@ export class OAuthProvider {
 				/** @type {OAuthClientInformationFull} */ (clientInfo),
 			);
 
-		return new Response(JSON.stringify(registered_client), {
+		const response = new Response(JSON.stringify(registered_client), {
 			status: 201,
 			headers: {
 				'Content-Type': 'application/json',
 				'Cache-Control': 'no-store',
-				'Access-Control-Allow-Origin': '*',
 			},
 		});
+		return this.#apply_cors_headers(response, request);
 	}
 
 	/**
@@ -612,13 +647,13 @@ export class OAuthProvider {
 
 		await this.#config.provider.revokeToken(client, revoke_result.output);
 
-		return new Response('{}', {
+		const response = new Response('{}', {
 			status: 200,
 			headers: {
 				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': '*',
 			},
 		});
+		return this.#apply_cors_headers(response, request);
 	}
 
 	/**
@@ -628,13 +663,13 @@ export class OAuthProvider {
 	 */
 	async #authorization_metadata(request) {
 		const metadata = this.#create_oauth_metadata();
-		return new Response(JSON.stringify(metadata), {
+		const response = new Response(JSON.stringify(metadata), {
 			status: 200,
 			headers: {
 				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': '*',
 			},
 		});
+		return this.#apply_cors_headers(response, request);
 	}
 
 	/**
@@ -644,13 +679,13 @@ export class OAuthProvider {
 	 */
 	async #resource_metadata(request) {
 		const metadata = this.#create_resource_metadata();
-		return new Response(JSON.stringify(metadata), {
+		const response = new Response(JSON.stringify(metadata), {
 			status: 200,
 			headers: {
 				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': '*',
 			},
 		});
+		return this.#apply_cors_headers(response, request);
 	}
 
 	/**
@@ -746,21 +781,27 @@ export class OAuthProvider {
 	 * Create method not allowed response
 	 * @param {string} pathname
 	 * @param {string} method
+	 * @param {Request} [request]
 	 * @returns {Response}
 	 */
-	#not_allowed(pathname, method) {
+	#not_allowed(pathname, method, request) {
 		const allowedMethods = this.#getAllowedMethods(pathname);
 		const error = new MethodNotAllowedError(
 			`The method ${method} is not allowed for this endpoint`,
 		);
 
-		return new Response(JSON.stringify(error.toResponseObject()), {
-			status: 405,
-			headers: {
-				'Content-Type': 'application/json',
-				Allow: allowedMethods.join(', '),
+		const response = new Response(
+			JSON.stringify(error.toResponseObject()),
+			{
+				status: 405,
+				headers: {
+					'Content-Type': 'application/json',
+					Allow: allowedMethods.join(', '),
+				},
 			},
-		});
+		);
+
+		return request ? this.#apply_cors_headers(response, request) : response;
 	}
 
 	/**
@@ -787,12 +828,14 @@ export class OAuthProvider {
 	/**
 	 * Handle errors and convert to appropriate HTTP responses
 	 * @param {any} error
+	 * @param {Request} [request]
 	 * @returns {Response}
 	 */
-	#handle_error(error) {
+	#handle_error(error, request) {
+		let response;
 		if (error instanceof OAuthError) {
 			const status = error instanceof ServerError ? 500 : 400;
-			return new Response(JSON.stringify(error.toResponseObject()), {
+			response = new Response(JSON.stringify(error.toResponseObject()), {
 				status,
 				headers: {
 					'Content-Type': 'application/json',
@@ -800,7 +843,7 @@ export class OAuthProvider {
 			});
 		} else {
 			const serverError = new ServerError('Internal Server Error');
-			return new Response(
+			response = new Response(
 				JSON.stringify(serverError.toResponseObject()),
 				{
 					status: 500,
@@ -810,6 +853,8 @@ export class OAuthProvider {
 				},
 			);
 		}
+
+		return request ? this.#apply_cors_headers(response, request) : response;
 	}
 
 	/**
@@ -964,5 +1009,114 @@ export class OAuthProvider {
 		}
 
 		return value;
+	}
+
+	/**
+	 * Handle CORS preflight requests
+	 * @param {Request} request
+	 * @param {string} pathname
+	 * @returns {Response | null}
+	 */
+	#handle_preflight(request, pathname) {
+		const cors_headers = this.#get_cors_headers(request);
+
+		// Check if this is a valid OAuth endpoint
+		const valid_endpoints = [
+			'/authorize',
+			'/token',
+			'/register',
+			'/revoke',
+			'/.well-known/oauth-authorization-server',
+			'/.well-known/oauth-protected-resource',
+		];
+
+		if (!valid_endpoints.includes(pathname)) {
+			return null; // Not an OAuth endpoint, let other handlers deal with it
+		}
+
+		return new Response(null, {
+			status: 204,
+			headers: cors_headers,
+		});
+	}
+
+	/**
+	 * Get CORS headers for a request
+	 * @param {Request} request
+	 * @returns {Record<string, string>}
+	 */
+	#get_cors_headers(request) {
+		const cors = this.#config.cors;
+		if (!cors) return {};
+
+		const headers = /** @type {Record<string, string>} */ ({});
+
+		// Handle origin
+		const request_origin = request.headers.get('origin');
+		if (cors.origin === '*' || !cors.origin) {
+			headers['Access-Control-Allow-Origin'] = '*';
+		} else if (typeof cors.origin === 'string') {
+			if (request_origin === cors.origin) {
+				headers['Access-Control-Allow-Origin'] = cors.origin;
+				headers['Vary'] = 'Origin';
+			}
+		} else if (Array.isArray(cors.origin)) {
+			if (request_origin && cors.origin.includes(request_origin)) {
+				headers['Access-Control-Allow-Origin'] = request_origin;
+				headers['Vary'] = 'Origin';
+			}
+		}
+
+		// Handle methods
+		const methods = cors.methods || ['GET', 'POST', 'OPTIONS'];
+		headers['Access-Control-Allow-Methods'] = methods.join(', ');
+
+		// Handle headers
+		const allowed_headers = cors.allowedHeaders || [
+			'Content-Type',
+			'Authorization',
+		];
+		headers['Access-Control-Allow-Headers'] = allowed_headers.join(', ');
+
+		// Handle exposed headers
+		if (cors.exposedHeaders?.length) {
+			headers['Access-Control-Expose-Headers'] =
+				cors.exposedHeaders.join(', ');
+		}
+
+		// Handle credentials
+		if (cors.credentials) {
+			headers['Access-Control-Allow-Credentials'] = 'true';
+		}
+
+		// Handle max age
+		if (cors.maxAge !== undefined) {
+			headers['Access-Control-Max-Age'] = cors.maxAge.toString();
+		}
+
+		return headers;
+	}
+
+	/**
+	 * Apply CORS headers to a response
+	 * @param {Response} response
+	 * @param {Request} request
+	 * @returns {Response}
+	 */
+	#apply_cors_headers(response, request) {
+		if (!this.#config.cors) return response;
+
+		const corsHeaders = this.#get_cors_headers(request);
+		const headers = new Headers(response.headers);
+
+		for (const [key, value] of Object.entries(corsHeaders)) {
+			headers.set(key, value);
+		}
+
+		return new Response(response.body, {
+			status: response.status,
+			statusText: response.statusText,
+			headers,
+		});
 	}
 }

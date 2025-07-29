@@ -35,6 +35,32 @@ declare module '@tmcp/auth' {
 		 */
 		resourceMetadataUrl?: string | undefined;
 	};
+	type CorsConfig = {
+		/**
+		 * - Allowed origins (default: '*')
+		 */
+		origin?: string | string[] | undefined;
+		/**
+		 * - Allowed methods (default: ['GET', 'POST', 'OPTIONS'])
+		 */
+		methods?: string[] | undefined;
+		/**
+		 * - Allowed headers (default: ['Content-Type', 'Authorization'])
+		 */
+		allowedHeaders?: string[] | undefined;
+		/**
+		 * - Exposed headers
+		 */
+		exposedHeaders?: string[] | undefined;
+		/**
+		 * - Allow credentials (default: false)
+		 */
+		credentials?: boolean | undefined;
+		/**
+		 * - Preflight cache duration in seconds (default: 86400)
+		 */
+		maxAge?: number | undefined;
+	};
 	type OAuthProviderConfig_1 = {
 		/**
 		 * - OAuth server provider implementation
@@ -76,6 +102,10 @@ declare module '@tmcp/auth' {
 		 * - Bearer token authentication configuration
 		 */
 		bearerToken?: BearerTokenConfig | undefined;
+		/**
+		 * - CORS configuration
+		 */
+		cors?: CorsConfig | undefined;
 	};
 	/**
 	 * Implements an OAuth server that proxies requests to another OAuth server.

@@ -153,9 +153,67 @@ const oauthProvider = new OAuthProvider({
   bearerToken: {               // Optional: Bearer token authentication config
     requiredScopes,            //   Optional: Array of required scopes
     resourceMetadataUrl        //   Optional: Resource metadata URL for WWW-Authenticate header
+  },
+  cors: {                      // Optional: CORS configuration
+    origin,                    //   Optional: Allowed origins (string, array, or '*')
+    methods,                   //   Optional: Allowed methods (default: ['GET', 'POST', 'OPTIONS'])
+    allowedHeaders,            //   Optional: Allowed headers (default: ['Content-Type', 'Authorization'])
+    exposedHeaders,            //   Optional: Exposed headers
+    credentials,               //   Optional: Allow credentials (default: false)
+    maxAge                     //   Optional: Preflight cache duration in seconds (default: 86400)
   }
 });
 ```
+
+## CORS Configuration
+
+Configure Cross-Origin Resource Sharing (CORS) for web applications:
+
+```javascript
+const oauthProvider = new OAuthProvider({
+  // ... other config
+  cors: {
+    origin: ['https://app.example.com', 'https://localhost:3000'], // Specific origins
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true, // Allow cookies and authentication headers
+    maxAge: 86400 // Cache preflight for 24 hours
+  }
+});
+```
+
+**Common CORS Configurations:**
+
+```javascript
+// Allow all origins (development only)
+cors: { origin: '*' }
+
+// Single origin
+cors: { origin: 'https://app.example.com' }
+
+// Multiple specific origins
+cors: { 
+  origin: ['https://app.example.com', 'https://staging.example.com'],
+  credentials: true 
+}
+
+// Full configuration
+cors: {
+  origin: ['https://app.example.com', 'https://staging.example.com', 'https://localhost:3000'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-Total-Count'],
+  credentials: true,
+  maxAge: 7200
+}
+```
+
+**CORS Features:**
+- **Automatic preflight handling** - OPTIONS requests are handled automatically
+- **Origin validation** - Support for single origins (string), multiple origins (array), or wildcard ('*')
+- **Credential support** - Enable cookies and authentication headers
+- **Header management** - Control allowed and exposed headers
+- **Caching control** - Configure preflight cache duration
 
 ## Provider Interface
 
