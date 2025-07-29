@@ -1,51 +1,243 @@
 declare module '@tmcp/auth' {
 	import * as v from 'valibot';
-	export type OAuthServerProvider = OAuthServerProvider_1;
-	export type OAuthRegisteredClientsStore = OAuthRegisteredClientsStore_1;
-	export type OAuthProviderConfig = OAuthProviderConfig_1;
 	/**
-	 * Main OAuth Provider class that handles OAuth 2.1 requests using Web Request/Response APIs
+	 * Main OAuth provider class - handles OAuth 2.1 requests with a clean fluent API
 	 */
-	export class OAuthProvider {
+	export class OAuth {
 		/**
-		 * @param config - OAuth provider configuration
-		 */
-		constructor(config: OAuthProviderConfig_1);
+		 * Create a new OAuth builder instance
+		 * @param issuerUrl - The OAuth issuer URL
+		 * */
+		static create(issuerUrl: string): OAuth;
 		/**
-		 * Routes an OAuth request to the appropriate handler method.
-		 * Returns null if the request is not for this provider.
-		 *
-		 * @param request - The HTTP request to handle
-		 * @returns HTTP response or null if not handled
+		 * Static method to create OAuth from issuer URL
+		 * @param issuerUrl - The OAuth issuer URL
+		 * */
+		static issuer(issuerUrl: string): OAuth;
+		/**
+		 * Create a new OAuth instance
+		 * @param issuerUrl - The OAuth issuer URL
 		 */
+		constructor(issuerUrl: string);
+		/**
+		 * Set supported scopes
+		 * @param scopes - Supported scopes
+		 * */
+		scopes(...scopes: string[]): OAuth;
+		/**
+		 * Set OAuth handlers
+		 * @param handlers - OAuth handlers
+		 * */
+		handlers(handlers: SimplifiedHandlers_1): OAuth;
+		/**
+		 * Use in-memory client store with optional initial clients
+		 * @param clients - Initial clients
+		 * */
+		memory(clients?: OAuthClientInformationFull[]): OAuth;
+		/**
+		 * Use custom client store
+		 * @param store - Custom client store
+		 * */
+		clients(store: OAuthRegisteredClientsStore): OAuth;
+		/**
+		 * Configure OAuth features
+		 * @param features - Feature configuration
+		 * */
+		features(features: FeatureConfig): OAuth;
+		/**
+		 * Enable PKCE (enabled by default)
+		 * @param enabledtrue] - Whether to enable PKCE
+		 * */
+		pkce(enabled?: boolean): OAuth;
+		/**
+		 * Configure bearer token authentication
+		 * @param configtrue] - Bearer config
+		 * */
+		bearer(config?: boolean | string[] | BearerConfig): OAuth;
+		/**
+		 * Configure CORS
+		 * @param configtrue] - CORS config
+		 * */
+		cors(config?: boolean | CorsConfig): OAuth;
+		/**
+		 * Enable dynamic client registration
+		 * @param enabledtrue] - Whether to enable registration
+		 * */
+		registration(enabled?: boolean): OAuth;
+		/**
+		 * Configure rate limiting
+		 * @param limits - Rate limits
+		 * */
+		rateLimit(limits: Record<string, {
+			windowMs: number;
+			max: number;
+		}>): OAuth;
+		/**
+		 * Auto-configure with sensible defaults
+		 * */
+		auto(): OAuth;
+		/**
+		 * Build the OAuth provider (same as this instance since we're standalone now)
+		 * */
+		build(): OAuth;
+		/**
+		 * Handle HTTP requests for OAuth endpoints
+		 * @param request - HTTP request
+		 * */
 		respond(request: Request): Promise<Response | null>;
 		#private;
 	}
-	type BearerTokenConfig = {
+	type ExchangeAuthorizationCodeRequest = {
 		/**
-		 * - List of URIs that require Bearer token authentication
+		 * - Client information
 		 */
-		uris: string[];
+		client: OAuthClientInformationFull;
 		/**
-		 * - Optional scopes that the token must have
+		 * - Grant type
 		 */
-		requiredScopes?: string[] | undefined;
+		type: "authorization_code";
 		/**
-		 * - Optional resource metadata URL to include in WWW-Authenticate header
+		 * - Authorization code (for authorization_code grants)
 		 */
-		resourceMetadataUrl?: string | undefined;
+		code: string;
+		/**
+		 * - PKCE code verifier (for authorization_code grants)
+		 */
+		verifier: string;
+		/**
+		 * - Redirect URI (for authorization_code grants)
+		 */
+		redirectUri?: string | undefined;
+		/**
+		 * - Requested scopes
+		 */
+		scopes?: string[] | undefined;
+		/**
+		 * - Resource parameter
+		 */
+		resource?: URL | undefined;
+	};
+	type ExchangeRefreshTokenRequest = {
+		/**
+		 * - Client information
+		 */
+		client: OAuthClientInformationFull;
+		/**
+		 * - Grant type
+		 */
+		type: "refresh_token";
+		/**
+		 * - Refresh token (for refresh_token grants)
+		 */
+		refreshToken: string;
+		/**
+		 * - Requested scopes
+		 */
+		scopes?: string[] | undefined;
+		/**
+		 * - Resource parameter
+		 */
+		resource?: URL | undefined;
+	};
+	type ExchangeRequest = ExchangeAuthorizationCodeRequest | ExchangeRefreshTokenRequest;
+	type AuthorizeRequest = {
+		/**
+		 * - Client information
+		 */
+		client: OAuthClientInformationFull;
+		/**
+		 * - Redirect URI
+		 */
+		redirectUri: string;
+		/**
+		 * - PKCE code challenge
+		 */
+		codeChallenge: string;
+		/**
+		 * - OAuth state parameter
+		 */
+		state?: string | undefined;
+		/**
+		 * - Requested scopes
+		 */
+		scopes?: string[] | undefined;
+		/**
+		 * - Resource parameter
+		 */
+		resource?: URL | undefined;
+	};
+	type SimplifiedHandlers_1 = {
+		/**
+		 * - Handle authorization requests
+		 */
+		authorize: (arg0: AuthorizeRequest) => Promise<Response>;
+		/**
+		 * - Handle token exchange
+		 */
+		exchange: (arg0: ExchangeRequest) => Promise<OAuthTokens>;
+		/**
+		 * - Verify access tokens
+		 */
+		verify: (arg0: string) => Promise<AuthInfo>;
+		/**
+		 * - Revoke tokens
+		 */
+		revoke?: ((arg0: OAuthClientInformationFull, arg1: {
+			token: string;
+			tokenType?: string;
+		}) => Promise<void>) | undefined;
+	};
+	type Methods = "GET" | "POST";
+	type BearerConfig = {
+		/**
+		 * - Required scopes for bearer token
+		 */
+		scopes?: string[] | undefined;
+		/**
+		 * - Resource URL for bearer token
+		 */
+		resourceUrl?: string | undefined;
+		/**
+		 * - Paths that require bearer token
+		 */
+		paths?: Partial<Record<Methods, string[]>> | undefined;
+	};
+	type FeatureConfig = {
+		/**
+		 * - Enable PKCE
+		 */
+		pkce?: boolean | undefined;
+		/**
+		 * - Bearer token config
+		 */
+		bearer?: boolean | BearerConfig | undefined;
+		/**
+		 * - CORS config
+		 */
+		cors?: boolean | CorsConfig | undefined;
+		/**
+		 * - Dynamic client registration
+		 */
+		registration?: boolean | undefined;
+		/**
+		 * - Rate limiting config
+		 */
+		rateLimits?: Record<string, {
+			windowMs: number;
+			max: number;
+		}> | undefined;
 	};
 	type CorsConfig = {
 		/**
-		 * - Allowed origins (default: '*')
+		 * - Allowed origins
 		 */
 		origin?: string | string[] | undefined;
 		/**
-		 * - Allowed methods (default: ['GET', 'POST', 'OPTIONS'])
+		 * - Allowed methods
 		 */
 		methods?: string[] | undefined;
 		/**
-		 * - Allowed headers (default: ['Content-Type', 'Authorization'])
+		 * - Allowed headers
 		 */
 		allowedHeaders?: string[] | undefined;
 		/**
@@ -53,65 +245,19 @@ declare module '@tmcp/auth' {
 		 */
 		exposedHeaders?: string[] | undefined;
 		/**
-		 * - Allow credentials (default: false)
+		 * - Allow credentials
 		 */
 		credentials?: boolean | undefined;
 		/**
-		 * - Preflight cache duration in seconds (default: 86400)
+		 * - Preflight cache duration
 		 */
 		maxAge?: number | undefined;
-	};
-	type OAuthProviderConfig_1 = {
-		/**
-		 * - OAuth server provider implementation
-		 */
-		provider: OAuthServerProvider_1;
-		/**
-		 * - Issuer URL (must be HTTPS except localhost)
-		 */
-		issuerUrl: URL;
-		/**
-		 * - Base URL if different from issuer
-		 */
-		baseUrl?: URL | undefined;
-		/**
-		 * - Documentation URL
-		 */
-		serviceDocumentationUrl?: URL | undefined;
-		/**
-		 * - Supported scopes
-		 */
-		scopesSupported?: string[] | undefined;
-		/**
-		 * - Human-readable resource name
-		 */
-		resourceName?: string | undefined;
-		/**
-		 * - Client secret expiry (default: 30 days)
-		 */
-		clientSecretExpirySeconds?: number | undefined;
-		/**
-		 * - Generate client IDs (default: true)
-		 */
-		clientIdGeneration?: boolean | undefined;
-		/**
-		 * - Rate limits per endpoint
-		 */
-		rateLimits?: Record<string, RateLimitConfig> | undefined;
-		/**
-		 * - Bearer token authentication configuration
-		 */
-		bearerToken?: BearerTokenConfig | undefined;
-		/**
-		 * - CORS configuration
-		 */
-		cors?: CorsConfig | undefined;
 	};
 	/**
 	 * Implements an OAuth server that proxies requests to another OAuth server.
 	 * 
 	 */
-	export class ProxyOAuthServerProvider implements OAuthServerProvider_1 {
+	export class ProxyOAuthServerProvider {
 		/**
 		 * @param options - Proxy configuration
 		 */
@@ -119,7 +265,7 @@ declare module '@tmcp/auth' {
 		
 		skipLocalPkceValidation: boolean;
 		
-		get clientStore(): OAuthRegisteredClientsStore_1;
+		get clientStore(): OAuthRegisteredClientsStore;
 		
 		authorize(client: OAuthClientInformationFull, params: AuthorizationParams): Promise<Response>;
 		
@@ -170,86 +316,106 @@ declare module '@tmcp/auth' {
 		 */
 		fetch?: typeof fetch | undefined;
 	};
-  /**
-   * Implements an end-to-end OAuth server.
-   */
-  interface OAuthServerProvider_1 {
 	/**
-	 * A store used to read information about registered OAuth clients.
+	 * Simple OAuth provider implementation for development and testing
+	 * Provides an easy way to create a working OAuth server with minimal setup
 	 */
-	get clientStore(): OAuthRegisteredClientsStore_1;
-
+	export class SimpleProvider {
+		/**
+		 * Create a simple provider with pre-configured client
+		 * @param clientId - Client ID
+		 * @param clientSecret - Client secret
+		 * @param redirectUris - Redirect URIs
+		 * @param options - Additional options
+		 * */
+		static withClient(clientId: string, clientSecret: string, redirectUris: string[], options?: SimpleProviderOptions): SimpleProvider;
+		/**
+		 * @param options - Provider options
+		 */
+		constructor(options?: SimpleProviderOptions & {
+			clients?: OAuthClientInformationFull[];
+		});
+		/**
+		 * Add a client to the store
+		 * @param client - Client to add
+		 */
+		addClient(client: OAuthClientInformationFull): void;
+		/**
+		 * Get the handlers for use with OAuth builder
+		 * */
+		handlers(): SimplifiedHandlers;
+		/**
+		 * Get the client store
+		 * */
+		get clientStore(): MemoryClientStore;
+		#private;
+	}
+	type SimpleProviderOptions = {
+		/**
+		 * - Storage for authorization codes and their challenges
+		 */
+		codes?: Map<string, string> | undefined;
+		/**
+		 * - Storage for access tokens
+		 */
+		tokens?: Map<string, AuthInfo> | undefined;
+		/**
+		 * - Storage for refresh tokens
+		 */
+		refreshTokens?: Map<string, {
+			token: string;
+			clientId: string;
+			scopes: string[];
+		}> | undefined;
+		/**
+		 * - Token expiry in seconds
+		 */
+		tokenExpiry?: number | undefined;
+	};
 	/**
-	 * Begins the authorization flow, which can either be implemented by this server itself or via redirection to a separate authorization server.
-	 *
-	 * This server must eventually issue a redirect with an authorization response or an error response to the given redirect URI. Per OAuth 2.1:
-	 * - In the successful case, the redirect MUST include the `code` and `state` (if present) query parameters.
-	 * - In the error case, the redirect MUST include the `error` query parameter, and MAY include an optional `error_description` query parameter.
-	 */
-	authorize(client: OAuthClientInformationFull, params: AuthorizationParams): Promise<Response>;
-
-	/**
-	 * Returns the `codeChallenge` that was used when the indicated authorization began.
-	 */
-	challengeForAuthorizationCode(client: OAuthClientInformationFull, authorizationCode: string): Promise<string>;
-
-	/**
-	 * Exchanges an authorization code for an access token.
-	 */
-	exchangeAuthorizationCode(
-	  client: OAuthClientInformationFull, 
-	  authorizationCode: string, 
-	  codeVerifier?: string,
-	  redirectUri?: string,
-	  resource?: URL
-	): Promise<OAuthTokens>;
-
-	/**
-	 * Exchanges a refresh token for an access token.
-	 */
-	exchangeRefreshToken(client: OAuthClientInformationFull, refreshToken: string, scopes?: string[], resource?: URL): Promise<OAuthTokens>;
-
-	/**
-	 * Verifies an access token and returns information about it.
-	 */
-	verifyAccessToken(token: string): Promise<AuthInfo>;
-
-	/**
-	 * Revokes an access or refresh token. If unimplemented, token revocation is not supported (not recommended).
-	 *
-	 * If the given token is invalid or already revoked, this method should do nothing.
-	 */
-	revokeToken?(client: OAuthClientInformationFull, request: OAuthTokenRevocationRequest): Promise<void>;
-
-	/**
-	 * Whether to skip local PKCE validation.
-	 *
-	 * If true, the server will not perform PKCE validation locally and will pass the code_verifier to the upstream server.
-	 *
-	 * NOTE: This should only be true if the upstream server is performing the actual PKCE validation.
-	 */
-	skipLocalPkceValidation?: boolean;
-  }
-
-
-  /**
-   * Stores information about registered OAuth clients for this server.
-   */
-  interface OAuthRegisteredClientsStore_1 {
-	/**
-	 * Returns information about a registered client, based on its ID.
-	 */
-	getClient(clientId: string): OAuthClientInformationFull | undefined | Promise<OAuthClientInformationFull | undefined>;
-
-	/**
-	 * Registers a new client with the server. The client ID and secret will be automatically generated by the library. A modified version of the client information can be returned to reflect specific values enforced by the server.
+	 * @import { OAuthClientInformationFull } from './types.js'
 	 * 
-	 * NOTE: Implementations should NOT delete expired client secrets in-place. Auth middleware provided by this library will automatically check the `client_secret_expires_at` field and reject requests with expired secrets. Any custom logic for authenticating clients should check the `client_secret_expires_at` field as well.
-	 * 
-	 * If unimplemented, dynamic client registration is unsupported.
 	 */
-	registerClient?(client: Omit<OAuthClientInformationFull, "client_id" | "client_id_issued_at">): OAuthClientInformationFull | Promise<OAuthClientInformationFull>;
-  }
+	/**
+	 * Simple in-memory client store for development and testing
+	 * 
+	 */
+	export class MemoryClientStore implements OAuthRegisteredClientsStore {
+		/**
+		 * @param initialClients - Initial clients to store
+		 */
+		constructor(initialClients?: OAuthClientInformationFull[]);
+		/**
+		 * Get client by ID
+		 * @param clientId - Client ID
+		 * */
+		getClient(clientId: string): Promise<OAuthClientInformationFull | undefined>;
+		/**
+		 * Register a new client
+		 * @param client - Client to register
+		 * */
+		registerClient(client: Omit<OAuthClientInformationFull, "client_id" | "client_id_issued_at">): Promise<OAuthClientInformationFull>;
+		/**
+		 * Add a client directly (for testing/setup)
+		 * @param client - Client to add
+		 */
+		addClient(client: OAuthClientInformationFull): void;
+		/**
+		 * Remove a client
+		 * @param clientId - Client ID to remove
+		 * @returns True if client was removed
+		 */
+		removeClient(clientId: string): boolean;
+		/**
+		 * Get all clients (for debugging)
+		 * */
+		getAllClients(): OAuthClientInformationFull[];
+		/**
+		 * Clear all clients
+		 */
+		clear(): void;
+		#private;
+	}
 	/**
 	 * Base class for all OAuth errors
 	 */
@@ -696,16 +862,24 @@ declare module '@tmcp/auth' {
 		 */
 		software_version?: string | undefined;
 	};
-	type RateLimitConfig = {
-		/**
-		 * - Time window in milliseconds
-		 */
-		windowMs: number;
-		/**
-		 * - Maximum requests per window
-		 */
-		max: number;
-	};
+  /**
+   * Stores information about registered OAuth clients for this server.
+   */
+  interface OAuthRegisteredClientsStore {
+	/**
+	 * Returns information about a registered client, based on its ID.
+	 */
+	getClient(clientId: string): OAuthClientInformationFull | undefined | Promise<OAuthClientInformationFull | undefined>;
+
+	/**
+	 * Registers a new client with the server. The client ID and secret will be automatically generated by the library. A modified version of the client information can be returned to reflect specific values enforced by the server.
+	 * 
+	 * NOTE: Implementations should NOT delete expired client secrets in-place. Auth middleware provided by this library will automatically check the `client_secret_expires_at` field and reject requests with expired secrets. Any custom logic for authenticating clients should check the `client_secret_expires_at` field as well.
+	 * 
+	 * If unimplemented, dynamic client registration is unsupported.
+	 */
+	registerClient?(client: Omit<OAuthClientInformationFull, "client_id" | "client_id_issued_at">): OAuthClientInformationFull | Promise<OAuthClientInformationFull>;
+  }
 
 	export {};
 }

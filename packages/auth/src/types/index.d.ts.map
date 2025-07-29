@@ -2,11 +2,12 @@
 	"version": 3,
 	"file": "index.d.ts",
 	"names": [
-		"OAuthServerProvider",
-		"OAuthRegisteredClientsStore",
-		"OAuthProviderConfig",
-		"OAuthProvider",
+		"OAuth",
+		"ExchangeRequest",
+		"Methods",
 		"ProxyOAuthServerProvider",
+		"SimpleProvider",
+		"MemoryClientStore",
 		"OAuthError",
 		"InvalidRequestError",
 		"InvalidClientError",
@@ -36,15 +37,17 @@
 		"TokenRequestSchema",
 		"AuthorizationCodeGrantSchema",
 		"RefreshTokenGrantSchema",
-		"OAuthErrorResponseSchema"
+		"OAuthErrorResponseSchema",
+		"OAuthRegisteredClientsStore"
 	],
 	"sources": [
-		"../internal.d.ts",
-		"../index.js",
-		"../oauth-provider.js",
+		"../oauth.js",
 		"../proxy-provider.js",
+		"../simple-provider.js",
+		"../memory-store.js",
 		"../errors.js",
-		"../schemas.js"
+		"../schemas.js",
+		"../internal.d.ts"
 	],
 	"sourcesContent": [
 		null,
@@ -52,8 +55,9 @@
 		null,
 		null,
 		null,
+		null,
 		null
 	],
-	"mappings": ";;aAKiBA,mBAAmBA;aA8DnBC,2BAA2BA;aCvDNC,mBAAmBA;;;;cCyD5CC,aAAaA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cCrCbC,wBAAwBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cCrBxBC,UAAUA;;;;;;;;;;;;;;;;;;;;;;;cAgDVC,mBAAmBA;;;;;;cAQnBC,kBAAkBA;;;;;;;cASlBC,iBAAiBA;;;;;;cAQjBC,uBAAuBA;;;;;;cAQvBC,yBAAyBA;;;;;;cAQzBC,iBAAiBA;;;;;cAOjBC,iBAAiBA;;;;;;cAQjBC,WAAWA;;;;;;cAQXC,2BAA2BA;;;;;;cAQ3BC,4BAA4BA;;;;;;cAQ5BC,yBAAyBA;;;;;;cAQzBC,iBAAiBA;;;;;;cAQjBC,qBAAqBA;;;;;;cAQrBC,oBAAoBA;;;;;;cAQpBC,0BAA0BA;;;;;cAO1BC,sBAAsBA;;;;;cAOtBC,gBAAgBA;;;;;;;;;;;;cAsBhBC,YAAYA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cC1MZC,yBAAyBA;;;;;;;;;;;;;;;;;;;;;;cA0BzBC,gCAAgCA;;;;;;;;;;;;;;;;;;;;;;;cAwBhCC,iBAAiBA;;;;;;;;;;;cAYjBC,iCAAiCA;;;;;;;cAQjCC,gCAAgCA;;;;;;;cAQhCC,+BAA+BA;;;;;;;cAQ/BC,gCAAgCA;;;;;;;;;;;cAYhCC,kBAAkBA;;;;;;cAOlBC,4BAA4BA;;;;;;;;;cAU5BC,uBAAuBA;;;;;;;;cASvBC,wBAAwBA",
+	"mappings": ";;;;;cAwGaA,KAAKA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;MAtD2DC,eAAeA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;MAsB/DC,OAAOA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cCxCvBC,wBAAwBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cCZxBC,cAAcA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cCXdC,iBAAiBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cCEjBC,UAAUA;;;;;;;;;;;;;;;;;;;;;;;cAgDVC,mBAAmBA;;;;;;cAQnBC,kBAAkBA;;;;;;;cASlBC,iBAAiBA;;;;;;cAQjBC,uBAAuBA;;;;;;cAQvBC,yBAAyBA;;;;;;cAQzBC,iBAAiBA;;;;;cAOjBC,iBAAiBA;;;;;;cAQjBC,WAAWA;;;;;;cAQXC,2BAA2BA;;;;;;cAQ3BC,4BAA4BA;;;;;;cAQ5BC,yBAAyBA;;;;;;cAQzBC,iBAAiBA;;;;;;cAQjBC,qBAAqBA;;;;;;cAQrBC,oBAAoBA;;;;;;cAQpBC,0BAA0BA;;;;;cAO1BC,sBAAsBA;;;;;cAOtBC,gBAAgBA;;;;;;;;;;;;cAsBhBC,YAAYA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cC1MZC,yBAAyBA;;;;;;;;;;;;;;;;;;;;;;cA0BzBC,gCAAgCA;;;;;;;;;;;;;;;;;;;;;;;cAwBhCC,iBAAiBA;;;;;;;;;;;cAYjBC,iCAAiCA;;;;;;;cAQjCC,gCAAgCA;;;;;;;cAQhCC,+BAA+BA;;;;;;;cAQ/BC,gCAAgCA;;;;;;;;;;;cAYhCC,kBAAkBA;;;;;;cAOlBC,4BAA4BA;;;;;;;;;cAU5BC,uBAAuBA;;;;;;;;cASvBC,wBAAwBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;YC3HpBC,2BAA2BA",
 	"ignoreList": []
 }

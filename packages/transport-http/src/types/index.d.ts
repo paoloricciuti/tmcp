@@ -1,6 +1,6 @@
 declare module '@tmcp/transport-http' {
 	import type { McpServer } from 'tmcp';
-	import type { OAuthProvider } from '@tmcp/auth';
+	import type { OAuth } from '@tmcp/auth';
 	export class HttpTransport {
 		
 		constructor(server: McpServer<any>, options?: HttpTransportOptions);
@@ -11,7 +11,7 @@ declare module '@tmcp/transport-http' {
 	export type HttpTransportOptions = {
 		getSessionId?: () => string;
 		path?: string;
-		oauth?: OAuthProvider;
+		oauth?: OAuth;
 	};
 
 	export {};

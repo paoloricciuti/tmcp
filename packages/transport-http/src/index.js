@@ -1,13 +1,13 @@
 /**
  * @import { McpServer } from "tmcp";
- * @import { OAuthProvider  } from "@tmcp/auth";
+ * @import { OAuth  } from "@tmcp/auth";
  */
 
 /**
  * @typedef {{
  * 	getSessionId?: () => string
  * 	path?: string
- * 	oauth?: OAuthProvider
+ * 	oauth?: OAuth
  * }} HttpTransportOptions
  */
 
@@ -43,7 +43,7 @@ export class HttpTransport {
 	#controller_storage = new AsyncLocalStorage();
 
 	/**
-	 * @type {OAuthProvider | undefined}
+	 * @type {OAuth | undefined}
 	 */
 	#oauth;
 

@@ -1,18 +1,20 @@
 # @tmcp/auth
 
-OAuth 2.1 authorization helper for MCP with Web Request support and valibot validation.
+OAuth 2.1 authorization helper for MCP with simplified fluent API and valibot validation.
 
 ## Features
 
+- **Fluent API**: Clean, chainable methods for easy configuration
+- **Auto-configuration**: Smart defaults for rapid development setup
 - **Web Request/Response API**: Works with modern Web APIs instead of Express
 - **Valibot Validation**: Uses valibot for schema validation instead of zod
 - **JSDoc + TypeScript**: Full type safety with JSDoc annotations
 - **OAuth 2.1 Compliant**: Supports all standard OAuth 2.1 flows
 - **MCP Compatible**: Designed specifically for Model Context Protocol servers
-- **Unified API**: Single `respond()` method handles all OAuth endpoints
 - **Lightweight**: Minimal dependencies, no Express required
-- **Bearer Authentication**: Integrated Bearer token validation in the main provider
+- **Bearer Authentication**: Integrated Bearer token validation
 - **Proxy Support**: Built-in proxy provider for upstream OAuth servers
+- **Memory Store**: In-memory client storage for development
 
 ## Installation
 
@@ -20,106 +22,134 @@ OAuth 2.1 authorization helper for MCP with Web Request support and valibot vali
 pnpm install @tmcp/auth valibot pkce-challenge
 ```
 
-## Quick Start
+## Quick Start (New Fluent API - Recommended)
 
 ```javascript
-import { OAuthProvider } from '@tmcp/auth';
-import { InvalidTokenError } from '@tmcp/auth';
+import { OAuth, SimpleProvider } from '@tmcp/auth';
 
-// Create a provider implementation
-const provider = {
-  clientsStore: {
-    async getClient(clientId) {
-      // Return client info or undefined
-      return {
-        client_id: clientId,
-        client_secret: 'secret',
-        redirect_uris: ['https://example.com/callback']
-      };
-    },
-    
-    async registerClient(client) {
-      // Register new client and return full info
-      return { ...client, client_id: 'generated-id' };
-    }
-  },
-
-  async authorize(client, params) {
-    // Handle authorization - return redirect response
-    const redirectUrl = new URL(params.redirectUri);
-    redirectUrl.searchParams.set('code', 'auth_code');
-    if (params.state) {
-      redirectUrl.searchParams.set('state', params.state);
-    }
-    return new Response(null, {
-      status: 302,
-      headers: { 'Location': redirectUrl.toString() }
-    });
-  },
-
-  async challengeForAuthorizationCode(client, code) {
-    // Return PKCE challenge for the code
-    return 'challenge_string';
-  },
-
-  async exchangeAuthorizationCode(client, code, codeVerifier, redirectUri, resource) {
-    // Exchange code for tokens
-    return {
-      access_token: 'access_token',
-      token_type: 'bearer',
-      expires_in: 3600,
-      refresh_token: 'refresh_token'
-    };
-  },
-
-  async exchangeRefreshToken(client, refreshToken, scopes, resource) {
-    // Exchange refresh token for new tokens
-    return {
-      access_token: 'new_access_token',
-      token_type: 'bearer',
-      expires_in: 3600,
-      refresh_token: 'new_refresh_token'
-    };
-  },
-
-  async verifyAccessToken(token) {
-    // Verify token and return auth info
-    if (token === 'valid_token') {
-      return {
-        token,
-        clientId: 'client_id',
-        scopes: ['read', 'write'],
-        expiresAt: Date.now() / 1000 + 3600
-      };
-    }
-    throw new InvalidTokenError('Invalid token');
-  },
-
-  async revokeToken(client, request) {
-    // Revoke the token
-    // request contains { token, token_type_hint? }
-  }
-};
-
-// Create OAuth provider
-const oauthProvider = new OAuthProvider({
-  provider,
-  issuerUrl: new URL('https://auth.example.com'),
-  scopesSupported: ['read', 'write'],
-  resourceName: 'My API'
-});
+// Ultra-minimal setup with auto-configuration
+const auth = OAuth
+  .issuer('https://auth.example.com')
+  .auto();
 
 // Handle requests
 async function handleRequest(request) {
-  const response = await oauthProvider.respond(request);
-  if (response) {
-    return response; // OAuth request handled
-  }
-  
-  // Handle other requests...
-  return new Response('Not Found', { status: 404 });
+  return await auth.handle(request) || new Response('Not Found', { status: 404 });
 }
+
+// More explicit setup with custom handlers
+const customAuth = OAuth
+  .issuer('https://auth.example.com')
+  .scopes('read', 'write')
+  .memory([{
+    client_id: 'test-client',
+    client_secret: 'test-secret',
+    redirect_uris: ['https://app.example.com/callback'],
+    client_id_issued_at: Math.floor(Date.now() / 1000)
+  }])
+  .handlers({
+    async authorize(request) {
+      // Generate authorization code and redirect
+      const redirectUrl = new URL(request.redirectUri);
+      redirectUrl.searchParams.set('code', 'auth_code_' + Date.now());
+      if (request.state) {
+        redirectUrl.searchParams.set('state', request.state);
+      }
+      return new Response(null, {
+        status: 302,
+        headers: { 'Location': redirectUrl.toString() }
+      });
+    },
+
+    async exchange(request) {
+      if (request.type === 'authorization_code') {
+        return {
+          access_token: 'access_token_' + Date.now(),
+          token_type: 'bearer',
+          expires_in: 3600,
+          refresh_token: 'refresh_token_' + Date.now()
+        };
+      } else if (request.type === 'refresh_token') {
+        return {
+          access_token: 'new_access_token_' + Date.now(),
+          token_type: 'bearer',
+          expires_in: 3600,
+          refresh_token: request.refreshToken
+        };
+      }
+      throw new Error('Unsupported grant type');
+    },
+
+    async verify(token) {
+      // Verify token and return auth info
+      if (token.startsWith('access_token_')) {
+        return {
+          token,
+          clientId: 'test-client',
+          scopes: ['read', 'write'],
+          expiresAt: Math.floor(Date.now() / 1000) + 3600
+        };
+      }
+      throw new Error('Invalid token');
+    },
+
+    async revoke(client, request) {
+      // Revoke the token
+      console.log(`Revoking token ${request.token} for client ${client.client_id}`);
+    }
+  })
+  .cors({ origin: 'https://app.example.com', credentials: true })
+  .bearer(['read'])
+  .build();
+
+// Or use SimpleProvider for quick development
+const simpleAuth = OAuth
+  .issuer('https://auth.example.com')
+  .clients(SimpleProvider.withClient(
+    'demo-client',
+    'demo-secret',
+    ['https://app.example.com/callback']
+  ).clientStore)
+  .handlers(SimpleProvider.withClient(
+    'demo-client',
+    'demo-secret',
+    ['https://app.example.com/callback']
+  ).handlers())
+  .cors(true)
+  .build();
 ```
+
+## Legacy API (Deprecated)
+
+For backward compatibility, the legacy OAuthProvider is still available:
+
+```javascript
+import { OAuthProvider } from '@tmcp/auth';
+
+// Legacy provider approach - more verbose but compatible with existing code
+const provider = {
+  clientsStore: {
+    async getClient(clientId) { /* implementation */ },
+    async registerClient(client) { /* implementation */ }
+  },
+  async authorize(client, params) { /* implementation */ },
+  async challengeForAuthorizationCode(client, code) { /* implementation */ },
+  async exchangeAuthorizationCode(client, code, verifier, redirectUri, resource) { /* implementation */ },
+  async exchangeRefreshToken(client, refreshToken, scopes, resource) { /* implementation */ },
+  async verifyAccessToken(token) { /* implementation */ },
+  async revokeToken(client, request) { /* implementation */ }
+};
+
+const legacyAuth = new OAuthProvider({
+  provider,
+  issuerUrl: new URL('https://auth.example.com'),
+  scopesSupported: ['read', 'write'],
+  bearerToken: { requiredScopes: ['read'] },
+  cors: { origin: 'https://app.example.com', credentials: true }
+});
+```
+
+**Note**: The legacy API is deprecated. Use the new `OAuth` class for better performance, cleaner code, and improved developer experience.
 
 ## Supported Endpoints
 
