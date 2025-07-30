@@ -1,5 +1,11 @@
 # @tmcp/auth
 
+## 0.3.0
+
+### Minor Changes
+
+- 03384c2: feat: pass request to handlers and allow generation for simple provider
+
 ## 0.2.1
 
 ### Patch Changes
