@@ -407,10 +407,6 @@ export class SimpleProvider {
 		// Clean up the code (one-time use)
 		await this.#code_callbacks.delete(code, http_request);
 
-		// Generate tokens
-		const access_token = `at_${Date.now()}_${this.#generate_random_string(16)}`;
-		const refresh_token = `rt_${Date.now()}_${this.#generate_random_string(16)}`;
-
 		const expires_at = Math.floor(Date.now() / 1000) + this.#token_expiry;
 
 		// Store token data
@@ -420,11 +416,12 @@ export class SimpleProvider {
 			expires_at: expires_at,
 		};
 
-		await this.#token_callbacks.store(
-			access_token,
-			token_data,
-			http_request,
-		);
+		// Generate tokens
+		const access_token =
+			(await this.#token_callbacks.generate?.(
+				token_data,
+				http_request,
+			)) ?? `at_${Date.now()}_${this.#generate_random_string(16)}`;
 
 		// Store refresh token data
 		const refresh_token_data = {
@@ -432,6 +429,18 @@ export class SimpleProvider {
 			scopes: request.scopes || code_data.scopes,
 			access_token: access_token,
 		};
+
+		const refresh_token =
+			(await this.#refresh_token_callbacks.generate?.(
+				refresh_token_data,
+				http_request,
+			)) ?? `rt_${Date.now()}_${this.#generate_random_string(16)}`;
+
+		await this.#token_callbacks.store(
+			access_token,
+			token_data,
+			http_request,
+		);
 
 		await this.#refresh_token_callbacks.store(
 			refresh_token,
@@ -477,11 +486,6 @@ export class SimpleProvider {
 			refresh_token_data.access_token,
 			http_request,
 		);
-
-		// Generate new access token
-		const new_access_token = `at_${Date.now()}_${this.#generate_random_string(16)}`;
-		const new_refresh_token = `rt_${Date.now()}_${this.#generate_random_string(16)}`;
-
 		const expires_at = Math.floor(Date.now() / 1000) + this.#token_expiry;
 
 		// Store new token data
@@ -491,6 +495,25 @@ export class SimpleProvider {
 			expires_at: expires_at,
 		};
 
+		// Generate new access token
+		const new_access_token =
+			(await this.#token_callbacks.generate?.(
+				token_data,
+				http_request,
+			)) ?? `at_${Date.now()}_${this.#generate_random_string(16)}`;
+
+		const new_refresh_token_data = {
+			client_id: client.client_id,
+			scopes: request.scopes || refresh_token_data.scopes,
+			access_token: new_access_token,
+		};
+
+		const new_refresh_token =
+			(await this.#refresh_token_callbacks.generate?.(
+				refresh_token_data,
+				http_request,
+			)) ?? `rt_${Date.now()}_${this.#generate_random_string(16)}`;
+
 		await this.#token_callbacks.store(
 			new_access_token,
 			token_data,
@@ -499,12 +522,6 @@ export class SimpleProvider {
 
 		// Update refresh token mapping
 		await this.#refresh_token_callbacks.delete(refresh_token, http_request);
-
-		const new_refresh_token_data = {
-			client_id: client.client_id,
-			scopes: request.scopes || refresh_token_data.scopes,
-			access_token: new_access_token,
-		};
 
 		await this.#refresh_token_callbacks.store(
 			new_refresh_token,
