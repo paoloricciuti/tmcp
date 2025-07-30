@@ -1,5 +1,11 @@
 # @tmcp/auth
 
+## 0.2.0
+
+### Minor Changes
+
+- d5636d1: breaking: better `SimpleProvider`
+
 ## 0.1.1
 
 ### Patch Changes
