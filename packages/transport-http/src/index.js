@@ -72,8 +72,7 @@ export class HttpTransport {
 			// use the current controller if the request has an id (it means it's a request and not a notification)
 			if (request.id != null) {
 				const controller = this.#controller_storage.getStore();
-				if (!controller)
-					throw new Error('Controller not found in storage');
+				if (!controller) return;
 
 				controller.enqueue('data: ' + JSON.stringify(request) + '\n\n');
 				return;
