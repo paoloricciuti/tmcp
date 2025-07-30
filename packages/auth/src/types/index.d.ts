@@ -476,33 +476,28 @@ declare module '@tmcp/auth' {
 		scopes: string[];
 	};
 	type TokenData = {
-		/**
-		 * - Client ID
-		 */
 		client_id: string;
-		/**
-		 * - Token scopes
-		 */
 		scopes: string[];
-		/**
-		 * - Expiration timestamp
-		 */
 		expires_at: number;
-	};
-	type RefreshTokenData = {
-		/**
-		 * - Client ID
-		 */
-		client_id: string;
-		/**
-		 * - Token scopes
-		 */
-		scopes: string[];
-		/**
-		 * - Associated access token
-		 */
+	} & ({
+		kind: "new";
+		code: string;
+	} | {
+		kind: "refresh";
 		access_token: string;
-	};
+	});
+	type TokenDataOut = Omit<TokenData, "kind" | "code" | "access_token">;
+	type RefreshTokenData = {
+		client_id: string;
+		scopes: string[];
+		access_token: string;
+	} & ({
+		kind: "new";
+		code: string;
+	} | {
+		kind: "refresh";
+	});
+	type RefreshTokenDataOut = Omit<RefreshTokenData, "kind" | "code">;
 	type ClientCallbacks = {
 		/**
 		 * - Get client by ID
@@ -535,7 +530,7 @@ declare module '@tmcp/auth' {
 		/**
 		 * - Generate the access token, optional if you want to generate it yourself
 		 */
-		generate?: ((token_data: TokenData, request: Request) => Promise<string> | string) | undefined;
+		generate?: ((token_data: TokenData, request: Request) => Promise<string | void> | string | void | void) | undefined;
 		/**
 		 * - Store access token data
 		 */
@@ -543,7 +538,7 @@ declare module '@tmcp/auth' {
 		/**
 		 * - Get access token data
 		 */
-		get: (token: string, request: Request) => Promise<TokenData | undefined> | TokenData | undefined;
+		get: (token: string, request: Request) => Promise<TokenDataOut | undefined> | TokenDataOut | undefined;
 		/**
 		 * - Delete access token
 		 */
@@ -553,7 +548,7 @@ declare module '@tmcp/auth' {
 		/**
 		 * - Generate the refresh token, optional if you want to generate it yourself
 		 */
-		generate?: ((refresh_token_data: RefreshTokenData, request: Request) => Promise<string> | string) | undefined;
+		generate?: ((refresh_token_data: RefreshTokenData, request: Request) => Promise<string | void> | string | void) | undefined;
 		/**
 		 * - Store refresh token data
 		 */
@@ -561,7 +556,7 @@ declare module '@tmcp/auth' {
 		/**
 		 * - Get refresh token data
 		 */
-		get: (token: string, request: Request) => Promise<RefreshTokenData | undefined> | RefreshTokenData | undefined;
+		get: (token: string, request: Request) => Promise<RefreshTokenDataOut | undefined> | RefreshTokenDataOut | undefined;
 		/**
 		 * - Delete refresh token
 		 */

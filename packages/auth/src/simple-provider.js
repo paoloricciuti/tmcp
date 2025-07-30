@@ -17,17 +17,19 @@ import { OAuth } from './oauth.js';
  */
 
 /**
- * @typedef {Object} TokenData
- * @property {string} client_id - Client ID
- * @property {string[]} scopes - Token scopes
- * @property {number} expires_at - Expiration timestamp
+ * @typedef {{ client_id: string, scopes: string[], expires_at: number } & ({ kind: "new", code: string } | { kind: "refresh", access_token: string })} TokenData
  */
 
 /**
- * @typedef {Object} RefreshTokenData
- * @property {string} client_id - Client ID
- * @property {string[]} scopes - Token scopes
- * @property {string} access_token - Associated access token
+ * @typedef {Omit<TokenData, "kind" | "code" | "access_token">} TokenDataOut
+ */
+
+/**
+ * @typedef {{ client_id: string, scopes: string[], access_token: string } & ({ kind: "new", code: string } | { kind: "refresh" })} RefreshTokenData
+ */
+
+/**
+ * @typedef {Omit<RefreshTokenData, "kind" | "code">} RefreshTokenDataOut
  */
 
 /**
@@ -46,17 +48,17 @@ import { OAuth } from './oauth.js';
 
 /**
  * @typedef {Object} TokenCallbacks
- * @property {(token_data: TokenData, request: Request) => Promise<string> | string} [generate] - Generate the access token, optional if you want to generate it yourself
+ * @property {(token_data: TokenData, request: Request) => Promise<string | void> | string | void | void} [generate] - Generate the access token, optional if you want to generate it yourself
  * @property {(token: string, token_data: TokenData, request: Request) => Promise<void> | void} store - Store access token data
- * @property {(token: string, request: Request) => Promise<TokenData | undefined> | TokenData | undefined} get - Get access token data
+ * @property {(token: string, request: Request) => Promise<TokenDataOut | undefined> | TokenDataOut | undefined} get - Get access token data
  * @property {(token: string, request: Request) => Promise<void> | void} delete - Delete access token
  */
 
 /**
  * @typedef {Object} RefreshTokenCallbacks
- * @property {(refresh_token_data: RefreshTokenData, request: Request) => Promise<string> | string} [generate] - Generate the refresh token, optional if you want to generate it yourself
+ * @property {(refresh_token_data: RefreshTokenData, request: Request) => Promise<string | void> | string | void} [generate] - Generate the refresh token, optional if you want to generate it yourself
  * @property {(token: string, refresh_token_data: RefreshTokenData, request: Request) => Promise<void> | void} store - Store refresh token data
- * @property {(token: string, request: Request) => Promise<RefreshTokenData | undefined> | RefreshTokenData | undefined} get - Get refresh token data
+ * @property {(token: string, request: Request) => Promise<RefreshTokenDataOut | undefined> | RefreshTokenDataOut | undefined} get - Get refresh token data
  * @property {(token: string, request: Request) => Promise<void> | void} delete - Delete refresh token
  */
 
@@ -404,16 +406,18 @@ export class SimpleProvider {
 
 		// PKCE verification it's done in the `OAuth` class
 
-		// Clean up the code (one-time use)
-		await this.#code_callbacks.delete(code, http_request);
-
 		const expires_at = Math.floor(Date.now() / 1000) + this.#token_expiry;
 
 		// Store token data
+		/**
+		 * @type {TokenData}
+		 */
 		const token_data = {
 			client_id: client.client_id,
 			scopes: request.scopes || code_data.scopes,
 			expires_at: expires_at,
+			kind: 'new',
+			code: code,
 		};
 
 		// Generate tokens
@@ -424,10 +428,15 @@ export class SimpleProvider {
 			)) ?? `at_${Date.now()}_${this.#generate_random_string(16)}`;
 
 		// Store refresh token data
+		/**
+		 * @type {RefreshTokenData}
+		 */
 		const refresh_token_data = {
 			client_id: client.client_id,
 			scopes: request.scopes || code_data.scopes,
 			access_token: access_token,
+			kind: 'new',
+			code,
 		};
 
 		const refresh_token =
@@ -435,6 +444,9 @@ export class SimpleProvider {
 				refresh_token_data,
 				http_request,
 			)) ?? `rt_${Date.now()}_${this.#generate_random_string(16)}`;
+
+		// Clean up the code (one-time use)
+		await this.#code_callbacks.delete(code, http_request);
 
 		await this.#token_callbacks.store(
 			access_token,
@@ -481,18 +493,18 @@ export class SimpleProvider {
 			throw new Error('Invalid refresh token');
 		}
 
-		// Revoke old access token
-		await this.#token_callbacks.delete(
-			refresh_token_data.access_token,
-			http_request,
-		);
 		const expires_at = Math.floor(Date.now() / 1000) + this.#token_expiry;
 
 		// Store new token data
+		/**
+		 * @type {TokenData}
+		 */
 		const token_data = {
 			client_id: client.client_id,
 			scopes: request.scopes || refresh_token_data.scopes,
 			expires_at: expires_at,
+			kind: 'refresh',
+			access_token: refresh_token_data.access_token,
 		};
 
 		// Generate new access token
@@ -502,17 +514,27 @@ export class SimpleProvider {
 				http_request,
 			)) ?? `at_${Date.now()}_${this.#generate_random_string(16)}`;
 
+		/**
+		 * @type {RefreshTokenData}
+		 */
 		const new_refresh_token_data = {
 			client_id: client.client_id,
 			scopes: request.scopes || refresh_token_data.scopes,
 			access_token: new_access_token,
+			kind: 'refresh',
 		};
 
 		const new_refresh_token =
 			(await this.#refresh_token_callbacks.generate?.(
-				refresh_token_data,
+				new_refresh_token_data,
 				http_request,
 			)) ?? `rt_${Date.now()}_${this.#generate_random_string(16)}`;
+
+		// Revoke old access token
+		await this.#token_callbacks.delete(
+			refresh_token_data.access_token,
+			http_request,
+		);
 
 		await this.#token_callbacks.store(
 			new_access_token,
