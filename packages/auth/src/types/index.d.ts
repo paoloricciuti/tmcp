@@ -512,7 +512,7 @@ declare module '@tmcp/auth' {
 		/**
 		 * - the page the user should be redirected to in case it needs to login before authorizing, optional if you want to never redirect
 		 */
-		redirect?: ((request: Request) => Promise<string> | string | Promise<null> | null) | undefined;
+		redirect?: ((request: Request) => Promise<string | null> | string | null) | undefined;
 		/**
 		 * - Store authorization code data
 		 */

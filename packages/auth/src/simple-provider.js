@@ -40,7 +40,7 @@ import { OAuth } from './oauth.js';
 
 /**
  * @typedef {Object} CodeCallbacks
- * @property {(request: Request) => Promise<string> | string | Promise<null> | null} [redirect] - the page the user should be redirected to in case it needs to login before authorizing, optional if you want to never redirect
+ * @property {(request: Request) => Promise<string | null> | string | null} [redirect] - the page the user should be redirected to in case it needs to login before authorizing, optional if you want to never redirect
  * @property {(code: string, code_data: CodeData, request: Request) => Promise<void> | void} store - Store authorization code data
  * @property {(code: string, request: Request) => Promise<CodeData | undefined> | CodeData | undefined} get - Get authorization code data
  * @property {(code: string, request: Request) => Promise<void> | void} delete - Delete authorization code
@@ -301,14 +301,7 @@ export class SimpleProvider {
 
 		if (should_redirect != null) {
 			const url = new URL(should_redirect);
-			url.searchParams.set('client_id', client.client_id);
-			url.searchParams.set('redirect_uri', redirect_uri);
-			if (state) {
-				url.searchParams.set('state', state);
-			}
-			if (scopes.length > 0) {
-				url.searchParams.set('scope', scopes.join(' '));
-			}
+			url.searchParams.set('return_to', http_request.url);
 			return new Response(null, {
 				status: 302,
 				headers: {
