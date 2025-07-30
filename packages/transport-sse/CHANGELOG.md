@@ -1,5 +1,11 @@
 # @tmcp/transport-sse
 
+## 0.2.2
+
+### Patch Changes
+
+- 62f09d3: fix: auth as dev dependency
+
 ## 0.2.1
 
 ## 0.2.0
