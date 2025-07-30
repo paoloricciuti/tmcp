@@ -1,5 +1,13 @@
 # @tmcp/auth
 
+## 0.3.1
+
+### Patch Changes
+
+- 7d01476: fix: actually use the `generate` functions
+- 3c1b0d0: fix: redirect with `return_to` if `should_redirect`
+- d1e53b3: fix: pass information about kind of code to access_token callbacks
+
 ## 0.3.0
 
 ### Minor Changes
