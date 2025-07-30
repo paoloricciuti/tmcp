@@ -1,5 +1,11 @@
 # @tmcp/auth
 
+## 0.2.1
+
+### Patch Changes
+
+- d5ec813: fix: read authorization header in case client_id is missing from params
+
 ## 0.2.0
 
 ### Minor Changes
