@@ -64,10 +64,10 @@ import { verifyChallenge } from 'pkce-challenge';
 
 /**
  * @typedef {Object} SimplifiedHandlers
- * @property {(request: AuthorizeRequest) => Promise<Response>} authorize - Handle authorization requests
- * @property {(request: ExchangeRequest) => Promise<OAuthTokens>} exchange - Handle token exchange
- * @property {(token: string) => Promise<AuthInfo>} verify - Verify access tokens
- * @property {(client: OAuthClientInformationFull, data: {token: string, tokenType?: string}) => Promise<void>} [revoke] - Revoke tokens
+ * @property {(authorize_request: AuthorizeRequest, http_request: Request) => Promise<Response>} authorize - Handle authorization requests
+ * @property {(request: ExchangeRequest, http_request: Request) => Promise<OAuthTokens>} exchange - Handle token exchange
+ * @property {(token: string, http_request: Request) => Promise<AuthInfo>} verify - Verify access tokens
+ * @property {(client: OAuthClientInformationFull, data: {token: string, tokenType?: string}, http_request: Request) => Promise<void>} [revoke] - Revoke tokens
  */
 
 /**
@@ -309,7 +309,7 @@ export class OAuth {
 			return null;
 		}
 
-		return this.#handlers.verify(token);
+		return this.#handlers.verify(token, request);
 	}
 
 	/**
@@ -568,16 +568,19 @@ export class OAuth {
 			: [];
 
 		// Call handler
-		return this.#handlers.authorize({
-			client,
-			redirectUri: redirect_uri,
-			codeChallenge: request_params.code_challenge,
-			state: request_params.state,
-			scopes,
-			resource: request_params.resource
-				? new URL(request_params.resource)
-				: undefined,
-		});
+		return this.#handlers.authorize(
+			{
+				client,
+				redirectUri: redirect_uri,
+				codeChallenge: request_params.code_challenge,
+				state: request_params.state,
+				scopes,
+				resource: request_params.resource
+					? new URL(request_params.resource)
+					: undefined,
+			},
+			request,
+		);
 	}
 
 	/**
@@ -669,24 +672,34 @@ export class OAuth {
 					}
 				}
 			}
-			tokens = await this.#handlers.exchange({
-				type: 'authorization_code',
-				client,
-				code: grant.code,
-				verifier: grant.code_verifier,
-				redirectUri: grant.redirect_uri,
-				resource: grant.resource ? new URL(grant.resource) : undefined,
-			});
+			tokens = await this.#handlers.exchange(
+				{
+					type: 'authorization_code',
+					client,
+					code: grant.code,
+					verifier: grant.code_verifier,
+					redirectUri: grant.redirect_uri,
+					resource: grant.resource
+						? new URL(grant.resource)
+						: undefined,
+				},
+				request,
+			);
 		} else if (token_request.grant_type === 'refresh_token') {
 			const grant = v.parse(RefreshTokenGrantSchema, params);
 			const scopes = grant.scope ? grant.scope.split(' ') : undefined;
-			tokens = await this.#handlers.exchange({
-				type: 'refresh_token',
-				client,
-				refreshToken: grant.refresh_token,
-				scopes,
-				resource: grant.resource ? new URL(grant.resource) : undefined,
-			});
+			tokens = await this.#handlers.exchange(
+				{
+					type: 'refresh_token',
+					client,
+					refreshToken: grant.refresh_token,
+					scopes,
+					resource: grant.resource
+						? new URL(grant.resource)
+						: undefined,
+				},
+				request,
+			);
 		} else {
 			throw new InvalidGrantError(
 				`Unsupported grant type: ${token_request.grant_type}`,
@@ -772,10 +785,14 @@ export class OAuth {
 			params,
 		);
 
-		await this.#handlers.revoke?.(client, {
-			token: revocation_request.token,
-			tokenType: revocation_request.token_type_hint,
-		});
+		await this.#handlers.revoke?.(
+			client,
+			{
+				token: revocation_request.token,
+				tokenType: revocation_request.token_type_hint,
+			},
+			request,
+		);
 
 		return new Response(null, { status: 200 });
 	}
@@ -801,7 +818,7 @@ export class OAuth {
 		}
 
 		try {
-			const auth_info = await this.#handlers.verify(token);
+			const auth_info = await this.#handlers.verify(token, request);
 
 			// Check required scopes
 			const bearer_config = this.#features.bearer;

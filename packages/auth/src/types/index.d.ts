@@ -171,22 +171,22 @@ declare module '@tmcp/auth' {
 		/**
 		 * - Handle authorization requests
 		 */
-		authorize: (request: AuthorizeRequest) => Promise<Response>;
+		authorize: (authorize_request: AuthorizeRequest, http_request: Request) => Promise<Response>;
 		/**
 		 * - Handle token exchange
 		 */
-		exchange: (request: ExchangeRequest) => Promise<OAuthTokens>;
+		exchange: (request: ExchangeRequest, http_request: Request) => Promise<OAuthTokens>;
 		/**
 		 * - Verify access tokens
 		 */
-		verify: (token: string) => Promise<AuthInfo>;
+		verify: (token: string, http_request: Request) => Promise<AuthInfo>;
 		/**
 		 * - Revoke tokens
 		 */
 		revoke?: ((client: OAuthClientInformationFull, data: {
 			token: string;
 			tokenType?: string;
-		}) => Promise<void>) | undefined;
+		}, http_request: Request) => Promise<void>) | undefined;
 	};
 	type Methods = "GET" | "POST";
 	type BearerConfig = {
@@ -511,53 +511,61 @@ declare module '@tmcp/auth' {
 		/**
 		 * - Register new client
 		 */
-		register?: ((client_info: Omit<OAuthClientInformationFull, "client_id">) => Promise<OAuthClientInformationFull> | OAuthClientInformationFull) | undefined;
+		register?: ((client_info: Omit<OAuthClientInformationFull, "client_id" | "client_id_issued_at">) => Promise<OAuthClientInformationFull> | OAuthClientInformationFull) | undefined;
 	};
 	type CodeCallbacks = {
 		/**
 		 * - the page the user should be redirected to in case it needs to login before authorizing, optional if you want to never redirect
 		 */
-		redirect?: (() => Promise<string> | string | Promise<null> | null) | undefined;
+		redirect?: ((request: Request) => Promise<string> | string | Promise<null> | null) | undefined;
 		/**
 		 * - Store authorization code data
 		 */
-		store: (code: string, code_data: CodeData) => Promise<void> | void;
+		store: (code: string, code_data: CodeData, request: Request) => Promise<void> | void;
 		/**
 		 * - Get authorization code data
 		 */
-		get: (code: string) => Promise<CodeData | undefined> | CodeData | undefined;
+		get: (code: string, request: Request) => Promise<CodeData | undefined> | CodeData | undefined;
 		/**
 		 * - Delete authorization code
 		 */
-		delete: (code: string) => Promise<void> | void;
+		delete: (code: string, request: Request) => Promise<void> | void;
 	};
 	type TokenCallbacks = {
 		/**
+		 * - Generate the access token, optional if you want to generate it yourself
+		 */
+		generate?: ((token_data: TokenData, request: Request) => Promise<string> | string) | undefined;
+		/**
 		 * - Store access token data
 		 */
-		store: (token: string, token_data: TokenData) => Promise<void> | void;
+		store: (token: string, token_data: TokenData, request: Request) => Promise<void> | void;
 		/**
 		 * - Get access token data
 		 */
-		get: (token: string) => Promise<TokenData | undefined> | TokenData | undefined;
+		get: (token: string, request: Request) => Promise<TokenData | undefined> | TokenData | undefined;
 		/**
 		 * - Delete access token
 		 */
-		delete: (token: string) => Promise<void> | void;
+		delete: (token: string, request: Request) => Promise<void> | void;
 	};
 	type RefreshTokenCallbacks = {
 		/**
+		 * - Generate the refresh token, optional if you want to generate it yourself
+		 */
+		generate?: ((refresh_token_data: RefreshTokenData, request: Request) => Promise<string> | string) | undefined;
+		/**
 		 * - Store refresh token data
 		 */
-		store: (token: string, refresh_token_data: RefreshTokenData) => Promise<void> | void;
+		store: (token: string, refresh_token_data: RefreshTokenData, request: Request) => Promise<void> | void;
 		/**
 		 * - Get refresh token data
 		 */
-		get: (token: string) => Promise<RefreshTokenData | undefined> | RefreshTokenData | undefined;
+		get: (token: string, request: Request) => Promise<RefreshTokenData | undefined> | RefreshTokenData | undefined;
 		/**
 		 * - Delete refresh token
 		 */
-		delete: (token: string) => Promise<void> | void;
+		delete: (token: string, request: Request) => Promise<void> | void;
 	};
 	type SimpleProviderOptions = {
 		/**

@@ -33,29 +33,31 @@ import { OAuth } from './oauth.js';
 /**
  * @typedef {Object} ClientCallbacks
  * @property {(client_id: string) => Promise<OAuthClientInformationFull | undefined> | OAuthClientInformationFull | undefined} get - Get client by ID
- * @property {(client_info: Omit<OAuthClientInformationFull, "client_id">) => Promise<OAuthClientInformationFull> | OAuthClientInformationFull} [register] - Register new client
+ * @property {(client_info: Omit<OAuthClientInformationFull, "client_id" | "client_id_issued_at">) => Promise<OAuthClientInformationFull> | OAuthClientInformationFull} [register] - Register new client
  */
 
 /**
  * @typedef {Object} CodeCallbacks
- * @property {() => Promise<string> | string | Promise<null> | null} [redirect] - the page the user should be redirected to in case it needs to login before authorizing, optional if you want to never redirect
- * @property {(code: string, code_data: CodeData) => Promise<void> | void} store - Store authorization code data
- * @property {(code: string) => Promise<CodeData | undefined> | CodeData | undefined} get - Get authorization code data
- * @property {(code: string) => Promise<void> | void} delete - Delete authorization code
+ * @property {(request: Request) => Promise<string> | string | Promise<null> | null} [redirect] - the page the user should be redirected to in case it needs to login before authorizing, optional if you want to never redirect
+ * @property {(code: string, code_data: CodeData, request: Request) => Promise<void> | void} store - Store authorization code data
+ * @property {(code: string, request: Request) => Promise<CodeData | undefined> | CodeData | undefined} get - Get authorization code data
+ * @property {(code: string, request: Request) => Promise<void> | void} delete - Delete authorization code
  */
 
 /**
  * @typedef {Object} TokenCallbacks
- * @property {(token: string, token_data: TokenData) => Promise<void> | void} store - Store access token data
- * @property {(token: string) => Promise<TokenData | undefined> | TokenData | undefined} get - Get access token data
- * @property {(token: string) => Promise<void> | void} delete - Delete access token
+ * @property {(token_data: TokenData, request: Request) => Promise<string> | string} [generate] - Generate the access token, optional if you want to generate it yourself
+ * @property {(token: string, token_data: TokenData, request: Request) => Promise<void> | void} store - Store access token data
+ * @property {(token: string, request: Request) => Promise<TokenData | undefined> | TokenData | undefined} get - Get access token data
+ * @property {(token: string, request: Request) => Promise<void> | void} delete - Delete access token
  */
 
 /**
  * @typedef {Object} RefreshTokenCallbacks
- * @property {(token: string, refresh_token_data: RefreshTokenData) => Promise<void> | void} store - Store refresh token data
- * @property {(token: string) => Promise<RefreshTokenData | undefined> | RefreshTokenData | undefined} get - Get refresh token data
- * @property {(token: string) => Promise<void> | void} delete - Delete refresh token
+ * @property {(refresh_token_data: RefreshTokenData, request: Request) => Promise<string> | string} [generate] - Generate the refresh token, optional if you want to generate it yourself
+ * @property {(token: string, refresh_token_data: RefreshTokenData, request: Request) => Promise<void> | void} store - Store refresh token data
+ * @property {(token: string, request: Request) => Promise<RefreshTokenData | undefined> | RefreshTokenData | undefined} get - Get refresh token data
+ * @property {(token: string, request: Request) => Promise<void> | void} delete - Delete refresh token
  */
 
 /**
@@ -275,9 +277,10 @@ export class SimpleProvider {
 	/**
 	 * Handle authorization request
 	 * @param {AuthorizeRequest} request - Authorization request
+	 * @param {Request} http_request - HTTP request object (available for authentication checks)
 	 * @returns {Promise<Response>}
 	 */
-	async #authorize(request) {
+	async #authorize(request, http_request) {
 		const {
 			client,
 			redirectUri: redirect_uri,
@@ -291,7 +294,8 @@ export class SimpleProvider {
 			throw new AccessDeniedError('Invalid redirect URI');
 		}
 
-		const should_redirect = await this.#code_callbacks.redirect?.();
+		const should_redirect =
+			await this.#code_callbacks.redirect?.(http_request);
 
 		if (should_redirect != null) {
 			const url = new URL(should_redirect);
@@ -324,7 +328,7 @@ export class SimpleProvider {
 			scopes: scopes,
 		};
 
-		await this.#code_callbacks.store(code, code_data);
+		await this.#code_callbacks.store(code, code_data, http_request);
 
 		// TODO: figure out how to let the user navigate to the login OR the redirect URI
 
@@ -346,13 +350,14 @@ export class SimpleProvider {
 	/**
 	 * Handle token exchange
 	 * @param {ExchangeRequest} request - Exchange request
+	 * @param {Request} http_request - HTTP request object (available for authentication checks)
 	 * @returns {Promise<OAuthTokens>}
 	 */
-	async #exchange(request) {
+	async #exchange(request, http_request) {
 		if (request.type === 'authorization_code') {
-			return this.#exchange_code(request);
+			return this.#exchange_code(request, http_request);
 		} else if (request.type === 'refresh_token') {
-			return this.#exchange_refresh_token(request);
+			return this.#exchange_refresh_token(request, http_request);
 		}
 
 		throw new Error(
@@ -363,9 +368,10 @@ export class SimpleProvider {
 	/**
 	 * Exchange authorization code for tokens
 	 * @param {ExchangeAuthorizationCodeRequest} request - Exchange request
+	 * @param {Request} http_request - HTTP request object (available for authentication checks)
 	 * @returns {Promise<OAuthTokens>}
 	 */
-	async #exchange_code(request) {
+	async #exchange_code(request, http_request) {
 		const { client, code, verifier } = request;
 
 		if (!code || !verifier) {
@@ -373,14 +379,14 @@ export class SimpleProvider {
 		}
 
 		// Verify code exists and get stored data
-		const code_data = await this.#code_callbacks.get(code);
+		const code_data = await this.#code_callbacks.get(code, http_request);
 		if (!code_data) {
 			throw new Error('Invalid or expired authorization code');
 		}
 
 		// Check if code is expired
 		if (code_data.expires_at < Date.now()) {
-			await this.#code_callbacks.delete(code);
+			await this.#code_callbacks.delete(code, http_request);
 			throw new Error('Authorization code expired');
 		}
 
@@ -399,7 +405,7 @@ export class SimpleProvider {
 		// PKCE verification it's done in the `OAuth` class
 
 		// Clean up the code (one-time use)
-		await this.#code_callbacks.delete(code);
+		await this.#code_callbacks.delete(code, http_request);
 
 		// Generate tokens
 		const access_token = `at_${Date.now()}_${this.#generate_random_string(16)}`;
@@ -414,7 +420,11 @@ export class SimpleProvider {
 			expires_at: expires_at,
 		};
 
-		await this.#token_callbacks.store(access_token, token_data);
+		await this.#token_callbacks.store(
+			access_token,
+			token_data,
+			http_request,
+		);
 
 		// Store refresh token data
 		const refresh_token_data = {
@@ -426,6 +436,7 @@ export class SimpleProvider {
 		await this.#refresh_token_callbacks.store(
 			refresh_token,
 			refresh_token_data,
+			http_request,
 		);
 
 		return {
@@ -440,17 +451,20 @@ export class SimpleProvider {
 	/**
 	 * Exchange refresh token for new access token
 	 * @param {ExchangeRefreshTokenRequest} request - Exchange request
+	 * @param {Request} http_request - HTTP request object (available for authentication checks)
 	 * @returns {Promise<OAuthTokens>}
 	 */
-	async #exchange_refresh_token(request) {
+	async #exchange_refresh_token(request, http_request) {
 		const { client, refreshToken: refresh_token } = request;
 
 		if (!refresh_token) {
 			throw new Error('Missing refresh token');
 		}
 
-		const refresh_token_data =
-			await this.#refresh_token_callbacks.get(refresh_token);
+		const refresh_token_data = await this.#refresh_token_callbacks.get(
+			refresh_token,
+			http_request,
+		);
 		if (
 			!refresh_token_data ||
 			refresh_token_data.client_id !== client.client_id
@@ -459,7 +473,10 @@ export class SimpleProvider {
 		}
 
 		// Revoke old access token
-		await this.#token_callbacks.delete(refresh_token_data.access_token);
+		await this.#token_callbacks.delete(
+			refresh_token_data.access_token,
+			http_request,
+		);
 
 		// Generate new access token
 		const new_access_token = `at_${Date.now()}_${this.#generate_random_string(16)}`;
@@ -474,10 +491,14 @@ export class SimpleProvider {
 			expires_at: expires_at,
 		};
 
-		await this.#token_callbacks.store(new_access_token, token_data);
+		await this.#token_callbacks.store(
+			new_access_token,
+			token_data,
+			http_request,
+		);
 
 		// Update refresh token mapping
-		await this.#refresh_token_callbacks.delete(refresh_token);
+		await this.#refresh_token_callbacks.delete(refresh_token, http_request);
 
 		const new_refresh_token_data = {
 			client_id: client.client_id,
@@ -488,6 +509,7 @@ export class SimpleProvider {
 		await this.#refresh_token_callbacks.store(
 			new_refresh_token,
 			new_refresh_token_data,
+			http_request,
 		);
 
 		return {
@@ -502,10 +524,11 @@ export class SimpleProvider {
 	/**
 	 * Verify access token
 	 * @param {string} token - Access token to verify
+	 * @param {Request} http_request - HTTP request object (available for authentication checks)
 	 * @returns {Promise<AuthInfo>}
 	 */
-	async #verify(token) {
-		const token_data = await this.#token_callbacks.get(token);
+	async #verify(token, http_request) {
+		const token_data = await this.#token_callbacks.get(token, http_request);
 		if (!token_data) {
 			throw new InvalidTokenError('Token not found');
 		}
@@ -515,7 +538,7 @@ export class SimpleProvider {
 			token_data.expires_at &&
 			token_data.expires_at < Date.now() / 1000
 		) {
-			await this.#token_callbacks.delete(token);
+			await this.#token_callbacks.delete(token, http_request);
 			throw new InvalidTokenError('Token has expired');
 		}
 
@@ -532,28 +555,34 @@ export class SimpleProvider {
 	 * Revoke a token
 	 * @param {OAuthClientInformationFull} client - Client information
 	 * @param {{token: string, tokenType?: string}} request - Revocation request
+	 * @param {Request} http_request - HTTP request object (available for authentication checks)
 	 * @returns {Promise<void>}
 	 */
-	async #revoke(client, request) {
+	async #revoke(client, request, http_request) {
 		const { token } = request;
 
 		// Try to revoke as access token
-		const token_data = await this.#token_callbacks.get(token);
+		const token_data = await this.#token_callbacks.get(token, http_request);
 		if (token_data && token_data.client_id === client.client_id) {
-			await this.#token_callbacks.delete(token);
+			await this.#token_callbacks.delete(token, http_request);
 			return;
 		}
 
 		// Try to revoke as refresh token
-		const refresh_token_data =
-			await this.#refresh_token_callbacks.get(token);
+		const refresh_token_data = await this.#refresh_token_callbacks.get(
+			token,
+			http_request,
+		);
 		if (
 			refresh_token_data &&
 			refresh_token_data.client_id === client.client_id
 		) {
 			// Also revoke associated access token
-			await this.#token_callbacks.delete(refresh_token_data.access_token);
-			await this.#refresh_token_callbacks.delete(token);
+			await this.#token_callbacks.delete(
+				refresh_token_data.access_token,
+				http_request,
+			);
+			await this.#refresh_token_callbacks.delete(token, http_request);
 			return;
 		}
 
