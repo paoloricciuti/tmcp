@@ -288,6 +288,9 @@ importers:
 
   packages/transport-sse:
     devDependencies:
+      '@tmcp/auth':
+        specifier: workspace:^
+        version: link:../auth
       dts-buddy:
         specifier: ^0.6.2
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
@@ -297,10 +300,6 @@ importers:
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
-    optionalDependencies:
-      '@tmcp/auth':
-        specifier: workspace:^
-        version: link:../auth
 
   packages/transport-stdio:
     devDependencies:
