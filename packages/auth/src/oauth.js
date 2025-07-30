@@ -597,6 +597,22 @@ export class OAuth {
 		const form_data = await request.formData();
 		const params = Object.fromEntries(form_data);
 
+		if (!params.client_id) {
+			// if no client_id is provided, check for basic auth
+			const authorization_header = request.headers.get('authorization');
+			if (authorization_header) {
+				const [type, credentials] = authorization_header.split(' ', 2);
+				if (type.toLowerCase() === 'basic' && credentials) {
+					const decoded = atob(credentials);
+					const [client_id, client_secret] = decoded.split(':', 2);
+					params.client_id = client_id;
+					if (client_secret) {
+						params.client_secret = client_secret;
+					}
+				}
+			}
+		}
+
 		// Validate basic token request
 		const token_request = v.parse(TokenRequestSchema, params);
 
