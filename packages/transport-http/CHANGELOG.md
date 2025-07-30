@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.5.1
+
+### Patch Changes
+
+- 297b783: fix: silently fail in case a controller is missing
+
 ## 0.5.0
 
 ### Minor Changes
