@@ -171,19 +171,19 @@ declare module '@tmcp/auth' {
 		/**
 		 * - Handle authorization requests
 		 */
-		authorize: (arg0: AuthorizeRequest) => Promise<Response>;
+		authorize: (request: AuthorizeRequest) => Promise<Response>;
 		/**
 		 * - Handle token exchange
 		 */
-		exchange: (arg0: ExchangeRequest) => Promise<OAuthTokens>;
+		exchange: (request: ExchangeRequest) => Promise<OAuthTokens>;
 		/**
 		 * - Verify access tokens
 		 */
-		verify: (arg0: string) => Promise<AuthInfo>;
+		verify: (token: string) => Promise<AuthInfo>;
 		/**
 		 * - Revoke tokens
 		 */
-		revoke?: ((arg0: OAuthClientInformationFull, arg1: {
+		revoke?: ((client: OAuthClientInformationFull, data: {
 			token: string;
 			tokenType?: string;
 		}) => Promise<void>) | undefined;
@@ -362,59 +362,224 @@ declare module '@tmcp/auth' {
 	};
 	/**
 	 * Simple OAuth provider implementation for development and testing
-	 * Provides an easy way to create a working OAuth server with minimal setup
+	 * Provides a purely callback-based OAuth server with no default storage - all callbacks must be explicitly provided
+	 *
+	 * @example
+	 * // Create with Map-based storage callbacks
+	 * const clientsMap = new Map();
+	 * const codesMap = new Map();
+	 * const tokensMap = new Map();
+	 * const refreshTokensMap = new Map();
+	 *
+	 * const provider = new SimpleProvider({
+	 *   clients: {
+	 *     get: (client_id) => clientsMap.get(client_id),
+	 *     register: (client) => { clientsMap.set(client.client_id, client); return client; }
+	 *   },
+	 *   codes: {
+	 *     store: (code, data) => { codesMap.set(code, data); },
+	 *     get: (code) => codesMap.get(code),
+	 *     delete: (code) => { codesMap.delete(code); }
+	 *   },
+	 *   tokens: {
+	 *     store: (token, data) => { tokensMap.set(token, data); },
+	 *     get: (token) => tokensMap.get(token),
+	 *     delete: (token) => { tokensMap.delete(token); }
+	 *   },
+	 *   refresh_tokens: {
+	 *     store: (token, data) => { refreshTokensMap.set(token, data); },
+	 *     get: (token) => refreshTokensMap.get(token),
+	 *     delete: (token) => { refreshTokensMap.delete(token); }
+	 *   }
+	 * });
+	 *
+	 * // Build complete OAuth instance
+	 * const auth = provider.build('https://auth.example.com', {
+	 *   cors: true,
+	 *   bearer: {
+	 * 		POST: ["/mcp"]
+	 * 	 },
+	 *   scopes: ['read', 'write', 'admin']
+	 * });
+	 *
+	 * @example
+	 * // Use with manual OAuth fluent API
+	 * const auth = OAuth.issuer('https://auth.example.com')
+	 *   .clients(provider.clientStore)
+	 *   .handlers(provider.handlers())
+	 *   .cors(true)
+	 *   .build();
 	 */
 	export class SimpleProvider {
 		/**
-		 * Create a simple provider with pre-configured client
+		 * Create a simple provider with pre-configured client - requires all storage callbacks to be provided
 		 * @param client_id - Client ID
 		 * @param client_secret - Client secret
 		 * @param redirect_uris - Redirect URIs
-		 * @param options - Additional options
+		 * @param options - Required storage callbacks and additional options
 		 * */
-		static withClient(client_id: string, client_secret: string, redirect_uris: string[], options?: SimpleProviderOptions): SimpleProvider;
+		static withClient(client_id: string, client_secret: string, redirect_uris: string[], options: SimpleProviderOptions): SimpleProvider;
 		/**
-		 * @param options - Provider options
+		 * @param options - Provider options with required storage callbacks
 		 */
-		constructor(options?: SimpleProviderOptions & {
-			clients?: OAuthClientInformationFull[];
-		});
-		/**
-		 * Add a client to the store
-		 * @param client - Client to add
-		 */
-		add_client(client: OAuthClientInformationFull): void;
+		constructor(options: SimpleProviderOptions);
 		/**
 		 * Get the handlers for use with OAuth builder
 		 * */
 		handlers(): SimplifiedHandlers;
 		/**
-		 * Get the client store
+		 * Get a client store compatible with OAuth builder
 		 * */
-		get clientStore(): MemoryClientStore;
+		get clientStore(): OAuthRegisteredClientsStore;
+		/**
+		 * Build a complete OAuth instance with this provider's configuration
+		 * @param issuer_url - The OAuth issuer URL for this server
+		 * @param {Object} options - Optional configuration
+		 * */
+		build(issuer_url: string, options?: {
+			cors?: boolean | CorsConfig | undefined;
+			bearer?: boolean | BearerConfig | undefined;
+			scopes?: string[] | undefined;
+			registration?: boolean | undefined;
+			rateLimits?: Record<string, {
+				windowMs: number;
+				max: number;
+			}> | undefined;
+			pkce?: ((client: OAuthClientInformationFull, code: string) => Promise<string> | undefined) | undefined;
+		}): OAuth<"built">;
 		#private;
 	}
+	type CodeData = {
+		/**
+		 * - Client ID
+		 */
+		client_id: string;
+		/**
+		 * - Redirect URI
+		 */
+		redirect_uri: string;
+		/**
+		 * - PKCE code challenge
+		 */
+		code_challenge?: string | undefined;
+		/**
+		 * - PKCE code challenge method
+		 */
+		code_challenge_method?: string | undefined;
+		/**
+		 * - Expiration timestamp
+		 */
+		expires_at: number;
+		/**
+		 * - Requested scopes
+		 */
+		scopes: string[];
+	};
+	type TokenData = {
+		/**
+		 * - Client ID
+		 */
+		client_id: string;
+		/**
+		 * - Token scopes
+		 */
+		scopes: string[];
+		/**
+		 * - Expiration timestamp
+		 */
+		expires_at: number;
+	};
+	type RefreshTokenData = {
+		/**
+		 * - Client ID
+		 */
+		client_id: string;
+		/**
+		 * - Token scopes
+		 */
+		scopes: string[];
+		/**
+		 * - Associated access token
+		 */
+		access_token: string;
+	};
+	type ClientCallbacks = {
+		/**
+		 * - Get client by ID
+		 */
+		get: (client_id: string) => Promise<OAuthClientInformationFull | undefined> | OAuthClientInformationFull | undefined;
+		/**
+		 * - Register new client
+		 */
+		register?: ((client_info: Omit<OAuthClientInformationFull, "client_id">) => Promise<OAuthClientInformationFull> | OAuthClientInformationFull) | undefined;
+	};
+	type CodeCallbacks = {
+		/**
+		 * - the page the user should be redirected to in case it needs to login before authorizing, optional if you want to never redirect
+		 */
+		redirect?: (() => Promise<string> | string | Promise<null> | null) | undefined;
+		/**
+		 * - Store authorization code data
+		 */
+		store: (code: string, code_data: CodeData) => Promise<void> | void;
+		/**
+		 * - Get authorization code data
+		 */
+		get: (code: string) => Promise<CodeData | undefined> | CodeData | undefined;
+		/**
+		 * - Delete authorization code
+		 */
+		delete: (code: string) => Promise<void> | void;
+	};
+	type TokenCallbacks = {
+		/**
+		 * - Store access token data
+		 */
+		store: (token: string, token_data: TokenData) => Promise<void> | void;
+		/**
+		 * - Get access token data
+		 */
+		get: (token: string) => Promise<TokenData | undefined> | TokenData | undefined;
+		/**
+		 * - Delete access token
+		 */
+		delete: (token: string) => Promise<void> | void;
+	};
+	type RefreshTokenCallbacks = {
+		/**
+		 * - Store refresh token data
+		 */
+		store: (token: string, refresh_token_data: RefreshTokenData) => Promise<void> | void;
+		/**
+		 * - Get refresh token data
+		 */
+		get: (token: string) => Promise<RefreshTokenData | undefined> | RefreshTokenData | undefined;
+		/**
+		 * - Delete refresh token
+		 */
+		delete: (token: string) => Promise<void> | void;
+	};
 	type SimpleProviderOptions = {
 		/**
-		 * - Storage for authorization codes and their challenges
+		 * - Client storage callbacks (required)
 		 */
-		codes?: Map<string, string> | undefined;
+		clients: ClientCallbacks;
 		/**
-		 * - Storage for access tokens
+		 * - Authorization code storage callbacks (required)
 		 */
-		tokens?: Map<string, AuthInfo> | undefined;
+		codes: CodeCallbacks;
 		/**
-		 * - Storage for refresh tokens
+		 * - Access token storage callbacks (required)
 		 */
-		refresh_tokens?: Map<string, {
-			token: string;
-			clientId: string;
-			scopes: string[];
-		}> | undefined;
+		tokens: TokenCallbacks;
+		/**
+		 * - Refresh token storage callbacks (required)
+		 */
+		refreshTokens: RefreshTokenCallbacks;
 		/**
 		 * - Token expiry in seconds
 		 */
-		token_expiry?: number | undefined;
+		tokenExpiry?: number | undefined;
 	};
 	/**
 	 * @import { OAuthClientInformationFull } from './types.js'

@@ -60,10 +60,10 @@ export class ProxyOAuthServerProvider {
 	/** @type {ProxyEndpoints} */
 	#endpoints;
 
-	/** @type {function(string): Promise<AuthInfo>} */
+	/** @type {(token: string) => Promise<AuthInfo>} */
 	#verify_access_token;
 
-	/** @type {function(string): Promise<OAuthClientInformationFull | undefined>} */
+	/** @type {(client_id: string) => Promise<OAuthClientInformationFull | undefined>} */
 	#get_client;
 
 	/** @type {typeof fetch} */

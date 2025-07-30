@@ -64,10 +64,10 @@ import { verifyChallenge } from 'pkce-challenge';
 
 /**
  * @typedef {Object} SimplifiedHandlers
- * @property {function(AuthorizeRequest): Promise<Response>} authorize - Handle authorization requests
- * @property {function(ExchangeRequest): Promise<OAuthTokens>} exchange - Handle token exchange
- * @property {function(string): Promise<AuthInfo>} verify - Verify access tokens
- * @property {function(OAuthClientInformationFull, {token: string, tokenType?: string}): Promise<void>} [revoke] - Revoke tokens
+ * @property {(request: AuthorizeRequest) => Promise<Response>} authorize - Handle authorization requests
+ * @property {(request: ExchangeRequest) => Promise<OAuthTokens>} exchange - Handle token exchange
+ * @property {(token: string) => Promise<AuthInfo>} verify - Verify access tokens
+ * @property {(client: OAuthClientInformationFull, data: {token: string, tokenType?: string}) => Promise<void>} [revoke] - Revoke tokens
  */
 
 /**

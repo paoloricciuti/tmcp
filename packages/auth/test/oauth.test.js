@@ -5,6 +5,58 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { OAuth, SimpleProvider, MemoryClientStore } from '../src/index.js';
 
+/**
+ * Helper function to create basic storage callbacks using Maps
+ * @returns {import('../src/simple-provider.js').SimpleProviderOptions}
+ */
+function create_map_storage_callbacks() {
+	const clientsMap = new Map();
+	const codesMap = new Map();
+	const tokensMap = new Map();
+	const refreshTokensMap = new Map();
+
+	return {
+		clients: {
+			get: (client_id) => clientsMap.get(client_id),
+			register: (client) => {
+				const new_client = {
+					client_id: Math.random().toString(36).substring(2, 15),
+					...client,
+				};
+				clientsMap.set(new_client.client_id, new_client);
+				return new_client;
+			},
+		},
+		codes: {
+			store: (code, data) => {
+				codesMap.set(code, data);
+			},
+			get: (code) => codesMap.get(code),
+			delete: (code) => {
+				codesMap.delete(code);
+			},
+		},
+		tokens: {
+			store: (token, data) => {
+				tokensMap.set(token, data);
+			},
+			get: (token) => tokensMap.get(token),
+			delete: (token) => {
+				tokensMap.delete(token);
+			},
+		},
+		refreshTokens: {
+			store: (token, data) => {
+				refreshTokensMap.set(token, data);
+			},
+			get: (token) => refreshTokensMap.get(token),
+			delete: (token) => {
+				refreshTokensMap.delete(token);
+			},
+		},
+	};
+}
+
 describe('OAuth', () => {
 	/** @type {OAuthClientInformationFull} */
 	const testClient = {
@@ -308,10 +360,12 @@ describe('OAuth', () => {
 
 	describe('SimpleProvider integration', () => {
 		it('works with SimpleProvider', () => {
+			const storage_callbacks = create_map_storage_callbacks();
 			const provider = SimpleProvider.withClient(
 				'test-client',
 				'test-secret',
 				['https://example.com/callback'],
+				storage_callbacks,
 			);
 
 			const oauth = OAuth.create('https://auth.example.com')
@@ -323,10 +377,12 @@ describe('OAuth', () => {
 		});
 
 		it('handles full OAuth flow with SimpleProvider', async () => {
+			const storage_callbacks = create_map_storage_callbacks();
 			const provider = SimpleProvider.withClient(
 				'test-client',
 				'test-secret',
 				['https://example.com/callback'],
+				storage_callbacks,
 			);
 
 			const oauth = OAuth.create('https://auth.example.com')

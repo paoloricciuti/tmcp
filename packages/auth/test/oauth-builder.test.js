@@ -5,6 +5,58 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { OAuth, SimpleProvider, MemoryClientStore } from '../src/index.js';
 
+/**
+ * Helper function to create basic storage callbacks using Maps
+ * @returns {import('../src/simple-provider.js').SimpleProviderOptions}
+ */
+function create_map_storage_callbacks() {
+	const clients_map = new Map();
+	const codes_map = new Map();
+	const tokens_map = new Map();
+	const refresh_tokens_ap = new Map();
+
+	return {
+		clients: {
+			get: (client_id) => clients_map.get(client_id),
+			register: (client) => {
+				const new_client = {
+					client_id: Math.random().toString(36).substring(2, 15),
+					...client,
+				};
+				clients_map.set(new_client.client_id, new_client);
+				return new_client;
+			},
+		},
+		codes: {
+			store: (code, data) => {
+				codes_map.set(code, data);
+			},
+			get: (code) => codes_map.get(code),
+			delete: (code) => {
+				codes_map.delete(code);
+			},
+		},
+		tokens: {
+			store: (token, data) => {
+				tokens_map.set(token, data);
+			},
+			get: (token) => tokens_map.get(token),
+			delete: (token) => {
+				tokens_map.delete(token);
+			},
+		},
+		refreshTokens: {
+			store: (token, data) => {
+				refresh_tokens_ap.set(token, data);
+			},
+			get: (token) => refresh_tokens_ap.get(token),
+			delete: (token) => {
+				refresh_tokens_ap.delete(token);
+			},
+		},
+	};
+}
+
 describe('OAuth (Fluent Builder)', () => {
 	/** @type {OAuthClientInformationFull} */
 	const testClient = {
@@ -183,10 +235,12 @@ describe('OAuth (Fluent Builder)', () => {
 
 	describe('SimpleProvider integration', () => {
 		it('works with SimpleProvider', () => {
+			const storageCallbacks = create_map_storage_callbacks();
 			const provider = SimpleProvider.withClient(
 				'test-client',
 				'test-secret',
 				['https://example.com/callback'],
+				storageCallbacks,
 			);
 
 			const oauth = OAuth.create('https://auth.example.com')
@@ -197,21 +251,80 @@ describe('OAuth (Fluent Builder)', () => {
 			expect(oauth).toBeDefined();
 		});
 
-		it('creates SimpleProvider with default options', () => {
-			const provider = new SimpleProvider();
+		it('creates SimpleProvider with required callbacks', () => {
+			const storageCallbacks = create_map_storage_callbacks();
+			const provider = new SimpleProvider(storageCallbacks);
 			expect(provider).toBeDefined();
 			expect(provider.clientStore).toBeDefined();
 		});
 
-		it('creates SimpleProvider with client', () => {
+		it('throws error when SimpleProvider created without callbacks', () => {
+			expect(() => {
+				// @ts-ignore
+				new SimpleProvider();
+			}).toThrow('SimpleProvider options are required');
+		});
+
+		it('throws error when SimpleProvider.withClient called without callbacks', () => {
+			expect(() => {
+				// @ts-ignore
+				SimpleProvider.withClient('id', 'secret', [
+					'https://example.com',
+				]);
+			}).toThrow('Storage callbacks are required');
+		});
+
+		it('creates SimpleProvider with client', async () => {
+			const storage_callbacks = create_map_storage_callbacks();
 			const provider = SimpleProvider.withClient(
 				'client-id',
 				'client-secret',
 				['https://example.com/callback'],
+				storage_callbacks,
 			);
 
 			expect(provider).toBeDefined();
-			expect(provider.clientStore.getAllClients()).toHaveLength(1);
+			const client = await provider.clientStore.getClient('client-id');
+			expect(client).toBeDefined();
+			expect(client?.client_id).toBe('client-id');
+		});
+
+		it('builds complete OAuth instance with SimpleProvider.build method', () => {
+			const storageCallbacks = create_map_storage_callbacks();
+			const provider = new SimpleProvider(storageCallbacks);
+
+			const oauth = provider.build('https://auth.example.com', {
+				cors: true,
+				// @ts-ignore
+				bearer: ['read', 'write'],
+				scopes: ['read', 'write', 'admin'],
+				registration: true,
+				rateLimits: {
+					'/token': { windowMs: 60000, max: 100 },
+				},
+			});
+
+			expect(oauth).toBeDefined();
+		});
+
+		it('builds OAuth instance with minimal configuration', () => {
+			const storageCallbacks = create_map_storage_callbacks();
+			const provider = new SimpleProvider(storageCallbacks);
+
+			const oauth = provider.build('https://auth.example.com');
+
+			expect(oauth).toBeDefined();
+		});
+
+		it('builds OAuth instance with PKCE configuration', () => {
+			const storageCallbacks = create_map_storage_callbacks();
+			const provider = new SimpleProvider(storageCallbacks);
+
+			const oauth = provider.build('https://auth.example.com', {
+				pkce: async () => 'test-challenge',
+			});
+
+			expect(oauth).toBeDefined();
 		});
 	});
 
