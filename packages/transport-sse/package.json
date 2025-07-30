@@ -19,9 +19,6 @@
 	"peerDependencies": {
 		"tmcp": "workspace:^"
 	},
-	"optionalDependencies": {
-		"@tmcp/auth": "workspace:^"
-	},
 	"keywords": [
 		"tmcp",
 		"sse",
@@ -34,6 +31,7 @@
 		"directory": "packages/transport-sse"
 	},
 	"devDependencies": {
+		"@tmcp/auth": "workspace:^",
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^"
