@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/auth",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"description": "OAuth 2.1 authorization helper for TMCP with MCP specification compliance",
 	"type": "module",
 	"main": "src/index.js",
