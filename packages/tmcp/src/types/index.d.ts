@@ -116,7 +116,7 @@ declare module 'tmcp' {
 	type Completion = (
 		query: string,
 		context: { arguments: Record<string, string> },
-	) => CompleteResult;
+	) => CompleteResult | Promise<CompleteResult>;
 
 	type ServerOptions<TSchema extends StandardSchemaV1> = {
 		capabilities?: ServerCapabilities;

@@ -26,7 +26,7 @@ export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 export type Completion = (
 	query: string,
 	context: { arguments: Record<string, string> },
-) => CompleteResult;
+) => CompleteResult | Promise<CompleteResult>;
 
 export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
