@@ -91,8 +91,8 @@ export const ClientAuthorizationParamsSchema = v.object({
  */
 export const RequestAuthorizationParamsSchema = v.object({
 	response_type: v.literal('code'),
-	code_challenge: v.string(),
-	code_challenge_method: v.literal('S256'),
+	code_challenge: v.optional(v.string()),
+	code_challenge_method: v.optional(v.literal('S256')),
 	scope: v.optional(v.string()),
 	state: v.optional(v.string()),
 	resource: v.optional(v.pipe(v.string(), v.url())),
@@ -110,7 +110,7 @@ export const TokenRequestSchema = v.object({
  */
 export const AuthorizationCodeGrantSchema = v.object({
 	code: v.string(),
-	code_verifier: v.string(),
+	code_verifier: v.optional(v.string()),
 	redirect_uri: v.optional(v.string()),
 	resource: v.optional(v.pipe(v.string(), v.url())),
 });

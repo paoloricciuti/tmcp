@@ -367,10 +367,10 @@ export class SimpleProvider {
 	 * @returns {Promise<OAuthTokens>}
 	 */
 	async #exchange_code(request, http_request) {
-		const { client, code, verifier } = request;
+		const { client, code } = request;
 
-		if (!code || !verifier) {
-			throw new Error('Missing code or verifier');
+		if (!code) {
+			throw new Error('Missing code');
 		}
 
 		// Verify code exists and get stored data

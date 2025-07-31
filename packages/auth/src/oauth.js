@@ -33,7 +33,7 @@ import { verifyChallenge } from 'pkce-challenge';
  * @property {OAuthClientInformationFull} client - Client information
  * @property {'authorization_code'} type - Grant type
  * @property {string} code - Authorization code (for authorization_code grants)
- * @property {string} verifier - PKCE code verifier (for authorization_code grants)
+ * @property {string} [verifier] - PKCE code verifier (for authorization_code grants)
  * @property {string} [redirectUri] - Redirect URI (for authorization_code grants)
  * @property {string[]} [scopes] - Requested scopes
  * @property {URL} [resource] - Resource parameter
@@ -56,7 +56,7 @@ import { verifyChallenge } from 'pkce-challenge';
  * @typedef {Object} AuthorizeRequest
  * @property {OAuthClientInformationFull} client - Client information
  * @property {string} redirectUri - Redirect URI
- * @property {string} codeChallenge - PKCE code challenge
+ * @property {string} [codeChallenge] - PKCE code challenge
  * @property {string} [state] - OAuth state parameter
  * @property {string[]} [scopes] - Requested scopes
  * @property {URL} [resource] - Resource parameter

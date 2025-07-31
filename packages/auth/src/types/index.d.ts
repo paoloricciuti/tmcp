@@ -104,7 +104,7 @@ declare module '@tmcp/auth' {
 		/**
 		 * - PKCE code verifier (for authorization_code grants)
 		 */
-		verifier: string;
+		verifier?: string | undefined;
 		/**
 		 * - Redirect URI (for authorization_code grants)
 		 */
@@ -153,7 +153,7 @@ declare module '@tmcp/auth' {
 		/**
 		 * - PKCE code challenge
 		 */
-		codeChallenge: string;
+		codeChallenge?: string | undefined;
 		/**
 		 * - OAuth state parameter
 		 */
@@ -878,8 +878,8 @@ declare module '@tmcp/auth' {
 	 */
 	export const RequestAuthorizationParamsSchema: v.ObjectSchema<{
 		readonly response_type: v.LiteralSchema<"code", undefined>;
-		readonly code_challenge: v.StringSchema<undefined>;
-		readonly code_challenge_method: v.LiteralSchema<"S256", undefined>;
+		readonly code_challenge: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+		readonly code_challenge_method: v.OptionalSchema<v.LiteralSchema<"S256", undefined>, undefined>;
 		readonly scope: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 		readonly state: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 		readonly resource: v.OptionalSchema<v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.UrlAction<string, undefined>]>, undefined>;
@@ -895,7 +895,7 @@ declare module '@tmcp/auth' {
 	 */
 	export const AuthorizationCodeGrantSchema: v.ObjectSchema<{
 		readonly code: v.StringSchema<undefined>;
-		readonly code_verifier: v.StringSchema<undefined>;
+		readonly code_verifier: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 		readonly redirect_uri: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 		readonly resource: v.OptionalSchema<v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.UrlAction<string, undefined>]>, undefined>;
 	}, undefined>;
