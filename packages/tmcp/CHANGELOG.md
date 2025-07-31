@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.9.1
+
+### Patch Changes
+
+- 05e7631: fix: `Completion` can be a Promise
+
 ## 1.9.0
 
 ### Minor Changes
