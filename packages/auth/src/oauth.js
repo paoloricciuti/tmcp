@@ -631,6 +631,7 @@ export class OAuth {
 
 		// Verify client secret if provided
 		if (
+			client.token_endpoint_auth_method !== 'none' &&
 			client.client_secret &&
 			client_auth.client_secret !== client.client_secret
 		) {
