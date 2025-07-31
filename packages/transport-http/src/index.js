@@ -47,6 +47,8 @@ export class HttpTransport {
 	 */
 	#oauth;
 
+	#text_encoder = new TextEncoder();
+
 	/**
 	 *
 	 * @param {McpServer<any>} server
@@ -74,13 +76,19 @@ export class HttpTransport {
 				const controller = this.#controller_storage.getStore();
 				if (!controller) return;
 
-				controller.enqueue('data: ' + JSON.stringify(request) + '\n\n');
+				controller.enqueue(
+					this.#text_encoder.encode(
+						'data: ' + JSON.stringify(request) + '\n\n',
+					),
+				);
 				return;
 			}
 			for (let [session_id, controller] of this.#session.entries()) {
 				if (sessions === undefined || sessions.includes(session_id)) {
 					controller.enqueue(
-						'data: ' + JSON.stringify(request) + '\n\n',
+						this.#text_encoder.encode(
+							'data: ' + JSON.stringify(request) + '\n\n',
+						),
 					);
 				}
 			}
@@ -214,7 +222,9 @@ export class HttpTransport {
 				);
 
 				controller?.enqueue(
-					'data: ' + JSON.stringify(response) + '\n\n',
+					this.#text_encoder.encode(
+						'data: ' + JSON.stringify(response) + '\n\n',
+					),
 				);
 				controller?.close();
 			};

@@ -48,6 +48,8 @@ export class SseTransport {
 	 */
 	#oauth;
 
+	#text_encoder = new TextEncoder();
+
 	/**
 	 * @param {McpServer<any>} server
 	 * @param {SseTransportOptions} [options]
@@ -79,7 +81,11 @@ export class SseTransport {
 		this.#server.on('send', ({ request, context: { sessions } }) => {
 			for (let [session_id, controller] of this.#sessions.entries()) {
 				if (sessions === undefined || sessions.includes(session_id)) {
-					controller.enqueue(`data: ${JSON.stringify(request)}\n\n`);
+					controller.enqueue(
+						this.#text_encoder.encode(
+							`data: ${JSON.stringify(request)}\n\n`,
+						),
+					);
 				}
 			}
 		});
@@ -111,7 +117,7 @@ export class SseTransport {
 
 				const endpoint_event = `event: endpoint\ndata: ${endpoint_url.pathname + endpoint_url.search + endpoint_url.hash}\n\n`;
 
-				controller.enqueue(endpoint_event);
+				controller.enqueue(this.#text_encoder.encode(endpoint_event));
 			},
 			cancel: () => {
 				this.#sessions.delete(session_id);
@@ -183,7 +189,11 @@ export class SseTransport {
 			}
 
 			if (response != null) {
-				controller.enqueue(`data: ${JSON.stringify(response)}\n\n`);
+				controller.enqueue(
+					this.#text_encoder.encode(
+						`data: ${JSON.stringify(response)}\n\n`,
+					),
+				);
 			}
 
 			// Return JSON response for requests
