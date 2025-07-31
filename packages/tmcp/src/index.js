@@ -600,7 +600,7 @@ export class McpServer {
 	#init_completion() {
 		this.#server.addMethod(
 			'completion/complete',
-			({ argument, ref, context }) => {
+			async ({ argument, ref, context }) => {
 				const completions = this.#completions[ref.type];
 				if (!completions) return null;
 				const complete = completions.get(ref.uri ?? ref.name);
@@ -609,7 +609,7 @@ export class McpServer {
 				if (!actual_complete) return null;
 				return v.parse(
 					CompleteResultSchema,
-					actual_complete(argument.value, context),
+					await actual_complete(argument.value, context),
 				);
 			},
 		);
