@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.5.2
+
+### Patch Changes
+
+- 55916ac: fix: encode strings before enqueueing them
+
 ## 0.5.1
 
 ### Patch Changes
