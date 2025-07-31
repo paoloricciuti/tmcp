@@ -1,5 +1,11 @@
 # @tmcp/transport-sse
 
+## 0.2.3
+
+### Patch Changes
+
+- 55916ac: fix: encode strings before enqueueing them
+
 ## 0.2.2
 
 ### Patch Changes

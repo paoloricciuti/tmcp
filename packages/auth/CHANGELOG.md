@@ -1,5 +1,11 @@
 # @tmcp/auth
 
+## 0.3.2
+
+### Patch Changes
+
+- 2c03f48: fix: don't check client secret for method none
+
 ## 0.3.1
 
 ### Patch Changes
