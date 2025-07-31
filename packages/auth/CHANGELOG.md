@@ -1,5 +1,11 @@
 # @tmcp/auth
 
+## 0.3.3
+
+### Patch Changes
+
+- 7ff2e63: fix: don't require code challenge or verifier
+
 ## 0.3.2
 
 ### Patch Changes
