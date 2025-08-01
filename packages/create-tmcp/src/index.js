@@ -11,6 +11,43 @@ import {
 } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
+/**
+ * Fetch the latest version of a package from npm
+ * @param {string} package_name - The name of the package
+ */
+function get_latest_version(package_name) {
+	try {
+		const result = execSync(`npm view ${package_name} version`, {
+			encoding: 'utf8',
+			stdio: 'pipe',
+			timeout: 5000,
+		});
+		return `^${result.trim()}`;
+	} catch {
+		// Fallback versions if npm view fails
+		const fallback_versions = {
+			tmcp: '^1.9.0',
+			'@tmcp/adapter-valibot': '^0.2.0',
+			'@tmcp/adapter-zod': '^0.2.0',
+			'@tmcp/adapter-zod-v3': '^0.2.0',
+			'@tmcp/adapter-arktype': '^0.2.0',
+			'@tmcp/adapter-effect': '^0.2.0',
+			'@tmcp/transport-stdio': '^0.1.0',
+			'@tmcp/transport-http': '^0.1.0',
+			'@tmcp/transport-sse': '^0.1.0',
+			'@tmcp/auth': '^0.3.0',
+			valibot: '^1.1.0',
+			zod: '^4.0.0',
+			arktype: '^2.0.0',
+			effect: '^3.0.0',
+			srvx: '^0.8.0',
+		};
+		return (
+			fallback_versions[/** @type {never} */ (package_name)] || '^1.0.0'
+		);
+	}
+}
+
 async function main() {
 	console.log();
 	p.intro('🚀 Welcome to create-tmcp!');
@@ -133,6 +170,42 @@ async function main() {
 		return process.exit(0);
 	}
 
+	// Ask about dependency installation
+	const install_dependencies = await p.confirm({
+		message: 'Would you like to automatically install dependencies?',
+		initialValue: true,
+	});
+
+	if (p.isCancel(install_dependencies)) {
+		p.cancel('Operation cancelled');
+		return process.exit(0);
+	}
+
+	let package_manager = 'pnpm';
+	if (install_dependencies) {
+		const package_manager_res = await p.select({
+			message: 'Which package manager would you like to use?',
+			options: [
+				{
+					value: 'pnpm',
+					label: 'pnpm (Recommended)',
+					hint: 'Fast, disk space efficient',
+				},
+				{
+					value: 'npm',
+					label: 'npm',
+					hint: 'Node.js default package manager',
+				},
+			],
+		});
+
+		if (p.isCancel(package_manager_res)) {
+			p.cancel('Operation cancelled');
+			return process.exit(0);
+		}
+		package_manager = package_manager_res;
+	}
+
 	let example_path = 'src/example.js';
 	if (include_example) {
 		const custom_example_path = await p.text({
@@ -163,14 +236,19 @@ async function main() {
 			include_auth,
 			include_example,
 			example_path,
+			install_dependencies,
+			package_manager,
 		});
 
 		spinner.stop('Project created successfully!');
 
-		p.note(
-			[`cd ${target_dir}`, 'pnpm install', 'pnpm run dev'].join('\n'),
-			'Next steps:',
-		);
+		const next_steps = [`cd ${target_dir}`];
+		if (!install_dependencies) {
+			next_steps.push(`${package_manager} install`);
+		}
+		next_steps.push(`${package_manager} run dev`);
+
+		p.note(next_steps.join('\n'), 'Next steps:');
 
 		p.outro('Happy coding! 🎉');
 	} catch (error) {
@@ -190,6 +268,8 @@ async function main() {
  * @param {boolean} options.include_auth
  * @param {boolean} options.include_example
  * @param {string} options.example_path
+ * @param {boolean} options.install_dependencies
+ * @param {string} options.package_manager
  */
 async function generate_project({
 	project_path,
@@ -199,6 +279,8 @@ async function generate_project({
 	include_auth,
 	include_example,
 	example_path,
+	install_dependencies,
+	package_manager,
 }) {
 	// Create src directory
 	const src_dir = join(project_path, 'src');
@@ -257,16 +339,15 @@ async function generate_project({
 		writeFileSync(readme_path, readme_content);
 	}
 
-	// Install dependencies
-	try {
-		execSync('pnpm install', { cwd: project_path, stdio: 'ignore' });
-	} catch {
-		// If pnpm fails, try npm
+	// Install dependencies if requested
+	if (install_dependencies) {
 		try {
-			execSync('npm install', { cwd: project_path, stdio: 'ignore' });
+			const install_command =
+				package_manager === 'pnpm' ? 'pnpm install' : 'npm install';
+			execSync(install_command, { cwd: project_path, stdio: 'ignore' });
 		} catch {
 			throw new Error(
-				'Failed to install dependencies. Please run "pnpm install" or "npm install" manually.',
+				`Failed to install dependencies. Please run "${package_manager} install" manually.`,
 			);
 		}
 	}
@@ -311,40 +392,44 @@ function generate_package_json({
 	 * @type {Record<string, string>}
 	 */
 	const new_dependencies = {
-		tmcp: '^1.9.0',
+		tmcp: get_latest_version('tmcp'),
 	};
 
 	// Add adapter dependencies
 	if (adapter !== 'none') {
-		new_dependencies[`@tmcp/adapter-${adapter}`] = '^0.2.0';
+		new_dependencies[`@tmcp/adapter-${adapter}`] = get_latest_version(
+			`@tmcp/adapter-${adapter}`,
+		);
 
 		switch (adapter) {
 			case 'valibot':
-				new_dependencies.valibot = '^1.1.0';
+				new_dependencies.valibot = get_latest_version('valibot');
 				break;
 			case 'zod':
-				new_dependencies.zod = '^4.0.0';
+				new_dependencies.zod = get_latest_version('zod');
 				break;
 			case 'zod-v3':
-				new_dependencies.zod = '^3.0.0';
+				new_dependencies.zod = '^3.23.8'; // Force v3 for zod-v3 adapter
 				break;
 			case 'arktype':
-				new_dependencies.arktype = '^2.0.0';
+				new_dependencies.arktype = get_latest_version('arktype');
 				break;
 			case 'effect':
-				new_dependencies.effect = '^3.0.0';
+				new_dependencies.effect = get_latest_version('effect');
 				break;
 		}
 	}
 
 	// Add transport dependencies
-	transports.forEach((transport) => {
-		new_dependencies[`@tmcp/transport-${transport}`] = '^0.1.0';
-	});
+	for (const transport of transports) {
+		new_dependencies[`@tmcp/transport-${transport}`] = get_latest_version(
+			`@tmcp/transport-${transport}`,
+		);
+	}
 
 	// Add auth dependency
 	if (include_auth) {
-		new_dependencies['@tmcp/auth'] = '^0.3.0';
+		new_dependencies['@tmcp/auth'] = get_latest_version('@tmcp/auth');
 	}
 
 	// Add srvx dependency if HTTP/SSE transports are selected and example is included
@@ -352,7 +437,7 @@ function generate_package_json({
 		include_example &&
 		(transports.includes('http') || transports.includes('sse'))
 	) {
-		new_dependencies.srvx = '^0.5.0';
+		new_dependencies.srvx = get_latest_version('srvx');
 	}
 
 	// Merge dependencies with existing ones
@@ -399,7 +484,7 @@ const clients = new Map();
 const tokens = new Map();
 const refresh_tokens = new Map();
 
-export const auth = new SimpleProvider({
+export const oauth = new SimpleProvider({
 	clients: {
 		async get(client_id) {
 			return clients.get(client_id);
@@ -448,7 +533,7 @@ export const auth = new SimpleProvider({
 			refresh_tokens.delete(token);
 		}
 	}
-}).build('http://localhost:3000/', {
+}).build('http://localhost:3000', {
 	bearer: {
 		paths: {${
 			transports.includes('http')

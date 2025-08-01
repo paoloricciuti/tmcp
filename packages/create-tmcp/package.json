@@ -1,5 +1,5 @@
 {
-	"name": "@tmcp/create-tmcp",
+	"name": "create-tmcp",
 	"version": "0.1.0",
 	"description": "CLI tool to create TMCP (lightweight MCP) projects with interactive setup",
 	"type": "module",
