@@ -4,7 +4,7 @@
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations } from "./validation/index.js";
- * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents, Context as ContextType } from "./internal/internal.js";
+ * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -92,7 +92,7 @@ export class McpServer {
 	#client;
 	#options;
 	/**
-	 * @type {Map<string, Tool<any>>}
+	 * @type {Map<string, Tool<any, any>>}
 	 */
 	#tools = new Map();
 	/**
@@ -328,12 +328,25 @@ export class McpServer {
 						name,
 						title: tool.title || tool.description,
 						description: tool.description,
-						annotations: tool.annotations,
+
 						inputSchema: tool.schema
 							? await this.#options.adapter.toJsonSchema(
 									tool.schema,
 								)
 							: { type: 'object', properties: {} },
+						...(tool.outputSchema
+							? {
+									outputSchema:
+										await this.#options.adapter.toJsonSchema(
+											tool.outputSchema,
+										),
+								}
+							: {}),
+						...(tool.annotations
+							? {
+									annotations: tool.annotations,
+								}
+							: {}),
 					};
 				}),
 			);
@@ -348,22 +361,57 @@ export class McpServer {
 				if (!tool) {
 					throw new McpError(-32601, `Tool ${name} not found`);
 				}
-				if (!tool.schema) {
-					return v.parse(CallToolResultSchema, await tool.execute());
+
+				// Validate input arguments if schema is provided
+				let validated_args = args;
+				if (tool.schema) {
+					let validation_result =
+						tool.schema['~standard'].validate(args);
+					if (validation_result instanceof Promise)
+						validation_result = await validation_result;
+					if (validation_result.issues) {
+						throw new McpError(
+							-32602,
+							`Invalid arguments for tool ${name}: ${JSON.stringify(validation_result.issues)}`,
+						);
+					}
+					validated_args = validation_result.value;
 				}
-				let validated_args = tool.schema['~standard'].validate(args);
-				if (validated_args instanceof Promise)
-					validated_args = await validated_args;
-				if (validated_args.issues) {
-					throw new McpError(
-						-32602,
-						`Invalid arguments for tool ${name}: ${JSON.stringify(validated_args.issues)}`,
-					);
-				}
-				return v.parse(
+
+				// Execute the tool
+				const tool_result = tool.schema
+					? await tool.execute(validated_args)
+					: await tool.execute();
+
+				console.log({ tool_result });
+
+				// Parse the basic result structure
+				const parsed_result = v.parse(
 					CallToolResultSchema,
-					await tool.execute(validated_args.value),
+					tool_result,
 				);
+
+				// If tool has outputSchema, validate and populate structuredContent
+				if (
+					tool.outputSchema &&
+					parsed_result.structuredContent !== undefined
+				) {
+					let output_validation = tool.outputSchema[
+						'~standard'
+					].validate(parsed_result.structuredContent);
+					if (output_validation instanceof Promise)
+						output_validation = await output_validation;
+					if (output_validation.issues) {
+						throw new McpError(
+							-32603,
+							`Tool ${name} returned invalid structured content: ${JSON.stringify(output_validation.issues)}`,
+						);
+					}
+					// Update with validated structured content
+					parsed_result.structuredContent = output_validation.value;
+				}
+
+				return parsed_result;
 			},
 		);
 	}
@@ -627,10 +675,14 @@ export class McpServer {
 	}
 	/**
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; annotations?: ToolAnnotations }} options
-	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)} execute
+	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
+	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations }} options
+	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
 	 */
-	tool({ name, description, title, schema, annotations }, execute) {
+	tool(
+		{ name, description, title, schema, outputSchema, annotations },
+		execute,
+	) {
 		if (this.#options.capabilities?.tools?.listChanged) {
 			this.#notify('notifications/tools/list_changed', {});
 		}
@@ -638,6 +690,7 @@ export class McpServer {
 			description,
 			title,
 			schema,
+			outputSchema,
 			execute,
 			annotations,
 		});

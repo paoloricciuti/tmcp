@@ -45,14 +45,37 @@ server.tool(
 		name: 'add_numbers',
 		description: 'Add two numbers together',
 		schema: AddNumbersSchema,
+		outputSchema: v.object({
+			test: v.number(),
+		}),
 	},
 	async (input) => {
 		const result = input.a + input.b;
 		return {
+			structuredContent: {
+				test: 1,
+			},
 			content: [
 				{
 					type: 'text',
 					text: `The sum of ${input.a} and ${input.b} is ${result}`,
+				},
+			],
+		};
+	},
+);
+
+server.tool(
+	{
+		name: 'add_numbers',
+		description: 'Add two numbers together',
+	},
+	async () => {
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `The sum of `,
 				},
 			],
 		};

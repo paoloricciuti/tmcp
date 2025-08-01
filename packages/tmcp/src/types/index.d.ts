@@ -23,13 +23,14 @@ declare module 'tmcp' {
 		
 		on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): () => void;
 		
-		tool<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, annotations }: {
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations }: {
 			name: string;
 			description: string;
 			title?: string;
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
 			annotations?: ToolAnnotations;
-		}, execute: TSchema extends undefined ? (() => Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)): void;
+		}, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
 		
 		prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete }: {
 			name: string;
@@ -895,7 +896,11 @@ declare module 'tmcp' {
 	type ClientCapabilities_1 = v.InferInput<typeof ClientCapabilitiesSchema>;
 	type ServerCapabilities = v.InferInput<typeof ServerCapabilitiesSchema>;
 	type InitializeRequestParams = v.InferInput<typeof InitializeRequestParamsSchema>;
-	type CallToolResult = v.InferInput<typeof CallToolResultSchema>;
+	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent"> & (undefined extends TStructuredContent ? {
+		structuredContent?: undefined;
+	} : {
+		structuredContent: TStructuredContent;
+	});
 	type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
 	type GetPromptResult = v.InferInput<typeof GetPromptResultSchema>;
 	type CompleteResult = v.InferInput<typeof CompleteResultSchema>;

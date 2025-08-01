@@ -1492,7 +1492,8 @@ export const ServerResultSchema = v.union([
  * @typedef {v.InferInput<typeof InitializeRequestParamsSchema>} InitializeRequestParams
  */
 /**
- * @typedef {v.InferInput<typeof CallToolResultSchema>} CallToolResult
+ * @template {Record<string, unknown> | undefined} TStructuredContent
+ * @typedef {Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent"> & (undefined extends TStructuredContent ? { structuredContent?: undefined } : { structuredContent: TStructuredContent })} CallToolResult
  */
 /**
  * @typedef {v.InferInput<typeof ReadResourceResultSchema>} ReadResourceResult

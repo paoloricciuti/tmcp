@@ -46,6 +46,20 @@ const mock_schema = {
 };
 
 /**
+ * Mock schema for testing
+ * @type {MockSchema<any>}
+ */
+const output_mock_schema = {
+	'~standard': {
+		validate: vi
+			.fn()
+			.mockImplementation((input) => Promise.resolve({ value: input })),
+		vendor: 'mock',
+		version: 1,
+	},
+};
+
+/**
  * @template const T
  * @param {T} request
  * @returns {T}
@@ -109,10 +123,9 @@ describe('McpServer', () => {
 				},
 			});
 
-			const result = await server.receive(
-				initialize_request,
-				'session-1',
-			);
+			const result = await server.receive(initialize_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -137,7 +150,9 @@ describe('McpServer', () => {
 				method: 'ping',
 			});
 
-			const result = await server.receive(ping_request, 'session-1');
+			const result = await server.receive(ping_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -152,7 +167,9 @@ describe('McpServer', () => {
 				method: 'notifications/initialized',
 			});
 
-			const result = await server.receive(notification, 'session-1');
+			const result = await server.receive(notification, {
+				sessionId: 'session-1',
+			});
 			expect(result).toBe(null);
 		});
 
@@ -171,7 +188,9 @@ describe('McpServer', () => {
 				},
 			});
 
-			const result = await server.receive(invalid, 'session-1');
+			const result = await server.receive(invalid, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -199,7 +218,7 @@ describe('McpServer', () => {
 					clientInfo: { name: 'test', version: '1.0.0' },
 				},
 			});
-			await server.receive(init, 'session-1');
+			await server.receive(init, { sessionId: 'session-1' });
 		});
 
 		it('should list tools', async () => {
@@ -216,13 +235,26 @@ describe('McpServer', () => {
 				tool,
 			);
 
+			server.tool(
+				{
+					name: 'list-test-tool-schemas',
+					description: 'A tool for list testing 2',
+					title: 'List Test Tool',
+					schema: mock_schema,
+					outputSchema: output_mock_schema,
+				},
+				tool,
+			);
+
 			const list_request = request({
 				jsonrpc: '2.0',
 				id: 2,
 				method: 'tools/list',
 			});
 
-			const result = await server.receive(list_request, 'session-1');
+			const result = await server.receive(list_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -234,6 +266,29 @@ describe('McpServer', () => {
 							title: 'List Test Tool',
 							description: 'A tool for list testing',
 							inputSchema: { type: 'object', properties: {} },
+						},
+						{
+							description: 'A tool for list testing 2',
+							inputSchema: {
+								properties: {
+									test: {
+										type: 'string',
+									},
+								},
+								required: ['test'],
+								type: 'object',
+							},
+							outputSchema: {
+								type: 'object',
+								properties: {
+									test: {
+										type: 'string',
+									},
+								},
+								required: ['test'],
+							},
+							name: 'list-test-tool-schemas',
+							title: 'List Test Tool',
 						},
 					],
 				},
@@ -262,7 +317,9 @@ describe('McpServer', () => {
 				},
 			});
 
-			const result = await server.receive(call_request, 'session-1');
+			const result = await server.receive(call_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(tool).toHaveBeenCalledWith();
 			expect(result).toEqual({
@@ -298,7 +355,9 @@ describe('McpServer', () => {
 				},
 			});
 
-			const result = await server.receive(call_request, 'session-1');
+			const result = await server.receive(call_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(mock_schema['~standard'].validate).toHaveBeenCalledWith({
 				test: 'value',
@@ -315,6 +374,61 @@ describe('McpServer', () => {
 			});
 		});
 
+		it('should call a tool with outputSchema validation', async () => {
+			const tool = vi.fn().mockResolvedValue({
+				content: [
+					{
+						type: 'text',
+						text: '{ "cool": true }',
+					},
+				],
+				structuredContent: {
+					cool: true,
+				},
+			});
+
+			server.tool(
+				{
+					name: 'schema-test-tool',
+					description: 'A tool with schema',
+					schema: mock_schema,
+					outputSchema: output_mock_schema,
+				},
+				tool,
+			);
+
+			const call_request = request({
+				jsonrpc: '2.0',
+				id: 4,
+				method: 'tools/call',
+				params: {
+					name: 'schema-test-tool',
+					arguments: { test: 'value' },
+				},
+			});
+
+			const result = await server.receive(call_request, {
+				sessionId: 'session-1',
+			});
+
+			expect(
+				output_mock_schema['~standard'].validate,
+			).toHaveBeenCalledWith({
+				cool: true,
+			});
+			expect(tool).toHaveBeenCalledWith({ test: 'value' });
+			expect(result).toEqual({
+				jsonrpc: '2.0',
+				id: 4,
+				result: {
+					content: [{ type: 'text', text: '{ "cool": true }' }],
+					structuredContent: {
+						cool: true,
+					},
+				},
+			});
+		});
+
 		it('should return error for non-existent tool', async () => {
 			const call_request = request({
 				jsonrpc: '2.0',
@@ -325,7 +439,9 @@ describe('McpServer', () => {
 				},
 			});
 
-			const result = await server.receive(call_request, 'session-1');
+			const result = await server.receive(call_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -352,7 +468,7 @@ describe('McpServer', () => {
 					clientInfo: { name: 'test', version: '1.0.0' },
 				},
 			});
-			await server.receive(init, 'session-1');
+			await server.receive(init, { sessionId: 'session-1' });
 		});
 
 		it('should list prompts', async () => {
@@ -380,7 +496,9 @@ describe('McpServer', () => {
 				method: 'prompts/list',
 			});
 
-			const result = await server.receive(list, 'session-1');
+			const result = await server.receive(list, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -425,7 +543,9 @@ describe('McpServer', () => {
 				},
 			});
 
-			const result = await server.receive(get_request, 'session-1');
+			const result = await server.receive(get_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(prompt).toHaveBeenCalledWith();
 			expect(result).toEqual({
@@ -452,7 +572,9 @@ describe('McpServer', () => {
 				},
 			});
 
-			const result = await server.receive(get_request, 'session-1');
+			const result = await server.receive(get_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -479,7 +601,7 @@ describe('McpServer', () => {
 					clientInfo: { name: 'test', version: '1.0.0' },
 				},
 			});
-			await server.receive(init, 'session-1');
+			await server.receive(init, { sessionId: 'session-1' });
 		});
 
 		it('should list resources', async () => {
@@ -502,7 +624,9 @@ describe('McpServer', () => {
 				method: 'resources/list',
 			});
 
-			const result = await server.receive(list, 'session-1');
+			const result = await server.receive(list, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -545,7 +669,9 @@ describe('McpServer', () => {
 				},
 			});
 
-			const result = await server.receive(read, 'session-1');
+			const result = await server.receive(read, {
+				sessionId: 'session-1',
+			});
 
 			expect(resource).toHaveBeenCalledWith('test://read-resource');
 			expect(result).toEqual({
@@ -585,7 +711,9 @@ describe('McpServer', () => {
 				},
 			);
 
-			const result = await server.receive(subscribe_request, 'session-1');
+			const result = await server.receive(subscribe_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -604,7 +732,9 @@ describe('McpServer', () => {
 				},
 			});
 
-			const result = await server.receive(read_request, 'session-1');
+			const result = await server.receive(read_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -631,7 +761,7 @@ describe('McpServer', () => {
 					clientInfo: { name: 'test', version: '1.0.0' },
 				},
 			});
-			await server.receive(init_request, 'session-1');
+			await server.receive(init_request, { sessionId: 'session-1' });
 		});
 
 		it('should set log level', async () => {
@@ -644,7 +774,9 @@ describe('McpServer', () => {
 				},
 			});
 
-			const result = await server.receive(set_level_request, 'session-1');
+			const result = await server.receive(set_level_request, {
+				sessionId: 'session-1',
+			});
 
 			expect(result).toEqual({
 				jsonrpc: '2.0',
@@ -693,7 +825,7 @@ describe('McpServer', () => {
 			const listener = vi.fn();
 			server.on('initialize', listener, { once: true });
 			expect(listener).not.toHaveBeenCalled();
-			await server.receive(init_request, 'session-1');
+			await server.receive(init_request, { sessionId: 'session-1' });
 			expect(listener).toHaveBeenCalledWith({
 				capabilities: {},
 				clientInfo: {
@@ -724,7 +856,7 @@ describe('McpServer', () => {
 				},
 			});
 
-			await server.receive(init_request, 'session-1');
+			await server.receive(init_request, { sessionId: 'session-1' });
 
 			expect(listener).toHaveBeenNthCalledWith(1, {
 				context: {
@@ -770,7 +902,7 @@ describe('McpServer', () => {
 				},
 			});
 
-			await server.receive(subscribe_request, 'session-1');
+			await server.receive(subscribe_request, { sessionId: 'session-1' });
 			server.changed('resource', 'test://subscribe-resource');
 
 			expect(listener).toHaveBeenNthCalledWith(3, {
@@ -848,7 +980,7 @@ describe('McpServer', () => {
 			});
 
 			// trigger the prompt read to test elicitation, refreshRoots and message
-			await server.receive(get_request, 'session-1');
+			await server.receive(get_request, { sessionId: 'session-1' });
 
 			expect(listener).toHaveBeenNthCalledWith(6, {
 				context: {
@@ -956,8 +1088,8 @@ describe('McpServer', () => {
 				});
 
 				const [result1, result2] = await Promise.all([
-					server.receive(session1_init, 'session-1'),
-					server.receive(session2_init, 'session-2'),
+					server.receive(session1_init, { sessionId: 'session-1' }),
+					server.receive(session2_init, { sessionId: 'session-2' }),
 				]);
 
 				expect(result1).toEqual({
@@ -997,7 +1129,7 @@ describe('McpServer', () => {
 								},
 							},
 						}),
-						'session-with-roots',
+						{ sessionId: 'session-with-roots' },
 					);
 
 					await server.receive(
@@ -1014,7 +1146,7 @@ describe('McpServer', () => {
 								},
 							},
 						}),
-						'session-with-tools',
+						{ sessionId: 'session-with-tools' },
 					);
 
 					// Verify that sessions maintain different capability contexts
@@ -1027,7 +1159,11 @@ describe('McpServer', () => {
 		describe('session isolation', () => {
 			beforeEach(async () => {
 				// Initialize multiple sessions
-				const sessions = ['session-a', 'session-b', 'session-c'];
+				const sessions = [
+					{ sessionId: 'session-a' },
+					{ sessionId: 'session-b' },
+					{ sessionId: 'session-c' },
+				];
 				await Promise.all(
 					sessions.map((sessionId) =>
 						server.receive(
@@ -1111,7 +1247,7 @@ describe('McpServer', () => {
 
 				const results = await Promise.all(
 					call_requests.map(({ request, session }) =>
-						server.receive(request, session),
+						server.receive(request, { sessionId: session }),
 					),
 				);
 
@@ -1190,7 +1326,7 @@ describe('McpServer', () => {
 
 				const results = await Promise.all(
 					prompt_requests.map(({ request, session }) =>
-						server.receive(request, session),
+						server.receive(request, { sessionId: session }),
 					),
 				);
 
@@ -1269,7 +1405,7 @@ describe('McpServer', () => {
 
 				const results = await Promise.all(
 					subscribe_requests.map(({ request, session }) =>
-						server.receive(request, session),
+						server.receive(request, { sessionId: session }),
 					),
 				);
 
@@ -1282,7 +1418,7 @@ describe('McpServer', () => {
 							params: { uri: 'test://one-session-resource' },
 						}),
 					),
-					'session-a',
+					{ sessionId: 'session-a' },
 				);
 
 				expect(results[0]).toEqual({
@@ -1353,7 +1489,7 @@ describe('McpServer', () => {
 								},
 							},
 						}),
-						'concurrent-session-1',
+						{ sessionId: 'concurrent-session-1' },
 					),
 					server.receive(
 						request({
@@ -1369,7 +1505,7 @@ describe('McpServer', () => {
 								},
 							},
 						}),
-						'concurrent-session-2',
+						{ sessionId: 'concurrent-session-2' },
 					),
 				]);
 			});
@@ -1401,7 +1537,7 @@ describe('McpServer', () => {
 							method: 'tools/call',
 							params: { name: 'concurrent-tool-1' },
 						}),
-						'concurrent-session-1',
+						{ sessionId: 'concurrent-session-1' },
 					),
 					server.receive(
 						request({
@@ -1410,7 +1546,7 @@ describe('McpServer', () => {
 							method: 'tools/call',
 							params: { name: 'concurrent-tool-2' },
 						}),
-						'concurrent-session-2',
+						{ sessionId: 'concurrent-session-2' },
 					),
 					server.receive(
 						request({
@@ -1418,7 +1554,7 @@ describe('McpServer', () => {
 							id: 3,
 							method: 'tools/list',
 						}),
-						'concurrent-session-1',
+						{ sessionId: 'concurrent-session-1' },
 					),
 				]);
 
@@ -1483,7 +1619,7 @@ describe('McpServer', () => {
 							method: 'tools/call',
 							params: { name: 'mixed-tool' },
 						}),
-						'concurrent-session-1',
+						{ sessionId: 'concurrent-session-1' },
 					),
 					server.receive(
 						request({
@@ -1492,7 +1628,7 @@ describe('McpServer', () => {
 							method: 'prompts/get',
 							params: { name: 'mixed-prompt' },
 						}),
-						'concurrent-session-2',
+						{ sessionId: 'concurrent-session-2' },
 					),
 					server.receive(
 						request({
@@ -1501,7 +1637,7 @@ describe('McpServer', () => {
 							method: 'resources/read',
 							params: { uri: 'test://mixed-resource' },
 						}),
-						'concurrent-session-1',
+						{ sessionId: 'concurrent-session-1' },
 					),
 					server.receive(
 						request({
@@ -1509,7 +1645,7 @@ describe('McpServer', () => {
 							id: 13,
 							method: 'ping',
 						}),
-						'concurrent-session-2',
+						{ sessionId: 'concurrent-session-2' },
 					),
 				]);
 
@@ -1544,7 +1680,7 @@ describe('McpServer', () => {
 								},
 							},
 						}),
-						'log-session-1',
+						{ sessionId: 'log-session-1' },
 					),
 					server.receive(
 						request({
@@ -1560,7 +1696,7 @@ describe('McpServer', () => {
 								},
 							},
 						}),
-						'log-session-2',
+						{ sessionId: 'log-session-2' },
 					),
 				]);
 
@@ -1573,7 +1709,7 @@ describe('McpServer', () => {
 							method: 'logging/setLevel',
 							params: { level: 'debug' },
 						}),
-						'log-session-1',
+						{ sessionId: 'log-session-1' },
 					),
 					server.receive(
 						request({
@@ -1582,7 +1718,7 @@ describe('McpServer', () => {
 							method: 'logging/setLevel',
 							params: { level: 'error' },
 						}),
-						'log-session-2',
+						{ sessionId: 'log-session-2' },
 					),
 				]);
 
