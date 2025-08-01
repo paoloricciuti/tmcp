@@ -1,28 +1,25 @@
 #!/usr/bin/env node
 
 import * as p from '@clack/prompts';
-import { execSync } from 'node:child_process';
-import {
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-	writeFileSync,
-} from 'node:fs';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+import { existsSync } from 'node:fs';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
+
+const execAsync = promisify(exec);
 
 /**
  * Fetch the latest version of a package from npm
  * @param {string} package_name - The name of the package
  */
-function get_latest_version(package_name) {
+async function get_latest_version(package_name) {
 	try {
-		const result = execSync(`npm view ${package_name} version`, {
+		const { stdout } = await execAsync(`npm view ${package_name} version`, {
 			encoding: 'utf8',
-			stdio: 'pipe',
 			timeout: 5000,
 		});
-		return `^${result.trim()}`;
+		return `^${stdout.trim()}`;
 	} catch {
 		// Fallback versions if npm view fails
 		const fallback_versions = {
@@ -48,6 +45,28 @@ function get_latest_version(package_name) {
 	}
 }
 
+/**
+ * Batch fetch versions for multiple packages
+ * @param {string[]} package_names - Array of package names
+ * @returns {Promise<Record<string, string>>} - Object mapping package names to versions
+ */
+async function get_versions_batch(package_names) {
+	const results = await Promise.allSettled(
+		package_names.map(async (pkg) => [pkg, await get_latest_version(pkg)]),
+	);
+	/**
+	 * @type {Record<string, string>} - Object mapping package names to versions
+	 */
+	const versions = {};
+	for (const result of results) {
+		if (result.status === 'fulfilled') {
+			const [pkg, version] = result.value;
+			versions[pkg] = version;
+		}
+	}
+	return versions;
+}
+
 async function main() {
 	console.log();
 	p.intro('🚀 Welcome to create-tmcp!');
@@ -71,7 +90,7 @@ async function main() {
 
 	// Check if directory exists and is not empty
 	if (existsSync(project_path)) {
-		const files = readdirSync(project_path);
+		const files = await readdir(project_path);
 		if (files.length > 0) {
 			const should_continue = await p.confirm({
 				message: `Directory "${target_dir}" is not empty. Continue anyway?`,
@@ -83,7 +102,7 @@ async function main() {
 			}
 		}
 	} else {
-		mkdirSync(project_path, { recursive: true });
+		await mkdir(project_path, { recursive: true });
 	}
 
 	// Select adapter
@@ -285,12 +304,12 @@ async function generate_project({
 	// Create src directory
 	const src_dir = join(project_path, 'src');
 	if (!existsSync(src_dir)) {
-		mkdirSync(src_dir, { recursive: true });
+		await mkdir(src_dir, { recursive: true });
 	}
 
 	// Generate or update package.json
 	const package_json_path = join(project_path, 'package.json');
-	const package_json = generate_package_json({
+	const package_json = await generate_package_json({
 		project_name,
 		adapter,
 		transports,
@@ -298,7 +317,10 @@ async function generate_project({
 		include_example,
 		existing_package_path: package_json_path,
 	});
-	writeFileSync(package_json_path, JSON.stringify(package_json, null, '\t'));
+	await writeFile(
+		package_json_path,
+		JSON.stringify(package_json, null, '\t'),
+	);
 
 	// Generate example if requested
 	if (include_example) {
@@ -310,9 +332,9 @@ async function generate_project({
 		const example_file_path = join(project_path, example_path);
 		const example_dir = join(example_file_path, '..');
 		if (!existsSync(example_dir)) {
-			mkdirSync(example_dir, { recursive: true });
+			await mkdir(example_dir, { recursive: true });
 		}
-		writeFileSync(example_file_path, example_content);
+		await writeFile(example_file_path, example_content);
 
 		// Generate auth provider if requested
 		if (include_auth) {
@@ -321,7 +343,7 @@ async function generate_project({
 				project_path,
 				'src/auth-provider.js',
 			);
-			writeFileSync(auth_provider_path, auth_provider_content);
+			await writeFile(auth_provider_path, auth_provider_content);
 		}
 	}
 
@@ -336,7 +358,7 @@ async function generate_project({
 			include_example,
 			example_path,
 		});
-		writeFileSync(readme_path, readme_content);
+		await writeFile(readme_path, readme_content);
 	}
 
 	// Install dependencies if requested
@@ -344,7 +366,7 @@ async function generate_project({
 		try {
 			const install_command =
 				package_manager === 'pnpm' ? 'pnpm install' : 'npm install';
-			execSync(install_command, { cwd: project_path, stdio: 'ignore' });
+			await execAsync(install_command, { cwd: project_path });
 		} catch {
 			throw new Error(
 				`Failed to install dependencies. Please run "${package_manager} install" manually.`,
@@ -363,7 +385,7 @@ async function generate_project({
  * @param {boolean} options.include_example
  * @param {string} options.existing_package_path
  */
-function generate_package_json({
+async function generate_package_json({
 	project_name,
 	adapter,
 	transports,
@@ -378,9 +400,8 @@ function generate_package_json({
 	let existing_package = {};
 	if (existsSync(existing_package_path)) {
 		try {
-			existing_package = JSON.parse(
-				readFileSync(existing_package_path, 'utf8'),
-			);
+			const content = await readFile(existing_package_path, 'utf8');
+			existing_package = JSON.parse(content);
 		} catch {
 			// If we can't parse the existing package.json, we'll create a new one
 			console.warn(
@@ -388,48 +409,40 @@ function generate_package_json({
 			);
 		}
 	}
-	/**
-	 * @type {Record<string, string>}
-	 */
-	const new_dependencies = {
-		tmcp: get_latest_version('tmcp'),
-	};
+	// Collect all packages we need to fetch versions for
+	const packages_to_fetch = ['tmcp'];
 
 	// Add adapter dependencies
 	if (adapter !== 'none') {
-		new_dependencies[`@tmcp/adapter-${adapter}`] = get_latest_version(
-			`@tmcp/adapter-${adapter}`,
-		);
+		packages_to_fetch.push(`@tmcp/adapter-${adapter}`);
 
 		switch (adapter) {
 			case 'valibot':
-				new_dependencies.valibot = get_latest_version('valibot');
+				packages_to_fetch.push('valibot');
 				break;
 			case 'zod':
-				new_dependencies.zod = get_latest_version('zod');
+				packages_to_fetch.push('zod');
 				break;
 			case 'zod-v3':
-				new_dependencies.zod = '^3.23.8'; // Force v3 for zod-v3 adapter
+				// Don't fetch zod version for v3, we'll force it
 				break;
 			case 'arktype':
-				new_dependencies.arktype = get_latest_version('arktype');
+				packages_to_fetch.push('arktype');
 				break;
 			case 'effect':
-				new_dependencies.effect = get_latest_version('effect');
+				packages_to_fetch.push('effect');
 				break;
 		}
 	}
 
 	// Add transport dependencies
 	for (const transport of transports) {
-		new_dependencies[`@tmcp/transport-${transport}`] = get_latest_version(
-			`@tmcp/transport-${transport}`,
-		);
+		packages_to_fetch.push(`@tmcp/transport-${transport}`);
 	}
 
 	// Add auth dependency
 	if (include_auth) {
-		new_dependencies['@tmcp/auth'] = get_latest_version('@tmcp/auth');
+		packages_to_fetch.push('@tmcp/auth');
 	}
 
 	// Add srvx dependency if HTTP/SSE transports are selected and example is included
@@ -437,7 +450,60 @@ function generate_package_json({
 		include_example &&
 		(transports.includes('http') || transports.includes('sse'))
 	) {
-		new_dependencies.srvx = get_latest_version('srvx');
+		packages_to_fetch.push('srvx');
+	}
+
+	// Batch fetch all versions
+	const versions = await get_versions_batch(packages_to_fetch);
+
+	/**
+	 * @type {Record<string, string>}
+	 */
+	const new_dependencies = {
+		tmcp: versions.tmcp,
+	};
+
+	// Add adapter dependencies
+	if (adapter !== 'none') {
+		new_dependencies[`@tmcp/adapter-${adapter}`] =
+			versions[`@tmcp/adapter-${adapter}`];
+
+		switch (adapter) {
+			case 'valibot':
+				new_dependencies.valibot = versions.valibot;
+				break;
+			case 'zod':
+				new_dependencies.zod = versions.zod;
+				break;
+			case 'zod-v3':
+				new_dependencies.zod = '^3.23.8'; // Force v3 for zod-v3 adapter
+				break;
+			case 'arktype':
+				new_dependencies.arktype = versions.arktype;
+				break;
+			case 'effect':
+				new_dependencies.effect = versions.effect;
+				break;
+		}
+	}
+
+	// Add transport dependencies
+	for (const transport of transports) {
+		new_dependencies[`@tmcp/transport-${transport}`] =
+			versions[`@tmcp/transport-${transport}`];
+	}
+
+	// Add auth dependency
+	if (include_auth) {
+		new_dependencies['@tmcp/auth'] = versions['@tmcp/auth'];
+	}
+
+	// Add srvx dependency if HTTP/SSE transports are selected and example is included
+	if (
+		include_example &&
+		(transports.includes('http') || transports.includes('sse'))
+	) {
+		new_dependencies.srvx = versions.srvx;
 	}
 
 	// Merge dependencies with existing ones
