@@ -1,0 +1,40 @@
+{
+	"name": "create-tmcp",
+	"version": "0.1.0",
+	"description": "CLI tool to create TMCP (lightweight MCP) projects with interactive setup",
+	"type": "module",
+	"main": "src/index.js",
+	"bin": {
+		"create-tmcp": "src/index.js"
+	},
+	"scripts": {
+		"start": "node src/index.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [
+		"tmcp",
+		"mcp",
+		"cli",
+		"create",
+		"boilerplate",
+		"schema",
+		"validation"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/paoloricciuti/tmcp.git",
+		"directory": "projects/@tmcp/create-tmcp"
+	},
+	"dependencies": {
+		"@clack/prompts": "^0.11.0"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.15"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
+}
