@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.10.0
+
+### Minor Changes
+
+- ea63a2b: feat: support `structuredContent`
+
 ## 1.9.1
 
 ### Patch Changes
