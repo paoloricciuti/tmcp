@@ -383,8 +383,6 @@ export class McpServer {
 					? await tool.execute(validated_args)
 					: await tool.execute();
 
-				console.log({ tool_result });
-
 				// Parse the basic result structure
 				const parsed_result = v.parse(
 					CallToolResultSchema,
