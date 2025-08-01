@@ -213,19 +213,34 @@ async function generate_project({
 		adapter,
 		transports,
 		include_auth,
+		include_example,
 		existing_package_path: package_json_path,
 	});
 	writeFileSync(package_json_path, JSON.stringify(package_json, null, '\t'));
 
 	// Generate example if requested
 	if (include_example) {
-		const example_content = generate_example_js({ adapter });
+		const example_content = generate_example_js({
+			adapter,
+			transports,
+			include_auth,
+		});
 		const example_file_path = join(project_path, example_path);
 		const example_dir = join(example_file_path, '..');
 		if (!existsSync(example_dir)) {
 			mkdirSync(example_dir, { recursive: true });
 		}
 		writeFileSync(example_file_path, example_content);
+
+		// Generate auth provider if requested
+		if (include_auth) {
+			const auth_provider_content = generate_auth_provider(transports);
+			const auth_provider_path = join(
+				project_path,
+				'src/auth-provider.js',
+			);
+			writeFileSync(auth_provider_path, auth_provider_content);
+		}
 	}
 
 	// Generate README.md only if project is not already initialized
@@ -264,6 +279,7 @@ async function generate_project({
  * @param {string} options.adapter
  * @param {string[]} options.transports
  * @param {boolean} options.include_auth
+ * @param {boolean} options.include_example
  * @param {string} options.existing_package_path
  */
 function generate_package_json({
@@ -271,6 +287,7 @@ function generate_package_json({
 	adapter,
 	transports,
 	include_auth,
+	include_example,
 	existing_package_path,
 }) {
 	// Check if package.json exists and merge dependencies
@@ -330,6 +347,14 @@ function generate_package_json({
 		new_dependencies['@tmcp/auth'] = '^0.3.0';
 	}
 
+	// Add srvx dependency if HTTP/SSE transports are selected and example is included
+	if (
+		include_example &&
+		(transports.includes('http') || transports.includes('sse'))
+	) {
+		new_dependencies.srvx = '^0.5.0';
+	}
+
 	// Merge dependencies with existing ones
 	const merged_dependencies = {
 		...existing_package.dependencies,
@@ -363,11 +388,97 @@ function generate_package_json({
 }
 
 /**
+ * Generate auth provider content
+ * @param {string[]} transports
+ */
+function generate_auth_provider(transports) {
+	return `import { SimpleProvider } from '@tmcp/auth';
+
+const codes = new Map();
+const clients = new Map();
+const tokens = new Map();
+const refresh_tokens = new Map();
+
+export const auth = new SimpleProvider({
+	clients: {
+		async get(client_id) {
+			return clients.get(client_id);
+		},
+		async register(client_info) {
+			const client_id = Math.random().toString(36).substring(2, 15);
+			const new_client = {
+				...client_info,
+				client_id,
+				client_id_issued_at: Date.now()
+			};
+			clients.set(client_id, new_client);
+			return new_client;
+		}
+	},
+	codes: {
+		async get(code) {
+			return codes.get(code);
+		},
+		async store(code, code_data) {
+			codes.set(code, code_data);
+		},
+		async delete(code) {
+			codes.delete(code);
+		}
+	},
+	tokens: {
+		async get(token) {
+			return tokens.get(token);
+		},
+		async store(token, token_data) {
+			tokens.set(token, token_data);
+		},
+		async delete(token) {
+			tokens.delete(token);
+		}
+	},
+	refreshTokens: {
+		async get(token) {
+			return refresh_tokens.get(token);
+		},
+		async store(token, token_data) {
+			refresh_tokens.set(token, token_data);
+		},
+		async delete(token) {
+			refresh_tokens.delete(token);
+		}
+	}
+}).build('http://localhost:3000/', {
+	bearer: {
+		paths: {${
+			transports.includes('http')
+				? `
+			POST: ['/mcp'],`
+				: ''
+		}${
+			transports.includes('sse')
+				? `
+			get: ['/sse'],`
+				: ''
+		}
+		}
+	},
+	cors: {
+		origin: '*',
+		credentials: true
+	},
+	registration: true
+});`;
+}
+
+/**
  * Generate example server content
  * @param {Object} options
  * @param {string} options.adapter - The selected schema adapter
+ * @param {string[]} options.transports - The selected transports
+ * @param {boolean} options.include_auth - Whether to include auth
  */
-function generate_example_js({ adapter }) {
+function generate_example_js({ adapter, transports, include_auth }) {
 	const imports = ["import { McpServer } from 'tmcp';"];
 
 	let adapter_setup = '';
@@ -544,10 +655,59 @@ ${schema_example.tool}`;
 		}
 	}
 
+	// Add server imports and setup if HTTP/SSE transports are used
+	let server_setup = '';
+	let http_transports_setup = [];
+	let http_transports_respond = [];
+	if (transports.includes('http') || transports.includes('sse')) {
+		imports.push(`import { serve } from 'srvx';`);
+
+		if (transports.includes('http')) {
+			http_transports_setup.push(`
+export const http_transport = new HttpTransport(server${
+				include_auth
+					? `, {
+	oauth
+}`
+					: ''
+			});`);
+			http_transports_respond.push(`		const http_response = await http_transport.respond(request);
+		if (http_response) {
+			return http_response;
+		}`);
+		}
+
+		if (transports.includes('sse')) {
+			http_transports_setup.push(`
+export const sse_transport = new SseTransport(server${
+				include_auth
+					? `, {
+	oauth
+}`
+					: ''
+			});`);
+			http_transports_respond.push(`		const sse_response = await sse_transport.respond(request);
+		if (sse_response) {
+			return sse_response;
+		}`);
+		}
+
+		if (include_auth) {
+			imports.push(`import { oauth } from './auth-provider.js';`);
+		}
+		server_setup = `
+serve({
+	async fetch(request) {
+${http_transports_respond.join('\n\n')}
+		return new Response(null, { status: 404 });
+	}
+});
+`;
+	}
+
 	return `#!/usr/bin/env node
 
-${imports.join('\n')}
-import { StdioTransport } from '@tmcp/transport-stdio';
+${imports.join('\n')}${transports.includes('stdio') ? "\nimport { StdioTransport } from '@tmcp/transport-stdio';" : ''}${transports.includes('http') ? "\nimport { HttpTransport } from '@tmcp/transport-http';" : ''}${transports.includes('sse') ? "\nimport { SseTransport } from '@tmcp/transport-sse';" : ''}
 
 const server = new McpServer(
 	{
@@ -559,8 +719,15 @@ const server = new McpServer(
 
 ${example_tool}
 
-const transport = new StdioTransport(server);
-transport.listen();
+${http_transports_setup.join('\n')}
+${server_setup}${
+		transports.includes('stdio')
+			? `
+
+const stdio_transport = new StdioTransport(server);
+stdio_transport.listen();`
+			: ''
+	}
 `;
 }
 
