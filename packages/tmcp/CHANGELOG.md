@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.10.1
+
+### Patch Changes
+
+- 8891069: fix: remove console.log
+
 ## 1.10.0
 
 ### Minor Changes
