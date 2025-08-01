@@ -1,6 +1,6 @@
 {
 	"name": "create-tmcp",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "CLI tool to create TMCP (lightweight MCP) projects with interactive setup",
 	"type": "module",
 	"main": "src/index.js",
