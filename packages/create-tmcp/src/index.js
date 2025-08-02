@@ -211,6 +211,38 @@ async function main() {
 		return process.exit(0);
 	}
 
+	let example_path = 'src/index.js';
+	if (include_example) {
+		const custom_example_path = await p.text({
+			message: 'Where should we place the example server?',
+			placeholder: 'src/index.js',
+		});
+
+		if (p.isCancel(custom_example_path)) {
+			p.cancel('Operation cancelled');
+			return process.exit(0);
+		}
+
+		if (custom_example_path && custom_example_path.trim()) {
+			let trimmed_path = custom_example_path.trim();
+
+			// Check if the path is a directory (ends with / or doesn't have an extension)
+			// If so, default to index.js
+			if (
+				trimmed_path.endsWith('/') ||
+				(!trimmed_path.includes('.') && !trimmed_path.includes('/'))
+			) {
+				// It's a directory, append index.js
+				trimmed_path = join(trimmed_path, 'index.js');
+			} else if (!trimmed_path.includes('.')) {
+				// It's a path without extension, assume it's a directory
+				trimmed_path = join(trimmed_path, 'index.js');
+			}
+
+			example_path = trimmed_path;
+		}
+	}
+
 	// Ask about dependency installation
 	const install_dependencies = await p.confirm({
 		message: 'Would you like to automatically install dependencies?',
@@ -245,23 +277,6 @@ async function main() {
 			return process.exit(0);
 		}
 		package_manager = package_manager_res;
-	}
-
-	let example_path = 'src/example.js';
-	if (include_example) {
-		const custom_example_path = await p.text({
-			message: 'Where should we place the example server?',
-			placeholder: 'src/example.js',
-		});
-
-		if (p.isCancel(custom_example_path)) {
-			p.cancel('Operation cancelled');
-			return process.exit(0);
-		}
-
-		if (custom_example_path && custom_example_path.trim()) {
-			example_path = custom_example_path.trim();
-		}
 	}
 
 	const spinner = p.spinner();
@@ -360,10 +375,11 @@ async function generate_project({
 
 		// Generate auth provider if requested
 		if (include_auth) {
-			const auth_provider_content = await generate_auth_provider(transports);
+			const auth_provider_content =
+				await generate_auth_provider(transports);
 			const auth_provider_path = join(
-				project_path,
-				'src/auth-provider.js',
+				dirname(example_file_path),
+				'auth-provider.js',
 			);
 			await writeFile(auth_provider_path, auth_provider_content);
 		}
@@ -566,16 +582,16 @@ async function generate_package_json({
  */
 async function generate_auth_provider(transports) {
 	const bearer_paths = [];
-	
+
 	if (transports.includes('http')) {
-		bearer_paths.push('\n\t\t\tPOST: [\'/mcp\'],');
+		bearer_paths.push("\n\t\t\tPOST: ['/mcp'],");
 	}
 	if (transports.includes('sse')) {
-		bearer_paths.push('\n\t\t\tGET: [\'/sse\'],');
+		bearer_paths.push("\n\t\t\tGET: ['/sse'],");
 	}
-	
+
 	const bearer_paths_string = `{${bearer_paths.join('')}\n\t\t}`;
-	
+
 	return await read_template('auth-provider.js', {
 		BEARER_PATHS: bearer_paths_string,
 	});
@@ -735,15 +751,22 @@ async function generate_readme({
 		.map((t) => `@tmcp/transport-${t}`)
 		.join(', ');
 
-	const auth_line = include_auth ? '\n- **Authentication**: OAuth 2.1 support' : '';
-	const example_line = include_example ? `\n- **Example**: Included at \`${example_path}\`` : '';
-	
-	const adapter_description = adapter !== 'none' 
-		? `Validates input using ${adapter_name}` 
-		: 'No schema validation (manual handling)';
-	
-	const auth_architecture = include_auth ? '\n- **OAuth 2.1**: Authentication and authorization' : '';
-	
+	const auth_line = include_auth
+		? '\n- **Authentication**: OAuth 2.1 support'
+		: '';
+	const example_line = include_example
+		? `\n- **Example**: Included at \`${example_path}\``
+		: '';
+
+	const adapter_description =
+		adapter !== 'none'
+			? `Validates input using ${adapter_name}`
+			: 'No schema validation (manual handling)';
+
+	const auth_architecture = include_auth
+		? '\n- **OAuth 2.1**: Authentication and authorization'
+		: '';
+
 	let example_section = '';
 	if (include_example) {
 		example_section = `### Example Server
