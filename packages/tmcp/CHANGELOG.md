@@ -1,5 +1,12 @@
 # tmcp
 
+## 1.10.2
+
+### Patch Changes
+
+- d4dcd27: fix: bump `uri-template-matcher`
+- d4dcd27: chore: update readme
+
 ## 1.10.1
 
 ### Patch Changes
