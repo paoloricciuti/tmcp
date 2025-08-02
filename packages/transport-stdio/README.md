@@ -5,11 +5,7 @@ A Standard I/O (stdio) transport implementation for TMCP (TypeScript Model Conte
 ## Installation
 
 ```bash
-npm install @tmcp/transport-stdio tmcp
-# or
 pnpm add @tmcp/transport-stdio tmcp
-# or
-yarn add @tmcp/transport-stdio tmcp
 ```
 
 ## Usage

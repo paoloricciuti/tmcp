@@ -5,11 +5,7 @@ An HTTP transport implementation for TMCP (TypeScript Model Context Protocol) se
 ## Installation
 
 ```bash
-npm install @tmcp/transport-http tmcp
-# or
 pnpm add @tmcp/transport-http tmcp
-# or
-yarn add @tmcp/transport-http tmcp
 ```
 
 ## Usage
@@ -54,56 +50,18 @@ server.tool(
 const transport = new HttpTransport(server);
 
 // Use with your preferred HTTP server
-// Example with Node.js built-in server:
-import { createServer } from 'http';
+// Example with Node.js built-in server + @remix-run/
+import * as http from 'node:http';
+import { createRequestListener } from '@remix-run/node-fetch-server';
 
-const httpServer = createServer(async (req, res) => {
-	try {
-		let body = '';
-		req.on('data', (chunk) => (body += chunk));
-		req.on('end', async () => {
-			const request = new Request(`http://localhost${req.url}`, {
-				method: req.method,
-				headers: req.headers,
-				body: req.method === 'POST' ? body : undefined,
-			});
-
-			const response = await transport.respond(request);
-			
-			// If response is null, the request wasn't for MCP
-			if (response === null) {
-				res.statusCode = 404;
-				res.end('Not Found');
-				return;
-			}
-
-			// Copy response to Node.js response
-			response.headers.forEach((value, key) => {
-				res.setHeader(key, value);
-			});
-			res.statusCode = response.status;
-
-			if (response.body) {
-				const reader = response.body.getReader();
-				const pump = async () => {
-					const { done, value } = await reader.read();
-					if (done) {
-						res.end();
-						return;
-					}
-					res.write(value);
-					pump();
-				};
-				pump();
-			} else {
-				res.end();
-			}
-		});
-	} catch (error) {
-		res.statusCode = 500;
-		res.end('Internal Server Error');
+let httpServer = http.createServer(createRequestListener((request)=>{
+	const response = await transport.respond(request);
+	if(response){
+		return response;
 	}
-});
+	return new Response(null, { status: 404 });
+}));
+
 
 httpServer.listen(3000, () => {
 	console.log('MCP HTTP server listening on port 3000');
@@ -157,6 +115,7 @@ Creates a new HTTP transport instance.
 interface HttpTransportOptions {
 	getSessionId: () => string; // Custom session ID generator
 	path?: string; // MCP endpoint path (default: '/mcp')
+	oauth?: OAuth; // an oauth provider generated from @tmcp/auth
 }
 ```
 
@@ -187,6 +146,7 @@ Processes an HTTP request and returns a Response with Server-Sent Events, or nul
 The transport supports three HTTP methods:
 
 #### POST - Message Processing
+
 Clients send JSON-RPC messages via HTTP POST requests:
 
 ```http
@@ -215,6 +175,7 @@ data: {"jsonrpc":"2.0","id":1,"result":{"tools":[...]}}
 ```
 
 #### GET - Notification Stream
+
 Establishes long-lived connections for server notifications:
 
 ```http
@@ -236,6 +197,7 @@ data: {"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
 ```
 
 #### DELETE - Session Disconnect
+
 Disconnects a session and cleans up resources:
 
 ```http
@@ -290,6 +252,27 @@ const server = new McpServer(/* ... */);
 const transport = new HttpTransport(server);
 
 Deno.serve({ port: 3000 }, async (req) => {
+	const response = await transport.respond(req);
+	if (response === null) {
+		return new Response('Not Found', { status: 404 });
+	}
+	return response;
+});
+```
+
+### `srvx`
+
+If you want to have the same experience throughout Deno, Bun or Node you can also use `srvx`
+
+```js
+import { McpServer } from 'tmcp';
+import { HttpTransport } from '@tmcp/transport-http';
+import { serve } from 'srvx';
+
+const server = new McpServer(/* ... */);
+const transport = new HttpTransport(server);
+
+serve(async (req) => {
 	const response = await transport.respond(req);
 	if (response === null) {
 		return new Response('Not Found', { status: 404 });

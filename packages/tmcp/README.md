@@ -333,34 +333,6 @@ server.resource(
 server.changed('resource', 'file://watched/file.txt');
 ```
 
-### Multiple Schema Libraries
-
-```javascript
-// Use different schemas for different tools
-import { z } from 'zod';
-import * as v from 'valibot';
-
-server.tool(
-	{
-		name: 'zod-tool',
-		schema: z.object({ name: z.string() }),
-	},
-	async ({ name }) => ({
-		content: [{ type: 'text', text: `Hello ${name}` }],
-	}),
-);
-
-server.tool(
-	{
-		name: 'valibot-tool',
-		schema: v.object({ age: v.number() }),
-	},
-	async ({ age }) => ({
-		content: [{ type: 'text', text: `Age: ${age}` }],
-	}),
-);
-```
-
 ### Completion API
 
 The completion API allows you to provide auto-completion suggestions for prompt and template parameters. Completion functions return an object with `completion` containing `values`, `total`, and `hasMore` properties.

@@ -5,7 +5,7 @@ Effect Schema adapter for TMCP JSON Schema conversion.
 ## Installation
 
 ```bash
-npm install @tmcp/adapter-effect effect tmcp
+pnpm add @tmcp/adapter-effect effect tmcp
 ```
 
 ## Usage
@@ -151,7 +151,7 @@ A class that extends the base `JsonSchemaAdapter` from TMCP and provides Effect 
 
 ## Dependencies
 
-- `effect` - Peer dependency for schema validation and type definitions
+- `effect` - Peer dependency for schema validation and type definitions (^3.0.0)
 - `tmcp` - Peer dependency for the base adapter
 
 ## Features
