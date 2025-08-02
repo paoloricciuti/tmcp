@@ -5,9 +5,31 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const TEMPLATES_DIR = join(__dirname, '..', 'templates');
 
 const execAsync = promisify(exec);
+
+/**
+ * Read a template file and replace placeholders
+ * @param {string} template_name - The name of the template file
+ * @param {Record<string, string>} replacements - Object mapping placeholders to values
+ */
+async function read_template(template_name, replacements = {}) {
+	const template_path = join(TEMPLATES_DIR, template_name);
+	const template_content = await readFile(template_path, 'utf8');
+
+	let result = template_content;
+	for (const [placeholder, value] of Object.entries(replacements)) {
+		result = result.replace(new RegExp(`{{${placeholder}}}`, 'g'), value);
+	}
+
+	return result;
+}
 
 /**
  * Fetch the latest version of a package from npm
@@ -324,7 +346,7 @@ async function generate_project({
 
 	// Generate example if requested
 	if (include_example) {
-		const example_content = generate_example_js({
+		const example_content = await generate_example_js({
 			adapter,
 			transports,
 			include_auth,
@@ -338,7 +360,7 @@ async function generate_project({
 
 		// Generate auth provider if requested
 		if (include_auth) {
-			const auth_provider_content = generate_auth_provider(transports);
+			const auth_provider_content = await generate_auth_provider(transports);
 			const auth_provider_path = join(
 				project_path,
 				'src/auth-provider.js',
@@ -350,7 +372,7 @@ async function generate_project({
 	// Generate README.md only if project is not already initialized
 	const readme_path = join(project_path, 'README.md');
 	if (!existsSync(readme_path)) {
-		const readme_content = generate_readme({
+		const readme_content = await generate_readme({
 			project_name,
 			adapter,
 			transports,
@@ -539,119 +561,41 @@ async function generate_package_json({
 }
 
 /**
- * Generate auth provider content
+ * Generate auth provider content using template
  * @param {string[]} transports
  */
-function generate_auth_provider(transports) {
-	return `import { SimpleProvider } from '@tmcp/auth';
-
-const codes = new Map();
-const clients = new Map();
-const tokens = new Map();
-const refresh_tokens = new Map();
-
-export const oauth = new SimpleProvider({
-	clients: {
-		async get(client_id) {
-			return clients.get(client_id);
-		},
-		async register(client_info) {
-			const client_id = Math.random().toString(36).substring(2, 15);
-			const new_client = {
-				...client_info,
-				client_id,
-				client_id_issued_at: Date.now()
-			};
-			clients.set(client_id, new_client);
-			return new_client;
-		}
-	},
-	codes: {
-		async get(code) {
-			return codes.get(code);
-		},
-		async store(code, code_data) {
-			codes.set(code, code_data);
-		},
-		async delete(code) {
-			codes.delete(code);
-		}
-	},
-	tokens: {
-		async get(token) {
-			return tokens.get(token);
-		},
-		async store(token, token_data) {
-			tokens.set(token, token_data);
-		},
-		async delete(token) {
-			tokens.delete(token);
-		}
-	},
-	refreshTokens: {
-		async get(token) {
-			return refresh_tokens.get(token);
-		},
-		async store(token, token_data) {
-			refresh_tokens.set(token, token_data);
-		},
-		async delete(token) {
-			refresh_tokens.delete(token);
-		}
+async function generate_auth_provider(transports) {
+	const bearer_paths = [];
+	
+	if (transports.includes('http')) {
+		bearer_paths.push('\n\t\t\tPOST: [\'/mcp\'],');
 	}
-}).build('http://localhost:3000', {
-	bearer: {
-		paths: {${
-			transports.includes('http')
-				? `
-			POST: ['/mcp'],`
-				: ''
-		}${
-			transports.includes('sse')
-				? `
-			get: ['/sse'],`
-				: ''
-		}
-		}
-	},
-	cors: {
-		origin: '*',
-		credentials: true
-	},
-	registration: true
-});`;
+	if (transports.includes('sse')) {
+		bearer_paths.push('\n\t\t\tGET: [\'/sse\'],');
+	}
+	
+	const bearer_paths_string = `{${bearer_paths.join('')}\n\t\t}`;
+	
+	return await read_template('auth-provider.js', {
+		BEARER_PATHS: bearer_paths_string,
+	});
 }
 
 /**
- * Generate example server content
+ * Generate example server content using templates
  * @param {Object} options
  * @param {string} options.adapter - The selected schema adapter
  * @param {string[]} options.transports - The selected transports
  * @param {boolean} options.include_auth - Whether to include auth
  */
-function generate_example_js({ adapter, transports, include_auth }) {
+async function generate_example_js({ adapter, transports, include_auth }) {
 	const imports = ["import { McpServer } from 'tmcp';"];
 
+	// Add adapter imports and setup
 	let adapter_setup = '';
-	let example_tool = `server.tool(
-	{
-		name: 'example_tool',
-		description: 'An example tool without schema validation',
-	},
-	async () => {
-		return {
-			content: [
-				{
-					type: 'text',
-					text: 'This is an example tool!',
-				},
-			],
-		};
-	}
-);`;
+	let example_tool_content = '';
 
 	if (adapter !== 'none') {
-		// Add adapter-specific imports and setup
 		const adapter_class_map = {
 			valibot: 'ValibotJsonSchemaAdapter',
 			zod: 'ZodJsonSchemaAdapter',
@@ -659,240 +603,125 @@ function generate_example_js({ adapter, transports, include_auth }) {
 			arktype: 'ArktypeJsonSchemaAdapter',
 			effect: 'EffectJsonSchemaAdapter',
 		};
-		const adapter_class =
-			adapter_class_map[/** @type {keyof schema_examples} */ (adapter)];
+
+		const schema_imports = {
+			valibot: "import * as v from 'valibot';",
+			zod: "import { z } from 'zod';",
+			'zod-v3': "import { z } from 'zod';",
+			arktype: "import { type } from 'arktype';",
+			effect: "import * as S from 'effect/Schema';",
+		};
+
+		const adapter_class = adapter_class_map[/** @type {never} */ (adapter)];
 		imports.push(
 			`import { ${adapter_class} } from '@tmcp/adapter-${adapter}';`,
 		);
+		imports.push(schema_imports[/** @type {never} */ (adapter)]);
 
-		// Add schema library import and example
-		const schema_examples = {
-			valibot: {
-				import: "import * as v from 'valibot';",
-				schema: `const ExampleSchema = v.object({
-	name: v.pipe(v.string(), v.description('Name of the person')),
-	age: v.pipe(v.number(), v.description('Age of the person')),
-});`,
-				tool: `server.tool(
-	{
-		name: 'greet_person',
-		description: 'Greet a person by name and age',
-		schema: ExampleSchema,
-	},
-	async (input) => {
-		return {
-			content: [
-				{
-					type: 'text',
-					text: \`Hello \${input.name}! You are \${input.age} years old.\`,
-				},
-			],
-		};
-	}
-);`,
-			},
-			zod: {
-				import: "import { z } from 'zod';",
-				schema: `const ExampleSchema = z.object({
-	name: z.string().describe('Name of the person'),
-	age: z.number().describe('Age of the person'),
-});`,
-				tool: `server.tool(
-	{
-		name: 'greet_person',
-		description: 'Greet a person by name and age',
-		schema: ExampleSchema,
-	},
-	async (input) => {
-		return {
-			content: [
-				{
-					type: 'text',
-					text: \`Hello \${input.name}! You are \${input.age} years old.\`,
-				},
-			],
-		};
-	}
-);`,
-			},
-			'zod-v3': {
-				import: "import { z } from 'zod';",
-				schema: `const ExampleSchema = z.object({
-	name: z.string().describe('Name of the person'),
-	age: z.number().describe('Age of the person'),
-});`,
-				tool: `server.tool(
-	{
-		name: 'greet_person',
-		description: 'Greet a person by name and age',
-		schema: ExampleSchema,
-	},
-	async (input) => {
-		return {
-			content: [
-				{
-					type: 'text',
-					text: \`Hello \${input.name}! You are \${input.age} years old.\`,
-				},
-			],
-		};
-	}
-);`,
-			},
-			arktype: {
-				import: "import { type } from 'arktype';",
-				schema: `const ExampleSchema = type({
-	name: 'string',
-	age: 'number',
-});`,
-				tool: `server.tool(
-	{
-		name: 'greet_person',
-		description: 'Greet a person by name and age',
-		schema: ExampleSchema,
-	},
-	async (input) => {
-		return {
-			content: [
-				{
-					type: 'text',
-					text: \`Hello \${input.name}! You are \${input.age} years old.\`,
-				},
-			],
-		};
-	}
-);`,
-			},
-			effect: {
-				import: "import * as S from 'effect/Schema';",
-				schema: `const ExampleSchema = S.Struct({
-	name: S.String.annotations({ description: 'Name of the person' }),
-	age: S.Number.annotations({ description: 'Age of the person' }),
-});`,
-				tool: `server.tool(
-	{
-		name: 'greet_person',
-		description: 'Greet a person by name and age',
-		schema: ExampleSchema,
-	},
-	async (input) => {
-		return {
-			content: [
-				{
-					type: 'text',
-					text: \`Hello \${input.name}! You are \${input.age} years old.\`,
-				},
-			],
-		};
-	}
-);`,
-			},
-		};
-
-		const schema_example =
-			schema_examples[/** @type {keyof schema_examples} */ (adapter)];
-		if (schema_example) {
-			imports.push(schema_example.import);
-			adapter_setup = `,
+		adapter_setup = `,
 	{
 		adapter: new ${adapter_class}(),
 		capabilities: {
 			tools: { listChanged: true },
 		},
 	}`;
-			example_tool = `${schema_example.schema}
 
-${schema_example.tool}`;
-		}
+		// Read schema template and tool template
+		const schema_content = await read_template(`schema-${adapter}.js`);
+		const tool_content = await read_template('tool.js');
+		example_tool_content = `${schema_content}\n\n${tool_content}`;
+	} else {
+		// No schema case
+		example_tool_content = await read_template('tool-no-schema.js');
 	}
 
-	// Add server imports and setup if HTTP/SSE transports are used
+	// Add transport imports
+	const transport_imports = [];
+	if (transports.includes('stdio')) {
+		transport_imports.push(
+			"import { StdioTransport } from '@tmcp/transport-stdio';",
+		);
+	}
+	if (transports.includes('http')) {
+		transport_imports.push(
+			"import { HttpTransport } from '@tmcp/transport-http';",
+		);
+	}
+	if (transports.includes('sse')) {
+		transport_imports.push(
+			"import { SseTransport } from '@tmcp/transport-sse';",
+		);
+	}
+
+	// Setup HTTP/SSE transports
+	let http_transports_setup = '';
 	let server_setup = '';
-	let http_transports_setup = [];
-	let http_transports_respond = [];
+
 	if (transports.includes('http') || transports.includes('sse')) {
 		imports.push(`import { serve } from 'srvx';`);
-
-		if (transports.includes('http')) {
-			http_transports_setup.push(`
-export const http_transport = new HttpTransport(server${
-				include_auth
-					? `, {
-	oauth
-}`
-					: ''
-			});`);
-			http_transports_respond.push(`		const http_response = await http_transport.respond(request);
-		if (http_response) {
-			return http_response;
-		}`);
-		}
-
-		if (transports.includes('sse')) {
-			http_transports_setup.push(`
-export const sse_transport = new SseTransport(server${
-				include_auth
-					? `, {
-	oauth
-}`
-					: ''
-			});`);
-			http_transports_respond.push(`		const sse_response = await sse_transport.respond(request);
-		if (sse_response) {
-			return sse_response;
-		}`);
-		}
 
 		if (include_auth) {
 			imports.push(`import { oauth } from './auth-provider.js';`);
 		}
-		server_setup = `
-serve({
-	async fetch(request) {
-${http_transports_respond.join('\n\n')}
-		return new Response(null, { status: 404 });
+
+		const http_exports = [];
+		const http_responses = [];
+
+		if (transports.includes('http')) {
+			http_exports.push(
+				`export const http_transport = new HttpTransport(server${
+					include_auth ? `, {\n\toauth\n}` : ''
+				});`,
+			);
+			http_responses.push(
+				`\t\tconst http_response = await http_transport.respond(request);\n\t\tif (http_response) {\n\t\t\treturn http_response;\n\t\t}`,
+			);
+		}
+
+		if (transports.includes('sse')) {
+			http_exports.push(
+				`export const sse_transport = new SseTransport(server${
+					include_auth ? `, {\n\toauth\n}` : ''
+				});`,
+			);
+			http_responses.push(
+				`\t\tconst sse_response = await sse_transport.respond(request);\n\t\tif (sse_response) {\n\t\t\treturn sse_response;\n\t\t}`,
+			);
+		}
+
+		http_transports_setup = '\n' + http_exports.join('\n');
+		server_setup = `\nserve({\n\tasync fetch(request) {\n${http_responses.join('\n\n')}\n\t\treturn new Response(null, { status: 404 });\n\t}\n});\n`;
 	}
-});
-`;
+
+	// STDIO setup
+	let stdio_setup = '';
+	if (transports.includes('stdio')) {
+		stdio_setup =
+			'\n\nconst stdio_transport = new StdioTransport(server);\nstdio_transport.listen();';
 	}
 
-	return `#!/usr/bin/env node
-
-${imports.join('\n')}${transports.includes('stdio') ? "\nimport { StdioTransport } from '@tmcp/transport-stdio';" : ''}${transports.includes('http') ? "\nimport { HttpTransport } from '@tmcp/transport-http';" : ''}${transports.includes('sse') ? "\nimport { SseTransport } from '@tmcp/transport-sse';" : ''}
-
-const server = new McpServer(
-	{
-		name: 'example-server',
-		version: '1.0.0',
-		description: 'An example TMCP server',
-	}${adapter_setup}
-);
-
-${example_tool}
-
-${http_transports_setup.join('\n')}
-${server_setup}${
-		transports.includes('stdio')
-			? `
-
-const stdio_transport = new StdioTransport(server);
-stdio_transport.listen();`
-			: ''
-	}
-`;
+	// Use main server template
+	return await read_template('server.js', {
+		IMPORTS: [...imports, ...transport_imports].join('\n'),
+		ADAPTER_SETUP: adapter_setup,
+		EXAMPLE_TOOL: example_tool_content,
+		HTTP_TRANSPORTS_SETUP: http_transports_setup,
+		SERVER_SETUP: server_setup,
+		STDIO_SETUP: stdio_setup,
+	});
 }
 
 /**
- * Generate README.md content
+ * Generate README.md content using template
  * @param {Object} options
- * @param {Object} options.project_name
+ * @param {string} options.project_name
  * @param {string} options.adapter
  * @param {string[]} options.transports
  * @param {boolean} options.include_auth
  * @param {boolean} options.include_example
  * @param {string} options.example_path
  */
-function generate_readme({
+async function generate_readme({
 	project_name,
 	adapter,
 	transports,
@@ -906,37 +735,18 @@ function generate_readme({
 		.map((t) => `@tmcp/transport-${t}`)
 		.join(', ');
 
-	return `# ${project_name}
-
-A TMCP (lightweight MCP) server built with:
-
-- **Schema Adapter**: ${adapter_name}
-- **Transports**: ${transport_names}${include_auth ? '\n- **Authentication**: OAuth 2.1 support' : ''}${include_example ? `\n- **Example**: Included at \`${example_path}\`` : ''}
-
-## Development
-
-\`\`\`bash
-# Install dependencies
-pnpm install
-
-# Start the server
-pnpm run start
-
-# Start with file watching
-pnpm run dev
-\`\`\`
-
-## Usage
-
-This server provides the following capabilities:
-
-### Tools
-
-- \`hello\` - A simple greeting tool
-
-${
-	include_example
-		? `### Example Server
+	const auth_line = include_auth ? '\n- **Authentication**: OAuth 2.1 support' : '';
+	const example_line = include_example ? `\n- **Example**: Included at \`${example_path}\`` : '';
+	
+	const adapter_description = adapter !== 'none' 
+		? `Validates input using ${adapter_name}` 
+		: 'No schema validation (manual handling)';
+	
+	const auth_architecture = include_auth ? '\n- **OAuth 2.1**: Authentication and authorization' : '';
+	
+	let example_section = '';
+	if (include_example) {
+		example_section = `### Example Server
 
 Run the example server:
 
@@ -947,23 +757,20 @@ node ${example_path}
 The example demonstrates:
 - ${adapter !== 'none' ? 'Schema validation with ' + adapter_name : 'Basic tool implementation'}
 - STDIO transport for MCP communication
-`
-		: ''
-}
 
-## Architecture
-
-This server uses the TMCP (lightweight MCP) architecture:
-
-- **McpServer**: Core server implementation
-- **Schema Adapter**: ${adapter !== 'none' ? `Validates input using ${adapter_name}` : 'No schema validation (manual handling)'}
-- **Transports**: Communication layers (${transport_names})${include_auth ? '\n- **OAuth 2.1**: Authentication and authorization' : ''}
-
-## Learn More
-
-- [TMCP Documentation](https://github.com/paoloricciuti/tmcp)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
 `;
+	}
+
+	return await read_template('README.md', {
+		PROJECT_NAME: project_name,
+		ADAPTER_NAME: adapter_name,
+		TRANSPORT_NAMES: transport_names,
+		AUTH_LINE: auth_line,
+		EXAMPLE_LINE: example_line,
+		EXAMPLE_SECTION: example_section,
+		ADAPTER_DESCRIPTION: adapter_description,
+		AUTH_ARCHITECTURE: auth_architecture,
+	});
 }
 
 main().catch(console.error);
