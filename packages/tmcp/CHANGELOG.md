@@ -1,5 +1,37 @@
 # tmcp
 
+## 1.10.2
+
+### Patch Changes
+
+- d4dcd27: fix: bump `uri-template-matcher`
+- d4dcd27: chore: update readme
+
+## 1.10.1
+
+### Patch Changes
+
+- 8891069: fix: remove console.log
+
+## 1.10.0
+
+### Minor Changes
+
+- ea63a2b: feat: support `structuredContent`
+
+## 1.9.1
+
+### Patch Changes
+
+- 05e7631: fix: `Completion` can be a Promise
+
+## 1.9.0
+
+### Minor Changes
+
+- a99b45a: breaking: accept context with auth info as second argument of receive
+- a99b45a: feat: authentication
+
 ## 1.8.2
 
 ### Patch Changes

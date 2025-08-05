@@ -1,6 +1,6 @@
 {
 	"name": "tmcp",
-	"version": "1.8.2",
+	"version": "1.10.2",
 	"description": "The main tmcp library",
 	"main": "src/index.js",
 	"type": "module",
@@ -37,7 +37,7 @@
 		"@standard-schema/spec": "^1.0.0",
 		"json-rpc-2.0": "^1.7.1",
 		"sqids": "^0.3.0",
-		"uri-template-matcher": "^1.1.0",
+		"uri-template-matcher": "^1.1.1",
 		"valibot": "^1.1.0"
 	},
 	"devDependencies": {

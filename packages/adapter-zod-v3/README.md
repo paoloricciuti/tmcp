@@ -1,20 +1,22 @@
 # @tmcp/adapter-zod-v3
 
-Zod v3 adapter for TMCP JSON Schema conversion.
+Zod v3 adapter for TMCP JSON Schema conversion. Uses the external `zod-to-json-schema` library for conversion.
+
+> **Note:** For Zod v4+ support, use [`@tmcp/adapter-zod`](../adapter-zod) which uses Zod's built-in `toJSONSchema()` method.
 
 ## Installation
 
 ```bash
-npm install @tmcp/adapter-zod-v3 zod tmcp
+pnpm add @tmcp/adapter-zod-v3 zod tmcp
 ```
 
 ## Usage
 
 ```javascript
-import { ZodJsonSchemaAdapter } from '@tmcp/adapter-zod-v3';
+import { ZodV3JsonSchemaAdapter } from '@tmcp/adapter-zod-v3';
 import { z } from 'zod';
 
-const adapter = new ZodJsonSchemaAdapter();
+const adapter = new ZodV3JsonSchemaAdapter();
 
 // Define a Zod schema
 const userSchema = z.object({
@@ -32,10 +34,10 @@ console.log(jsonSchema);
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { ZodJsonSchemaAdapter } from '@tmcp/adapter-zod-v3';
+import { ZodV3JsonSchemaAdapter } from '@tmcp/adapter-zod-v3';
 import { z } from 'zod';
 
-const adapter = new ZodJsonSchemaAdapter();
+const adapter = new ZodV3JsonSchemaAdapter();
 const server = new McpServer(
 	{
 		name: 'my-server',
@@ -79,10 +81,10 @@ server.tool(
 ### Custom JSON Schema Options
 
 ```javascript
-import { ZodJsonSchemaAdapter } from '@tmcp/adapter-zod-v3';
+import { ZodV3JsonSchemaAdapter } from '@tmcp/adapter-zod-v3';
 import { z } from 'zod';
 
-const adapter = new ZodJsonSchemaAdapter();
+const adapter = new ZodV3JsonSchemaAdapter();
 
 // Schema with custom descriptions and metadata
 const userSchema = z.object({
@@ -122,9 +124,9 @@ const companySchema = z.object({
 
 ## API
 
-### `ZodJsonSchemaAdapter`
+### `ZodV3JsonSchemaAdapter`
 
-A class that extends the base `JsonSchemaAdapter` from TMCP and provides Zod-specific schema conversion.
+A class that extends the base `JsonSchemaAdapter` from TMCP and provides Zod v3-specific schema conversion.
 
 #### Methods
 
@@ -132,13 +134,13 @@ A class that extends the base `JsonSchemaAdapter` from TMCP and provides Zod-spe
 
 ## Dependencies
 
-- `zod` - Peer dependency for schema validation and type definitions
+- `zod` - Peer dependency for schema validation and type definitions (^3.0.0)
 - `tmcp` - Peer dependency for the base adapter
 - `zod-to-json-schema` - For schema conversion
 
 ## Features
 
-- **Full Zod support** - Supports all Zod schema types and transformations
+- **Full Zod v3 support** - Supports all Zod schema types and transformations
 - **Type safety** - Full TypeScript support with proper type inference
 - **Rich metadata** - Preserves descriptions, defaults, and validation rules
 - **Easy integration** - Drop-in replacement for other TMCP adapters

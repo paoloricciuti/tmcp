@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/adapter-effect",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Effect Schema adapter for TMCP JSON Schema conversion",
 	"type": "module",
 	"main": "src/index.js",

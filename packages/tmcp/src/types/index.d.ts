@@ -11,6 +11,7 @@ declare module 'tmcp' {
 			uri: string;
 			name?: string;
 		}>;
+		get ctx(): Context;
 		currentClientCapabilities(): {
 			experimental?: {} | undefined;
 			sampling?: {} | undefined;
@@ -22,13 +23,14 @@ declare module 'tmcp' {
 		
 		on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): () => void;
 		
-		tool<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, annotations }: {
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations }: {
 			name: string;
 			description: string;
 			title?: string;
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
 			annotations?: ToolAnnotations;
-		}, execute: TSchema extends undefined ? (() => Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)): void;
+		}, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
 		
 		prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete }: {
 			name: string;
@@ -54,7 +56,7 @@ declare module 'tmcp' {
 			list?: () => Promise<Array<Resource>> | Array<Resource>;
 		}, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
 		
-		receive(message: JSONRPCResponse | JSONRPCRequest, session_id?: string): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
+		receive(message: JSONRPCResponse | JSONRPCRequest, ctx?: Context): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
 		/**
 		 * Send a notification for subscriptions
 		 * */
@@ -76,11 +78,46 @@ declare module 'tmcp' {
 		log(level: LoggingLevel, data: unknown, logger?: string): void;
 		#private;
 	}
+	/**
+	 * Information about a validated access token, provided to request handlers.
+	 */
+	export type AuthInfo = {
+		/**
+		 * - The access token.
+		 */
+		token: string;
+		/**
+		 * - The client ID associated with this token.
+		 */
+		clientId: string;
+		/**
+		 * - Scopes associated with this token.
+		 */
+		scopes: string[];
+		/**
+		 * - When the token expires (in seconds since epoch).
+		 */
+		expiresAt?: number | undefined;
+		/**
+		 * - The RFC 8707 resource server identifier for which this token is valid.
+		 * If set, this MUST match the MCP server's resource identifier (minus hash fragment).
+		 */
+		resource?: URL | undefined;
+		/**
+		 * - Additional data associated with the token.
+		 * This field should be used for any additional data that needs to be attached to the auth info.
+		 */
+		extra?: Record<string, unknown> | undefined;
+	};
+	export type Context = {
+		sessionId?: string | undefined;
+		auth?: AuthInfo | undefined;
+	};
 	export type ClientCapabilities = ClientCapabilities_1;
 	type Completion = (
 		query: string,
 		context: { arguments: Record<string, string> },
-	) => CompleteResult;
+	) => CompleteResult | Promise<CompleteResult>;
 
 	type ServerOptions<TSchema extends StandardSchemaV1> = {
 		capabilities?: ServerCapabilities;
@@ -859,7 +896,11 @@ declare module 'tmcp' {
 	type ClientCapabilities_1 = v.InferInput<typeof ClientCapabilitiesSchema>;
 	type ServerCapabilities = v.InferInput<typeof ServerCapabilitiesSchema>;
 	type InitializeRequestParams = v.InferInput<typeof InitializeRequestParamsSchema>;
-	type CallToolResult = v.InferInput<typeof CallToolResultSchema>;
+	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent"> & (undefined extends TStructuredContent ? {
+		structuredContent?: undefined;
+	} : {
+		structuredContent: TStructuredContent;
+	});
 	type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
 	type GetPromptResult = v.InferInput<typeof GetPromptResultSchema>;
 	type CompleteResult = v.InferInput<typeof CompleteResultSchema>;

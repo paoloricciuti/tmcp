@@ -30,6 +30,25 @@ import {
 import { should_version_negotiation_fail } from './validation/version.js';
 
 /**
+ * Information about a validated access token, provided to request handlers.
+ * @typedef {Object} AuthInfo
+ * @property {string} token - The access token.
+ * @property {string} clientId - The client ID associated with this token.
+ * @property {string[]} scopes - Scopes associated with this token.
+ * @property {number} [expiresAt] - When the token expires (in seconds since epoch).
+ * @property {URL} [resource] - The RFC 8707 resource server identifier for which this token is valid.
+ *   If set, this MUST match the MCP server's resource identifier (minus hash fragment).
+ * @property {Record<string, unknown>} [extra] - Additional data associated with the token.
+ *   This field should be used for any additional data that needs to be attached to the auth info.
+ */
+
+/**
+ * @typedef {Object} Context
+ * @property {string} [sessionId]
+ * @property {AuthInfo} [auth]
+ */
+
+/**
  * @type {SqidsType | undefined}
  */
 let Sqids;
@@ -73,7 +92,7 @@ export class McpServer {
 	#client;
 	#options;
 	/**
-	 * @type {Map<string, Tool<any>>}
+	 * @type {Map<string, Tool<any, any>>}
 	 */
 	#tools = new Map();
 	/**
@@ -110,9 +129,9 @@ export class McpServer {
 	};
 
 	/**
-	 * @type {AsyncLocalStorage<string | undefined>}
+	 * @type {AsyncLocalStorage<Context>}
 	 */
-	#session_storage = new AsyncLocalStorage();
+	#ctx_storage = new AsyncLocalStorage();
 
 	/**
 	 * @type {Map<string|undefined, ClientCapabilities>}
@@ -236,7 +255,11 @@ export class McpServer {
 	}
 
 	get #session_id() {
-		return this.#session_storage.getStore();
+		return this.#ctx_storage.getStore()?.sessionId;
+	}
+
+	get ctx() {
+		return this.#ctx_storage.getStore() ?? {};
 	}
 
 	get #client_capabilities() {
@@ -305,12 +328,25 @@ export class McpServer {
 						name,
 						title: tool.title || tool.description,
 						description: tool.description,
-						annotations: tool.annotations,
+
 						inputSchema: tool.schema
 							? await this.#options.adapter.toJsonSchema(
 									tool.schema,
 								)
 							: { type: 'object', properties: {} },
+						...(tool.outputSchema
+							? {
+									outputSchema:
+										await this.#options.adapter.toJsonSchema(
+											tool.outputSchema,
+										),
+								}
+							: {}),
+						...(tool.annotations
+							? {
+									annotations: tool.annotations,
+								}
+							: {}),
 					};
 				}),
 			);
@@ -325,22 +361,55 @@ export class McpServer {
 				if (!tool) {
 					throw new McpError(-32601, `Tool ${name} not found`);
 				}
-				if (!tool.schema) {
-					return v.parse(CallToolResultSchema, await tool.execute());
+
+				// Validate input arguments if schema is provided
+				let validated_args = args;
+				if (tool.schema) {
+					let validation_result =
+						tool.schema['~standard'].validate(args);
+					if (validation_result instanceof Promise)
+						validation_result = await validation_result;
+					if (validation_result.issues) {
+						throw new McpError(
+							-32602,
+							`Invalid arguments for tool ${name}: ${JSON.stringify(validation_result.issues)}`,
+						);
+					}
+					validated_args = validation_result.value;
 				}
-				let validated_args = tool.schema['~standard'].validate(args);
-				if (validated_args instanceof Promise)
-					validated_args = await validated_args;
-				if (validated_args.issues) {
-					throw new McpError(
-						-32602,
-						`Invalid arguments for tool ${name}: ${JSON.stringify(validated_args.issues)}`,
-					);
-				}
-				return v.parse(
+
+				// Execute the tool
+				const tool_result = tool.schema
+					? await tool.execute(validated_args)
+					: await tool.execute();
+
+				// Parse the basic result structure
+				const parsed_result = v.parse(
 					CallToolResultSchema,
-					await tool.execute(validated_args.value),
+					tool_result,
 				);
+
+				// If tool has outputSchema, validate and populate structuredContent
+				if (
+					tool.outputSchema &&
+					parsed_result.structuredContent !== undefined
+				) {
+					let output_validation = tool.outputSchema[
+						'~standard'
+					].validate(parsed_result.structuredContent);
+					if (output_validation instanceof Promise)
+						output_validation = await output_validation;
+					if (output_validation.issues) {
+						throw new McpError(
+							-32603,
+							`Tool ${name} returned invalid structured content: ${JSON.stringify(output_validation.issues)}`,
+						);
+					}
+					// Update with validated structured content
+					parsed_result.structuredContent = output_validation.value;
+				}
+
+				return parsed_result;
 			},
 		);
 	}
@@ -577,7 +646,7 @@ export class McpServer {
 	#init_completion() {
 		this.#server.addMethod(
 			'completion/complete',
-			({ argument, ref, context }) => {
+			async ({ argument, ref, context }) => {
 				const completions = this.#completions[ref.type];
 				if (!completions) return null;
 				const complete = completions.get(ref.uri ?? ref.name);
@@ -586,7 +655,7 @@ export class McpServer {
 				if (!actual_complete) return null;
 				return v.parse(
 					CompleteResultSchema,
-					actual_complete(argument.value, context),
+					await actual_complete(argument.value, context),
 				);
 			},
 		);
@@ -604,10 +673,14 @@ export class McpServer {
 	}
 	/**
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; annotations?: ToolAnnotations }} options
-	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult> | CallToolResult) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult> | CallToolResult)} execute
+	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
+	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations }} options
+	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
 	 */
-	tool({ name, description, title, schema, annotations }, execute) {
+	tool(
+		{ name, description, title, schema, outputSchema, annotations },
+		execute,
+	) {
 		if (this.#options.capabilities?.tools?.listChanged) {
 			this.#notify('notifications/tools/list_changed', {});
 		}
@@ -615,6 +688,7 @@ export class McpServer {
 			description,
 			title,
 			schema,
+			outputSchema,
 			execute,
 			annotations,
 		});
@@ -690,10 +764,10 @@ export class McpServer {
 	}
 	/**
 	 * @param {JSONRPCResponse | JSONRPCRequest} message
-	 * @param {string} [session_id]
+	 * @param {Context} [ctx]
 	 * @returns {ReturnType<JSONRPCServer['receive']> | ReturnType<JSONRPCClient['receive'] | undefined>}
 	 */
-	receive(message, session_id) {
+	receive(message, ctx) {
 		// Validate the message first
 		const validated_message = v.safeParse(
 			v.union([JSONRPCRequestSchema, JSONRPCNotificationSchema]),
@@ -707,15 +781,15 @@ export class McpServer {
 			// to each client that didn't explicitly set a log level too
 			if (
 				!!this.#options.capabilities?.logging &&
-				!this.#session_log_levels.has(session_id)
+				!this.#session_log_levels.has(ctx?.sessionId)
 			) {
 				this.#session_log_levels.set(
-					session_id,
+					ctx?.sessionId,
 					this.#options.logging?.default ?? 'info',
 				);
 			}
-			return this.#session_storage.run(
-				session_id,
+			return this.#ctx_storage.run(
+				ctx ?? {},
 				async () =>
 					await this.#server.receive(validated_message.output),
 			);
@@ -723,7 +797,7 @@ export class McpServer {
 		// It's a response - handle with client
 		const validated_response = v.parse(JSONRPCResponseSchema, message);
 		this.#lazyily_create_client();
-		return this.#session_storage.run(session_id, async () =>
+		return this.#ctx_storage.run(ctx ?? {}, async () =>
 			this.#client?.receive(validated_response),
 		);
 	}

@@ -1,11 +1,13 @@
 # @tmcp/adapter-zod
 
-Zod adapter for TMCP JSON Schema conversion.
+Zod v4+ adapter for TMCP JSON Schema conversion. Uses Zod's built-in `toJSONSchema()` method available in Zod v4+.
+
+> **Note:** For Zod v3 support, use [`@tmcp/adapter-zod-v3`](../adapter-zod-v3) which uses the external `zod-to-json-schema` library.
 
 ## Installation
 
 ```bash
-npm install @tmcp/adapter-zod zod tmcp
+pnpm add @tmcp/adapter-zod zod tmcp
 ```
 
 ## Usage
@@ -132,17 +134,16 @@ A class that extends the base `JsonSchemaAdapter` from TMCP and provides Zod-spe
 
 ## Dependencies
 
-- `zod` - Peer dependency for schema validation and type definitions
+- `zod` - Peer dependency for schema validation and type definitions (^4.0.0)
 - `tmcp` - Peer dependency for the base adapter
-- `zod-to-json-schema` - For schema conversion
 
 ## Features
 
-- **Full Zod support** - Supports all Zod schema types and transformations
+- **Full Zod v4+ support** - Supports all Zod schema types and transformations
 - **Type safety** - Full TypeScript support with proper type inference
 - **Rich metadata** - Preserves descriptions, defaults, and validation rules
 - **Easy integration** - Drop-in replacement for other TMCP adapters
-- **Battle-tested** - Uses the well-maintained `zod-to-json-schema` library
+- **Native conversion** - Uses Zod's built-in `toJSONSchema()` method for optimal performance
 
 ## Acknowledgments
 

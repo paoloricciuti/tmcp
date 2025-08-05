@@ -1,16 +1,17 @@
 /**
- * @import { McpServer, ClientCapabilities } from "tmcp";
+ * @import { AuthInfo, McpServer } from "tmcp";
+ * @import { OAuth  } from "@tmcp/auth";
  */
 
 /**
  * @typedef {{
  * 	getSessionId?: () => string
  * 	path?: string
+ * 	oauth?: OAuth<"built">
  * }} HttpTransportOptions
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
-
 export class HttpTransport {
 	/**
 	 * @type {McpServer<any>}
@@ -18,7 +19,7 @@ export class HttpTransport {
 	#server;
 
 	/**
-	 * @type {Required<HttpTransportOptions>}
+	 * @type {Required<Omit<HttpTransportOptions, 'oauth'>>}
 	 */
 	#options;
 
@@ -42,32 +43,52 @@ export class HttpTransport {
 	#controller_storage = new AsyncLocalStorage();
 
 	/**
+	 * @type {OAuth<"built"> | undefined}
+	 */
+	#oauth;
+
+	#text_encoder = new TextEncoder();
+
+	/**
 	 *
 	 * @param {McpServer<any>} server
 	 * @param {HttpTransportOptions} [options]
 	 */
 	constructor(server, options) {
 		this.#server = server;
-		const { getSessionId = () => crypto.randomUUID(), path = '/mcp' } =
-			options ?? {
-				getSessionId: () => crypto.randomUUID(),
-			};
+		const {
+			getSessionId = () => crypto.randomUUID(),
+			path = '/mcp',
+			oauth,
+		} = options ?? {
+			getSessionId: () => crypto.randomUUID(),
+		};
+
+		if (oauth) {
+			this.#oauth = oauth;
+		}
+
 		this.#options = { getSessionId, path };
 		this.#path = path;
 		this.#server.on('send', ({ request, context: { sessions } }) => {
 			// use the current controller if the request has an id (it means it's a request and not a notification)
 			if (request.id != null) {
 				const controller = this.#controller_storage.getStore();
-				if (!controller)
-					throw new Error('Controller not found in storage');
+				if (!controller) return;
 
-				controller.enqueue('data: ' + JSON.stringify(request) + '\n\n');
+				controller.enqueue(
+					this.#text_encoder.encode(
+						'data: ' + JSON.stringify(request) + '\n\n',
+					),
+				);
 				return;
 			}
 			for (let [session_id, controller] of this.#session.entries()) {
 				if (sessions === undefined || sessions.includes(session_id)) {
 					controller.enqueue(
-						'data: ' + JSON.stringify(request) + '\n\n',
+						this.#text_encoder.encode(
+							'data: ' + JSON.stringify(request) + '\n\n',
+						),
 					);
 				}
 			}
@@ -150,8 +171,9 @@ export class HttpTransport {
 	 *
 	 * @param {string} session_id
 	 * @param {Request} request
+	 * @param {AuthInfo | null} auth_info
 	 */
-	async #handle_post(session_id, request) {
+	async #handle_post(session_id, request, auth_info) {
 		// Check Content-Type header
 		const content_type = request.headers.get('content-type');
 		if (!content_type || !content_type.includes('application/json')) {
@@ -192,11 +214,17 @@ export class HttpTransport {
 			const handle = async () => {
 				const response = await this.#controller_storage.run(
 					controller,
-					() => this.#server.receive(body, session_id),
+					() =>
+						this.#server.receive(body, {
+							sessionId: session_id,
+							auth: auth_info ?? undefined,
+						}),
 				);
 
 				controller?.enqueue(
-					'data: ' + JSON.stringify(response) + '\n\n',
+					this.#text_encoder.encode(
+						'data: ' + JSON.stringify(response) + '\n\n',
+					),
 				);
 				controller?.close();
 			};
@@ -274,10 +302,38 @@ export class HttpTransport {
 	async respond(request) {
 		const url = new URL(request.url);
 
+		/**
+		 * @type {AuthInfo | null}
+		 */
+		let auth_info = null;
+
+		// Check if OAuth helper should handle this request
+		if (this.#oauth) {
+			try {
+				const response = await this.#oauth.respond(request);
+				if (response) {
+					return response;
+				}
+			} catch (error) {
+				return new Response(
+					JSON.stringify({
+						error: 'server_error',
+						error_description: /** @type {Error} */ (error).message,
+					}),
+					{
+						status: 500,
+						headers: { 'Content-Type': 'application/json' },
+					},
+				);
+			}
+			auth_info = await this.#oauth.verify(request);
+		}
+
 		// Check if the request path matches the configured MCP path
 		if (url.pathname !== this.#path) {
 			return null;
 		}
+
 		const method = request.method;
 		const session_id =
 			request.headers.get('mcp-session-id') ||
@@ -295,7 +351,7 @@ export class HttpTransport {
 
 		// Handle POST request - process message and respond through event stream
 		if (method === 'POST') {
-			return this.#handle_post(session_id, request);
+			return this.#handle_post(session_id, request, auth_info);
 		}
 
 		// Method not supported

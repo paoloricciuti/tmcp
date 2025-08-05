@@ -1,5 +1,6 @@
 /**
- * @import { McpServer } from "tmcp";
+ * @import { AuthInfo, McpServer } from "tmcp";
+ * @import { OAuth } from "@tmcp/auth";
  */
 
 /**
@@ -7,6 +8,7 @@
  * 	getSessionId?: () => string
  * 	path?: string
  * 	endpoint?: string
+ * 	oauth?: OAuth<"built">
  * }} SseTransportOptions
  */
 
@@ -17,7 +19,7 @@ export class SseTransport {
 	#server;
 
 	/**
-	 * @type {Required<SseTransportOptions>}
+	 * @type {Required<Omit<SseTransportOptions, 'oauth'>>}
 	 */
 	#options;
 
@@ -42,6 +44,13 @@ export class SseTransport {
 	#streams = new Map();
 
 	/**
+	 * @type {OAuth<"built"> | undefined}
+	 */
+	#oauth;
+
+	#text_encoder = new TextEncoder();
+
+	/**
 	 * @param {McpServer<any>} server
 	 * @param {SseTransportOptions} [options]
 	 */
@@ -51,11 +60,15 @@ export class SseTransport {
 			getSessionId = () => crypto.randomUUID(),
 			path = '/sse',
 			endpoint = '/message',
+			oauth,
 		} = options ?? {
 			getSessionId: () => crypto.randomUUID(),
 			path: '/sse',
 			endpoint: '/message',
 		};
+		if (oauth) {
+			this.#oauth = oauth;
+		}
 		this.#options = {
 			getSessionId,
 			path,
@@ -68,7 +81,11 @@ export class SseTransport {
 		this.#server.on('send', ({ request, context: { sessions } }) => {
 			for (let [session_id, controller] of this.#sessions.entries()) {
 				if (sessions === undefined || sessions.includes(session_id)) {
-					controller.enqueue(`data: ${JSON.stringify(request)}\n\n`);
+					controller.enqueue(
+						this.#text_encoder.encode(
+							`data: ${JSON.stringify(request)}\n\n`,
+						),
+					);
 				}
 			}
 		});
@@ -100,7 +117,7 @@ export class SseTransport {
 
 				const endpoint_event = `event: endpoint\ndata: ${endpoint_url.pathname + endpoint_url.search + endpoint_url.hash}\n\n`;
 
-				controller.enqueue(endpoint_event);
+				controller.enqueue(this.#text_encoder.encode(endpoint_event));
 			},
 			cancel: () => {
 				this.#sessions.delete(session_id);
@@ -127,8 +144,9 @@ export class SseTransport {
 	/**
 	 * @param {string} session_id
 	 * @param {Request} request
+	 * @param {AuthInfo | null} auth_info
 	 */
-	async #handle_post(session_id, request) {
+	async #handle_post(session_id, request, auth_info) {
 		// Check Content-Type header
 		const content_type = request.headers.get('content-type');
 		if (!content_type || !content_type.includes('application/json')) {
@@ -153,7 +171,10 @@ export class SseTransport {
 
 		try {
 			const body = await request.clone().json();
-			const response = await this.#server.receive(body, session_id);
+			const response = await this.#server.receive(body, {
+				sessionId: session_id,
+				auth: auth_info ?? undefined,
+			});
 
 			const controller = this.#sessions.get(session_id);
 
@@ -168,7 +189,11 @@ export class SseTransport {
 			}
 
 			if (response != null) {
-				controller.enqueue(`data: ${JSON.stringify(response)}\n\n`);
+				controller.enqueue(
+					this.#text_encoder.encode(
+						`data: ${JSON.stringify(response)}\n\n`,
+					),
+				);
 			}
 
 			// Return JSON response for requests
@@ -240,6 +265,33 @@ export class SseTransport {
 	async respond(request) {
 		const url = new URL(request.url);
 
+		/**
+		 * @type {AuthInfo | null}
+		 */
+		let auth_info = null;
+
+		// Check if OAuth helper should handle this request
+		if (this.#oauth) {
+			try {
+				const response = await this.#oauth.respond(request);
+				if (response) {
+					return response;
+				}
+			} catch (error) {
+				return new Response(
+					JSON.stringify({
+						error: 'server_error',
+						error_description: /** @type {Error} */ (error).message,
+					}),
+					{
+						status: 500,
+						headers: { 'Content-Type': 'application/json' },
+					},
+				);
+			}
+			auth_info = await this.#oauth.verify(request);
+		}
+
 		// Check if the request path matches the configured SSE path
 		if (
 			request.method === 'GET'
@@ -267,7 +319,7 @@ export class SseTransport {
 
 		// Handle POST request - process message
 		if (method === 'POST') {
-			return this.#handle_post(session_id, request);
+			return this.#handle_post(session_id, request, auth_info);
 		}
 
 		// Method not supported

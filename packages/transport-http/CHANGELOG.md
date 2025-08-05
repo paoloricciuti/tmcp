@@ -1,5 +1,38 @@
 # @tmcp/transport-http
 
+## 0.5.3
+
+### Patch Changes
+
+- d4dcd27: chore: update readme
+- Updated dependencies [d4dcd27]
+- Updated dependencies [d4dcd27]
+    - tmcp@1.10.2
+
+## 0.5.2
+
+### Patch Changes
+
+- 55916ac: fix: encode strings before enqueueing them
+
+## 0.5.1
+
+### Patch Changes
+
+- 297b783: fix: silently fail in case a controller is missing
+
+## 0.5.0
+
+### Minor Changes
+
+- a99b45a: feat: authentication
+
+### Patch Changes
+
+- Updated dependencies [a99b45a]
+- Updated dependencies [a99b45a]
+    - tmcp@1.9.0
+
 ## 0.4.2
 
 ### Patch Changes

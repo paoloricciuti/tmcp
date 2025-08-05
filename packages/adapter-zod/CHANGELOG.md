@@ -1,5 +1,23 @@
 # @tmcp/adapter-zod
 
+## 0.1.6
+
+### Patch Changes
+
+- d4dcd27: chore: update readme
+- Updated dependencies [d4dcd27]
+- Updated dependencies [d4dcd27]
+    - tmcp@1.10.2
+
+## 0.1.5
+
+### Patch Changes
+
+- a99b45a: fix: types
+- Updated dependencies [a99b45a]
+- Updated dependencies [a99b45a]
+    - tmcp@1.9.0
+
 ## 0.1.4
 
 ### Patch Changes

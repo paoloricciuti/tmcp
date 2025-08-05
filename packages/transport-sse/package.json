@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/transport-sse",
-	"version": "0.1.2",
+	"version": "0.2.4",
 	"description": "Transport for TMCP using Server-Sent Events",
 	"type": "module",
 	"main": "src/index.js",
@@ -31,6 +31,7 @@
 		"directory": "packages/transport-sse"
 	},
 	"devDependencies": {
+		"@tmcp/auth": "workspace:^",
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^"

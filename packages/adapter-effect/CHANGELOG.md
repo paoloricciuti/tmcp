@@ -1,5 +1,14 @@
 # @tmcp/adapter-effect
 
+## 0.2.1
+
+### Patch Changes
+
+- d4dcd27: chore: update readme
+- Updated dependencies [d4dcd27]
+- Updated dependencies [d4dcd27]
+    - tmcp@1.10.2
+
 ## 0.2.0
 
 ### Minor Changes

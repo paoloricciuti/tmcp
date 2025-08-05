@@ -13,9 +13,10 @@ import {
 	ToolAnnotations
 } from '../validation/index.js';
 
-export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
+export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
+	outputSchema?: TOutputSchema;
 	title?: string;
 	annotations?: ToolAnnotations;
 	execute: (
@@ -26,7 +27,7 @@ export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 export type Completion = (
 	query: string,
 	context: { arguments: Record<string, string> },
-) => CompleteResult;
+) => CompleteResult | Promise<CompleteResult>;
 
 export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;

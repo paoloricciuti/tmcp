@@ -5,11 +5,7 @@ A Server-Sent Events (SSE) transport implementation for TMCP (TypeScript Model C
 ## Installation
 
 ```bash
-npm install @tmcp/transport-sse tmcp
-# or
 pnpm add @tmcp/transport-sse tmcp
-# or
-yarn add @tmcp/transport-sse tmcp
 ```
 
 ## Usage
@@ -55,55 +51,16 @@ const transport = new SseTransport(server);
 
 // Use with your preferred HTTP server
 // Example with Node.js built-in server:
-import { createServer } from 'http';
+import * as http from 'node:http';
+import { createRequestListener } from '@remix-run/node-fetch-server';
 
-const httpServer = createServer(async (req, res) => {
-	try {
-		let body = '';
-		req.on('data', (chunk) => (body += chunk));
-		req.on('end', async () => {
-			const request = new Request(`http://localhost${req.url}`, {
-				method: req.method,
-				headers: req.headers,
-				body: req.method === 'POST' ? body : undefined,
-			});
-
-			const response = await transport.respond(request);
-
-			// If response is null, the request wasn't for MCP
-			if (response === null) {
-				res.statusCode = 404;
-				res.end('Not Found');
-				return;
-			}
-
-			// Copy response to Node.js response
-			response.headers.forEach((value, key) => {
-				res.setHeader(key, value);
-			});
-			res.statusCode = response.status;
-
-			if (response.body) {
-				const reader = response.body.getReader();
-				const pump = async () => {
-					const { done, value } = await reader.read();
-					if (done) {
-						res.end();
-						return;
-					}
-					res.write(value);
-					pump();
-				};
-				pump();
-			} else {
-				res.end();
-			}
-		});
-	} catch (error) {
-		res.statusCode = 500;
-		res.end('Internal Server Error');
+const httpServer = http.createServer((request)=>{
+	const response = await transport.respond(request);
+	if(response){
+		return response;
 	}
-});
+	return new Response(null, { status: 404 });
+}));
 
 httpServer.listen(3000, () => {
 	console.log('MCP SSE server listening on port 3000');
@@ -122,6 +79,7 @@ const transport = new SseTransport(server, {
 	getSessionId: () => {
 		return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 	},
+	oauth: OAuth; // an oauth provider generated from @tmcp/auth
 });
 ```
 
@@ -290,6 +248,27 @@ const server = new McpServer(/* ... */);
 const transport = new SseTransport(server);
 
 Deno.serve({ port: 3000 }, async (req) => {
+	const response = await transport.respond(req);
+	if (response === null) {
+		return new Response('Not Found', { status: 404 });
+	}
+	return response;
+});
+```
+
+### `srvx`
+
+If you want to have the same experience throughout Deno, Bun or Node you can also use `srvx`
+
+```js
+import { McpServer } from 'tmcp';
+import { SseTransport } from '@tmcp/transport-sse';
+import { serve } from 'srvx';
+
+const server = new McpServer(/* ... */);
+const transport = new SseTransport(server);
+
+serve(async (req) => {
 	const response = await transport.respond(req);
 	if (response === null) {
 		return new Response('Not Found', { status: 404 });

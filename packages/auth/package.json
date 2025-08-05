@@ -1,0 +1,56 @@
+{
+	"name": "@tmcp/auth",
+	"version": "0.3.3",
+	"description": "OAuth 2.1 authorization helper for TMCP with MCP specification compliance",
+	"type": "module",
+	"main": "src/index.js",
+	"types": "src/types/index.d.ts",
+	"scripts": {
+		"generate:types": "dts-buddy && publint",
+		"prepublish": "pnpm generate:types",
+		"test": "vitest --run"
+	},
+	"exports": {
+		".": {
+			"types": "./src/types/index.d.ts",
+			"default": "./src/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"src/**/*"
+	],
+	"peerDependencies": {
+		"tmcp": "workspace:^"
+	},
+	"dependencies": {
+		"@standard-schema/spec": "^1.0.0",
+		"@types/json-schema": "^7.0.15",
+		"pkce-challenge": "^4.1.0",
+		"valibot": "^1.1.0"
+	},
+	"keywords": [
+		"tmcp",
+		"oauth",
+		"oauth2",
+		"authorization",
+		"mcp",
+		"auth"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/paoloricciuti/tmcp.git",
+		"directory": "packages/auth"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.15",
+		"@tmcp/internal-ts-helpers": "workspace:^",
+		"dts-buddy": "^0.6.2",
+		"publint": "^0.3.12",
+		"tmcp": "workspace:^",
+		"vitest": "^3.2.4"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
+}

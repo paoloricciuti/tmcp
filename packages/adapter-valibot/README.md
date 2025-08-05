@@ -5,7 +5,7 @@ Valibot adapter for TMCP JSON Schema conversion.
 ## Installation
 
 ```bash
-npm install @tmcp/adapter-valibot valibot tmcp
+pnpm add @tmcp/adapter-valibot valibot tmcp
 ```
 
 ## Usage
@@ -141,7 +141,7 @@ A class that extends the base `JsonSchemaAdapter` from TMCP and provides Valibot
 
 ## Dependencies
 
-- `valibot` - Peer dependency for schema validation
+- `valibot` - Peer dependency for schema validation (^1.1.0)
 - `tmcp` - Peer dependency for the base adapter
 - `@valibot/to-json-schema` - For schema conversion
 
