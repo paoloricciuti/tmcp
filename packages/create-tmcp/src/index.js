@@ -223,7 +223,11 @@ async function main() {
 			return process.exit(0);
 		}
 
-		if (custom_example_path && custom_example_path.trim()) {
+		/**
+		 *
+		 * @param {string} custom_example_path
+		 */
+		function example_path_to_file(custom_example_path) {
 			let trimmed_path = custom_example_path.trim();
 
 			// Check if the path is a directory (ends with / or doesn't have an extension)
@@ -239,7 +243,40 @@ async function main() {
 				trimmed_path = join(trimmed_path, 'index.js');
 			}
 
-			example_path = trimmed_path;
+			return trimmed_path;
+		}
+
+		if (custom_example_path && custom_example_path.trim()) {
+			example_path = example_path_to_file(custom_example_path);
+		}
+
+		while (existsSync(join(project_path, example_path))) {
+			const overwrite_example = await p.confirm({
+				message: `File "${example_path}" already exists. Overwrite?`,
+				initialValue: false,
+			});
+
+			if (p.isCancel(overwrite_example)) {
+				p.cancel('Operation cancelled');
+				return process.exit(0);
+			}
+
+			if (overwrite_example) {
+				break;
+			}
+
+			const new_example_path = await p.text({
+				message:
+					'Please provide a different path for the example server:',
+				placeholder: 'src/index.js',
+			});
+
+			if (p.isCancel(new_example_path)) {
+				p.cancel('Operation cancelled');
+				return process.exit(0);
+			}
+
+			example_path = example_path_to_file(new_example_path.trim());
 		}
 	}
 
@@ -256,8 +293,11 @@ async function main() {
 
 	let package_manager = 'pnpm';
 	if (install_dependencies) {
+		const is_deno = 'Deno' in globalThis;
+		const is_bun = 'Bun' in globalThis;
 		const package_manager_res = await p.select({
 			message: 'Which package manager would you like to use?',
+			initialValue: is_deno ? 'deno' : is_bun ? 'bun' : 'pnpm',
 			options: [
 				{
 					value: 'pnpm',
@@ -268,6 +308,16 @@ async function main() {
 					value: 'npm',
 					label: 'npm',
 					hint: 'Node.js default package manager',
+				},
+				{
+					value: 'deno',
+					label: 'Deno',
+					hint: 'Deno runtime',
+				},
+				{
+					value: 'bun',
+					label: 'Bun',
+					hint: 'Bun runtime',
 				},
 			],
 		});
@@ -294,6 +344,7 @@ async function main() {
 			example_path,
 			install_dependencies,
 			package_manager,
+			spinner,
 		});
 
 		spinner.stop('Project created successfully!');
@@ -326,6 +377,7 @@ async function main() {
  * @param {string} options.example_path
  * @param {boolean} options.install_dependencies
  * @param {string} options.package_manager
+ * @param {ReturnType<typeof p.spinner>} options.spinner
  */
 async function generate_project({
 	project_path,
@@ -337,6 +389,7 @@ async function generate_project({
 	example_path,
 	install_dependencies,
 	package_manager,
+	spinner,
 }) {
 	// Create src directory
 	const src_dir = join(project_path, 'src');
@@ -345,6 +398,7 @@ async function generate_project({
 	}
 
 	// Generate or update package.json
+	spinner.message('Generating package.json...');
 	const package_json_path = join(project_path, 'package.json');
 	const package_json = await generate_package_json({
 		project_name,
@@ -352,7 +406,9 @@ async function generate_project({
 		transports,
 		include_auth,
 		include_example,
+		example_path,
 		existing_package_path: package_json_path,
+		package_manager,
 	});
 	await writeFile(
 		package_json_path,
@@ -361,6 +417,7 @@ async function generate_project({
 
 	// Generate example if requested
 	if (include_example) {
+		spinner.message('Generating example server...');
 		const example_content = await generate_example_js({
 			adapter,
 			transports,
@@ -375,19 +432,27 @@ async function generate_project({
 
 		// Generate auth provider if requested
 		if (include_auth) {
+			spinner.message('Generating auth provider...');
 			const auth_provider_content =
 				await generate_auth_provider(transports);
 			const auth_provider_path = join(
 				dirname(example_file_path),
 				'auth-provider.js',
 			);
-			await writeFile(auth_provider_path, auth_provider_content);
+			if (!existsSync(auth_provider_path)) {
+				await writeFile(auth_provider_path, auth_provider_content);
+			} else {
+				p.text({
+					message: `Auth provider file already exists at ${auth_provider_path}. Skipping generation.`,
+				});
+			}
 		}
 	}
 
 	// Generate README.md only if project is not already initialized
 	const readme_path = join(project_path, 'README.md');
 	if (!existsSync(readme_path)) {
+		spinner.message('Generating README...');
 		const readme_content = await generate_readme({
 			project_name,
 			adapter,
@@ -402,8 +467,8 @@ async function generate_project({
 	// Install dependencies if requested
 	if (install_dependencies) {
 		try {
-			const install_command =
-				package_manager === 'pnpm' ? 'pnpm install' : 'npm install';
+			spinner.message('Installing dependencies...');
+			const install_command = `${package_manager} install`;
 			await execAsync(install_command, { cwd: project_path });
 		} catch {
 			throw new Error(
@@ -422,6 +487,8 @@ async function generate_project({
  * @param {boolean} options.include_auth
  * @param {boolean} options.include_example
  * @param {string} options.existing_package_path
+ * @param {string} options.package_manager
+ * @param {string} options.example_path
  */
 async function generate_package_json({
 	project_name,
@@ -429,7 +496,9 @@ async function generate_package_json({
 	transports,
 	include_auth,
 	include_example,
+	example_path,
 	existing_package_path,
+	package_manager,
 }) {
 	// Check if package.json exists and merge dependencies
 	/**
@@ -555,6 +624,13 @@ async function generate_package_json({
 		...existing_package.devDependencies,
 	};
 
+	const runner =
+		package_manager === 'deno'
+			? 'deno run'
+			: package_manager === 'bun'
+				? 'bun run'
+				: 'node';
+
 	const default_package = {
 		name: project_name,
 		version: '1.0.0',
@@ -562,8 +638,8 @@ async function generate_package_json({
 		type: 'module',
 		main: 'src/index.js',
 		scripts: {
-			start: 'node src/index.js',
-			dev: 'node --watch src/index.js',
+			start: `${runner} ${example_path}`,
+			dev: `${runner} --watch ${example_path}}`,
 		},
 		keywords: ['tmcp', 'mcp', 'server'],
 	};
@@ -571,6 +647,10 @@ async function generate_package_json({
 	return {
 		...default_package,
 		...existing_package,
+		scripts: {
+			...default_package.scripts,
+			...existing_package.scripts,
+		},
 		dependencies: merged_dependencies,
 		devDependencies: merged_dev_dependencies,
 	};
