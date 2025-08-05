@@ -26,6 +26,11 @@ let client;
  */
 let mcp_server;
 
+/**
+ * @type {Promise<void>}
+ */
+let sse_connected;
+
 beforeEach(async () => {
 	/**
 	 * @type {()=>void};
@@ -42,7 +47,6 @@ beforeEach(async () => {
 		transport = new StreamableHTTPClientTransport(
 			new URL('http://localhost:3000/mcp'),
 		);
-		console.log('new transport');
 		client = new Client({
 			name: 'example-client',
 			version: '1.0.0',
@@ -63,14 +67,14 @@ afterEach(() => {
 describe('HTTP Transport', () => {
 	describe('basic connection', () => {
 		beforeEach(() => {
-			mcp_server = new_server({
+			({ mcp_server, sse_connected } = new_server({
 				capabilities: {
 					tools: { listChanged: true },
 					prompts: { listChanged: true },
 					resources: { listChanged: true, subscribe: true },
 					logging: {},
 				},
-			}).setup(() => {});
+			}).setup(() => {}));
 		});
 
 		it('can ping the server', async () => {
@@ -94,7 +98,7 @@ describe('HTTP Transport', () => {
 
 	describe('tools', () => {
 		beforeEach(() => {
-			mcp_server = new_server({
+			({ mcp_server, sse_connected } = new_server({
 				capabilities: {
 					tools: {
 						listChanged: true,
@@ -143,7 +147,7 @@ describe('HTTP Transport', () => {
 						};
 					},
 				);
-			});
+			}));
 		});
 
 		it('can request the list of tools', async () => {
@@ -267,9 +271,8 @@ describe('HTTP Transport', () => {
 				handler,
 			);
 
-			// @ts-ignore i'm patching the tool to add this promise so that i can await for the notification
-			// stream to be open before adding the tool
-			await transport.notification_stream_open;
+			// we need to wait for the SSE connection to be established
+			await sse_connected;
 
 			mcp_server.tool(
 				{
@@ -325,7 +328,7 @@ describe('HTTP Transport', () => {
 
 	describe('prompts', () => {
 		beforeEach(() => {
-			mcp_server = new_server({
+			({ mcp_server, sse_connected } = new_server({
 				capabilities: {
 					prompts: {
 						listChanged: true,
@@ -370,7 +373,7 @@ describe('HTTP Transport', () => {
 						};
 					},
 				);
-			});
+			}));
 		});
 
 		it('can list prompts', async () => {
@@ -429,9 +432,8 @@ describe('HTTP Transport', () => {
 				handler,
 			);
 
-			// @ts-ignore i'm patching the tool to add this promise so that i can await for the notification
-			// stream to be open before adding the tool
-			await transport.notification_stream_open;
+			// we need to wait for the SSE connection to be established
+			await sse_connected;
 
 			mcp_server.prompt(
 				{
@@ -459,7 +461,7 @@ describe('HTTP Transport', () => {
 
 	describe('resources', () => {
 		beforeEach(() => {
-			mcp_server = new_server({
+			({ mcp_server, sse_connected } = new_server({
 				capabilities: {
 					resources: {
 						listChanged: true,
@@ -514,7 +516,7 @@ describe('HTTP Transport', () => {
 						],
 					}),
 				);
-			});
+			}));
 		});
 
 		it('can list resources', async () => {
@@ -607,9 +609,8 @@ describe('HTTP Transport', () => {
 				handler,
 			);
 
-			// @ts-ignore i'm patching the tool to add this promise so that i can await for the notification
-			// stream to be open before adding the tool
-			await transport.notification_stream_open;
+			// we need to wait for the SSE connection to be established
+			await sse_connected;
 
 			mcp_server.resource(
 				{
@@ -643,9 +644,8 @@ describe('HTTP Transport', () => {
 				handler,
 			);
 
-			// @ts-ignore i'm patching the tool to add this promise so that i can await for the notification
-			// stream to be open before adding the tool
-			await transport.notification_stream_open;
+			// we need to wait for the SSE connection to be established
+			await sse_connected;
 
 			// Trigger resource change
 			mcp_server.changed('resource', 'test://resource');
@@ -668,9 +668,9 @@ describe('HTTP Transport', () => {
 
 	describe('roots', () => {
 		beforeEach(() => {
-			mcp_server = new_server({
+			({ mcp_server, sse_connected } = new_server({
 				capabilities: {},
-			}).setup(() => {});
+			}).setup(() => {}));
 		});
 
 		it('can send roots list changed notification', async () => {
@@ -688,11 +688,11 @@ describe('HTTP Transport', () => {
 
 	describe('error handling', () => {
 		beforeEach(() => {
-			mcp_server = new_server({
+			({ mcp_server, sse_connected } = new_server({
 				capabilities: {
 					tools: { listChanged: true },
 				},
-			}).setup(() => {});
+			}).setup(() => {}));
 		});
 
 		it('handles malformed requests gracefully', async () => {

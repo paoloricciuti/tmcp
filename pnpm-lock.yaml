@@ -5,9 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@modelcontextprotocol/sdk@1.16.0':
-    hash: d28a5605908a71cdbaf9407d0d137ccc16f4d6c985717b202f88a6339e8e7631
-    path: patches/@modelcontextprotocol__sdk@1.16.0.patch
   dts-buddy:
     hash: 07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b
     path: patches/dts-buddy.patch
@@ -272,8 +269,11 @@ importers:
   packages/transport-http:
     devDependencies:
       '@modelcontextprotocol/sdk':
-        specifier: ^1.16.0
-        version: 1.16.0(patch_hash=d28a5605908a71cdbaf9407d0d137ccc16f4d6c985717b202f88a6339e8e7631)
+        specifier: ^1.17.1
+        version: 1.17.1
+      '@remix-run/node-fetch-server':
+        specifier: ^0.8.0
+        version: 0.8.0
       '@tmcp/adapter-valibot':
         specifier: workspace:^
         version: link:../adapter-valibot
@@ -681,10 +681,6 @@ packages:
     engines: {node: '>=22.7.5'}
     hasBin: true
 
-  '@modelcontextprotocol/sdk@1.16.0':
-    resolution: {integrity: sha512-8ofX7gkZcLj9H9rSd50mCgm3SSF8C7XoclxJuLoV0Cz3rEQ1tv9MZRYYvJtm9n1BiEQQMzSmE/w2AEkNacLYfg==}
-    engines: {node: '>=18'}
-
   '@modelcontextprotocol/sdk@1.17.1':
     resolution: {integrity: sha512-CPle1OQehbWqd25La9Ack5B07StKIxh4+Bf19qnpZKJC1oI22Y0czZHbifjw1UoczIfKBwBDAp/dFxvHG13B5A==}
     engines: {node: '>=18'}
@@ -1078,6 +1074,9 @@ packages:
 
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
+
+  '@remix-run/node-fetch-server@0.8.0':
+    resolution: {integrity: sha512-8/sKegb4HrM6IdcQeU0KPhj9VOHm5SUqswJDHuMCS3mwbr/NRx078QDbySmn0xslahvvZoOENd7EnK40kWKxkg==}
 
   '@rollup/rollup-android-arm-eabi@4.46.2':
     resolution: {integrity: sha512-Zj3Hl6sN34xJtMv7Anwb5Gu01yujyE/cLBDB2gnHTAHaWS1Z38L7kuSG+oAh0giZMqG060f/YBStXtMH6FvPMA==}
@@ -3143,23 +3142,6 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@modelcontextprotocol/sdk@1.16.0(patch_hash=d28a5605908a71cdbaf9407d0d137ccc16f4d6c985717b202f88a6339e8e7631)':
-    dependencies:
-      ajv: 6.12.6
-      content-type: 1.0.5
-      cors: 2.8.5
-      cross-spawn: 7.0.6
-      eventsource: 3.0.7
-      eventsource-parser: 3.0.3
-      express: 5.1.0
-      express-rate-limit: 7.5.1(express@5.1.0)
-      pkce-challenge: 5.0.0
-      raw-body: 3.0.0
-      zod: 3.25.76
-      zod-to-json-schema: 3.24.6(zod@3.25.76)
-    transitivePeerDependencies:
-      - supports-color
-
   '@modelcontextprotocol/sdk@1.17.1':
     dependencies:
       ajv: 6.12.6
@@ -3483,6 +3465,8 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
 
   '@radix-ui/rect@1.1.1': {}
+
+  '@remix-run/node-fetch-server@0.8.0': {}
 
   '@rollup/rollup-android-arm-eabi@4.46.2':
     optional: true
