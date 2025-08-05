@@ -1,5 +1,5 @@
 > [!WARNING]
-> Unfortunately i published the 1.0 by mistake...this package is currently under heavy development so there will be breaking changes in minors...threat this `1.x` as the `0.x` of any other package. Sorry for the disservice, every breaking will be properly labeled in the PR name.
+> Unfortunately i published the 1.0 by mistake...this package is currently under heavy development so there will be breaking changes in minors...treat this `1.x` as the `0.x` of any other package. Sorry for the disservice, every breaking will be properly labeled in the PR name.
 
 # tmcp
 
