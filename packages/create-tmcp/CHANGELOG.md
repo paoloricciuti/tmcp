@@ -1,5 +1,11 @@
 # create-tmcp
 
+## 0.1.4
+
+### Patch Changes
+
+- 81d6fc3: fix: deal with Bun and Deno
+
 ## 0.1.3
 
 ### Patch Changes
