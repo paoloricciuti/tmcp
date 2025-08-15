@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.5.4
+
+### Patch Changes
+
+- b297315: feat: add cors handling to http transports
+
 ## 0.5.3
 
 ### Patch Changes
