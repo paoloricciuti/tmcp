@@ -5,9 +5,21 @@
 
 /**
  * @typedef {{
+ * 	origin?: string | string[] | boolean
+ * 	methods?: string[]
+ * 	allowedHeaders?: string[]
+ * 	exposedHeaders?: string[]
+ * 	credentials?: boolean
+ * 	maxAge?: number
+ * }} CorsConfig
+ */
+
+/**
+ * @typedef {{
  * 	getSessionId?: () => string
  * 	path?: string
  * 	oauth?: OAuth<"built">
+ * 	cors?: CorsConfig | boolean
  * }} HttpTransportOptions
  */
 
@@ -19,7 +31,7 @@ export class HttpTransport {
 	#server;
 
 	/**
-	 * @type {Required<Omit<HttpTransportOptions, 'oauth'>>}
+	 * @type {Required<Omit<HttpTransportOptions, 'oauth' | 'cors'>> & { cors?: CorsConfig | boolean }}
 	 */
 	#options;
 
@@ -60,6 +72,7 @@ export class HttpTransport {
 			getSessionId = () => crypto.randomUUID(),
 			path = '/mcp',
 			oauth,
+			cors,
 		} = options ?? {
 			getSessionId: () => crypto.randomUUID(),
 		};
@@ -68,7 +81,7 @@ export class HttpTransport {
 			this.#oauth = oauth;
 		}
 
-		this.#options = { getSessionId, path };
+		this.#options = { getSessionId, path, cors };
 		this.#path = path;
 		this.#server.on('send', ({ request, context: { sessions } }) => {
 			// use the current controller if the request has an id (it means it's a request and not a notification)
@@ -93,6 +106,89 @@ export class HttpTransport {
 				}
 			}
 		});
+	}
+
+	/**
+	 * Applies CORS headers to a response based on the configuration
+	 * @param {Response} response - The response to modify
+	 * @param {Request} request - The original request
+	 */
+	#apply_cors_headers(response, request) {
+		const cors_config = this.#options.cors;
+		if (!cors_config) {
+			return;
+		}
+
+		// Handle boolean true (allow all origins)
+		if (cors_config === true) {
+			response.headers.set('Access-Control-Allow-Origin', '*');
+			response.headers.set(
+				'Access-Control-Allow-Methods',
+				'GET, POST, DELETE, OPTIONS',
+			);
+			response.headers.set('Access-Control-Allow-Headers', '*');
+			return;
+		}
+
+		// Handle detailed configuration
+		const config = /** @type {CorsConfig} */ (cors_config);
+		const origin = request.headers.get('origin');
+
+		// Handle origin
+		if (config.origin !== undefined) {
+			if (config.origin === true || config.origin === '*') {
+				response.headers.set('Access-Control-Allow-Origin', '*');
+			} else if (typeof config.origin === 'string') {
+				if (origin === config.origin) {
+					response.headers.set(
+						'Access-Control-Allow-Origin',
+						config.origin,
+					);
+				}
+			} else if (Array.isArray(config.origin)) {
+				if (origin && config.origin.includes(origin)) {
+					response.headers.set('Access-Control-Allow-Origin', origin);
+				}
+			}
+		}
+
+		// Handle other CORS headers with defaults
+		const methods = config.methods ?? ['GET', 'POST', 'DELETE', 'OPTIONS'];
+		response.headers.set(
+			'Access-Control-Allow-Methods',
+			methods.join(', '),
+		);
+
+		const allowed_headers = config.allowedHeaders ?? '*';
+		if (Array.isArray(allowed_headers)) {
+			response.headers.set(
+				'Access-Control-Allow-Headers',
+				allowed_headers.join(', '),
+			);
+		} else {
+			response.headers.set(
+				'Access-Control-Allow-Headers',
+				allowed_headers,
+			);
+		}
+
+		if (config.exposedHeaders) {
+			response.headers.set(
+				'Access-Control-Expose-Headers',
+				config.exposedHeaders.join(', '),
+			);
+		}
+
+		if (config.credentials) {
+			response.headers.set('Access-Control-Allow-Credentials', 'true');
+		}
+
+		if (config.maxAge !== undefined) {
+			response.headers.set(
+				'Access-Control-Max-Age',
+				config.maxAge.toString(),
+			);
+		}
 	}
 
 	/**
@@ -288,7 +384,7 @@ export class HttpTransport {
 				status: 405,
 				headers: {
 					'Content-Type': 'application/json',
-					Allow: 'GET, POST, DELETE',
+					Allow: 'GET, POST, DELETE, OPTIONS',
 				},
 			},
 		);
@@ -339,22 +435,42 @@ export class HttpTransport {
 			request.headers.get('mcp-session-id') ||
 			this.#options.getSessionId();
 
+		/**
+		 * @type {Response | null}
+		 */
+		let response = null;
+
+		// Handle OPTIONS request - preflight CORS
+		if (method === 'OPTIONS') {
+			response = new Response(null, {
+				status: 204,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
+		}
 		// Handle DELETE request - disconnect session
-		if (method === 'DELETE') {
-			return this.#handle_delete(session_id);
+		else if (method === 'DELETE') {
+			response = this.#handle_delete(session_id);
 		}
-
 		// Handle GET request - establish long-lived connection for notifications
-		if (method === 'GET') {
-			return this.#handle_get(session_id);
+		else if (method === 'GET') {
+			response = this.#handle_get(session_id);
 		}
-
 		// Handle POST request - process message and respond through event stream
-		if (method === 'POST') {
-			return this.#handle_post(session_id, request, auth_info);
+		else if (method === 'POST') {
+			response = await this.#handle_post(session_id, request, auth_info);
+		}
+		// Method not supported
+		else {
+			response = this.#handle_default(method);
 		}
 
-		// Method not supported
-		return this.#handle_default(method);
+		// Apply CORS headers if we have a response
+		if (response) {
+			this.#apply_cors_headers(response, request);
+		}
+
+		return response;
 	}
 }

@@ -8,10 +8,19 @@ declare module '@tmcp/transport-http' {
 		respond(request: Request): Promise<Response | null>;
 		#private;
 	}
+	export type CorsConfig = {
+		origin?: string | string[] | boolean;
+		methods?: string[];
+		allowedHeaders?: string[];
+		exposedHeaders?: string[];
+		credentials?: boolean;
+		maxAge?: number;
+	};
 	export type HttpTransportOptions = {
 		getSessionId?: () => string;
 		path?: string;
 		oauth?: OAuth<"built">;
+		cors?: CorsConfig | boolean;
 	};
 
 	export {};

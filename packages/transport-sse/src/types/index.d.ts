@@ -6,6 +6,7 @@ declare module '@tmcp/transport-sse' {
 	 * @import { OAuth } from "@tmcp/auth";
 	 */
 
+
 	export class SseTransport {
 		
 		constructor(server: McpServer<any>, options?: SseTransportOptions);
@@ -17,11 +18,20 @@ declare module '@tmcp/transport-sse' {
 		close(): void;
 		#private;
 	}
+	export type CorsConfig = {
+		origin?: string | string[] | boolean;
+		methods?: string[];
+		allowedHeaders?: string[];
+		exposedHeaders?: string[];
+		credentials?: boolean;
+		maxAge?: number;
+	};
 	export type SseTransportOptions = {
 		getSessionId?: () => string;
 		path?: string;
 		endpoint?: string;
 		oauth?: OAuth<"built">;
+		cors?: CorsConfig | boolean;
 	};
 
 	export {};
