@@ -211,7 +211,7 @@ export class HttpTransport {
 	 */
 	#handle_get(session_id) {
 		const sessions = this.#session;
-		// If session already exists, return existing stream
+		// If session already exists, return error
 		const existing_session = this.#session.get(session_id);
 		if (existing_session) {
 			return new Response(
