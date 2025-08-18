@@ -44,10 +44,6 @@ export class HttpTransport {
 	 * @type {Map<string, ReadableStreamDefaultController>}
 	 */
 	#session = new Map();
-	/**
-	 * @type {Map<string, ReadableStream>}
-	 */
-	#streams = new Map();
 
 	/**
 	 * @type {AsyncLocalStorage<ReadableStreamDefaultController | undefined>}
@@ -199,7 +195,6 @@ export class HttpTransport {
 		if (controller) {
 			controller.close();
 			this.#session.delete(session_id);
-			this.#streams.delete(session_id);
 		}
 		return new Response(null, {
 			status: 204,
@@ -216,10 +211,9 @@ export class HttpTransport {
 	 */
 	#handle_get(session_id) {
 		const sessions = this.#session;
-		const streams = this.#streams;
 		// If session already exists, return existing stream
-		const existing_stream = this.#streams.get(session_id);
-		if (existing_stream) {
+		const existing_session = this.#session.get(session_id);
+		if (existing_session) {
 			return new Response(
 				JSON.stringify({
 					jsonrpc: '2.0',
@@ -247,11 +241,9 @@ export class HttpTransport {
 			},
 			cancel() {
 				sessions.delete(session_id);
-				streams.delete(session_id);
 			},
 		});
 
-		streams.set(session_id, stream);
 		return new Response(stream, {
 			headers: {
 				'Content-Type': 'text/event-stream',

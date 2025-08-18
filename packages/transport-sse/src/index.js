@@ -51,11 +51,6 @@ export class SseTransport {
 	#sessions = new Map();
 
 	/**
-	 * @type {Map<string, ReadableStream>}
-	 */
-	#streams = new Map();
-
-	/**
 	 * @type {OAuth<"built"> | undefined}
 	 */
 	#oauth;
@@ -197,7 +192,6 @@ export class SseTransport {
 		if (existing_controller) {
 			existing_controller.close();
 			this.#sessions.delete(session_id);
-			this.#streams.delete(session_id);
 		}
 
 		// Create new SSE stream
@@ -218,11 +212,8 @@ export class SseTransport {
 			},
 			cancel: () => {
 				this.#sessions.delete(session_id);
-				this.#streams.delete(session_id);
 			},
 		});
-
-		this.#streams.set(session_id, stream);
 
 		return new Response(stream, {
 			headers: {
@@ -318,7 +309,6 @@ export class SseTransport {
 		if (controller) {
 			controller.close();
 			this.#sessions.delete(session_id);
-			this.#streams.delete(session_id);
 		}
 
 		return new Response(null, {
@@ -448,6 +438,5 @@ export class SseTransport {
 			controller.close();
 		}
 		this.#sessions.clear();
-		this.#streams.clear();
 	}
 }
