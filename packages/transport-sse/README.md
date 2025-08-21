@@ -258,7 +258,7 @@ Deno.serve({ port: 3000 }, async (req) => {
 
 ### `srvx`
 
-If you want to have the same experience throughout Deno, Bun or Node you can also use [`srvx`](https://srvx.h3.dev/).
+If you want the same experience across Deno, Bun, and Node.js, you can use [srvx](https://srvx.h3.dev/).
 
 ```js
 import { McpServer } from 'tmcp';
