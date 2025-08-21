@@ -258,22 +258,24 @@ Deno.serve({ port: 3000 }, async (req) => {
 
 ### `srvx`
 
-If you want to have the same experience throughout Deno, Bun or Node you can also use `srvx`
+If you want to have the same experience throughout Deno, Bun or Node you can also use [`srvx`](https://srvx.h3.dev/).
 
 ```js
-import { McpServer } from 'tmcp';
+import { McpServer } from 'tmcp";
 import { SseTransport } from '@tmcp/transport-sse';
 import { serve } from 'srvx';
 
 const server = new McpServer(/* ... */);
 const transport = new SseTransport(server);
 
-serve(async (req) => {
-	const response = await transport.respond(req);
-	if (response === null) {
-		return new Response('Not Found', { status: 404 });
-	}
-	return response;
+serve({
+  fetch: async (req) => {
+    const response = await transport.respond(req);
+    if (response === null) {
+      return new Response('Not Found', { status: 404 });
+    }
+    return response;
+  },
 });
 ```
 
