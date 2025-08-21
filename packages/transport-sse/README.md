@@ -270,7 +270,7 @@ const transport = new SseTransport(server);
 
 serve({
 	  async fetch(req) {
-		    const response = await transport.respond(req);
+			const response = await transport.respond(req);
 			if (response === null) {
 				return new Response('Not Found', { status: 404 });
 			}
