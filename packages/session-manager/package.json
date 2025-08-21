@@ -1,0 +1,39 @@
+{
+	"name": "@tmcp/session-manager",
+	"version": "0.1.0",
+	"description": "",
+	"main": "src/index.js",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/paoloricciuti/tmcp.git",
+		"directory": "packages/session-manager"
+	},
+	"scripts": {
+		"generate:types": "dts-buddy && node scripts/abstractify.js && publint",
+		"prepublish": "pnpm generate:types"
+	},
+	"keywords": [
+		"tmcp",
+		"http",
+		"transport",
+		"session",
+		"manager"
+	],
+	"types": "./src/types/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/types/index.d.ts",
+			"import": "./src/index.js"
+		}
+	},
+	"packageManager": "pnpm@10.12.4",
+	"type": "module",
+	"publishConfig": {
+		"access": "public"
+	},
+	"devDependencies": {
+		"dts-buddy": "^0.6.2",
+		"publint": "^0.3.12",
+		"@tmcp/internal-ts-helpers": "workspace:^"
+	}
+}

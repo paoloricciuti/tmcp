@@ -30,6 +30,9 @@
 		"url": "git+https://github.com/paoloricciuti/tmcp.git",
 		"directory": "packages/transport-sse"
 	},
+	"dependencies": {
+		"@tmcp/session-manager": "workspace:^"
+	},
 	"devDependencies": {
 		"@tmcp/auth": "workspace:^",
 		"dts-buddy": "^0.6.2",

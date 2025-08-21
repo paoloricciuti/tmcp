@@ -1,6 +1,7 @@
 /**
  * @import { AuthInfo, McpServer } from "tmcp";
  * @import { OAuth  } from "@tmcp/auth";
+ * @import { SessionManager  } from "@tmcp/session-manager";
  */
 
 /**
@@ -19,11 +20,13 @@
  * 	getSessionId?: () => string
  * 	path?: string
  * 	oauth?: OAuth<"built">
- * 	cors?: CorsConfig | boolean
+ * 	cors?: CorsConfig | boolean,
+ * 	sessionManager?: SessionManager
  * }} HttpTransportOptions
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { InMemorySessionManager } from '@tmcp/session-manager';
 export class HttpTransport {
 	/**
 	 * @type {McpServer<any>}
@@ -39,11 +42,6 @@ export class HttpTransport {
 	 * @type {string}
 	 */
 	#path;
-
-	/**
-	 * @type {Map<string, ReadableStreamDefaultController>}
-	 */
-	#session = new Map();
 
 	/**
 	 * @type {AsyncLocalStorage<ReadableStreamDefaultController | undefined>}
@@ -69,6 +67,7 @@ export class HttpTransport {
 			path = '/mcp',
 			oauth,
 			cors,
+			sessionManager = new InMemorySessionManager(),
 		} = options ?? {
 			getSessionId: () => crypto.randomUUID(),
 		};
@@ -77,7 +76,7 @@ export class HttpTransport {
 			this.#oauth = oauth;
 		}
 
-		this.#options = { getSessionId, path, cors };
+		this.#options = { getSessionId, path, cors, sessionManager };
 		this.#path = path;
 		this.#server.on('send', ({ request, context: { sessions } }) => {
 			// use the current controller if the request has an id (it means it's a request and not a notification)
@@ -92,15 +91,10 @@ export class HttpTransport {
 				);
 				return;
 			}
-			for (let [session_id, controller] of this.#session.entries()) {
-				if (sessions === undefined || sessions.includes(session_id)) {
-					controller.enqueue(
-						this.#text_encoder.encode(
-							'data: ' + JSON.stringify(request) + '\n\n',
-						),
-					);
-				}
-			}
+			this.#options.sessionManager.send(
+				sessions,
+				'data: ' + JSON.stringify(request) + '\n\n',
+			);
 		});
 	}
 
@@ -191,11 +185,7 @@ export class HttpTransport {
 	 * @param {string} session_id
 	 */
 	#handle_delete(session_id) {
-		const controller = this.#session.get(session_id);
-		if (controller) {
-			controller.close();
-			this.#session.delete(session_id);
-		}
+		this.#options.sessionManager.delete(session_id);
 		return new Response(null, {
 			status: 204,
 			headers: {
@@ -209,10 +199,10 @@ export class HttpTransport {
 	 * @param {string} session_id
 	 * @returns
 	 */
-	#handle_get(session_id) {
-		const sessions = this.#session;
+	async #handle_get(session_id) {
+		const sessions = this.#options.sessionManager;
 		// If session already exists, return error
-		const existing_session = this.#session.get(session_id);
+		const existing_session = await sessions.has(session_id);
 		if (existing_session) {
 			return new Response(
 				JSON.stringify({
@@ -237,7 +227,7 @@ export class HttpTransport {
 		// Create new long-lived stream for notifications
 		const stream = new ReadableStream({
 			start(controller) {
-				sessions.set(session_id, controller);
+				sessions.create(session_id, controller);
 			},
 			cancel() {
 				sessions.delete(session_id);
@@ -447,7 +437,7 @@ export class HttpTransport {
 		}
 		// Handle GET request - establish long-lived connection for notifications
 		else if (method === 'GET') {
-			response = this.#handle_get(session_id);
+			response = await this.#handle_get(session_id);
 		}
 		// Handle POST request - process message and respond through event stream
 		else if (method === 'POST') {

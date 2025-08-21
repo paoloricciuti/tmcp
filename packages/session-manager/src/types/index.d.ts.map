@@ -2,7 +2,8 @@
 	"version": 3,
 	"file": "index.d.ts",
 	"names": [
-		"SseTransport"
+		"SessionManager",
+		"InMemorySessionManager"
 	],
 	"sources": [
 		"../index.js"
@@ -10,6 +11,6 @@
 	"sourcesContent": [
 		null
 	],
-	"mappings": ";;;;cA8BaA,YAAYA",
+	"mappings": ";;;;cAKaA,cAAcA;;;;;;;;;;;;;;;;;;cAqCdC,sBAAsBA",
 	"ignoreList": []
 }

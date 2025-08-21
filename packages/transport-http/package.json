@@ -33,6 +33,9 @@
 		"url": "git+https://github.com/paoloricciuti/tmcp.git",
 		"directory": "packages/transport-http"
 	},
+	"dependencies": {
+		"@tmcp/session-manager": "workspace:^"
+	},
 	"devDependencies": {
 		"@modelcontextprotocol/sdk": "^1.17.1",
 		"@remix-run/node-fetch-server": "^0.8.0",

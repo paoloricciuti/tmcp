@@ -1,7 +1,10 @@
 /**
  * @import { AuthInfo, McpServer } from "tmcp";
  * @import { OAuth } from "@tmcp/auth";
+ * @import { SessionManager } from "@tmcp/session-manager";
  */
+
+import { InMemorySessionManager } from '@tmcp/session-manager';
 
 /**
  * @typedef {{
@@ -21,6 +24,7 @@
  * 	endpoint?: string
  * 	oauth?: OAuth<"built">
  * 	cors?: CorsConfig | boolean
+ *  sessionManager?: SessionManager
  * }} SseTransportOptions
  */
 
@@ -46,11 +50,6 @@ export class SseTransport {
 	#endpoint;
 
 	/**
-	 * @type {Map<string, ReadableStreamDefaultController>}
-	 */
-	#sessions = new Map();
-
-	/**
 	 * @type {OAuth<"built"> | undefined}
 	 */
 	#oauth;
@@ -69,6 +68,7 @@ export class SseTransport {
 			endpoint = '/message',
 			oauth,
 			cors,
+			sessionManager = new InMemorySessionManager(),
 		} = options ?? {
 			getSessionId: () => crypto.randomUUID(),
 			path: '/sse',
@@ -82,21 +82,17 @@ export class SseTransport {
 			path,
 			endpoint,
 			cors,
+			sessionManager,
 		};
 		this.#path = this.#options.path;
 		this.#endpoint = this.#options.endpoint;
 
 		// Listen for server send events
 		this.#server.on('send', ({ request, context: { sessions } }) => {
-			for (let [session_id, controller] of this.#sessions.entries()) {
-				if (sessions === undefined || sessions.includes(session_id)) {
-					controller.enqueue(
-						this.#text_encoder.encode(
-							`data: ${JSON.stringify(request)}\n\n`,
-						),
-					);
-				}
-			}
+			this.#options.sessionManager.send(
+				sessions,
+				`data: ${JSON.stringify(request)}\n\n`,
+			);
 		});
 	}
 
@@ -186,18 +182,35 @@ export class SseTransport {
 	/**
 	 * @param {string} session_id
 	 */
-	#handle_get(session_id) {
+	async #handle_get(session_id) {
 		// If session already exists, close it first
-		const existing_controller = this.#sessions.get(session_id);
+		const existing_controller =
+			await this.#options.sessionManager.has(session_id);
 		if (existing_controller) {
-			existing_controller.close();
-			this.#sessions.delete(session_id);
+			return new Response(
+				JSON.stringify({
+					jsonrpc: '2.0',
+					error: {
+						code: -32000,
+						message:
+							'Conflict: Only one SSE stream is allowed per session',
+					},
+					id: null,
+				}),
+				{
+					headers: {
+						'Content-Type': 'application/json',
+						'mcp-session-id': session_id,
+					},
+					status: 409,
+				},
+			);
 		}
 
 		// Create new SSE stream
 		const stream = new ReadableStream({
 			start: (controller) => {
-				this.#sessions.set(session_id, controller);
+				this.#options.sessionManager.create(session_id, controller);
 
 				// Send initial endpoint event with session info
 				const endpoint_url = new URL(
@@ -211,7 +224,7 @@ export class SseTransport {
 				controller.enqueue(this.#text_encoder.encode(endpoint_event));
 			},
 			cancel: () => {
-				this.#sessions.delete(session_id);
+				this.#options.sessionManager.delete(session_id);
 			},
 		});
 
@@ -261,7 +274,7 @@ export class SseTransport {
 				auth: auth_info ?? undefined,
 			});
 
-			const controller = this.#sessions.get(session_id);
+			const controller = this.#options.sessionManager.has(session_id);
 
 			if (!controller) {
 				return new Response('SSE connection not established', {
@@ -274,10 +287,9 @@ export class SseTransport {
 			}
 
 			if (response != null) {
-				controller.enqueue(
-					this.#text_encoder.encode(
-						`data: ${JSON.stringify(response)}\n\n`,
-					),
+				this.#options.sessionManager.send(
+					[session_id],
+					`data: ${JSON.stringify(response)}\n\n`,
 				);
 			}
 
@@ -305,11 +317,7 @@ export class SseTransport {
 	 * @param {string} session_id
 	 */
 	#handle_delete(session_id) {
-		const controller = this.#sessions.get(session_id);
-		if (controller) {
-			controller.close();
-			this.#sessions.delete(session_id);
-		}
+		this.#options.sessionManager.delete(session_id);
 
 		return new Response(null, {
 			status: 204,
@@ -411,7 +419,7 @@ export class SseTransport {
 		}
 		// Handle GET request - establish SSE connection
 		else if (method === 'GET') {
-			response = this.#handle_get(session_id);
+			response = await this.#handle_get(session_id);
 		}
 		// Handle POST request - process message
 		else if (method === 'POST') {
@@ -433,10 +441,5 @@ export class SseTransport {
 	/**
 	 * Close all active sessions
 	 */
-	close() {
-		for (const controller of this.#sessions.values()) {
-			controller.close();
-		}
-		this.#sessions.clear();
-	}
+	close() {}
 }

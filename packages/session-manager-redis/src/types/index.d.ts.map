@@ -2,7 +2,7 @@
 	"version": 3,
 	"file": "index.d.ts",
 	"names": [
-		"SseTransport"
+		"RedisSessionManager"
 	],
 	"sources": [
 		"../index.js"
@@ -10,6 +10,6 @@
 	"sourcesContent": [
 		null
 	],
-	"mappings": ";;;;cA8BaA,YAAYA",
+	"mappings": ";;cASaA,mBAAmBA",
 	"ignoreList": []
 }

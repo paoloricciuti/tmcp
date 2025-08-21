@@ -81,6 +81,38 @@ const transport = new HttpTransport(server, {
 });
 ```
 
+### Session Management
+
+The HTTP transport supports custom session managers for different deployment scenarios:
+
+#### In-Memory Sessions (Default)
+
+```javascript
+import { InMemorySessionManager } from '@tmcp/session-manager';
+
+const transport = new HttpTransport(server, {
+	sessionManager: new InMemorySessionManager(), // Default behavior
+});
+```
+
+#### Redis Sessions (Multi-Server/Serverless)
+
+For deployments across multiple servers or serverless environments where sessions need to be shared:
+
+```javascript
+import { RedisSessionManager } from '@tmcp/session-manager-redis';
+
+const transport = new HttpTransport(server, {
+	sessionManager: new RedisSessionManager('redis://localhost:6379'),
+});
+```
+
+**When to use Redis sessions:**
+
+- **Multi-server deployments**: When your application runs on multiple servers and clients might connect to different instances
+- **Serverless deployments**: When your transport is deployed on serverless platforms where instances are ephemeral (attention, serverless environment generally kills SSE request after a not-so-long amount of time, this means notification from the server will not reach the client after the shutdown)
+- **Load balancing**: When using load balancers that might route requests to different server instances
+
 ## Features
 
 - **🌐 HTTP/SSE Communication**: Uses Server-Sent Events for real-time bidirectional communication
@@ -116,6 +148,7 @@ interface HttpTransportOptions {
 	getSessionId: () => string; // Custom session ID generator
 	path?: string; // MCP endpoint path (default: '/mcp')
 	oauth?: OAuth; // an oauth provider generated from @tmcp/auth
+	sessionManager?: SessionManager; // Custom session manager (default: InMemorySessionManager)
 }
 ```
 
@@ -273,12 +306,12 @@ const server = new McpServer(/* ... */);
 const transport = new HttpTransport(server);
 
 serve({
-	  async fetch(req) {
-			const response = await transport.respond(req);
-			if (response === null) {
-				return new Response('Not Found', { status: 404 });
-			}
-			return response;
+	async fetch(req) {
+		const response = await transport.respond(req);
+		if (response === null) {
+			return new Response('Not Found', { status: 404 });
+		}
+		return response;
 	},
 });
 ```
