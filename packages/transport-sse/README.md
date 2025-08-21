@@ -269,7 +269,7 @@ const server = new McpServer(/* ... */);
 const transport = new SseTransport(server);
 
 serve({
-  fetch: async (req) => {
+  async fetch(req) {
     const response = await transport.respond(req);
     if (response === null) {
       return new Response('Not Found', { status: 404 });
