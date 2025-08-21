@@ -1,5 +1,12 @@
 # @tmcp/transport-http
 
+## 0.5.5
+
+### Patch Changes
+
+- e55b816: fix: abstract session manager to allow for multi-server deployments
+- 65b88fc: fix: remove unneded `streams` map
+
 ## 0.5.4
 
 ### Patch Changes
