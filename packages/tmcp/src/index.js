@@ -3,7 +3,7 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations } from "./validation/index.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations, ClientInfo } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
@@ -139,6 +139,11 @@ export class McpServer {
 	#client_capabilities_map = new Map();
 
 	/**
+	 * @type {Map<string|undefined, ClientInfo>}
+	 */
+	#client_info_map = new Map();
+
+	/**
 	 * @type {Map<string|undefined, string>}
 	 */
 	#negotiated_protocol_versions = new Map();
@@ -193,6 +198,12 @@ export class McpServer {
 				this.#client_capabilities_map.set(
 					session_id,
 					validated_initialize.capabilities,
+				);
+
+				// Store client info
+				this.#client_info_map.set(
+					session_id,
+					validated_initialize.clientInfo,
 				);
 
 				// Dispatch initialization event
@@ -262,14 +273,30 @@ export class McpServer {
 		return this.#ctx_storage.getStore()?.progress_token;
 	}
 
+	/**
+	 * The context of the current request, include the session ID and any auth information.
+	 * @type {Context}
+	 */
 	get ctx() {
-		return this.#ctx_storage.getStore() ?? {};
+		// eslint-disable-next-line no-unused-vars
+		const { progress_token, ...rest } = this.#ctx_storage.getStore() ?? {};
+		return rest;
 	}
 
 	get #client_capabilities() {
 		return this.#client_capabilities_map.get(this.#session_id);
 	}
 
+	/**
+	 * Get the client information (name, version, etc.) of the client that initiated the current request...useful if you want to do something different based on the client.
+	 */
+	currentClientInfo() {
+		return this.#client_info_map.get(this.#session_id);
+	}
+
+	/**
+	 * Get the client capabilities of the client that initiated the current request, you can use this to verify the client support something before invoking the respective method.
+	 */
 	currentClientCapabilities() {
 		return this.#client_capabilities;
 	}
@@ -644,9 +671,7 @@ export class McpServer {
 			this.roots = [];
 		}
 	}
-	/**
-	 *
-	 */
+
 	#init_completion() {
 		this.#server.addMethod(
 			'completion/complete',
@@ -664,9 +689,7 @@ export class McpServer {
 			},
 		);
 	}
-	/**
-	 *
-	 */
+
 	#init_logging() {
 		if (!this.#options.capabilities?.logging) return;
 
@@ -676,6 +699,10 @@ export class McpServer {
 		});
 	}
 	/**
+	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+	 *
+	 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
 	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations }} options
@@ -698,6 +725,11 @@ export class McpServer {
 		});
 	}
 	/**
+	 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
+	 * Use the description and title to help the user to understand what the prompt does and when to use it.
+	 *
+	 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
+	 * for each input that will be used to provide completions for the user.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} execute
@@ -731,7 +763,10 @@ export class McpServer {
 		}
 		this.#resources.set(uri, resource);
 	}
+
 	/**
+	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+	 * Use the description and title to help the user to understand what the resource is.
 	 * @param {{ name: string; description: string; title?: string; uri: string }} options
 	 * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
@@ -746,6 +781,11 @@ export class McpServer {
 		});
 	}
 	/**
+	 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+	 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
+	 * Resource templates can have a list method that returns a list of resources that match the template and a complete method that returns a list of resources given one of the template variables, this method will
+	 * be invoked to provide completions for the template variables to the user.
+	 * Use the description and title to help the user to understand what the resource is.
 	 * @template {string} TUri
 	 * @template {ExtractURITemplateVariables<TUri>} TVariables
 	 * @param {{ name: string; description: string; title?: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
@@ -767,6 +807,8 @@ export class McpServer {
 		});
 	}
 	/**
+	 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
+	 *
 	 * @param {JSONRPCResponse | JSONRPCRequest} message
 	 * @param {Context} [ctx]
 	 * @returns {ReturnType<JSONRPCServer['receive']> | ReturnType<JSONRPCClient['receive'] | undefined>}
@@ -840,6 +882,12 @@ export class McpServer {
 	}
 
 	/**
+	 * Emit an elicitation request to the client. Elicitations are used to ask the user for input in a structured way, the client will show a UI to the user to fill the input.
+	 * The schema should be a valid Standard Schema V1 schema and should be an Object with the properties you need.
+	 * The client will return the validated input as a JSON object that matches the schema.
+	 *
+	 * If the client doesn't support elicitation, it will throw an error.
+	 *
 	 * @template {StandardSchema} TSchema
 	 * @param {TSchema} schema
 	 * @returns {Promise<StandardSchemaV1.InferOutput<TSchema>>}
@@ -902,6 +950,7 @@ export class McpServer {
 	}
 
 	/**
+	 * Send a progress notification to the client. This is useful for long-running operations where you want to inform the user about the progress.
 	 *
 	 * @param {number} progress The current progress value, it should be between 0 and total and should always increase
 	 * @param {number} [total] The total value, defaults to 1
@@ -926,6 +975,7 @@ export class McpServer {
 
 	/**
 	 * Log a message to the client if logging is enabled and the level is appropriate
+	 *
 	 * @param {LoggingLevel} level
 	 * @param {unknown} data
 	 * @param {string} [logger]

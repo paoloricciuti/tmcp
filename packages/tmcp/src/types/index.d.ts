@@ -11,7 +11,21 @@ declare module 'tmcp' {
 			uri: string;
 			name?: string;
 		}>;
+		/**
+		 * The context of the current request, include the session ID and any auth information.
+		 * */
 		get ctx(): Context;
+		/**
+		 * Get the client information (name, version, etc.) of the client that initiated the current request...useful if you want to do something different based on the client.
+		 */
+		currentClientInfo(): {
+			version: string;
+			name: string;
+			title?: string | undefined;
+		} | undefined;
+		/**
+		 * Get the client capabilities of the client that initiated the current request, you can use this to verify the client support something before invoking the respective method.
+		 */
 		currentClientCapabilities(): {
 			experimental?: {} | undefined;
 			sampling?: {} | undefined;
@@ -22,7 +36,12 @@ declare module 'tmcp' {
 		} | undefined;
 		
 		on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): () => void;
-		
+		/**
+		 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+		 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+		 *
+		 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
+		 * */
 		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations }: {
 			name: string;
 			description: string;
@@ -31,7 +50,13 @@ declare module 'tmcp' {
 			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
 			annotations?: ToolAnnotations;
 		}, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
-		
+		/**
+		 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
+		 * Use the description and title to help the user to understand what the prompt does and when to use it.
+		 *
+		 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
+		 * for each input that will be used to provide completions for the user.
+		 * */
 		prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete }: {
 			name: string;
 			description: string;
@@ -39,14 +64,23 @@ declare module 'tmcp' {
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
 			complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>>;
 		}, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): void;
-		
+		/**
+		 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+		 * Use the description and title to help the user to understand what the resource is.
+		 * */
 		resource({ name, description, title, uri }: {
 			name: string;
 			description: string;
 			title?: string;
 			uri: string;
 		}, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): void;
-		
+		/**
+		 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+		 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
+		 * Resource templates can have a list method that returns a list of resources that match the template and a complete method that returns a list of resources given one of the template variables, this method will
+		 * be invoked to provide completions for the template variables to the user.
+		 * Use the description and title to help the user to understand what the resource is.
+		 * */
 		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, title, uri, complete, list: list_resources }: {
 			name: string;
 			description: string;
@@ -55,7 +89,10 @@ declare module 'tmcp' {
 			complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
 			list?: () => Promise<Array<Resource>> | Array<Resource>;
 		}, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
-		
+		/**
+		 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
+		 *
+		 * */
 		receive(message: JSONRPCResponse | JSONRPCRequest, ctx?: Context): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
 		/**
 		 * Send a notification for subscriptions
@@ -65,14 +102,30 @@ declare module 'tmcp' {
 		 * Refresh roots list from client
 		 */
 		refreshRoots(): Promise<void>;
-		
+		/**
+		 * Emit an elicitation request to the client. Elicitations are used to ask the user for input in a structured way, the client will show a UI to the user to fill the input.
+		 * The schema should be a valid Standard Schema V1 schema and should be an Object with the properties you need.
+		 * The client will return the validated input as a JSON object that matches the schema.
+		 *
+		 * If the client doesn't support elicitation, it will throw an error.
+		 *
+		 * */
 		elicitation<TSchema extends StandardSchema>(schema: TSchema): Promise<StandardSchemaV1.InferOutput<TSchema>>;
 		/**
 		 * Request language model sampling from the client
 		 * */
 		message(request: CreateMessageRequestParams): Promise<CreateMessageResult>;
 		/**
+		 * Send a progress notification to the client. This is useful for long-running operations where you want to inform the user about the progress.
+		 *
+		 * @param progress The current progress value, it should be between 0 and total and should always increase
+		 * @param total The total value, defaults to 1
+		 * @param message An optional message to accompany the progress update
+		 */
+		progress(progress: number, total?: number, message?: string): void;
+		/**
 		 * Log a message to the client if logging is enabled and the level is appropriate
+		 *
 		 * 
 		 */
 		log(level: LoggingLevel, data: unknown, logger?: string): void;
