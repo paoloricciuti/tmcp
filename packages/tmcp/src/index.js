@@ -129,7 +129,7 @@ export class McpServer {
 	};
 
 	/**
-	 * @type {AsyncLocalStorage<Context>}
+	 * @type {AsyncLocalStorage<Context & { progress_token?: string }>}
 	 */
 	#ctx_storage = new AsyncLocalStorage();
 
@@ -256,6 +256,10 @@ export class McpServer {
 
 	get #session_id() {
 		return this.#ctx_storage.getStore()?.sessionId;
+	}
+
+	get #progress_token() {
+		return this.#ctx_storage.getStore()?.progress_token;
 	}
 
 	get ctx() {
@@ -788,8 +792,11 @@ export class McpServer {
 					this.#options.logging?.default ?? 'info',
 				);
 			}
+			const progress_token = /** @type {string | undefined} */ (
+				validated_message.output.params?._meta?.progressToken
+			);
 			return this.#ctx_storage.run(
-				ctx ?? {},
+				{ ...(ctx ?? {}), progress_token },
 				async () =>
 					await this.#server.receive(validated_message.output),
 			);
@@ -892,6 +899,29 @@ export class McpServer {
 
 		// Validate and return the response
 		return v.parse(CreateMessageResultSchema, response);
+	}
+
+	/**
+	 *
+	 * @param {number} progress The current progress value, it should be between 0 and total and should always increase
+	 * @param {number} [total] The total value, defaults to 1
+	 * @param {string} [message] An optional message to accompany the progress update
+	 */
+	progress(progress, total = 1, message = undefined) {
+		if (this.#progress_token != null) {
+			this.#notify(
+				'notifications/progress',
+				{
+					progress,
+					total,
+					message,
+					progressToken: this.#progress_token,
+				},
+				{
+					sessions: this.#session_id ? [this.#session_id] : undefined,
+				},
+			);
+		}
 	}
 
 	/**

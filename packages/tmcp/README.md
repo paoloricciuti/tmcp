@@ -249,6 +249,60 @@ Send notifications for subscriptions.
 server.changed('resource', 'file://path/to/resource');
 ```
 
+##### `progress(progress, total?, message?)`
+
+Report progress during long-running operations. Progress notifications are only sent when a progress token is provided by the client in the request's `_meta.progressToken` field.
+
+```javascript
+server.tool(
+	{
+		name: 'process-large-file',
+		description: 'Process a large file with progress updates',
+	},
+	async (input) => {
+		const totalSteps = 100;
+		
+		for (let i = 0; i <= totalSteps; i++) {
+			// Report progress with current step, total steps, and optional message
+			server.progress(i, totalSteps, `Processing step ${i}/${totalSteps}`);
+			
+			// Simulate work
+			await processStep(i);
+		}
+		
+		return {
+			content: [{ type: 'text', text: 'Processing complete!' }],
+		};
+	},
+);
+```
+
+**Parameters:**
+- `progress` (number): Current progress value (should be ≤ total and always increase)
+- `total` (number, optional): Maximum progress value (defaults to 1)
+- `message` (string, optional): Descriptive message about current progress
+
+**Notes:**
+- Progress notifications are only sent when the client provides a `progressToken` in the request
+- Progress values should be monotonically increasing within a single operation
+- Each session maintains its own progress context
+
+##### `log(level, data, logger?)`
+
+Send log messages to connected clients when logging is enabled.
+
+```javascript
+// Log at different severity levels
+server.log('info', 'Server started successfully');
+server.log('warning', 'Configuration missing, using defaults');
+server.log('error', 'Failed to connect to database', 'database-logger');
+```
+
+**Parameters:**
+- `level` (string): Log level ('debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency')
+- `data` (any): Data to log
+- `logger` (string, optional): Logger name/category
+
 ##### `on(event, callback)`
 
 Listen to server events.
@@ -264,6 +318,94 @@ server.on('send', ({ request, context }) => {
 ```
 
 ## Advanced Examples
+
+### Progress Reporting
+
+Provide real-time progress updates for long-running operations:
+
+```javascript
+server.tool(
+	{
+		name: 'analyze-codebase',
+		description: 'Analyze a large codebase with progress tracking',
+		schema: z.object({
+			path: z.string(),
+			includeTests: z.boolean().default(false),
+		}),
+	},
+	async ({ path, includeTests }) => {
+		// Discover files to analyze
+		const files = await discoverFiles(path, includeTests);
+		const totalFiles = files.length;
+		
+		server.progress(0, totalFiles, 'Starting analysis...');
+		
+		const results = [];
+		for (let i = 0; i < files.length; i++) {
+			const file = files[i];
+			
+			// Update progress with current file being processed
+			server.progress(
+				i + 1,
+				totalFiles,
+				`Analyzing ${file} (${i + 1}/${totalFiles})`
+			);
+			
+			// Analyze the file
+			const analysis = await analyzeFile(file);
+			results.push(analysis);
+		}
+		
+		// Final progress update
+		server.progress(totalFiles, totalFiles, 'Analysis complete!');
+		
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `Analyzed ${totalFiles} files. Found ${results.length} issues.`,
+				},
+			],
+			structuredContent: {
+				totalFiles,
+				results,
+				issues: results.length,
+			},
+		};
+	},
+);
+
+// Progress also works in prompts and resources
+server.prompt(
+	{
+		name: 'generate-report',
+		description: 'Generate a comprehensive report',
+		schema: z.object({
+			sections: z.array(z.string()),
+		}),
+	},
+	async ({ sections }) => {
+		const messages = [];
+		
+		for (let i = 0; i < sections.length; i++) {
+			server.progress(
+				i,
+				sections.length,
+				`Generating section: ${sections[i]}`
+			);
+			
+			const content = await generateSection(sections[i]);
+			messages.push({
+				role: 'user',
+				content: { type: 'text', text: content },
+			});
+		}
+		
+		server.progress(sections.length, sections.length, 'Report complete');
+		return { messages };
+	},
+);
+```
 
 ### Client Interaction Features
 

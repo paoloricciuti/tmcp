@@ -1744,4 +1744,417 @@ describe('McpServer', () => {
 			});
 		});
 	});
+
+	describe('progress functionality', () => {
+		beforeEach(async () => {
+			const init = request({
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'initialize',
+				params: {
+					protocolVersion: '2025-06-18',
+					capabilities: {},
+					clientInfo: { name: 'test', version: '1.0.0' },
+				},
+			});
+			await server.receive(init, { sessionId: 'session-1' });
+		});
+
+		it('should not send progress notifications when no progress token is present', async () => {
+			const on = vi.fn();
+			const off = server.on('send', on);
+
+			// Call progress without a progress token
+			server.progress(50, 100, 'Processing...');
+
+			// Should not send any notifications
+			expect(on).not.toHaveBeenCalled();
+			off();
+		});
+
+		it('should send progress notifications when progress token is present', async () => {
+			// Create a tool that uses progress
+			server.tool(
+				{
+					name: 'progress-tool',
+					description: 'A tool that reports progress',
+				},
+				() => {
+					server.progress(25, 100, 'Started processing');
+					server.progress(50, 100, 'Half way done');
+					server.progress(100, 100, 'Completed');
+					return {
+						content: [{ type: 'text', text: 'Tool completed' }],
+					};
+				},
+			);
+
+			const on = vi.fn();
+			const off = server.on('send', on);
+
+			// Call the tool with a progress token
+			const call_request = request({
+				jsonrpc: '2.0',
+				id: 2,
+				method: 'tools/call',
+				params: {
+					name: 'progress-tool',
+					_meta: {
+						progressToken: 'test-progress-token',
+					},
+				},
+			});
+
+			await server.receive(call_request, { sessionId: 'session-1' });
+
+			// Filter only progress notifications
+			const progress_calls = on.mock.calls.filter(
+				(call) => call[0].request.method === 'notifications/progress',
+			);
+
+			expect(progress_calls).toHaveLength(3);
+
+			expect(progress_calls[0][0]).toEqual({
+				context: {
+					sessions: ['session-1'],
+				},
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/progress',
+					params: {
+						progress: 25,
+						total: 100,
+						message: 'Started processing',
+						progressToken: 'test-progress-token',
+					},
+				},
+			});
+
+			expect(progress_calls[1][0]).toEqual({
+				context: {
+					sessions: ['session-1'],
+				},
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/progress',
+					params: {
+						progress: 50,
+						total: 100,
+						message: 'Half way done',
+						progressToken: 'test-progress-token',
+					},
+				},
+			});
+
+			expect(progress_calls[2][0]).toEqual({
+				context: {
+					sessions: ['session-1'],
+				},
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/progress',
+					params: {
+						progress: 100,
+						total: 100,
+						message: 'Completed',
+						progressToken: 'test-progress-token',
+					},
+				},
+			});
+
+			off();
+		});
+
+		it('should handle progress with default parameters', async () => {
+			const on = vi.fn();
+			const off = server.on('send', on);
+
+			// Create a tool that uses progress with defaults
+			server.tool(
+				{
+					name: 'default-progress-tool',
+					description: 'A tool that reports progress with defaults',
+				},
+				() => {
+					server.progress(0.5); // Using defaults: total=1, message=undefined
+					return {
+						content: [{ type: 'text', text: 'Tool completed' }],
+					};
+				},
+			);
+
+			// Call the tool with a progress token
+			const call_request = request({
+				jsonrpc: '2.0',
+				id: 3,
+				method: 'tools/call',
+				params: {
+					name: 'default-progress-tool',
+					_meta: {
+						progressToken: 'default-token',
+					},
+				},
+			});
+
+			await server.receive(call_request, { sessionId: 'session-1' });
+
+			expect(on).toHaveBeenCalledWith({
+				context: {
+					sessions: ['session-1'],
+				},
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/progress',
+					params: {
+						progress: 0.5,
+						total: 1,
+						message: undefined,
+						progressToken: 'default-token',
+					},
+				},
+			});
+
+			off();
+		});
+
+		it('should handle progress in prompts', async () => {
+			// Create a prompt that uses progress
+			server.prompt(
+				{
+					name: 'progress-prompt',
+					description: 'A prompt that reports progress',
+				},
+				() => {
+					server.progress(1, 3, 'Analyzing request');
+					server.progress(2, 3, 'Generating response');
+					server.progress(3, 3, 'Finalizing');
+					return {
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Generated prompt',
+								},
+							},
+						],
+					};
+				},
+			);
+
+			const on = vi.fn();
+			const off = server.on('send', on);
+
+			// Call the prompt with a progress token
+			const prompt_request = request({
+				jsonrpc: '2.0',
+				id: 4,
+				method: 'prompts/get',
+				params: {
+					name: 'progress-prompt',
+					_meta: {
+						progressToken: 'prompt-progress-token',
+					},
+				},
+			});
+
+			await server.receive(prompt_request, { sessionId: 'session-1' });
+
+			// Filter only progress notifications
+			const progress_calls = on.mock.calls.filter(
+				(call) => call[0].request.method === 'notifications/progress',
+			);
+
+			expect(progress_calls).toHaveLength(3);
+			expect(progress_calls[0][0]).toEqual({
+				context: {
+					sessions: ['session-1'],
+				},
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/progress',
+					params: {
+						progress: 1,
+						total: 3,
+						message: 'Analyzing request',
+						progressToken: 'prompt-progress-token',
+					},
+				},
+			});
+
+			off();
+		});
+
+		it('should handle progress in resources', async () => {
+			// Create a resource that uses progress
+			server.resource(
+				{
+					name: 'progress-resource',
+					description: 'A resource that reports progress',
+					uri: 'test://progress-resource',
+				},
+				() => {
+					server.progress(10, 20, 'Loading data');
+					server.progress(20, 20, 'Data loaded');
+					return {
+						contents: [
+							{
+								uri: 'test://progress-resource',
+								text: 'Resource content',
+							},
+						],
+					};
+				},
+			);
+
+			const on = vi.fn();
+			const off = server.on('send', on);
+
+			// Read the resource with a progress token
+			const resource_request = request({
+				jsonrpc: '2.0',
+				id: 5,
+				method: 'resources/read',
+				params: {
+					uri: 'test://progress-resource',
+					_meta: {
+						progressToken: 'resource-progress-token',
+					},
+				},
+			});
+
+			await server.receive(resource_request, { sessionId: 'session-1' });
+
+			// Filter only progress notifications
+			const progress_calls = on.mock.calls.filter(
+				(call) => call[0].request.method === 'notifications/progress',
+			);
+
+			expect(progress_calls).toHaveLength(2);
+			expect(progress_calls[0][0]).toEqual({
+				context: {
+					sessions: ['session-1'],
+				},
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/progress',
+					params: {
+						progress: 10,
+						total: 20,
+						message: 'Loading data',
+						progressToken: 'resource-progress-token',
+					},
+				},
+			});
+
+			expect(progress_calls[1][0]).toEqual({
+				context: {
+					sessions: ['session-1'],
+				},
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/progress',
+					params: {
+						progress: 20,
+						total: 20,
+						message: 'Data loaded',
+						progressToken: 'resource-progress-token',
+					},
+				},
+			});
+
+			off();
+		});
+
+		it('should handle progress across multiple sessions with different tokens', async () => {
+			// Initialize a second session
+			const init2 = request({
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'initialize',
+				params: {
+					protocolVersion: '2025-06-18',
+					capabilities: {},
+					clientInfo: { name: 'test2', version: '1.0.0' },
+				},
+			});
+			await server.receive(init2, { sessionId: 'session-2' });
+
+			// Create a tool that uses progress
+			server.tool(
+				{
+					name: 'multi-session-progress-tool',
+					description: 'A tool for multi-session progress testing',
+				},
+				() => {
+					server.progress(75, 100, 'Processing for current session');
+					return {
+						content: [{ type: 'text', text: 'Tool completed' }],
+					};
+				},
+			);
+
+			const on = vi.fn();
+			const off = server.on('send', on);
+
+			// Call from session 1 and session 2 simultaneously
+			await Promise.all([
+				server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 6,
+						method: 'tools/call',
+						params: {
+							name: 'multi-session-progress-tool',
+							_meta: {
+								progressToken: 'session-1-token',
+							},
+						},
+					}),
+					{ sessionId: 'session-1' },
+				),
+				server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 6,
+						method: 'tools/call',
+						params: {
+							name: 'multi-session-progress-tool',
+							_meta: {
+								progressToken: 'session-2-token',
+							},
+						},
+					}),
+					{ sessionId: 'session-2' },
+				),
+			]);
+
+			// Filter only progress notifications
+			const progress_calls = on.mock.calls.filter(
+				(call) => call[0].request.method === 'notifications/progress',
+			);
+
+			expect(progress_calls).toHaveLength(2);
+
+			// Check that each session got its own progress notification with the correct token
+			const session_one_call = progress_calls.find((call) =>
+				call[0].context.sessions.includes('session-1'),
+			);
+			const session_two_call = progress_calls.find((call) =>
+				call[0].context.sessions.includes('session-2'),
+			);
+
+			expect(session_one_call).toBeDefined();
+			expect(session_one_call?.[0].request.params.progressToken).toBe(
+				'session-1-token',
+			);
+
+			expect(session_two_call).toBeDefined();
+			expect(session_two_call?.[0].request.params.progressToken).toBe(
+				'session-2-token',
+			);
+
+			off();
+		});
+	});
 });
