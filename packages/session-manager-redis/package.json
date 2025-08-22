@@ -6,7 +6,7 @@
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/paoloricciuti/tmcp.git",
-		"directory": "packages/session-manager"
+		"directory": "packages/session-manager-redis"
 	},
 	"scripts": {
 		"generate:types": "dts-buddy && publint",
