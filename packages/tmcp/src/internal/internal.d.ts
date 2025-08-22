@@ -19,6 +19,7 @@ export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutp
 	outputSchema?: TOutputSchema;
 	title?: string;
 	annotations?: ToolAnnotations;
+	enabled?: () => boolean | Promise<boolean>;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<CallToolResult> | CallToolResult;
@@ -33,6 +34,7 @@ export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
 	title?: string;
+	enabled?: () => boolean | Promise<boolean>;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<GetPromptResult> | GetPromptResult;
@@ -44,6 +46,7 @@ export type StoredResource =
 			name: string;
 			template: true;
 			title?: string;
+			enabled?: () => boolean | Promise<boolean>;
 			list_resources?: () =>
 				| Promise<Array<Resource>>
 				| Array<Resource>;
@@ -57,6 +60,7 @@ export type StoredResource =
 			name: string;
 			template: false;
 			title?: string;
+			enabled?: () => boolean | Promise<boolean>;
 			execute: (
 				uri: string,
 			) => Promise<ReadResourceResult> | ReadResourceResult;

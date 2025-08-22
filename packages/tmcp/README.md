@@ -261,15 +261,19 @@ server.tool(
 	},
 	async (input) => {
 		const totalSteps = 100;
-		
+
 		for (let i = 0; i <= totalSteps; i++) {
 			// Report progress with current step, total steps, and optional message
-			server.progress(i, totalSteps, `Processing step ${i}/${totalSteps}`);
-			
+			server.progress(
+				i,
+				totalSteps,
+				`Processing step ${i}/${totalSteps}`,
+			);
+
 			// Simulate work
 			await processStep(i);
 		}
-		
+
 		return {
 			content: [{ type: 'text', text: 'Processing complete!' }],
 		};
@@ -278,11 +282,13 @@ server.tool(
 ```
 
 **Parameters:**
+
 - `progress` (number): Current progress value (should be ≤ total and always increase)
 - `total` (number, optional): Maximum progress value (defaults to 1)
 - `message` (string, optional): Descriptive message about current progress
 
 **Notes:**
+
 - Progress notifications are only sent when the client provides a `progressToken` in the request
 - Progress values should be monotonically increasing within a single operation
 - Each session maintains its own progress context
@@ -299,6 +305,7 @@ server.log('error', 'Failed to connect to database', 'database-logger');
 ```
 
 **Parameters:**
+
 - `level` (string): Log level ('debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency')
 - `data` (any): Data to log
 - `logger` (string, optional): Logger name/category
@@ -337,28 +344,28 @@ server.tool(
 		// Discover files to analyze
 		const files = await discoverFiles(path, includeTests);
 		const totalFiles = files.length;
-		
+
 		server.progress(0, totalFiles, 'Starting analysis...');
-		
+
 		const results = [];
 		for (let i = 0; i < files.length; i++) {
 			const file = files[i];
-			
+
 			// Update progress with current file being processed
 			server.progress(
 				i + 1,
 				totalFiles,
-				`Analyzing ${file} (${i + 1}/${totalFiles})`
+				`Analyzing ${file} (${i + 1}/${totalFiles})`,
 			);
-			
+
 			// Analyze the file
 			const analysis = await analyzeFile(file);
 			results.push(analysis);
 		}
-		
+
 		// Final progress update
 		server.progress(totalFiles, totalFiles, 'Analysis complete!');
-		
+
 		return {
 			content: [
 				{
@@ -386,21 +393,21 @@ server.prompt(
 	},
 	async ({ sections }) => {
 		const messages = [];
-		
+
 		for (let i = 0; i < sections.length; i++) {
 			server.progress(
 				i,
 				sections.length,
-				`Generating section: ${sections[i]}`
+				`Generating section: ${sections[i]}`,
 			);
-			
+
 			const content = await generateSection(sections[i]);
 			messages.push({
 				role: 'user',
 				content: { type: 'text', text: content },
 			});
 		}
-		
+
 		server.progress(sections.length, sections.length, 'Report complete');
 		return { messages };
 	},
@@ -766,6 +773,232 @@ server.tool(
 	},
 );
 ```
+
+## Dynamic Enabling/Disabling
+
+All MCP capabilities (tools, prompts, resources, templates) support dynamic enabling and disabling through the `enabled` function. This allows you to conditionally show or hide capabilities based on runtime conditions, user permissions, or any other logic.
+
+### Basic Usage
+
+The `enabled` function is called before each list operation and determines whether the capability should be included in the response:
+
+```javascript
+server.tool(
+	{
+		name: 'admin-only-tool',
+		description: 'Administrative tool',
+		enabled: () => {
+			// Only show this tool if user is admin
+			return getCurrentUser().isAdmin;
+		},
+	},
+	async (input) => {
+		return { content: [{ type: 'text', text: 'Admin action completed' }] };
+	},
+);
+```
+
+### Async Enabled Functions
+
+The `enabled` function can be synchronous or asynchronous:
+
+```javascript
+server.resource(
+	{
+		name: 'private-document',
+		description: 'Access private documents',
+		uri: 'private://document.txt',
+		enabled: async () => {
+			// Check permissions asynchronously
+			const user = await getCurrentUser();
+			return await hasPermission(user.id, 'read-private-docs');
+		},
+	},
+	async (uri) => {
+		return {
+			contents: [
+				{
+					uri,
+					mimeType: 'text/plain',
+					text: await readPrivateDocument(uri),
+				},
+			],
+		};
+	},
+);
+```
+
+### Context-Aware Enabling
+
+Within the `enabled` function you can read the session context with `server.ctx`, allowing for user-specific or session-specific logic:
+
+```javascript
+server.prompt(
+	{
+		name: 'personalized-prompt',
+		description: 'User-specific prompt template',
+		enabled: () => {
+			// Access session information
+			const sessionId = server.ctx.sessionId;
+			const userPrefs = getUserPreferences(sessionId);
+			return userPrefs.enablePersonalization;
+		},
+	},
+	async (input) => {
+		return {
+			messages: [
+				{
+					role: 'user',
+					content: { type: 'text', text: 'Personalized content...' },
+				},
+			],
+		};
+	},
+);
+```
+
+or enable a something based on client capabilities or info
+
+```javascript
+server.prompt(
+	{
+		name: 'personalized-prompt',
+		description: 'Claude Code prompt',
+		enabled: () => {
+			// Access session information
+			const clientInfo = server.currentClientInfo();
+			return clientInfo.name === 'Claude Code';
+		},
+	},
+	async (input) => {
+		return {
+			messages: [
+				{
+					role: 'user',
+					content: { type: 'text', text: 'Personalized content...' },
+				},
+			],
+		};
+	},
+);
+```
+
+or
+
+```javascript
+server.prompt(
+	{
+		name: 'fetch-repositories',
+		description: 'fetch the repositories of the user',
+		enabled: () => {
+			// Access session information
+			const clientInfo = server.currentClientCapabilities();
+			return clientInfo.elicitation != null;
+		},
+	},
+	async (input) => {
+		const username = await server.elicitation(
+			v.object({
+				value: v.string(),
+			}),
+		);
+		const repos = await fetchRepos(username.value);
+		return {
+			messages: [
+				{
+					role: 'user',
+					content: {
+						type: 'text',
+						text: `Your repositories are ${repos.join(', ')}`,
+					},
+				},
+			],
+		};
+	},
+);
+```
+
+### Template Enabling
+
+URI templates also support the `enabled` function:
+
+```javascript
+server.template(
+	{
+		name: 'user-files',
+		description: 'Access user-specific files',
+		uri: 'users/{userId}/files/{filename}',
+		enabled: async () => {
+			// Check if file system is available
+			return await isFileSystemMounted();
+		},
+		complete: {
+			userId: (arg, context) => ({
+				completion: {
+					values: ['user1', 'user2', 'user3'],
+					total: 3,
+					hasMore: false,
+				},
+			}),
+		},
+	},
+	async (uri, params) => {
+		const content = await readUserFile(params.userId, params.filename);
+		return {
+			contents: [
+				{
+					uri,
+					mimeType: 'text/plain',
+					text: content,
+				},
+			],
+		};
+	},
+);
+```
+
+### Error Handling
+
+If an `enabled` function throws an error, the capability will be treated as disabled:
+
+```javascript
+server.tool(
+	{
+		name: 'network-tool',
+		description: 'Tool requiring network access',
+		enabled: () => {
+			// If network check fails, tool is disabled
+			if (!checkNetworkConnection()) {
+				throw new Error('Network unavailable');
+			}
+			return true;
+		},
+	},
+	async (input) => {
+		return {
+			content: [{ type: 'text', text: 'Network operation completed' }],
+		};
+	},
+);
+```
+
+### Performance Considerations
+
+- The `enabled` function is called every time a list is requested
+- Keep enabled functions lightweight to avoid performance issues
+- Consider caching expensive checks when possible
+- Async functions add latency to list operations
+
+### Use Cases
+
+Common scenarios where `enabled` functions are useful:
+
+1. **Permission-based access**: Show tools only to authorized users
+2. **Feature flags**: Enable/disable features based on configuration
+3. **Resource availability**: Hide resources when underlying systems are unavailable
+4. **User preferences**: Customize available capabilities per user
+5. **Time-based access**: Enable tools only during specific hours
+6. **License restrictions**: Limit features based on subscription level
 
 ## Contributing
 

@@ -2157,4 +2157,1157 @@ describe('McpServer', () => {
 			off();
 		});
 	});
+
+	describe('enabled functionality', () => {
+		beforeEach(async () => {
+			vi.clearAllMocks();
+
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2024-11-05',
+						capabilities: {},
+						clientInfo: { name: 'test-client', version: '1.0.0' },
+					},
+				}),
+				{ sessionId: 'session-1' },
+			);
+		});
+
+		describe('tools with enabled function', () => {
+			it('should include enabled tools in tools/list when enabled returns true', async () => {
+				const enabled_mock = vi.fn().mockResolvedValue(true);
+
+				server.tool(
+					{
+						name: 'enabled_tool',
+						description: 'A tool that is enabled',
+						enabled: enabled_mock,
+					},
+					async () => ({
+						content: [{ type: 'text', text: 'Tool executed' }],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'tools/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock).toHaveBeenCalled();
+				expect(result.result.tools).toHaveLength(1);
+				expect(result.result.tools[0]).toMatchObject({
+					name: 'enabled_tool',
+					description: 'A tool that is enabled',
+				});
+			});
+
+			it('should exclude disabled tools from tools/list when enabled returns false', async () => {
+				const enabled_mock = vi.fn().mockResolvedValue(false);
+
+				server.tool(
+					{
+						name: 'disabled_tool',
+						description: 'A tool that is disabled',
+						enabled: enabled_mock,
+					},
+					async () => ({
+						content: [{ type: 'text', text: 'Tool executed' }],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'tools/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock).toHaveBeenCalled();
+				expect(result.result.tools).toHaveLength(0);
+			});
+
+			it('should include tools without enabled function by default', async () => {
+				server.tool(
+					{
+						name: 'always_enabled_tool',
+						description: 'A tool without enabled function',
+					},
+					async () => ({
+						content: [{ type: 'text', text: 'Tool executed' }],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'tools/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(result.result.tools).toHaveLength(1);
+				expect(result.result.tools[0].name).toBe('always_enabled_tool');
+			});
+
+			it('should handle mix of enabled and disabled tools', async () => {
+				const enabled_mock_true = vi.fn().mockResolvedValue(true);
+				const enabled_mock_false = vi.fn().mockResolvedValue(false);
+
+				server.tool(
+					{
+						name: 'enabled_tool',
+						description: 'Enabled tool',
+						enabled: enabled_mock_true,
+					},
+					async () => ({
+						content: [
+							{ type: 'text', text: 'Enabled tool executed' },
+						],
+					}),
+				);
+
+				server.tool(
+					{
+						name: 'disabled_tool',
+						description: 'Disabled tool',
+						enabled: enabled_mock_false,
+					},
+					async () => ({
+						content: [
+							{ type: 'text', text: 'Disabled tool executed' },
+						],
+					}),
+				);
+
+				server.tool(
+					{
+						name: 'always_enabled_tool',
+						description: 'Always enabled tool',
+					},
+					async () => ({
+						content: [
+							{
+								type: 'text',
+								text: 'Always enabled tool executed',
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'tools/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock_true).toHaveBeenCalled();
+				expect(enabled_mock_false).toHaveBeenCalled();
+				expect(result.result.tools).toHaveLength(2);
+
+				const tool_names = result.result.tools.map(
+					/** @param {any} tool */ (tool) => tool.name,
+				);
+				expect(tool_names).toContain('enabled_tool');
+				expect(tool_names).toContain('always_enabled_tool');
+				expect(tool_names).not.toContain('disabled_tool');
+			});
+		});
+
+		describe('prompts with enabled function', () => {
+			it('should include enabled prompts in prompts/list when enabled returns true', async () => {
+				const enabled_mock = vi.fn().mockResolvedValue(true);
+
+				server.prompt(
+					{
+						name: 'enabled_prompt',
+						description: 'A prompt that is enabled',
+						enabled: enabled_mock,
+					},
+					async () => ({
+						description: 'Enabled prompt response',
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Enabled prompt content',
+								},
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'prompts/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock).toHaveBeenCalled();
+				expect(result.result.prompts).toHaveLength(1);
+				expect(result.result.prompts[0]).toMatchObject({
+					name: 'enabled_prompt',
+					description: 'A prompt that is enabled',
+				});
+			});
+
+			it('should exclude disabled prompts from prompts/list when enabled returns false', async () => {
+				const enabled_mock = vi.fn().mockResolvedValue(false);
+
+				server.prompt(
+					{
+						name: 'disabled_prompt',
+						description: 'A prompt that is disabled',
+						enabled: enabled_mock,
+					},
+					async () => ({
+						description: 'Disabled prompt response',
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Disabled prompt content',
+								},
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'prompts/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock).toHaveBeenCalled();
+				expect(result.result.prompts).toHaveLength(0);
+			});
+
+			it('should include prompts without enabled function by default', async () => {
+				server.prompt(
+					{
+						name: 'always_enabled_prompt',
+						description: 'A prompt without enabled function',
+					},
+					async () => ({
+						description: 'Always enabled prompt response',
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Always enabled prompt content',
+								},
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'prompts/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(result.result.prompts).toHaveLength(1);
+				expect(result.result.prompts[0].name).toBe(
+					'always_enabled_prompt',
+				);
+			});
+
+			it('should handle mix of enabled and disabled prompts', async () => {
+				const enabled_mock_true = vi.fn().mockResolvedValue(true);
+				const enabled_mock_false = vi.fn().mockResolvedValue(false);
+
+				server.prompt(
+					{
+						name: 'enabled_prompt',
+						description: 'Enabled prompt',
+						enabled: enabled_mock_true,
+					},
+					async () => ({
+						description: 'Enabled prompt response',
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Enabled prompt content',
+								},
+							},
+						],
+					}),
+				);
+
+				server.prompt(
+					{
+						name: 'disabled_prompt',
+						description: 'Disabled prompt',
+						enabled: enabled_mock_false,
+					},
+					async () => ({
+						description: 'Disabled prompt response',
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Disabled prompt content',
+								},
+							},
+						],
+					}),
+				);
+
+				server.prompt(
+					{
+						name: 'always_enabled_prompt',
+						description: 'Always enabled prompt',
+					},
+					async () => ({
+						description: 'Always enabled prompt response',
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Always enabled prompt content',
+								},
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'prompts/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock_true).toHaveBeenCalled();
+				expect(enabled_mock_false).toHaveBeenCalled();
+				expect(result.result.prompts).toHaveLength(2);
+
+				const prompt_names = result.result.prompts.map(
+					/** @param {any} prompt */ (prompt) => prompt.name,
+				);
+				expect(prompt_names).toContain('enabled_prompt');
+				expect(prompt_names).toContain('always_enabled_prompt');
+				expect(prompt_names).not.toContain('disabled_prompt');
+			});
+		});
+
+		describe('resources with enabled function', () => {
+			it('should include enabled resources in resources/list when enabled returns true', async () => {
+				const enabled_mock = vi.fn().mockResolvedValue(true);
+
+				// Now that the bug is fixed, the enabled parameter should work correctly
+				server.resource(
+					{
+						name: 'enabled_resource',
+						description: 'A resource that is enabled',
+						uri: 'test://enabled-resource',
+						enabled: enabled_mock,
+					},
+					async (uri) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Content for ${uri}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock).toHaveBeenCalled();
+				expect(result.result.resources).toHaveLength(1);
+				expect(result.result.resources[0]).toMatchObject({
+					name: 'enabled_resource',
+					description: 'A resource that is enabled',
+					uri: 'test://enabled-resource',
+				});
+			});
+
+			it('should exclude disabled resources when enabled returns false', async () => {
+				const enabled_mock = vi.fn().mockResolvedValue(false);
+
+				// Now that the bug is fixed, this should work correctly
+				server.resource(
+					{
+						name: 'disabled_resource',
+						description: 'A resource that is disabled',
+						uri: 'test://disabled-resource',
+						enabled: enabled_mock,
+					},
+					async (uri) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Content for ${uri}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock).toHaveBeenCalled();
+				expect(result.result.resources).toHaveLength(0);
+			});
+
+			it('should include resources without enabled function by default', async () => {
+				server.resource(
+					{
+						name: 'always_enabled_resource',
+						description: 'A resource without enabled function',
+						uri: 'test://always-enabled-resource',
+					},
+					async (uri) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Content for ${uri}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(result.result.resources).toHaveLength(1);
+				expect(result.result.resources[0].name).toBe(
+					'always_enabled_resource',
+				);
+			});
+
+			it('should handle mix of enabled and disabled resources', async () => {
+				const enabled_mock_true = vi.fn().mockResolvedValue(true);
+				const enabled_mock_false = vi.fn().mockResolvedValue(false);
+
+				server.resource(
+					{
+						name: 'enabled_resource',
+						description: 'Enabled resource',
+						uri: 'test://enabled-resource',
+						enabled: enabled_mock_true,
+					},
+					async (uri) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Content for ${uri}`,
+							},
+						],
+					}),
+				);
+
+				server.resource(
+					{
+						name: 'disabled_resource',
+						description: 'Disabled resource',
+						uri: 'test://disabled-resource',
+						enabled: enabled_mock_false,
+					},
+					async (uri) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Content for ${uri}`,
+							},
+						],
+					}),
+				);
+
+				server.resource(
+					{
+						name: 'always_enabled_resource',
+						description: 'Always enabled resource',
+						uri: 'test://always-enabled-resource',
+					},
+					async (uri) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Content for ${uri}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock_true).toHaveBeenCalled();
+				expect(enabled_mock_false).toHaveBeenCalled();
+				expect(result.result.resources).toHaveLength(2);
+
+				const resource_names = result.result.resources.map(
+					/** @param {any} resource */ (resource) => resource.name,
+				);
+				expect(resource_names).toContain('enabled_resource');
+				expect(resource_names).toContain('always_enabled_resource');
+				expect(resource_names).not.toContain('disabled_resource');
+			});
+		});
+
+		describe('templates with enabled function', () => {
+			it('should include enabled templates in resources/list when enabled returns true', async () => {
+				const enabled_mock = vi.fn().mockResolvedValue(true);
+
+				server.template(
+					{
+						name: 'enabled_template',
+						description: 'A template that is enabled',
+						uri: 'test://template/{id}',
+						enabled: enabled_mock,
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/templates/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock).toHaveBeenCalled();
+				expect(result.result.resourceTemplates).toHaveLength(1);
+				expect(result.result.resourceTemplates[0]).toMatchObject({
+					name: 'enabled_template',
+					description: 'A template that is enabled',
+					uriTemplate: 'test://template/{id}',
+				});
+			});
+
+			it('should exclude disabled templates from resources/templates/list when enabled returns false', async () => {
+				const enabled_mock = vi.fn().mockResolvedValue(false);
+
+				server.template(
+					{
+						name: 'disabled_template',
+						description: 'A template that is disabled',
+						uri: 'test://disabled-template/{id}',
+						enabled: enabled_mock,
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/templates/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock).toHaveBeenCalled();
+				expect(result.result.resourceTemplates).toHaveLength(0);
+			});
+
+			it('should handle enabled templates with list method', async () => {
+				const enabled_mock = vi.fn().mockResolvedValue(true);
+				const list_mock = vi.fn().mockResolvedValue([
+					{
+						name: 'Generated Resource 1',
+						description: 'A generated resource',
+						uri: 'test://template/resource1',
+					},
+					{
+						name: 'Generated Resource 2',
+						description: 'Another generated resource',
+						uri: 'test://template/resource2',
+					},
+				]);
+
+				server.template(
+					{
+						name: 'enabled_template_with_list',
+						description:
+							'A template with list method that is enabled',
+						uri: 'test://template-with-list/{id}',
+						enabled: enabled_mock,
+						list: list_mock,
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock).toHaveBeenCalled();
+				expect(list_mock).toHaveBeenCalled();
+				expect(result.result.resources).toHaveLength(2);
+				expect(result.result.resources[0].name).toBe(
+					'Generated Resource 1',
+				);
+				expect(result.result.resources[1].name).toBe(
+					'Generated Resource 2',
+				);
+			});
+
+			it('should exclude disabled templates with list method', async () => {
+				const enabled_mock = vi.fn().mockResolvedValue(false);
+				const list_mock = vi.fn().mockResolvedValue([
+					{
+						name: 'Generated Resource 1',
+						description: 'A generated resource',
+						uri: 'test://template/resource1',
+					},
+				]);
+
+				server.template(
+					{
+						name: 'disabled_template_with_list',
+						description:
+							'A template with list method that is disabled',
+						uri: 'test://disabled-template-with-list/{id}',
+						enabled: enabled_mock,
+						list: list_mock,
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock).toHaveBeenCalled();
+				expect(list_mock).not.toHaveBeenCalled(); // Should not call list if disabled
+				expect(result.result.resources).toHaveLength(0);
+			});
+
+			it('should include templates without enabled function by default', async () => {
+				server.template(
+					{
+						name: 'always_enabled_template',
+						description: 'A template without enabled function',
+						uri: 'test://always-enabled-template/{id}',
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/templates/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(result.result.resourceTemplates).toHaveLength(1);
+				expect(result.result.resourceTemplates[0].name).toBe(
+					'always_enabled_template',
+				);
+			});
+
+			it('should handle mix of enabled and disabled templates with list method in resources/list', async () => {
+				const enabled_mock_true = vi.fn().mockResolvedValue(true);
+				const enabled_mock_false = vi.fn().mockResolvedValue(false);
+				const list_mock_enabled = vi.fn().mockResolvedValue([
+					{
+						name: 'Generated Resource 1',
+						description:
+							'A generated resource from enabled template',
+						uri: 'test://enabled-template/resource1',
+					},
+				]);
+				const list_mock_disabled = vi.fn().mockResolvedValue([
+					{
+						name: 'Generated Resource 2',
+						description:
+							'A generated resource from disabled template',
+						uri: 'test://disabled-template/resource2',
+					},
+				]);
+				const list_mock_always = vi.fn().mockResolvedValue([
+					{
+						name: 'Generated Resource 3',
+						description:
+							'A generated resource from always enabled template',
+						uri: 'test://always-enabled-template/resource3',
+					},
+				]);
+
+				server.template(
+					{
+						name: 'enabled_template',
+						description: 'Enabled template',
+						uri: 'test://enabled-template/{id}',
+						enabled: enabled_mock_true,
+						list: list_mock_enabled,
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				server.template(
+					{
+						name: 'disabled_template',
+						description: 'Disabled template',
+						uri: 'test://disabled-template/{id}',
+						enabled: enabled_mock_false,
+						list: list_mock_disabled,
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				server.template(
+					{
+						name: 'always_enabled_template',
+						description: 'Always enabled template',
+						uri: 'test://always-enabled-template/{id}',
+						list: list_mock_always,
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock_true).toHaveBeenCalled();
+				expect(enabled_mock_false).toHaveBeenCalled();
+				// Only enabled and always-enabled templates should have their list methods called
+				expect(list_mock_enabled).toHaveBeenCalled();
+				expect(list_mock_disabled).not.toHaveBeenCalled(); // Should not be called due to enabled=false
+				expect(list_mock_always).toHaveBeenCalled();
+
+				expect(result.result.resources).toHaveLength(2);
+
+				const resource_names = result.result.resources.map(
+					/** @param {any} resource */ (resource) => resource.name,
+				);
+				expect(resource_names).toContain('Generated Resource 1'); // From enabled template
+				expect(resource_names).toContain('Generated Resource 3'); // From always enabled template
+				expect(resource_names).not.toContain('Generated Resource 2'); // From disabled template
+			});
+
+			it('should handle mix of enabled and disabled templates in resources/templates/list', async () => {
+				const enabled_mock_true = vi.fn().mockResolvedValue(true);
+				const enabled_mock_false = vi.fn().mockResolvedValue(false);
+
+				server.template(
+					{
+						name: 'enabled_template',
+						description: 'Enabled template',
+						uri: 'test://enabled-template/{id}',
+						enabled: enabled_mock_true,
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				server.template(
+					{
+						name: 'disabled_template',
+						description: 'Disabled template',
+						uri: 'test://disabled-template/{id}',
+						enabled: enabled_mock_false,
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				server.template(
+					{
+						name: 'always_enabled_template',
+						description: 'Always enabled template',
+						uri: 'test://always-enabled-template/{id}',
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				const result = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/templates/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(enabled_mock_true).toHaveBeenCalled();
+				expect(enabled_mock_false).toHaveBeenCalled();
+				expect(result.result.resourceTemplates).toHaveLength(2);
+
+				const template_names = result.result.resourceTemplates.map(
+					/** @param {any} template */ (template) => template.name,
+				);
+				expect(template_names).toContain('enabled_template');
+				expect(template_names).toContain('always_enabled_template');
+				expect(template_names).not.toContain('disabled_template');
+			});
+		});
+
+		describe('error handling in enabled functions', () => {
+			it('should treat tools as disabled when enabled function throws error', async () => {
+				const enabled_mock = vi
+					.fn()
+					.mockRejectedValue(new Error('Enabled check failed'));
+
+				server.tool(
+					{
+						name: 'error_tool',
+						description: 'A tool with failing enabled function',
+						enabled: enabled_mock,
+					},
+					async () => ({
+						content: [{ type: 'text', text: 'Tool executed' }],
+					}),
+				);
+
+				// Add a working tool to verify the list still works
+				server.tool(
+					{
+						name: 'working_tool',
+						description: 'A working tool',
+					},
+					async () => ({
+						content: [{ type: 'text', text: 'Working tool executed' }],
+					}),
+				);
+
+				// When enabled function throws, tool should be treated as disabled
+				const response = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'tools/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				// Response should be successful, but the erroring tool should not be included
+				expect(response.error).toBeUndefined();
+				expect(response.result.tools).toHaveLength(1);
+				expect(response.result.tools[0].name).toBe('working_tool');
+				expect(enabled_mock).toHaveBeenCalled();
+			});
+
+			it('should treat prompts as disabled when enabled function throws error', async () => {
+				const enabled_mock = vi
+					.fn()
+					.mockRejectedValue(new Error('Enabled check failed'));
+
+				server.prompt(
+					{
+						name: 'error_prompt',
+						description: 'A prompt with failing enabled function',
+						enabled: enabled_mock,
+					},
+					async () => ({
+						description: 'Error prompt response',
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Error prompt content',
+								},
+							},
+						],
+					}),
+				);
+
+				// Add a working prompt to verify the list still works
+				server.prompt(
+					{
+						name: 'working_prompt',
+						description: 'A working prompt',
+					},
+					async () => ({
+						description: 'Working prompt response',
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Working prompt content',
+								},
+							},
+						],
+					}),
+				);
+
+				// When enabled function throws, prompt should be treated as disabled
+				const response = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'prompts/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				// Response should be successful, but the erroring prompt should not be included
+				expect(response.error).toBeUndefined();
+				expect(response.result.prompts).toHaveLength(1);
+				expect(response.result.prompts[0].name).toBe('working_prompt');
+				expect(enabled_mock).toHaveBeenCalled();
+			});
+
+			it('should treat resources as disabled when enabled function throws error', async () => {
+				const enabled_mock = vi
+					.fn()
+					.mockRejectedValue(new Error('Enabled check failed'));
+
+				server.resource(
+					{
+						name: 'error_resource',
+						description: 'A resource with failing enabled function',
+						uri: 'test://error-resource',
+						enabled: enabled_mock,
+					},
+					async (uri) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Content for ${uri}`,
+							},
+						],
+					}),
+				);
+
+				// Add a working resource to verify the list still works
+				server.resource(
+					{
+						name: 'working_resource',
+						description: 'A working resource',
+						uri: 'test://working-resource',
+					},
+					async (uri) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Content for ${uri}`,
+							},
+						],
+					}),
+				);
+
+				// When enabled function throws, resource should be treated as disabled
+				const response = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				// Response should be successful, but the erroring resource should not be included
+				expect(response.error).toBeUndefined();
+				expect(response.result.resources).toHaveLength(1);
+				expect(response.result.resources[0].name).toBe('working_resource');
+				expect(enabled_mock).toHaveBeenCalled();
+			});
+
+			it('should treat templates as disabled when enabled function throws error', async () => {
+				const enabled_mock = vi
+					.fn()
+					.mockRejectedValue(new Error('Enabled check failed'));
+
+				server.template(
+					{
+						name: 'error_template',
+						description: 'A template with failing enabled function',
+						uri: 'test://error-template/{id}',
+						enabled: enabled_mock,
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				// Add a working template to verify the list still works
+				server.template(
+					{
+						name: 'working_template',
+						description: 'A working template',
+						uri: 'test://working-template/{id}',
+					},
+					async (uri, params) => ({
+						contents: [
+							{
+								uri: uri,
+								text: `Template content for ${uri} with params ${JSON.stringify(params)}`,
+							},
+						],
+					}),
+				);
+
+				// When enabled function throws, template should be treated as disabled
+				const response = await server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'resources/templates/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				// Response should be successful, but the erroring template should not be included
+				expect(response.error).toBeUndefined();
+				expect(response.result.resourceTemplates).toHaveLength(1);
+				expect(response.result.resourceTemplates[0].name).toBe('working_template');
+				expect(enabled_mock).toHaveBeenCalled();
+			});
+		});
+	});
 });

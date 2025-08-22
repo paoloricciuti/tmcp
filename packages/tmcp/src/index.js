@@ -78,6 +78,17 @@ async function decode_cursor(cursor) {
 }
 
 /**
+ * @param {()=>boolean | Promise<boolean>} enabled
+ */
+async function safe_enabled(enabled) {
+	try {
+		return await enabled();
+	} catch {
+		return false;
+	}
+}
+
+/**
  * @typedef {ClientCapabilitiesType} ClientCapabilities
  */
 
@@ -353,34 +364,41 @@ export class McpServer {
 	#init_tools() {
 		if (!this.#options.capabilities?.tools) return;
 		this.#server.addMethod('tools/list', async () => {
-			const available_tools = await Promise.all(
-				[...this.#tools].map(async ([name, tool]) => {
-					return {
-						name,
-						title: tool.title || tool.description,
-						description: tool.description,
+			const available_tools = (
+				await Promise.all(
+					[...this.#tools].map(async ([name, tool]) => {
+						if (
+							tool.enabled != null &&
+							(await safe_enabled(tool.enabled)) === false
+						)
+							return null;
+						return {
+							name,
+							title: tool.title || tool.description,
+							description: tool.description,
 
-						inputSchema: tool.schema
-							? await this.#options.adapter.toJsonSchema(
-									tool.schema,
-								)
-							: { type: 'object', properties: {} },
-						...(tool.outputSchema
-							? {
-									outputSchema:
-										await this.#options.adapter.toJsonSchema(
-											tool.outputSchema,
-										),
-								}
-							: {}),
-						...(tool.annotations
-							? {
-									annotations: tool.annotations,
-								}
-							: {}),
-					};
-				}),
-			);
+							inputSchema: tool.schema
+								? await this.#options.adapter.toJsonSchema(
+										tool.schema,
+									)
+								: { type: 'object', properties: {} },
+							...(tool.outputSchema
+								? {
+										outputSchema:
+											await this.#options.adapter.toJsonSchema(
+												tool.outputSchema,
+											),
+									}
+								: {}),
+							...(tool.annotations
+								? {
+										annotations: tool.annotations,
+									}
+								: {}),
+						};
+					}),
+				)
+			).filter((tool) => tool !== null);
 			return {
 				tools: available_tools,
 			};
@@ -450,39 +468,49 @@ export class McpServer {
 	#init_prompts() {
 		if (!this.#options.capabilities?.prompts) return;
 		this.#server.addMethod('prompts/list', async ({ cursor } = {}) => {
-			const all_prompts = await Promise.all(
-				[...this.#prompts].map(async ([name, prompt]) => {
-					const arguments_schema = prompt.schema
-						? await this.#options.adapter.toJsonSchema(
-								prompt.schema,
-							)
-						: {
-								type: 'object',
-								properties:
-									/** @type {Record<string, {description: string}>} */ ({}),
-								required: [],
-							};
-					const keys = Object.keys(arguments_schema.properties ?? {});
-					const required = arguments_schema.required ?? [];
-					return {
-						name,
-						title: prompt.title || prompt.description,
-						description: prompt.description,
-						arguments: keys.map((key) => {
-							const property = arguments_schema.properties?.[key];
-							const description =
-								property && property !== true
-									? property.description
-									: key;
-							return {
-								name: key,
-								required: required.includes(key),
-								description,
-							};
-						}),
-					};
-				}),
-			);
+			const all_prompts = (
+				await Promise.all(
+					[...this.#prompts].map(async ([name, prompt]) => {
+						if (
+							prompt.enabled != null &&
+							(await safe_enabled(prompt.enabled)) === false
+						)
+							return null;
+						const arguments_schema = prompt.schema
+							? await this.#options.adapter.toJsonSchema(
+									prompt.schema,
+								)
+							: {
+									type: 'object',
+									properties:
+										/** @type {Record<string, {description: string}>} */ ({}),
+									required: [],
+								};
+						const keys = Object.keys(
+							arguments_schema.properties ?? {},
+						);
+						const required = arguments_schema.required ?? [];
+						return {
+							name,
+							title: prompt.title || prompt.description,
+							description: prompt.description,
+							arguments: keys.map((key) => {
+								const property =
+									arguments_schema.properties?.[key];
+								const description =
+									property && property !== true
+										? property.description
+										: key;
+								return {
+									name: key,
+									required: required.includes(key),
+									description,
+								};
+							}),
+						};
+					}),
+				)
+			).filter((prompt) => prompt !== null);
 
 			const pagination_options = this.#options.pagination?.prompts;
 			if (!pagination_options || pagination_options.size == null) {
@@ -559,6 +587,11 @@ export class McpServer {
 			for (const [uri, { description, name, title, ...resource }] of this
 				.#resources) {
 				if (!resource.template) {
+					if (
+						resource.enabled != null &&
+						(await safe_enabled(resource.enabled)) === false
+					)
+						continue;
 					all_resources.push({
 						name,
 						title: title || description,
@@ -566,6 +599,11 @@ export class McpServer {
 						uri,
 					});
 				} else if (resource.list_resources) {
+					if (
+						resource.enabled != null &&
+						(await safe_enabled(resource.enabled)) === false
+					)
+						continue;
 					const template_resources = await resource.list_resources();
 					all_resources.push(...template_resources);
 				}
@@ -594,20 +632,29 @@ export class McpServer {
 		});
 		this.#server.addMethod('resources/templates/list', async () => {
 			return {
-				resourceTemplates: [...this.#resources].reduce(
-					(arr, [uri, { description, name, title, template }]) => {
-						if (template) {
-							arr.push({
-								name,
-								title: title || description,
-								description,
-								uriTemplate: uri,
-							});
-						}
-						return arr;
-					},
-					/** @type {Array<{name: string, title: string, description: string, uriTemplate: string}>} */ ([]),
-				),
+				resourceTemplates: (
+					await Promise.all(
+						[...this.#resources].map(
+							async ([
+								uri,
+								{ description, name, title, template, enabled },
+							]) => {
+								if (!template) return null;
+								if (
+									enabled != null &&
+									(await safe_enabled(enabled)) === false
+								)
+									return null;
+								return {
+									name,
+									title: title || description,
+									description,
+									uriTemplate: uri,
+								};
+							},
+						),
+					)
+				).filter((resource) => resource != null),
 			};
 		});
 		this.#server.addMethod('resources/read', async ({ uri }) => {
@@ -705,11 +752,19 @@ export class McpServer {
 	 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
-	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations }} options
+	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
 	 */
 	tool(
-		{ name, description, title, schema, outputSchema, annotations },
+		{
+			name,
+			description,
+			title,
+			schema,
+			outputSchema,
+			annotations,
+			enabled,
+		},
 		execute,
 	) {
 		if (this.#options.capabilities?.tools?.listChanged) {
@@ -718,6 +773,7 @@ export class McpServer {
 		this.#tools.set(name, {
 			description,
 			title,
+			enabled,
 			schema,
 			outputSchema,
 			execute,
@@ -731,10 +787,10 @@ export class McpServer {
 	 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
 	 * for each input that will be used to provide completions for the user.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; title?: string; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
+	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} execute
 	 */
-	prompt({ name, description, title, schema, complete }, execute) {
+	prompt({ name, description, title, schema, complete, enabled }, execute) {
 		if (complete) {
 			this.#completions['ref/prompt'].set(name, complete);
 		}
@@ -746,6 +802,7 @@ export class McpServer {
 			title,
 			schema,
 			execute,
+			enabled,
 		});
 	}
 	/**
@@ -767,16 +824,17 @@ export class McpServer {
 	/**
 	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 	 * Use the description and title to help the user to understand what the resource is.
-	 * @param {{ name: string; description: string; title?: string; uri: string }} options
+	 * @param {{ name: string; description: string; title?: string; uri: string, enabled?: ()=>boolean | Promise<boolean>; }} options
 	 * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
-	resource({ name, description, title, uri }, execute) {
+	resource({ name, description, title, uri, enabled }, execute) {
 		this.#resource({
 			name,
 			description,
 			title,
 			uri,
 			execute,
+			enabled,
 			template: false,
 		});
 	}
@@ -788,15 +846,24 @@ export class McpServer {
 	 * Use the description and title to help the user to understand what the resource is.
 	 * @template {string} TUri
 	 * @template {ExtractURITemplateVariables<TUri>} TVariables
-	 * @param {{ name: string; description: string; title?: string; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
+	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
 	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
 	template(
-		{ name, description, title, uri, complete, list: list_resources },
+		{
+			name,
+			description,
+			title,
+			uri,
+			complete,
+			list: list_resources,
+			enabled,
+		},
 		execute,
 	) {
 		this.#resource({
 			name,
+			enabled,
 			description,
 			title,
 			uri,

@@ -42,10 +42,11 @@ declare module 'tmcp' {
 		 *
 		 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 		 * */
-		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations }: {
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations, enabled, }: {
 			name: string;
 			description: string;
 			title?: string;
+			enabled?: () => boolean | Promise<boolean>;
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
 			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
 			annotations?: ToolAnnotations;
@@ -57,10 +58,11 @@ declare module 'tmcp' {
 		 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
 		 * for each input that will be used to provide completions for the user.
 		 * */
-		prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete }: {
+		prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete, enabled }: {
 			name: string;
 			description: string;
 			title?: string;
+			enabled?: () => boolean | Promise<boolean>;
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
 			complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>>;
 		}, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): void;
@@ -68,11 +70,12 @@ declare module 'tmcp' {
 		 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 		 * Use the description and title to help the user to understand what the resource is.
 		 * */
-		resource({ name, description, title, uri }: {
+		resource({ name, description, title, uri, enabled }: {
 			name: string;
 			description: string;
 			title?: string;
 			uri: string;
+			enabled?: () => boolean | Promise<boolean>;
 		}, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): void;
 		/**
 		 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
@@ -81,10 +84,11 @@ declare module 'tmcp' {
 		 * be invoked to provide completions for the template variables to the user.
 		 * Use the description and title to help the user to understand what the resource is.
 		 * */
-		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, title, uri, complete, list: list_resources }: {
+		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, title, uri, complete, list: list_resources, enabled, }: {
 			name: string;
 			description: string;
 			title?: string;
+			enabled?: () => boolean | Promise<boolean>;
 			uri: TUri;
 			complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
 			list?: () => Promise<Array<Resource>> | Array<Resource>;
