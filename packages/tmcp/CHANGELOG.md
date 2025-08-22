@@ -1,5 +1,13 @@
 # tmcp
 
+## 1.10.3
+
+### Patch Changes
+
+- 05203d9: feat: add `getClientInfo` to retrieve information about the mcp client
+- f2aa0dd: feat: progress notifications
+- 9512cad: feat: add `enabled` function to all server functionalities
+
 ## 1.10.2
 
 ### Patch Changes
