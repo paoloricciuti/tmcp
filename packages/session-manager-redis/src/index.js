@@ -25,6 +25,11 @@ export class RedisSessionManager {
 	#connected;
 
 	/**
+	 * @type {ReturnType<setInterval> | undefined}
+	 */
+	#interval;
+
+	/**
 	 * @param {string} redis_url
 	 */
 	constructor(redis_url) {
@@ -42,13 +47,25 @@ export class RedisSessionManager {
 	 */
 	async create(id, controller) {
 		await this.#connected;
-		this.#client.set(`available:session:${id}`, 'active');
+		const available_key = `available:session:${id}`;
+		const expire_seconds = 10;
+		this.#client.set(available_key, 'active');
+
+		// we set the expiration to 10 seconds and we constantly refresh it
+		// to keep the session alive as long as it is being used
+		// this is to prevent hanging sessions in case the server abruptly stops
+		this.#client.expire(available_key, expire_seconds);
+		this.#interval = setInterval(() => {
+			this.#client.expire(available_key, expire_seconds);
+		}, expire_seconds * 1000);
+
 		this.#pub_sub_client.subscribe(`session:${id}`, (message) => {
 			controller.enqueue(this.#text_encoder.encode(message));
 		});
 		this.#pub_sub_client.subscribe(`delete:session:${id}`, () => {
 			controller.close();
 			this.#client?.del(`available:session:${id}`);
+			clearInterval(this.#interval);
 		});
 	}
 
@@ -59,6 +76,7 @@ export class RedisSessionManager {
 		await this.#connected;
 		this.#pub_sub_client.unsubscribe(`session:${id}`);
 		this.#pub_sub_client.unsubscribe(`delete:session:${id}`);
+		clearInterval(this.#interval);
 		this.#pub_sub_client.publish(`delete:session:${id}`, '');
 	}
 
