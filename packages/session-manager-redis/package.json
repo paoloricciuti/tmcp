@@ -36,7 +36,6 @@
 		"redis": "^5.8.2"
 	},
 	"devDependencies": {
-		"@tmcp/internal-ts-helpers": "workspace:^",
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12"
 	}

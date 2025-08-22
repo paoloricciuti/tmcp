@@ -253,9 +253,6 @@ importers:
         specifier: ^5.8.2
         version: 5.8.2
     devDependencies:
-      '@tmcp/internal-ts-helpers':
-        specifier: workspace:^
-        version: link:../internal-ts-helpers
       dts-buddy:
         specifier: ^0.6.2
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
