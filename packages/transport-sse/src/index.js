@@ -88,8 +88,8 @@ export class SseTransport {
 		this.#endpoint = this.#options.endpoint;
 
 		// Listen for server send events
-		this.#server.on('send', ({ request, context: { sessions } }) => {
-			this.#options.sessionManager.send(
+		this.#server.on('send', async ({ request, context: { sessions } }) => {
+			await this.#options.sessionManager.send(
 				sessions,
 				`data: ${JSON.stringify(request)}\n\n`,
 			);
@@ -209,8 +209,11 @@ export class SseTransport {
 
 		// Create new SSE stream
 		const stream = new ReadableStream({
-			start: (controller) => {
-				this.#options.sessionManager.create(session_id, controller);
+			start: async (controller) => {
+				await this.#options.sessionManager.create(
+					session_id,
+					controller,
+				);
 
 				// Send initial endpoint event with session info
 				const endpoint_url = new URL(
@@ -223,8 +226,8 @@ export class SseTransport {
 
 				controller.enqueue(this.#text_encoder.encode(endpoint_event));
 			},
-			cancel: () => {
-				this.#options.sessionManager.delete(session_id);
+			cancel: async () => {
+				await this.#options.sessionManager.delete(session_id);
 			},
 		});
 
@@ -274,7 +277,8 @@ export class SseTransport {
 				auth: auth_info ?? undefined,
 			});
 
-			const controller = this.#options.sessionManager.has(session_id);
+			const controller =
+				await this.#options.sessionManager.has(session_id);
 
 			if (!controller) {
 				return new Response('SSE connection not established', {
@@ -287,7 +291,7 @@ export class SseTransport {
 			}
 
 			if (response != null) {
-				this.#options.sessionManager.send(
+				await this.#options.sessionManager.send(
 					[session_id],
 					`data: ${JSON.stringify(response)}\n\n`,
 				);
@@ -316,8 +320,8 @@ export class SseTransport {
 	/**
 	 * @param {string} session_id
 	 */
-	#handle_delete(session_id) {
-		this.#options.sessionManager.delete(session_id);
+	async #handle_delete(session_id) {
+		await this.#options.sessionManager.delete(session_id);
 
 		return new Response(null, {
 			status: 204,
@@ -415,7 +419,7 @@ export class SseTransport {
 		}
 		// Handle DELETE request - disconnect session
 		else if (method === 'DELETE') {
-			response = this.#handle_delete(session_id);
+			response = await this.#handle_delete(session_id);
 		}
 		// Handle GET request - establish SSE connection
 		else if (method === 'GET') {

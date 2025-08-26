@@ -8,6 +8,7 @@ export class SessionManager {
 	 * @abstract
 	 * @param {string} id
 	 * @param {ReadableStreamDefaultController} controller
+	 * @returns {void | Promise<void>}
 	 */
 	create(id, controller) {
 		throw new Error('Method not implemented.');
@@ -16,6 +17,7 @@ export class SessionManager {
 	/**
 	 * @abstract
 	 * @param {string} id
+	 * @returns {void | Promise<void>}
 	 */
 	delete(id) {
 		throw new Error('Method not implemented.');
@@ -24,7 +26,7 @@ export class SessionManager {
 	/**
 	 * @abstract
 	 * @param {string} id
-	 * @returns {Promise<boolean>}
+	 * @returns {boolean | Promise<boolean>}
 	 */
 	has(id) {
 		throw new Error('Method not implemented.');
@@ -34,6 +36,7 @@ export class SessionManager {
 	 * @abstract
 	 * @param {string[] | undefined} sessions
 	 * @param {string} data
+	 * @returns {void | Promise<void>}
 	 */
 	send(sessions, data) {
 		throw new Error('Method not implemented.');

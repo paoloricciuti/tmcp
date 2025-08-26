@@ -78,7 +78,7 @@ export class HttpTransport {
 
 		this.#options = { getSessionId, path, cors, sessionManager };
 		this.#path = path;
-		this.#server.on('send', ({ request, context: { sessions } }) => {
+		this.#server.on('send', async ({ request, context: { sessions } }) => {
 			// use the current controller if the request has an id (it means it's a request and not a notification)
 			if (request.id != null) {
 				const controller = this.#controller_storage.getStore();
@@ -91,7 +91,7 @@ export class HttpTransport {
 				);
 				return;
 			}
-			this.#options.sessionManager.send(
+			await this.#options.sessionManager.send(
 				sessions,
 				'data: ' + JSON.stringify(request) + '\n\n',
 			);
@@ -184,8 +184,8 @@ export class HttpTransport {
 	/**
 	 * @param {string} session_id
 	 */
-	#handle_delete(session_id) {
-		this.#options.sessionManager.delete(session_id);
+	async #handle_delete(session_id) {
+		await this.#options.sessionManager.delete(session_id);
 		return new Response(null, {
 			status: 204,
 			headers: {
@@ -226,11 +226,11 @@ export class HttpTransport {
 
 		// Create new long-lived stream for notifications
 		const stream = new ReadableStream({
-			start(controller) {
-				sessions.create(session_id, controller);
+			async start(controller) {
+				await sessions.create(session_id, controller);
 			},
-			cancel() {
-				sessions.delete(session_id);
+			async cancel() {
+				await sessions.delete(session_id);
 			},
 		});
 
@@ -433,7 +433,7 @@ export class HttpTransport {
 		}
 		// Handle DELETE request - disconnect session
 		else if (method === 'DELETE') {
-			response = this.#handle_delete(session_id);
+			response = await this.#handle_delete(session_id);
 		}
 		// Handle GET request - establish long-lived connection for notifications
 		else if (method === 'GET') {
