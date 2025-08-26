@@ -244,6 +244,22 @@ importers:
         specifier: ^0.3.12
         version: 0.3.12
 
+  packages/session-manager-durable-objects:
+    dependencies:
+      '@tmcp/session-manager':
+        specifier: workspace:^
+        version: link:../session-manager
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20241218.0
+        version: 4.20250822.0
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.8.3)
+      publint:
+        specifier: ^0.3.12
+        version: 0.3.12
+
   packages/session-manager-redis:
     dependencies:
       '@tmcp/session-manager':
@@ -437,6 +453,9 @@ packages:
 
   '@clack/prompts@0.11.0':
     resolution: {integrity: sha512-pMN5FcrEw9hUkZA4f+zLlzivQSeQf5dRGJjSUbvVYDLvpKCdQx5OaknvKzgbtXOizhP+SJJJjqEbOe55uKKfAw==}
+
+  '@cloudflare/workers-types@4.20250822.0':
+    resolution: {integrity: sha512-SR5nxiclSEXS/lVwcfFCS/h7L99VWg0wa2B2CavdTAOwGznwTNcd3vmrrer3LwkqhAUQnDc2aZg3HbRvoh4LYw==}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -2932,6 +2951,8 @@ snapshots:
       '@clack/core': 0.5.0
       picocolors: 1.1.1
       sisteransi: 1.0.5
+
+  '@cloudflare/workers-types@4.20250822.0': {}
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:

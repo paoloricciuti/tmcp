@@ -1,0 +1,16 @@
+{
+	"version": 3,
+	"file": "index.d.ts",
+	"names": [
+		"DurableObjectSessionManager",
+		"SyncLayer"
+	],
+	"sources": [
+		"../index.js"
+	],
+	"sourcesContent": [
+		null
+	],
+	"mappings": ";;;cA0BaA,2BAA2BA;;;;;;;;;;;;;;;;;;;;;;cA+G3BC,SAASA",
+	"ignoreList": []
+}
