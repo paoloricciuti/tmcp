@@ -1,5 +1,13 @@
 # @tmcp/transport-sse
 
+## 0.2.7
+
+### Patch Changes
+
+- 957805b: fix: await session manager calls
+- Updated dependencies [957805b]
+    - @tmcp/session-manager@0.1.1
+
 ## 0.2.6
 
 ### Patch Changes
