@@ -66,7 +66,7 @@ export type StoredResource =
 			) => Promise<ReadResourceResult> | ReadResourceResult;
 	  };
 
-export type ServerOptions<TSchema extends StandardSchemaV1> = {
+export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	capabilities?: ServerCapabilities;
 	instructions?: string;
 	adapter: JsonSchemaAdapter<TSchema>;

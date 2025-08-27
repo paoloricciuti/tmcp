@@ -2,11 +2,11 @@ declare module '@tmcp/transport-sse' {
 	import type { McpServer } from 'tmcp';
 	import type { OAuth } from '@tmcp/auth';
 	import type { SessionManager } from '@tmcp/session-manager';
-	export class SseTransport {
+	export class SseTransport<TCustom extends Record<string, unknown> | undefined = undefined> {
 		
-		constructor(server: McpServer<any>, options?: SseTransportOptions);
+		constructor(server: McpServer<any, TCustom>, options?: SseTransportOptions);
 		
-		respond(request: Request): Promise<Response | null>;
+		respond(request: Request, ctx?: TCustom): Promise<Response | null>;
 		/**
 		 * Close all active sessions
 		 */

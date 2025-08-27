@@ -78,7 +78,7 @@ const server_info = {
 
 describe('McpServer', () => {
 	/**
-	 * @type {McpServer<any>}
+	 * @type {McpServer<MockSchema<any>, any>}
 	 */
 	let server;
 
@@ -3114,7 +3114,9 @@ describe('McpServer', () => {
 						description: 'A working tool',
 					},
 					async () => ({
-						content: [{ type: 'text', text: 'Working tool executed' }],
+						content: [
+							{ type: 'text', text: 'Working tool executed' },
+						],
 					}),
 				);
 
@@ -3249,7 +3251,9 @@ describe('McpServer', () => {
 				// Response should be successful, but the erroring resource should not be included
 				expect(response.error).toBeUndefined();
 				expect(response.result.resources).toHaveLength(1);
-				expect(response.result.resources[0].name).toBe('working_resource');
+				expect(response.result.resources[0].name).toBe(
+					'working_resource',
+				);
 				expect(enabled_mock).toHaveBeenCalled();
 			});
 
@@ -3305,8 +3309,161 @@ describe('McpServer', () => {
 				// Response should be successful, but the erroring template should not be included
 				expect(response.error).toBeUndefined();
 				expect(response.result.resourceTemplates).toHaveLength(1);
-				expect(response.result.resourceTemplates[0].name).toBe('working_template');
+				expect(response.result.resourceTemplates[0].name).toBe(
+					'working_template',
+				);
 				expect(enabled_mock).toHaveBeenCalled();
+			});
+		});
+	});
+
+	describe('custom context functionality', () => {
+		beforeEach(async () => {
+			const init = request({
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'initialize',
+				params: {
+					protocolVersion: '2025-06-18',
+					capabilities: {},
+					clientInfo: { name: 'test', version: '1.0.0' },
+				},
+			});
+			await server.receive(init, { sessionId: 'session-1' });
+		});
+
+		it('should make custom context available via ctx.custom', async () => {
+			let captured_context;
+			const tool = vi.fn().mockImplementation(() => {
+				captured_context = server.ctx;
+				return {
+					content: [{ type: 'text', text: 'tool executed' }],
+				};
+			});
+
+			server.tool(
+				{
+					name: 'context-test-tool',
+					description: 'A tool that captures context',
+				},
+				tool,
+			);
+
+			const call_request = request({
+				jsonrpc: '2.0',
+				id: 2,
+				method: 'tools/call',
+				params: {
+					name: 'context-test-tool',
+				},
+			});
+
+			const custom_context = {
+				user_id: '12345',
+				request_source: 'web-app',
+				metadata: { timestamp: Date.now() },
+			};
+
+			await server.receive(call_request, {
+				sessionId: 'session-1',
+				custom: custom_context,
+			});
+
+			expect(captured_context).toEqual({
+				sessionId: 'session-1',
+				custom: custom_context,
+			});
+		});
+
+		it('should handle custom context in prompts', async () => {
+			let captured_context;
+			const prompt = vi.fn().mockImplementation(() => {
+				captured_context = server.ctx;
+				return {
+					messages: [
+						{
+							role: 'user',
+							content: { type: 'text', text: 'prompt result' },
+						},
+					],
+				};
+			});
+
+			server.prompt(
+				{
+					name: 'context-test-prompt',
+					description: 'A prompt that captures context',
+				},
+				prompt,
+			);
+
+			const get_request = request({
+				jsonrpc: '2.0',
+				id: 3,
+				method: 'prompts/get',
+				params: {
+					name: 'context-test-prompt',
+				},
+			});
+
+			const custom_context = {
+				organization: 'acme-corp',
+				environment: 'production',
+			};
+
+			await server.receive(get_request, {
+				sessionId: 'session-1',
+				custom: custom_context,
+			});
+
+			expect(captured_context).toEqual({
+				sessionId: 'session-1',
+				custom: custom_context,
+			});
+		});
+
+		it('should handle custom context in resources', async () => {
+			let captured_context;
+			const resource = vi.fn().mockImplementation(() => {
+				captured_context = server.ctx;
+				return {
+					contents: [
+						{ uri: 'test://resource', text: 'resource content' },
+					],
+				};
+			});
+
+			server.resource(
+				{
+					name: 'context-test-resource',
+					description: 'A resource that captures context',
+					uri: 'test://context-resource',
+				},
+				resource,
+			);
+
+			const read_request = request({
+				jsonrpc: '2.0',
+				id: 4,
+				method: 'resources/read',
+				params: {
+					uri: 'test://context-resource',
+				},
+			});
+
+			const custom_context = {
+				tenant_id: 'tenant-123',
+				permissions: ['read', 'write'],
+			};
+
+			await server.receive(read_request, {
+				sessionId: 'session-1',
+				custom: custom_context,
+			});
+
+			expect(captured_context).toEqual({
+				sessionId: 'session-1',
+				custom: custom_context,
 			});
 		});
 	});

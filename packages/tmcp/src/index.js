@@ -1,3 +1,4 @@
+/* eslint-disable jsdoc/no-undefined-types */
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import SqidsType from "sqids";
@@ -43,9 +44,11 @@ import { should_version_negotiation_fail } from './validation/version.js';
  */
 
 /**
+ * @template {Record<string, unknown> | undefined} [TCustom=undefined]
  * @typedef {Object} Context
  * @property {string} [sessionId]
  * @property {AuthInfo} [auth]
+ * @property {TCustom} [custom]
  */
 
 /**
@@ -93,7 +96,8 @@ async function safe_enabled(enabled) {
  */
 
 /**
- * @template {StandardSchemaV1} StandardSchema
+ * @template {StandardSchemaV1 | undefined} [StandardSchema=undefined]
+ * @template {Record<string, unknown> | undefined} [CustomContext=undefined]
  */
 export class McpServer {
 	#server = new JSONRPCServer();
@@ -140,7 +144,7 @@ export class McpServer {
 	};
 
 	/**
-	 * @type {AsyncLocalStorage<Context & { progress_token?: string }>}
+	 * @type {AsyncLocalStorage<Context<CustomContext> & { progress_token?: string }>}
 	 */
 	#ctx_storage = new AsyncLocalStorage();
 
@@ -276,6 +280,19 @@ export class McpServer {
 		this.#init_logging();
 	}
 
+	/**
+	 * Utility method to specify the type of the custom context for this server instance without the need to specify the standard schema type.
+	 * @example
+	 * const server = new McpServer({ ... }, { ... }).withContext<{ name: string }>();
+	 * @template {Record<string, unknown>} TCustom
+	 * @returns {McpServer<StandardSchema, TCustom>}
+	 */
+	withContext() {
+		return /** @type {McpServer<StandardSchema, TCustom>} */ (
+			/** @type {unknown} */ (this)
+		);
+	}
+
 	get #session_id() {
 		return this.#ctx_storage.getStore()?.sessionId;
 	}
@@ -285,8 +302,8 @@ export class McpServer {
 	}
 
 	/**
-	 * The context of the current request, include the session ID and any auth information.
-	 * @type {Context}
+	 * The context of the current request, include the session ID, any auth information, and custom data.
+	 * @type {Context<CustomContext>}
 	 */
 	get ctx() {
 		// eslint-disable-next-line no-unused-vars
@@ -877,7 +894,7 @@ export class McpServer {
 	 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 	 *
 	 * @param {JSONRPCResponse | JSONRPCRequest} message
-	 * @param {Context} [ctx]
+	 * @param {Context<CustomContext>} [ctx]
 	 * @returns {ReturnType<JSONRPCServer['receive']> | ReturnType<JSONRPCClient['receive'] | undefined>}
 	 */
 	receive(message, ctx) {
@@ -955,7 +972,7 @@ export class McpServer {
 	 *
 	 * If the client doesn't support elicitation, it will throw an error.
 	 *
-	 * @template {StandardSchema} TSchema
+	 * @template {StandardSchema extends undefined ? never : StandardSchema} TSchema
 	 * @param {TSchema} schema
 	 * @returns {Promise<StandardSchemaV1.InferOutput<TSchema>>}
 	 */

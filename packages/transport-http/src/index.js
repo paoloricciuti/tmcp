@@ -27,9 +27,13 @@
 
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { InMemorySessionManager } from '@tmcp/session-manager';
+
+/**
+ * @template {Record<string, unknown> | undefined} [TCustom=undefined]
+ */
 export class HttpTransport {
 	/**
-	 * @type {McpServer<any>}
+	 * @type {McpServer<any, TCustom>}
 	 */
 	#server;
 
@@ -57,7 +61,7 @@ export class HttpTransport {
 
 	/**
 	 *
-	 * @param {McpServer<any>} server
+	 * @param {McpServer<any, TCustom>} server
 	 * @param {HttpTransportOptions} [options]
 	 */
 	constructor(server, options) {
@@ -250,8 +254,9 @@ export class HttpTransport {
 	 * @param {string} session_id
 	 * @param {Request} request
 	 * @param {AuthInfo | null} auth_info
+	 * @param {TCustom} [ctx]
 	 */
-	async #handle_post(session_id, request, auth_info) {
+	async #handle_post(session_id, request, auth_info, ctx) {
 		// Check Content-Type header
 		const content_type = request.headers.get('content-type');
 		if (!content_type || !content_type.includes('application/json')) {
@@ -296,6 +301,7 @@ export class HttpTransport {
 						this.#server.receive(body, {
 							sessionId: session_id,
 							auth: auth_info ?? undefined,
+							custom: ctx,
 						}),
 				);
 
@@ -375,9 +381,10 @@ export class HttpTransport {
 	/**
 	 *
 	 * @param {Request} request
+	 * @param {TCustom} [ctx]
 	 * @returns {Promise<Response | null>}
 	 */
-	async respond(request) {
+	async respond(request, ctx) {
 		const url = new URL(request.url);
 
 		/**
@@ -441,7 +448,12 @@ export class HttpTransport {
 		}
 		// Handle POST request - process message and respond through event stream
 		else if (method === 'POST') {
-			response = await this.#handle_post(session_id, request, auth_info);
+			response = await this.#handle_post(
+				session_id,
+				request,
+				auth_info,
+				ctx,
+			);
 		}
 		// Method not supported
 		else {

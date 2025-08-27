@@ -48,7 +48,7 @@ let mcp_server = new McpServer(
 		description: 'A simple server for testing HTTP transport',
 	},
 	DEFAULT_OPTIONS,
-);
+).withContext();
 
 let transport = new HttpTransport(mcp_server);
 /**
@@ -74,7 +74,7 @@ export function new_server(options = DEFAULT_OPTIONS) {
 	return {
 		/**
 		 *
-		 * @param {(server: McpServer<GenericSchema>)=>void} cb
+		 * @param {(server: McpServer<GenericSchema, any>)=>void} cb
 		 */
 		setup(cb) {
 			cb(mcp_server);
@@ -90,12 +90,25 @@ export function new_server(options = DEFAULT_OPTIONS) {
 	};
 }
 
+/**
+ * @type {Record<string, unknown> | undefined}
+ */
+let custom_ctx = undefined;
+
+/**
+ *
+ * @param {Record<string, unknown> | undefined} ctx
+ */
+export function set_custom_ctx(ctx) {
+	custom_ctx = ctx;
+}
+
 // Create the server
 export const server = createServer(
 	createRequestListener(async (request) => {
 		const url = new URL(request.url);
 		try {
-			let response = await transport.respond(request);
+			let response = await transport.respond(request, custom_ctx);
 			return (
 				response ??
 				new Response(null, {

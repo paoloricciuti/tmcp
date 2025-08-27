@@ -28,9 +28,12 @@ import { InMemorySessionManager } from '@tmcp/session-manager';
  * }} SseTransportOptions
  */
 
+/**
+ * @template {Record<string, unknown> | undefined} [TCustom=undefined]
+ */
 export class SseTransport {
 	/**
-	 * @type {McpServer<any>}
+	 * @type {McpServer<any, TCustom>}
 	 */
 	#server;
 
@@ -57,7 +60,7 @@ export class SseTransport {
 	#text_encoder = new TextEncoder();
 
 	/**
-	 * @param {McpServer<any>} server
+	 * @param {McpServer<any, TCustom>} server
 	 * @param {SseTransportOptions} [options]
 	 */
 	constructor(server, options) {
@@ -246,8 +249,9 @@ export class SseTransport {
 	 * @param {string} session_id
 	 * @param {Request} request
 	 * @param {AuthInfo | null} auth_info
+	 * @param {TCustom} [ctx]
 	 */
-	async #handle_post(session_id, request, auth_info) {
+	async #handle_post(session_id, request, auth_info, ctx) {
 		// Check Content-Type header
 		const content_type = request.headers.get('content-type');
 		if (!content_type || !content_type.includes('application/json')) {
@@ -275,6 +279,7 @@ export class SseTransport {
 			const response = await this.#server.receive(body, {
 				sessionId: session_id,
 				auth: auth_info ?? undefined,
+				custom: ctx,
 			});
 
 			const controller =
@@ -356,9 +361,10 @@ export class SseTransport {
 
 	/**
 	 * @param {Request} request
+	 * @param {TCustom} [ctx]
 	 * @returns {Promise<Response | null>}
 	 */
-	async respond(request) {
+	async respond(request, ctx) {
 		const url = new URL(request.url);
 
 		/**
@@ -427,7 +433,12 @@ export class SseTransport {
 		}
 		// Handle POST request - process message
 		else if (method === 'POST') {
-			response = await this.#handle_post(session_id, request, auth_info);
+			response = await this.#handle_post(
+				session_id,
+				request,
+				auth_info,
+				ctx,
+			);
 		}
 		// Method not supported
 		else {

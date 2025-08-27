@@ -1,15 +1,18 @@
+/**
+ * @import { McpServer } from 'tmcp';
+ * @import { GenericSchema } from "valibot";
+ */
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import {
-	ToolListChangedNotificationSchema,
 	PromptListChangedNotificationSchema,
 	ResourceListChangedNotificationSchema,
 	ResourceUpdatedNotificationSchema,
+	ToolListChangedNotificationSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { new_server, server } from './server.js';
-import { it, describe, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as v from 'valibot';
-import { McpServer } from 'tmcp';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { new_server, server, set_custom_ctx } from './server.js';
 
 /**
  * @type {StreamableHTTPClientTransport}
@@ -22,7 +25,7 @@ let transport;
 let client;
 
 /**
- * @type {McpServer<any>}
+ * @type {McpServer<GenericSchema, any>}
  */
 let mcp_server;
 
@@ -683,6 +686,52 @@ describe('HTTP Transport', () => {
 					'roots list changed notifications',
 				);
 			}
+		});
+	});
+
+	describe('custom context', () => {
+		/**
+		 * @type {Record<string, unknown>}
+		 */
+		let captured_context;
+		beforeEach(() => {
+			set_custom_ctx({ random: 'thing' });
+			({ mcp_server, sse_connected } = new_server({
+				capabilities: {
+					tools: { listChanged: true },
+				},
+			}).setup((server) => {
+				server.tool(
+					{
+						name: 'context-capture-tool',
+						description: 'A tool that captures context',
+					},
+					() => {
+						captured_context = server.ctx;
+						return {
+							content: [
+								{
+									type: 'text',
+									text: JSON.stringify(captured_context),
+								},
+							],
+						};
+					},
+				);
+			}));
+		});
+
+		afterEach(() => {
+			set_custom_ctx(undefined);
+		});
+
+		it('should pass custom context through HTTP transport', async () => {
+			await client.callTool({
+				name: 'context-capture-tool',
+				arguments: {},
+			});
+
+			expect(captured_context.custom).toStrictEqual({ random: 'thing' });
 		});
 	});
 

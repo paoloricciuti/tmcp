@@ -3,7 +3,7 @@ declare module 'tmcp' {
 	import type { JSONRPCRequest, JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
 	import type { JSONSchema7 } from 'json-schema';
 	import * as v from 'valibot';
-	export class McpServer<StandardSchema extends StandardSchemaV1> {
+	export class McpServer<StandardSchema extends StandardSchemaV1 | undefined = undefined, CustomContext extends Record<string, unknown> | undefined = undefined> {
 		
 		constructor(server_info: ServerInfo, options: ServerOptions<StandardSchema>);
 		
@@ -12,9 +12,15 @@ declare module 'tmcp' {
 			name?: string;
 		}>;
 		/**
-		 * The context of the current request, include the session ID and any auth information.
+		 * Utility method to specify the type of the custom context for this server instance without the need to specify the standard schema type.
+		 * @example
+		 * const server = new McpServer({ ... }, { ... }).withContext<{ name: string }>();
 		 * */
-		get ctx(): Context;
+		withContext<TCustom extends Record<string, unknown>>(): McpServer<StandardSchema, TCustom>;
+		/**
+		 * The context of the current request, include the session ID, any auth information, and custom data.
+		 * */
+		get ctx(): Context<CustomContext>;
 		/**
 		 * Get the client information (name, version, etc.) of the client that initiated the current request...useful if you want to do something different based on the client.
 		 */
@@ -97,7 +103,7 @@ declare module 'tmcp' {
 		 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 		 *
 		 * */
-		receive(message: JSONRPCResponse | JSONRPCRequest, ctx?: Context): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
+		receive(message: JSONRPCResponse | JSONRPCRequest, ctx?: Context<CustomContext>): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
 		/**
 		 * Send a notification for subscriptions
 		 * */
@@ -114,7 +120,7 @@ declare module 'tmcp' {
 		 * If the client doesn't support elicitation, it will throw an error.
 		 *
 		 * */
-		elicitation<TSchema extends StandardSchema>(schema: TSchema): Promise<StandardSchemaV1.InferOutput<TSchema>>;
+		elicitation<TSchema extends StandardSchema extends undefined ? never : StandardSchema>(schema: TSchema): Promise<StandardSchemaV1.InferOutput<TSchema>>;
 		/**
 		 * Request language model sampling from the client
 		 * */
@@ -166,9 +172,10 @@ declare module 'tmcp' {
 		 */
 		extra?: Record<string, unknown> | undefined;
 	};
-	export type Context = {
+	export type Context<TCustom extends Record<string, unknown> | undefined = undefined> = {
 		sessionId?: string | undefined;
 		auth?: AuthInfo | undefined;
+		custom?: TCustom | undefined;
 	};
 	export type ClientCapabilities = ClientCapabilities_1;
 	type Completion = (
@@ -176,7 +183,7 @@ declare module 'tmcp' {
 		context: { arguments: Record<string, string> },
 	) => CompleteResult | Promise<CompleteResult>;
 
-	type ServerOptions<TSchema extends StandardSchemaV1> = {
+	type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 		capabilities?: ServerCapabilities;
 		instructions?: string;
 		adapter: JsonSchemaAdapter<TSchema>;
