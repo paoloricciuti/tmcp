@@ -1,5 +1,17 @@
 # @tmcp/transport-sse
 
+## 0.3.0
+
+### Minor Changes
+
+- 5a38a23: feat: add custom context
+
+### Patch Changes
+
+- Updated dependencies [5a38a23]
+- Updated dependencies [5a38a23]
+    - tmcp@1.11.0
+
 ## 0.2.7
 
 ### Patch Changes

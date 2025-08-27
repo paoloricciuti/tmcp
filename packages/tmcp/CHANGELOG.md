@@ -1,5 +1,12 @@
 # tmcp
 
+## 1.11.0
+
+### Minor Changes
+
+- 5a38a23: feat: add custom context
+- 5a38a23: feat: allow to pass `undefined` to adapter in case you don't want to use schemas
+
 ## 1.10.3
 
 ### Patch Changes
