@@ -949,7 +949,7 @@ describe('McpServer', () => {
 				},
 				() => {
 					// this needs a session context to actually send a notification
-					server.elicitation(mock_schema);
+					server.elicitation('Message', mock_schema);
 					server.refreshRoots();
 					server.message({
 						maxTokens: 1000,
@@ -1018,7 +1018,8 @@ describe('McpServer', () => {
 					jsonrpc: '2.0',
 					method: 'elicitation/create',
 					params: {
-						params: {
+						message: 'Message',
+						requestedSchema: {
 							properties: {
 								test: {
 									type: 'string',

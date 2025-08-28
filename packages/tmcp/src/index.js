@@ -973,10 +973,11 @@ export class McpServer {
 	 * If the client doesn't support elicitation, it will throw an error.
 	 *
 	 * @template {StandardSchema extends undefined ? never : StandardSchema} TSchema
+	 * @param {string} message
 	 * @param {TSchema} schema
 	 * @returns {Promise<StandardSchemaV1.InferOutput<TSchema>>}
 	 */
-	async elicitation(schema) {
+	async elicitation(message, schema) {
 		if (!this.#client_capabilities?.elicitation)
 			throw new McpError(-32601, "Client doesn't support elicitation");
 
@@ -985,7 +986,9 @@ export class McpServer {
 			await this.#client?.request(
 				'elicitation/create',
 				{
-					params: await this.#options.adapter.toJsonSchema(schema),
+					message,
+					requestedSchema:
+						await this.#options.adapter.toJsonSchema(schema),
 				},
 				{
 					sessions: [this.#session_id],

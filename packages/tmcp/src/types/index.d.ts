@@ -120,7 +120,7 @@ declare module 'tmcp' {
 		 * If the client doesn't support elicitation, it will throw an error.
 		 *
 		 * */
-		elicitation<TSchema extends StandardSchema extends undefined ? never : StandardSchema>(schema: TSchema): Promise<StandardSchemaV1.InferOutput<TSchema>>;
+		elicitation<TSchema extends StandardSchema extends undefined ? never : StandardSchema>(message: string, schema: TSchema): Promise<StandardSchemaV1.InferOutput<TSchema>>;
 		/**
 		 * Request language model sampling from the client
 		 * */
