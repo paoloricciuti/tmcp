@@ -85,7 +85,18 @@ export type ServerInfo = {
 	description: string;
 };
 
-export type SubscriptionsKeys = 'resource';
+export type ChangedArgs = {
+	'resource': [id: string];
+	'tools': [];
+	'prompts': [];
+	'resources': [];
+}
+
+type SubscriptionsKeysObj = {
+	[K in keyof ChangedArgs as ChangedArgs[K]["length"] extends 0 ? "without_args" : "with_args"]: K
+};
+
+export type SubscriptionsKeys = SubscriptionsKeysObj["with_args"];
 
 export type McpEvents = {
 	send: (message: {

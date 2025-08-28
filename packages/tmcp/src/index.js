@@ -5,7 +5,7 @@
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations, ClientInfo } from "./validation/index.js";
- * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, McpEvents } from "./internal/internal.js";
+ * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, ChangedArgs, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -762,6 +762,25 @@ export class McpServer {
 			return {};
 		});
 	}
+
+	#notify_tools_list_changed() {
+		if (this.#options.capabilities?.tools?.listChanged) {
+			this.#notify('notifications/tools/list_changed', {});
+		}
+	}
+
+	#notify_prompts_list_changed() {
+		if (this.#options.capabilities?.prompts?.listChanged) {
+			this.#notify('notifications/prompts/list_changed', {});
+		}
+	}
+
+	#notify_resources_list_changed() {
+		if (this.#options.capabilities?.resources?.listChanged) {
+			this.#notify('notifications/resources/list_changed', {});
+		}
+	}
+
 	/**
 	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
 	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
@@ -784,9 +803,7 @@ export class McpServer {
 		},
 		execute,
 	) {
-		if (this.#options.capabilities?.tools?.listChanged) {
-			this.#notify('notifications/tools/list_changed', {});
-		}
+		this.#notify_tools_list_changed();
 		this.#tools.set(name, {
 			description,
 			title,
@@ -811,9 +828,7 @@ export class McpServer {
 		if (complete) {
 			this.#completions['ref/prompt'].set(name, complete);
 		}
-		if (this.#options.capabilities?.prompts?.listChanged) {
-			this.#notify('notifications/prompts/list_changed', {});
-		}
+		this.#notify_prompts_list_changed();
 		this.#prompts.set(name, {
 			description,
 			title,
@@ -832,9 +847,7 @@ export class McpServer {
 		if (resource.template) {
 			this.#templates.add(uri);
 		}
-		if (this.#options.capabilities?.resources?.listChanged) {
-			this.#notify('notifications/resources/list_changed', {});
-		}
+		this.#notify_resources_list_changed();
 		this.#resources.set(uri, resource);
 	}
 
@@ -937,24 +950,40 @@ export class McpServer {
 
 	/**
 	 * Send a notification for subscriptions
-	 * @param {SubscriptionsKeys} what
-	 * @param {string} id
+	 * @template {keyof ChangedArgs} TWhat
+	 * @param {[what: TWhat, ...ChangedArgs[TWhat]]} args
 	 */
-	changed(what, id) {
-		if (this.#subscriptions[what].has(id)) {
-			const resource = this.#resources.get(id);
-			if (!resource) return;
-			const sessions = this.#subscriptions[what].get(id);
-			this.#notify(
-				`notifications/resources/updated`,
-				{
-					uri: id,
-					title: resource.name,
-				},
-				{
-					sessions: sessions ? [...sessions] : undefined,
-				},
-			);
+	changed(...args) {
+		const [what, id] = args;
+		if (what === 'prompts') {
+			this.#notify_prompts_list_changed();
+		} else if (what === 'tools') {
+			this.#notify_tools_list_changed();
+		} else if (what === 'resources') {
+			this.#notify_resources_list_changed();
+		} else {
+			if (
+				this.#subscriptions[
+					/** @type {SubscriptionsKeys} */ (what)
+				].has(id)
+			) {
+				const resource = this.#resources.get(id);
+				if (!resource) return;
+				const sessions =
+					this.#subscriptions[
+						/** @type {SubscriptionsKeys} */ (what)
+					].get(id);
+				this.#notify(
+					`notifications/resources/updated`,
+					{
+						uri: id,
+						title: resource.name,
+					},
+					{
+						sessions: sessions ? [...sessions] : undefined,
+					},
+				);
+			}
 		}
 	}
 

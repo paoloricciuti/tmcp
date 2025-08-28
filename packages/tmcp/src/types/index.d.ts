@@ -107,7 +107,7 @@ declare module 'tmcp' {
 		/**
 		 * Send a notification for subscriptions
 		 * */
-		changed(what: SubscriptionsKeys, id: string): void;
+		changed<TWhat extends keyof ChangedArgs>(what: TWhat, ...args: ChangedArgs[TWhat]): void;
 		/**
 		 * Refresh roots list from client
 		 */
@@ -202,7 +202,12 @@ declare module 'tmcp' {
 		description: string;
 	};
 
-	type SubscriptionsKeys = 'resource';
+	type ChangedArgs = {
+		'resource': [id: string];
+		'tools': [];
+		'prompts': [];
+		'resources': [];
+	}
 
 	type McpEvents = {
 		send: (message: {
