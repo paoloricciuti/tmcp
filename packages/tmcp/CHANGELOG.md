@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.12.0
+
+### Minor Changes
+
+- c38ee66: breaking: fix elicitation signature (n.b. it's only breaking if you are using elicitation)
+
 ## 1.11.0
 
 ### Minor Changes
