@@ -81,6 +81,50 @@ const transport = new HttpTransport(server, {
 });
 ```
 
+### With Custom Context
+
+You can pass custom context data to your MCP server for each request. This is useful for authentication, user information, database connections, etc.
+
+```javascript
+// Define your custom context type
+interface MyContext {
+    userId: string;
+    permissions: string[];
+    database: DatabaseConnection;
+}
+
+// Create server with custom context
+const server = new McpServer(serverInfo, options).withContext<MyContext>();
+
+server.tool(
+    {
+        name: 'get-user-profile',
+        description: 'Get the current user profile',
+    },
+    async () => {
+        // Access custom context in your handler
+        const { userId, database } = server.ctx.custom!;
+        const profile = await database.users.findById(userId);
+
+        return {
+            content: [
+                { type: 'text', text: `User profile: ${JSON.stringify(profile)}` }
+            ],
+        };
+    },
+);
+
+// Create transport (it will be typed to accept your custom context)
+const transport = new HttpTransport(server);
+
+// then in the handler
+const response = await transport.respond(req, {
+	userId,
+	permissions,
+	database: req.locals.db,
+});
+```
+
 ### Session Management
 
 The HTTP transport supports custom session managers for different deployment scenarios:
@@ -154,13 +198,14 @@ interface HttpTransportOptions {
 
 #### Methods
 
-##### `respond(request: Request): Promise<Response | null>`
+##### `respond(request: Request, customContext?: T): Promise<Response | null>`
 
 Processes an HTTP request and returns a Response with Server-Sent Events, or null if the request path doesn't match the configured MCP path.
 
 **Parameters:**
 
 - `request` - A Web API Request object containing the JSON-RPC message
+- `customContext` - Optional custom context data to pass to the MCP server for this request
 
 **Returns:**
 

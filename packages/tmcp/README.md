@@ -201,12 +201,78 @@ server.template(
 );
 ```
 
-##### `receive(request, sessionId)`
+##### `withContext<T>()`
 
-Process an incoming MCP request.
+Specify the type of custom context for type-safe access to application-specific data.
 
 ```javascript
-const response = server.receive(jsonRpcRequest, sessionId);
+interface MyCustomContext {
+    userId: string;
+    permissions: string[];
+    database: DatabaseConnection;
+}
+
+const server = new McpServer(serverInfo, options).withContext<MyCustomContext>();
+
+// Now you can access typed custom context in handlers
+server.tool(
+    {
+        name: 'get-user-data',
+        description: 'Get current user data',
+    },
+    async () => {
+        const { userId, database } = server.ctx.custom!;
+        const userData = await database.users.findById(userId);
+        return {
+            content: [{ type: 'text', text: JSON.stringify(userData) }],
+        };
+    },
+);
+```
+
+##### `ctx`
+
+Access the current request context, including session ID, auth info, and custom context.
+
+```javascript
+server.tool(
+    {
+        name: 'context-aware-tool',
+        description: 'Tool that uses request context',
+    },
+    async () => {
+        const { sessionId, auth, custom } = server.ctx;
+        
+        if (!custom?.userId) {
+            throw new Error('User authentication required');
+        }
+        
+        return {
+            content: [
+                {
+                    type: 'text',
+                    text: `Hello user ${custom.userId} in session ${sessionId}`,
+                },
+            ],
+        };
+    },
+);
+```
+
+##### `receive(request, context?)`
+
+Process an incoming MCP request with optional context.
+
+```javascript
+// Basic usage
+const response = server.receive(jsonRpcRequest);
+
+// With custom context (typically used by transports)
+const response = server.receive(jsonRpcRequest, {
+    sessionId: 'session-123',
+    auth: authInfo,
+    custom: customContextData,
+});
 ```
 
 ##### `elicitation(schema)`
