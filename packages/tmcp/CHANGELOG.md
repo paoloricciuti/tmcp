@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.12.1
+
+### Patch Changes
+
+- 89c666b: feat: allow manual list changed notification
+
 ## 1.12.0
 
 ### Minor Changes
