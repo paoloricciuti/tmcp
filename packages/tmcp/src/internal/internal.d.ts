@@ -12,6 +12,7 @@ import {
 	LoggingLevel,
 	ToolAnnotations
 } from '../validation/index.js';
+import { SerializedState } from "../utils.js";
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
@@ -76,7 +77,9 @@ export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	};
 	logging?: {
 		default: LoggingLevel;
-	}
+	};
+	save?: (state: SerializedState) => Promise<void> | void;
+	load?: () => SerializedState | Promise<SerializedState>;
 };
 
 export type ServerInfo = {
