@@ -148,7 +148,7 @@ export class PostgresSessionManager {
 			);
 			// cleanup old sessions...don't await this
 			this.#client.query(
-				`DELETE FROM "${this.#table_name}" WHERE updated_at > NOW() - INTERVAL '10 seconds'`,
+				`DELETE FROM "${this.#table_name}" WHERE updated_at <= NOW() - INTERVAL '10 seconds'`,
 			);
 			for (let row of res.rows) {
 				this.#client.query(`NOTIFY "session:${row.id}", ${data}`);
