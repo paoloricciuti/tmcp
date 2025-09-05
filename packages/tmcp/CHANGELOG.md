@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.12.2
+
+### Patch Changes
+
+- 056a268: fix: don't force `structuredContent` if `isError`
+
 ## 1.12.1
 
 ### Patch Changes
