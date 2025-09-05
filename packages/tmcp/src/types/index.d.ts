@@ -965,11 +965,16 @@ declare module 'tmcp' {
 	type ClientCapabilities_1 = v.InferInput<typeof ClientCapabilitiesSchema>;
 	type ServerCapabilities = v.InferInput<typeof ServerCapabilitiesSchema>;
 	type InitializeRequestParams = v.InferInput<typeof InitializeRequestParamsSchema>;
-	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent"> & (undefined extends TStructuredContent ? {
+	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;
-	} : {
+		isError?: boolean;
+	} : ({
 		structuredContent: TStructuredContent;
-	});
+		isError?: false;
+	} | {
+		isError: true;
+		structuredContent?: TStructuredContent;
+	}));
 	type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
 	type GetPromptResult = v.InferInput<typeof GetPromptResultSchema>;
 	type CompleteResult = v.InferInput<typeof CompleteResultSchema>;

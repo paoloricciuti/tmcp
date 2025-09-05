@@ -1493,7 +1493,7 @@ export const ServerResultSchema = v.union([
  */
 /**
  * @template {Record<string, unknown> | undefined} TStructuredContent
- * @typedef {Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent"> & (undefined extends TStructuredContent ? { structuredContent?: undefined } : { structuredContent: TStructuredContent })} CallToolResult
+ * @typedef {Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? { structuredContent?: undefined, isError?: boolean } : ({ structuredContent: TStructuredContent, isError?: false } | { isError: true, structuredContent?: TStructuredContent }))} CallToolResult
  */
 /**
  * @typedef {v.InferInput<typeof ReadResourceResultSchema>} ReadResourceResult
