@@ -12,6 +12,8 @@ pnpm add @tmcp/session-manager-postgres
 
 The `PostgresSessionManager` uses PostgreSQL to store and manage client sessions across multiple server instances. It leverages PostgreSQL's LISTEN/NOTIFY functionality to enable real-time communication between different server instances and client sessions.
 
+LISTEN/NOTIFY have some trade-off and do require some setup to properly work so you might want to read [their documentation](https://www.postgresql.org/docs/current/sql-listen.html) or this [guide from neon](https://neon.com/guides/pub-sub-listen-notify) to learn about them.
+
 **Key Features:**
 
 - **Distributed Sessions**: Share sessions across multiple server instances
@@ -111,7 +113,7 @@ When you deploy your MCP server to multiple servers (or in a serverless environm
 
 ### Session Expiry
 
-Sessions are automatically expired after 10 seconds of inactivity. Each session has an interval that updates the `updated_at` timestamp every 10 seconds to keep it alive. When querying for active sessions, only those updated within the last 10 seconds are considered.
+Sessions are automatically expired after 10 seconds the stream they were managed is closed. This ensure that even if your process suddenly crashes (or your serverless function shuts down because it reached the timeout) it will not waste space on your db. Each session has an interval that updates the `updated_at` timestamp every 10 seconds to keep it alive. When querying for active sessions, only those updated within the last 10 seconds are considered.
 
 ## Database Schema
 
@@ -144,7 +146,7 @@ Creates a new PostgreSQL session manager instance.
 
 - `connectionString` - PostgreSQL connection string
 - `tableName` - Custom table name for sessions (defaults to `'tmcp_sessions'`)
-- `create` - Whether to create the table if it doesn't exist (defaults to `true`)
+- `create` - Whether to create the table if it doesn't exist (defaults to `true`). If you know for sure the table exists you can pass false to save a bit of compute time.
 
 #### Methods
 

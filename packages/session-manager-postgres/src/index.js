@@ -92,7 +92,7 @@ export class PostgresSessionManager {
 	 */
 	async create(id, controller) {
 		await this.#connected;
-		const expire_seconds = 10;
+		const expire_seconds = 7;
 
 		await this.#client.query(
 			`INSERT INTO "${this.#table_name}" (id) VALUES ($1)`,
