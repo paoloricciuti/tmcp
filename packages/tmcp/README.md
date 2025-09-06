@@ -107,7 +107,12 @@ new McpServer(serverInfo, options);
 ```
 
 - `serverInfo`: Server metadata (name, version, description)
-- `options`: Configuration object with adapter and capabilities
+- `options`: Configuration object with adapter, capabilities, and optional persistence functions
+  - `adapter`: Schema adapter for validation
+  - `capabilities`: Server capabilities configuration
+  - `save?`: Optional function called when state changes: `(state: SerializedState) => void`
+  - `load?`: Optional function called during initialization: `() => SerializedState | undefined`
+  - Other configuration options...
 
 #### Methods
 
@@ -375,6 +380,39 @@ server.log('error', 'Failed to connect to database', 'database-logger');
 - `level` (string): Log level ('debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency')
 - `data` (any): Data to log
 - `logger` (string, optional): Logger name/category
+
+##### `serialize()`
+
+Get the current serialized state as a plain object.
+
+```javascript
+const currentState = server.serialize();
+console.log('Server state:', currentState);
+
+// Example state structure:
+// {
+//   clientCapabilities: { "session-1": { tools: {} } },
+//   clientInfo: { "session-1": { name: "client", version: "1.0" } },
+//   negotiatedProtocolVersions: { "session-1": "2025-06-18" },
+//   sessionLogLevels: { "session-1": "info" },
+//   subscriptions: { resource: { "file://resource": ["session-1"] } }
+// }
+```
+
+##### `load()`
+
+Manually restore state from the load function if provided.
+
+```javascript
+const success = server.load();
+if (success) {
+	console.log('State loaded successfully');
+} else {
+	console.log('No load function provided or loading failed');
+}
+```
+
+**Returns:** `boolean` - `true` if state was loaded successfully, `false` otherwise.
 
 ##### `on(event, callback)`
 
@@ -838,6 +876,260 @@ server.tool(
 		};
 	},
 );
+```
+
+## State Persistence
+
+tmcp provides built-in state serialization/deserialization capabilities for persisting session data across server restarts. This feature allows you to maintain client capabilities, session information, and subscriptions even when your server restarts.
+
+### Overview
+
+The serialization feature automatically saves per-session state including:
+
+- **Client capabilities** - What features each client supports
+- **Client information** - Client name, version, and metadata  
+- **Protocol versions** - Negotiated protocol version for each session
+- **Log levels** - Logging configuration per session
+- **Resource subscriptions** - Which clients are subscribed to which resources
+
+### Basic Usage
+
+Configure persistence by providing `save` and `load` functions in the server options:
+
+```javascript
+import { McpServer } from 'tmcp';
+import fs from 'fs/promises';
+
+let saved_state = null;
+
+const server = new McpServer(
+	{
+		name: 'persistent-server',
+		version: '1.0.0',
+		description: 'Server with state persistence',
+	},
+	{
+		adapter,
+		capabilities: {
+			tools: { listChanged: true },
+			resources: { subscribe: true, listChanged: true },
+			logging: {},
+		},
+		// Save function - called automatically when state changes
+		save: (state) => {
+			console.log('Saving server state...');
+			saved_state = state;
+		},
+		// Load function - called during server construction  
+		load: () => {
+			console.log('Loading server state...');
+			return saved_state;
+		},
+	},
+);
+```
+
+### File-Based Persistence
+
+For production use, you'll typically want to persist state to disk:
+
+```javascript
+import { readFile, writeFile } from 'fs/promises';
+import path from 'path';
+
+const STATE_FILE = path.join(process.cwd(), 'server-state.json');
+
+const server = new McpServer(serverInfo, {
+	adapter,
+	capabilities: { /* your capabilities */ },
+	save: async (state) => {
+		try {
+			await writeFile(STATE_FILE, JSON.stringify(state, null, 2));
+			console.log('State saved to disk');
+		} catch (error) {
+			console.error('Failed to save state:', error);
+		}
+	},
+	load: async () => {
+		try {
+			const data = await readFile(STATE_FILE, 'utf8');
+			const state = JSON.parse(data);
+			console.log('State loaded from disk');
+			return state;
+		} catch (error) {
+			if (error.code === 'ENOENT') {
+				console.log('No existing state file found');
+			} else {
+				console.error('Failed to load state:', error);
+			}
+			return undefined;
+		}
+	},
+});
+```
+
+### Database Persistence
+
+For distributed applications, you might want to use a database:
+
+```javascript
+import Redis from 'redis';
+
+const redis = Redis.createClient();
+const STATE_KEY = 'mcp-server-state';
+
+const server = new McpServer(serverInfo, {
+	adapter,
+	capabilities: { /* your capabilities */ },
+	save: async (state) => {
+		try {
+			await redis.set(STATE_KEY, JSON.stringify(state));
+			console.log('State saved to Redis');
+		} catch (error) {
+			console.error('Failed to save state to Redis:', error);
+		}
+	},
+	load: async () => {
+		try {
+			const data = await redis.get(STATE_KEY);
+			if (data) {
+				console.log('State loaded from Redis');
+				return JSON.parse(data);
+			}
+		} catch (error) {
+			console.error('Failed to load state from Redis:', error);
+		}
+		return undefined;
+	},
+});
+```
+
+### Manual State Operations
+
+You can also manually control state serialization:
+
+```javascript
+// Get current serialized state
+const currentState = server.serialize();
+console.log('Current state:', currentState);
+
+// Manually restore state (calls the load function)
+const success = server.load();
+console.log('State loaded successfully:', success);
+```
+
+### State Structure
+
+The serialized state object has the following structure:
+
+```typescript
+interface SerializedState {
+	clientCapabilities: Record<string, ClientCapabilities>;
+	clientInfo: Record<string, ClientInfo>; 
+	negotiatedProtocolVersions: Record<string, string>;
+	sessionLogLevels: Record<string, LoggingLevel>;
+	subscriptions: {
+		resource: Record<string, string[]>; // URI -> session IDs
+	};
+}
+```
+
+### Session ID Handling
+
+Sessions without explicit IDs (undefined sessions) are serialized using a reserved key pattern `__@tmcp/undefined-session-marker__`. This ensures global server state is preserved even for sessions that don't have explicit identifiers.
+
+**Important:** Avoid using session IDs that start with `__@tmcp/` as these are reserved for internal use.
+
+### Automatic Save Triggers
+
+State is automatically saved when these events occur:
+
+- **Client initialization** - When a client connects and initializes
+- **Log level changes** - When a client sets a logging level  
+- **Resource subscriptions** - When a client subscribes to resource updates
+
+### Error Handling
+
+The persistence system is designed to be fault-tolerant:
+
+- If the `load` function throws an error, the server continues with empty state
+- If the `save` function throws an error, it's logged but doesn't affect server operation
+- The `load()` method returns `false` if loading fails, `true` on success
+
+### Best Practices
+
+1. **Handle errors gracefully** - Don't let persistence failures crash your server
+2. **Use atomic operations** - Ensure your save operations are atomic to prevent corruption
+3. **Consider performance** - Save operations are called frequently, keep them fast
+4. **Backup strategies** - Implement backup/restore mechanisms for critical applications
+5. **Session validation** - Validate loaded state before using it
+
+### Example: Complete File Persistence
+
+Here's a complete example with proper error handling and atomic writes:
+
+```javascript
+import { McpServer } from 'tmcp';
+import { readFile, writeFile, rename, mkdir, unlink } from 'fs/promises';
+import { randomUUID } from 'crypto';
+import path from 'path';
+
+const STATE_DIR = path.join(process.cwd(), '.mcp-state');
+const STATE_FILE = path.join(STATE_DIR, 'server-state.json');
+
+// Ensure state directory exists
+await mkdir(STATE_DIR, { recursive: true });
+
+const server = new McpServer(serverInfo, {
+	adapter,
+	capabilities: {
+		tools: { listChanged: true },
+		resources: { subscribe: true, listChanged: true },
+		logging: {},
+	},
+	save: async (state) => {
+		const tempFile = path.join(STATE_DIR, `state-${randomUUID()}.tmp`);
+		try {
+			// Atomic write: write to temp file, then rename
+			await writeFile(tempFile, JSON.stringify(state, null, 2));
+			await rename(tempFile, STATE_FILE);
+			console.log(`State saved: ${Object.keys(state.clientInfo).length} sessions`);
+		} catch (error) {
+			console.error('Failed to save state:', error);
+			// Clean up temp file if it exists
+			try {
+				await unlink(tempFile);
+			} catch {}
+		}
+	},
+	load: async () => {
+		try {
+			const data = await readFile(STATE_FILE, 'utf8');
+			const state = JSON.parse(data);
+			
+			// Basic validation
+			if (typeof state !== 'object' || !state.clientInfo) {
+				throw new Error('Invalid state format');
+			}
+			
+			console.log(`State loaded: ${Object.keys(state.clientInfo).length} sessions`);
+			return state;
+		} catch (error) {
+			if (error.code === 'ENOENT') {
+				console.log('Starting with fresh state');
+			} else {
+				console.error('Failed to load state:', error);
+			}
+			return undefined;
+		}
+	},
+});
+
+// Graceful shutdown with final state save
+process.on('SIGINT', () => {
+	console.log('Server shutting down...');
+	process.exit(0);
+});
 ```
 
 ## Dynamic Enabling/Disabling
