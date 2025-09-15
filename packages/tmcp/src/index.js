@@ -1,7 +1,7 @@
 /* eslint-disable jsdoc/no-undefined-types */
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
- * @import SqidsType from "sqids";
+ * @import { SerializedState } from "./utils.js";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations, ClientInfo } from "./validation/index.js";
@@ -11,6 +11,15 @@ import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { UriTemplateMatcher } from 'uri-template-matcher';
 import * as v from 'valibot';
+import {
+	decode_cursor,
+	encode_cursor,
+	map_to_object,
+	object_to_map,
+	object_to_subscriptions,
+	safe_enabled,
+	subscriptions_to_object,
+} from './utils.js';
 import {
 	CallToolResultSchema,
 	CompleteResultSchema,
@@ -27,9 +36,8 @@ import {
 import {
 	get_supported_versions,
 	negotiate_protocol_version,
+	should_version_negotiation_fail,
 } from './validation/version.js';
-import { should_version_negotiation_fail } from './validation/version.js';
-
 /**
  * Information about a validated access token, provided to request handlers.
  * @typedef {Object} AuthInfo
@@ -50,46 +58,6 @@ import { should_version_negotiation_fail } from './validation/version.js';
  * @property {AuthInfo} [auth]
  * @property {TCustom} [custom]
  */
-
-/**
- * @type {SqidsType | undefined}
- */
-let Sqids;
-
-async function get_sqids() {
-	if (!Sqids) {
-		Sqids = new (await import('sqids')).default();
-	}
-	return Sqids;
-}
-
-/**
- * Encode a cursor for pagination
- * @param {number} offset
- */
-async function encode_cursor(offset) {
-	return (await get_sqids()).encode([offset]);
-}
-
-/**
- * Decode a cursor from pagination
- * @param {string} cursor
- */
-async function decode_cursor(cursor) {
-	const [decoded] = (await get_sqids()).decode(cursor);
-	return decoded;
-}
-
-/**
- * @param {()=>boolean | Promise<boolean>} enabled
- */
-async function safe_enabled(enabled) {
-	try {
-		return await enabled();
-	} catch {
-		return false;
-	}
-}
 
 /**
  * @typedef {ClientCapabilitiesType} ClientCapabilities
@@ -169,11 +137,111 @@ export class McpServer {
 	#session_log_levels = new Map();
 
 	/**
+	 * @type {(()=>void) | undefined}
+	 */
+	#resolve_loaded;
+
+	/**
+	 * @type {Promise<void>}
+	 */
+	#loaded = new Promise((resolve) => (this.#resolve_loaded = resolve));
+
+	/**
+	 * Serialize current server state to plain object
+	 * @returns {SerializedState}
+	 */
+	#serialize_state() {
+		return {
+			clientCapabilities: map_to_object(this.#client_capabilities_map),
+			clientInfo: map_to_object(this.#client_info_map),
+			negotiatedProtocolVersions: map_to_object(
+				this.#negotiated_protocol_versions,
+			),
+			sessionLogLevels: map_to_object(this.#session_log_levels),
+			subscriptions: {
+				resource: subscriptions_to_object(this.#subscriptions.resource),
+			},
+		};
+	}
+
+	/**
+	 * Deserialize state from plain object and restore Maps
+	 * @param {SerializedState} state
+	 */
+	#deserialize_state(state) {
+		// Restore all Maps from serialized state
+		if (state.clientCapabilities) {
+			this.#client_capabilities_map = object_to_map(
+				state.clientCapabilities,
+			);
+		}
+		if (state.clientInfo) {
+			this.#client_info_map = object_to_map(state.clientInfo);
+		}
+		if (state.negotiatedProtocolVersions) {
+			this.#negotiated_protocol_versions = object_to_map(
+				state.negotiatedProtocolVersions,
+			);
+		}
+		if (state.sessionLogLevels) {
+			this.#session_log_levels = object_to_map(state.sessionLogLevels);
+		}
+		if (state.subscriptions?.resource) {
+			this.#subscriptions.resource = object_to_subscriptions(
+				state.subscriptions.resource,
+			);
+		}
+	}
+
+	/**
+	 * Trigger save function if provided
+	 */
+	#trigger_save() {
+		if (this.#options.save) {
+			this.#options.save(this.#serialize_state());
+		}
+	}
+
+	/**
 	 * @param {ServerInfo} server_info
 	 * @param {ServerOptions<StandardSchema>} options
 	 */
 	constructor(server_info, options) {
 		this.#options = options;
+
+		// Load state if load function is provided
+		if (options.load) {
+			try {
+				const load_state = options.load();
+				if (load_state instanceof Promise) {
+					load_state
+						.then((load_state) => {
+							this.load(load_state);
+						})
+						.catch(() => {})
+						.finally(() => {
+							this.#init(server_info, options);
+							this.#resolve_loaded?.();
+						});
+				} else {
+					this.load(load_state);
+					this.#init(server_info, options);
+					this.#resolve_loaded?.();
+				}
+			} catch {
+				/** empty */
+			}
+		} else {
+			this.#init(server_info, options);
+			this.#resolve_loaded?.();
+		}
+	}
+
+	/**
+	 * @param {ServerInfo} server_info
+	 * @param {ServerOptions<StandardSchema>} options
+	 */
+	#init(server_info, options) {
 		this.#server.addMethod('initialize', (initialize_request) => {
 			try {
 				// Validate basic request format
@@ -220,6 +288,9 @@ export class McpServer {
 					session_id,
 					validated_initialize.clientInfo,
 				);
+
+				// Save state after initialization
+				this.#trigger_save();
 
 				// Dispatch initialization event
 				this.#event_target.dispatchEvent(
@@ -593,6 +664,7 @@ export class McpServer {
 					this.#subscriptions.resource.set(uri, subscriptions);
 				}
 				subscriptions.add(this.#session_id);
+				this.#trigger_save();
 				return {};
 			});
 		}
@@ -759,6 +831,7 @@ export class McpServer {
 
 		this.#server.addMethod('logging/setLevel', ({ level }) => {
 			this.#session_log_levels.set(this.#session_id, level);
+			this.#trigger_save();
 			return {};
 		});
 	}
@@ -908,9 +981,10 @@ export class McpServer {
 	 *
 	 * @param {JSONRPCResponse | JSONRPCRequest} message
 	 * @param {Context<CustomContext>} [ctx]
-	 * @returns {ReturnType<JSONRPCServer['receive']> | ReturnType<JSONRPCClient['receive'] | undefined>}
+	 * @returns {Promise<ReturnType<JSONRPCServer['receive']> | ReturnType<JSONRPCClient['receive'] | undefined>>}
 	 */
-	receive(message, ctx) {
+	async receive(message, ctx) {
+		await this.#loaded;
 		// Validate the message first
 		const validated_message = v.safeParse(
 			v.union([JSONRPCRequestSchema, JSONRPCNotificationSchema]),
@@ -1151,5 +1225,30 @@ export class McpServer {
 
 		// Send if message severity is equal to or higher than session level
 		return message_severity >= session_severity;
+	}
+
+	/**
+	 * Manually restore state from the load function if provided
+	 * @param {SerializedState} state
+	 * @returns {boolean} Whether state was loaded successfully
+	 */
+	load(state) {
+		try {
+			if (state) {
+				this.#deserialize_state(state);
+				return true;
+			}
+			return false;
+		} catch {
+			return false;
+		}
+	}
+
+	/**
+	 * Get the current serialized state as a plain object
+	 * @returns {SerializedState}
+	 */
+	serialize() {
+		return this.#serialize_state();
 	}
 }
