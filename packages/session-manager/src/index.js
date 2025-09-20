@@ -64,8 +64,12 @@ export class InMemorySessionManager extends SessionManager {
 	delete(id) {
 		const controller = this.#sessions.get(id);
 		if (controller) {
-			controller.close();
 			this.#sessions.delete(id);
+			try {
+				controller.close();
+			} catch {
+				// could error if the controller is already closed
+			}
 		}
 	}
 

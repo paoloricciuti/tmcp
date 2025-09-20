@@ -182,12 +182,14 @@ export class SyncLayer extends DurableObject {
 	 */
 	async delete(id) {
 		const ws = this.#sessions.get(id);
+		this.#sessions.delete(id);
 		if (ws) {
 			ws.send(
 				JSON.stringify({
 					type: 'delete',
 				}),
 			);
+			ws.close();
 		}
 	}
 

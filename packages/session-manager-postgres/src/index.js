@@ -69,7 +69,6 @@ export class PostgresSessionManager {
 			if (!controller) return;
 
 			if (command === 'delete') {
-				controller.close();
 				this.#client.query(
 					`DELETE FROM "${this.#table_name}" WHERE id=$1`,
 					[notification_id],
@@ -78,6 +77,11 @@ export class PostgresSessionManager {
 					`UNLISTEN "delete:session:${notification_id}"`,
 				);
 				this.#client.query(`UNLISTEN "session:${notification_id}"`);
+				try {
+					controller.close();
+				} catch {
+					// could error if the controller is already closed
+				}
 				clearInterval(this.#intervals.get(notification_id));
 				return;
 			} else {

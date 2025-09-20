@@ -63,9 +63,13 @@ export class RedisSessionManager {
 			controller.enqueue(this.#text_encoder.encode(message));
 		});
 		this.#pub_sub_client.subscribe(`delete:session:${id}`, () => {
-			controller.close();
 			this.#client?.del(`available:session:${id}`);
 			clearInterval(this.#interval);
+			try {
+				controller.close();
+			} catch {
+				// could error if the controller is already closed
+			}
 		});
 	}
 
