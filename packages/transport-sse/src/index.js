@@ -329,7 +329,7 @@ export class SseTransport {
 		await this.#options.sessionManager.delete(session_id);
 
 		return new Response(null, {
-			status: 204,
+			status: 200,
 			headers: {
 				'mcp-session-id': session_id,
 			},
