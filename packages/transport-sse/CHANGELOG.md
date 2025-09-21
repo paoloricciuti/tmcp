@@ -1,5 +1,11 @@
 # @tmcp/transport-sse
 
+## 0.3.2
+
+### Patch Changes
+
+- bc21ef1: fix: respond with 200 to delete requests
+
 ## 0.3.1
 
 ### Patch Changes

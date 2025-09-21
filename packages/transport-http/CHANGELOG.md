@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.6.2
+
+### Patch Changes
+
+- bc21ef1: fix: respond with 200 to delete requests
+
 ## 0.6.1
 
 ### Patch Changes
