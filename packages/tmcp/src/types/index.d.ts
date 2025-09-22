@@ -120,7 +120,9 @@ declare module 'tmcp' {
 		 * If the client doesn't support elicitation, it will throw an error.
 		 *
 		 * */
-		elicitation<TSchema extends StandardSchema extends undefined ? never : StandardSchema>(message: string, schema: TSchema): Promise<StandardSchemaV1.InferOutput<TSchema>>;
+		elicitation<TSchema extends StandardSchema extends undefined ? never : StandardSchema>(message: string, schema: TSchema): Promise<ElicitResult & {
+			content?: StandardSchemaV1.InferOutput<TSchema>;
+		}>;
 		/**
 		 * Request language model sampling from the client
 		 * */
@@ -939,6 +941,24 @@ declare module 'tmcp' {
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
 	/**
+	 * The client's response to an elicitation/create request from the server.
+	 */
+	const ElicitResultSchema: v.ObjectSchema<{
+		/**
+		 * The user's response action.
+		 */
+		readonly action: v.PicklistSchema<["accept", "decline", "cancel"], undefined>;
+		/**
+		 * The collected user input content (only present if action is "accept").
+		 */
+		readonly content: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.UnknownSchema, undefined>, undefined>;
+		/**
+		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+		 * for notes on _meta usage.
+		 */
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+	}, undefined>;
+	/**
 	 * The server's response to a completion/complete request
 	 */
 	const CompleteResultSchema: v.ObjectSchema<{
@@ -984,6 +1004,7 @@ declare module 'tmcp' {
 	type JSONRPCResponse = v.InferInput<typeof JSONRPCResponseSchema>;
 	type LoggingLevel = v.InferInput<typeof LoggingLevelSchema>;
 	type ToolAnnotations = v.InferInput<typeof ToolAnnotationsSchema>;
+	type ElicitResult = v.InferInput<typeof ElicitResultSchema>;
 	// Helper type to remove whitespace
 	type Trim<S extends string> = S extends ` ${infer R}`
 		? Trim<R>

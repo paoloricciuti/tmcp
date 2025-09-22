@@ -1534,3 +1534,6 @@ export const ServerResultSchema = v.union([
 /**
  * @typedef {v.InferInput<typeof ToolAnnotationsSchema>} ToolAnnotations
  */
+/**
+ * @typedef {v.InferInput<typeof ElicitResultSchema>} ElicitResult
+ */

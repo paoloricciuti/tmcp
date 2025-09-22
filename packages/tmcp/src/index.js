@@ -4,7 +4,7 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations, ClientInfo } from "./validation/index.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations, ClientInfo, ElicitResult } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, ChangedArgs, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
@@ -23,6 +23,7 @@ import {
 	JSONRPCResponseSchema,
 	McpError,
 	ReadResourceResultSchema,
+	ElicitResultSchema,
 } from './validation/index.js';
 import {
 	get_supported_versions,
@@ -1004,25 +1005,27 @@ export class McpServer {
 	 * @template {StandardSchema extends undefined ? never : StandardSchema} TSchema
 	 * @param {string} message
 	 * @param {TSchema} schema
-	 * @returns {Promise<StandardSchemaV1.InferOutput<TSchema>>}
+	 * @returns {Promise<ElicitResult & { content?: StandardSchemaV1.InferOutput<TSchema> }>}
 	 */
 	async elicitation(message, schema) {
 		if (!this.#client_capabilities?.elicitation)
 			throw new McpError(-32601, "Client doesn't support elicitation");
 
 		this.#lazyily_create_client();
+		const result = await this.#client?.request(
+			'elicitation/create',
+			{
+				message,
+				requestedSchema:
+					await this.#options.adapter.toJsonSchema(schema),
+			},
+			{
+				sessions: [this.#session_id],
+			},
+		);
+		const elicit_result = v.parse(ElicitResultSchema, result);
 		let validated_result = schema['~standard'].validate(
-			await this.#client?.request(
-				'elicitation/create',
-				{
-					message,
-					requestedSchema:
-						await this.#options.adapter.toJsonSchema(schema),
-				},
-				{
-					sessions: [this.#session_id],
-				},
-			),
+			elicit_result.content,
 		);
 		if (validated_result instanceof Promise)
 			validated_result = await validated_result;
@@ -1032,7 +1035,7 @@ export class McpServer {
 				`Invalid elicitation result: ${JSON.stringify(validated_result.issues)}`,
 			);
 		}
-		return validated_result.value;
+		return { ...elicit_result, content: validated_result.value };
 	}
 
 	/**
