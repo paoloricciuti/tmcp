@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.13.0
+
+### Minor Changes
+
+- 3ff8c61: breaking: return proper type from `elicitation`
+
 ## 1.12.2
 
 ### Patch Changes
