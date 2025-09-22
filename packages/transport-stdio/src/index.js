@@ -10,14 +10,32 @@ export class StdioTransport {
 	#server;
 
 	/**
+	 * @type {Set<() => void>}
+	 */
+	#cleaners = new Set();
+
+	/**
 	 *
 	 * @param {McpServer<any>} server
 	 */
 	constructor(server) {
 		this.#server = server;
-		this.#server.on('send', ({ request }) => {
-			process.stdout.write(JSON.stringify(request) + '\n');
-		});
+		this.#cleaners.add(
+			this.#server.on('initialize', () => {
+				this.#cleaners.add(
+					this.#server.on('send', ({ request }) => {
+						process.stdout.write(JSON.stringify(request) + '\n');
+					}),
+				);
+			}),
+		);
+	}
+
+	#close() {
+		for (const cleaner of this.#cleaners) {
+			cleaner();
+		}
+		process.exit(0);
 	}
 
 	listen() {
@@ -51,16 +69,16 @@ export class StdioTransport {
 		});
 
 		process.stdin.on('end', () => {
-			process.exit(0);
+			this.#close();
 		});
 
 		// Handle process termination
 		process.on('SIGINT', () => {
-			process.exit(0);
+			this.#close();
 		});
 
 		process.on('SIGTERM', () => {
-			process.exit(0);
+			this.#close();
 		});
 	}
 }
