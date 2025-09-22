@@ -1,5 +1,16 @@
 # @tmcp/transport-stdio
 
+## 0.2.0
+
+### Minor Changes
+
+- e4f00e3: fix: only add send event listener after initialization
+
+### Patch Changes
+
+- Updated dependencies [3ff8c61]
+    - tmcp@1.13.0
+
 ## 0.1.3
 
 ### Patch Changes

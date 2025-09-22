@@ -1,6 +1,6 @@
 {
 	"name": "playground",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Playground app for testing tmcp with MCP Inspector",
 	"private": true,
 	"type": "module",
