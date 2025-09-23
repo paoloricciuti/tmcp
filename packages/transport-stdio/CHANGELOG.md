@@ -1,5 +1,11 @@
 # @tmcp/transport-stdio
 
+## 0.3.0
+
+### Minor Changes
+
+- be7a1dc: feat: allow for custom context in stdio transport
+
 ## 0.2.0
 
 ### Minor Changes
