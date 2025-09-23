@@ -3,9 +3,12 @@
  */
 import process from 'node:process';
 
+/**
+ * @template {Record<string, unknown> | undefined} [TCustom=undefined]
+ */
 export class StdioTransport {
 	/**
-	 * @type {McpServer<any>}
+	 * @type {McpServer<any, TCustom>}
 	 */
 	#server;
 
@@ -16,7 +19,7 @@ export class StdioTransport {
 
 	/**
 	 *
-	 * @param {McpServer<any>} server
+	 * @param {McpServer<any, TCustom>} server
 	 */
 	constructor(server) {
 		this.#server = server;
@@ -38,7 +41,10 @@ export class StdioTransport {
 		process.exit(0);
 	}
 
-	listen() {
+	/**
+	 * @param {TCustom} [ctx]
+	 */
+	listen(ctx) {
 		// Handle stdio communication
 		process.stdin.setEncoding('utf8');
 
@@ -55,7 +61,9 @@ export class StdioTransport {
 				if (line.trim()) {
 					try {
 						const message = JSON.parse(line);
-						const response = await this.#server.receive(message);
+						const response = await this.#server.receive(message, {
+							custom: ctx,
+						});
 						if (response) {
 							process.stdout.write(
 								JSON.stringify(response) + '\n',

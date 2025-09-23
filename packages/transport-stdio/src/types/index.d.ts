@@ -1,9 +1,10 @@
 declare module '@tmcp/transport-stdio' {
 	import type { McpServer } from 'tmcp';
-	export class StdioTransport {
+	export class StdioTransport<TCustom extends Record<string, unknown> | undefined = undefined> {
 		
-		constructor(server: McpServer<any>);
-		listen(): void;
+		constructor(server: McpServer<any, TCustom>);
+		
+		listen(ctx?: TCustom): void;
 		#private;
 	}
 
