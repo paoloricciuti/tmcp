@@ -1,5 +1,11 @@
 # @tmcp/transport-stdio
 
+## 0.3.1
+
+### Patch Changes
+
+- 4da89ef: chore: bump version to install new version automatically
+
 ## 0.3.0
 
 ### Minor Changes
