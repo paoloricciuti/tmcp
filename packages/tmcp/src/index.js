@@ -24,6 +24,7 @@ import {
 	McpError,
 	ReadResourceResultSchema,
 	ElicitResultSchema,
+	JSONRPCErrorSchema,
 } from './validation/index.js';
 import {
 	get_supported_versions,
@@ -228,11 +229,6 @@ export class McpServer {
 						detail: validated_initialize,
 					}),
 				);
-
-				// Trigger initial roots request if client supports it
-				if (validated_initialize.capabilities?.roots) {
-					this.#refresh_roots();
-				}
 
 				// Return server response with negotiated version and capabilities
 				return {
@@ -942,7 +938,10 @@ export class McpServer {
 			);
 		}
 		// It's a response - handle with client
-		const validated_response = v.parse(JSONRPCResponseSchema, message);
+		const validated_response = v.parse(
+			v.union([JSONRPCResponseSchema, JSONRPCErrorSchema]),
+			message,
+		);
 		this.#lazyily_create_client();
 		return this.#ctx_storage.run(ctx ?? {}, async () =>
 			this.#client?.receive(validated_response),
