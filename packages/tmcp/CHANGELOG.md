@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.14.0
+
+### Minor Changes
+
+- e81efc2: breaking: don't automatically refresh roots on init + support error responses
+
 ## 1.13.0
 
 ### Minor Changes
