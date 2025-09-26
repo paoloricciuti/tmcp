@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.6.3
+
+### Patch Changes
+
+- 4da89ef: chore: bump version to install new version automatically
+
 ## 0.6.2
 
 ### Patch Changes
