@@ -25,7 +25,13 @@ declare module 'tmcp' {
 		 * Get the client information (name, version, etc.) of the client that initiated the current request...useful if you want to do something different based on the client.
 		 */
 		currentClientInfo(): {
+			icons?: {
+				src: string;
+				mimeType?: string | undefined;
+				sizes?: string[] | undefined;
+			}[] | undefined;
 			version: string;
+			websiteUrl?: string | undefined;
 			name: string;
 			title?: string | undefined;
 		} | undefined;
@@ -48,7 +54,7 @@ declare module 'tmcp' {
 		 *
 		 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 		 * */
-		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations, enabled, }: {
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations, enabled, icons, }: {
 			name: string;
 			description: string;
 			title?: string;
@@ -56,6 +62,7 @@ declare module 'tmcp' {
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
 			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
 			annotations?: ToolAnnotations;
+			icons?: Icons;
 		}, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
 		/**
 		 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
@@ -64,9 +71,10 @@ declare module 'tmcp' {
 		 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
 		 * for each input that will be used to provide completions for the user.
 		 * */
-		prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete, enabled }: {
+		prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete, enabled, icons }: {
 			name: string;
 			description: string;
+			icons?: Icons;
 			title?: string;
 			enabled?: () => boolean | Promise<boolean>;
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
@@ -76,10 +84,11 @@ declare module 'tmcp' {
 		 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 		 * Use the description and title to help the user to understand what the resource is.
 		 * */
-		resource({ name, description, title, uri, enabled }: {
+		resource({ name, description, title, uri, enabled, icons }: {
 			name: string;
 			description: string;
 			title?: string;
+			icons?: Icons;
 			uri: string;
 			enabled?: () => boolean | Promise<boolean>;
 		}, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): void;
@@ -90,10 +99,11 @@ declare module 'tmcp' {
 		 * be invoked to provide completions for the template variables to the user.
 		 * Use the description and title to help the user to understand what the resource is.
 		 * */
-		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, title, uri, complete, list: list_resources, enabled, }: {
+		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, title, uri, complete, list: list_resources, enabled, icons, }: {
 			name: string;
 			description: string;
 			title?: string;
+			icons?: Icons;
 			enabled?: () => boolean | Promise<boolean>;
 			uri: TUri;
 			complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
@@ -198,12 +208,6 @@ declare module 'tmcp' {
 		}
 	};
 
-	type ServerInfo = {
-		name: string;
-		version: string;
-		description: string;
-	};
-
 	type ChangedArgs = {
 		'resource': [id: string];
 		'tools': [];
@@ -233,6 +237,82 @@ declare module 'tmcp' {
 			 */
 			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>;
+	}, undefined>;
+	const IconsSchema: v.ObjectSchema<{
+		/**
+		 * Optional set of sized icons that the client can display in a user interface.
+		 *
+		 * Clients that support rendering icons MUST support at least the following MIME types:
+		 * - `image/png` - PNG images (safe, universal compatibility)
+		 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+		 *
+		 * Clients that support rendering icons SHOULD also support:
+		 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+		 * - `image/webp` - WebP images (modern, efficient format)
+		 */
+		readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+			/**
+			 * URL or data URI for the icon.
+			 */
+			readonly src: v.StringSchema<undefined>;
+			/**
+			 * Optional MIME type for the icon.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * Optional array of strings that specify sizes at which the icon can be used.
+			 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+			 *
+			 * If not provided, the client should assume that the icon can be used at any size.
+			 */
+			readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+		}, undefined>, undefined>, undefined>;
+	}, undefined>;
+	/**
+	 * Describes the name and version of an MCP implementation.
+	 */
+	const ImplementationSchema: v.ObjectSchema<{
+		/**
+		 * Optional set of sized icons that the client can display in a user interface.
+		 *
+		 * Clients that support rendering icons MUST support at least the following MIME types:
+		 * - `image/png` - PNG images (safe, universal compatibility)
+		 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+		 *
+		 * Clients that support rendering icons SHOULD also support:
+		 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+		 * - `image/webp` - WebP images (modern, efficient format)
+		 */
+		readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+			/**
+			 * URL or data URI for the icon.
+			 */
+			readonly src: v.StringSchema<undefined>;
+			/**
+			 * Optional MIME type for the icon.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * Optional array of strings that specify sizes at which the icon can be used.
+			 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+			 *
+			 * If not provided, the client should assume that the icon can be used at any size.
+			 */
+			readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+		}, undefined>, undefined>, undefined>;
+		readonly version: v.StringSchema<undefined>;
+		readonly websiteUrl: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+		/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+		readonly name: v.StringSchema<undefined>;
+		/**
+		 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+		 * even by those unfamiliar with domain-specific terminology.
+		 *
+		 * If not provided, the name should be used for display (except for Tool,
+		 * where `annotations.title` should be given precedence over using `name`,
+		 * if present).
+		 */
+		readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 	}, undefined>;
 	/**
 	 * Capabilities a client may support. Known capabilities are defined here, in this schema, but this is not a closed set: any client can define its own, additional capabilities.
@@ -289,7 +369,36 @@ declare module 'tmcp' {
 			}, undefined>, undefined>;
 		}, undefined>;
 		readonly clientInfo: v.ObjectSchema<{
+			/**
+			 * Optional set of sized icons that the client can display in a user interface.
+			 *
+			 * Clients that support rendering icons MUST support at least the following MIME types:
+			 * - `image/png` - PNG images (safe, universal compatibility)
+			 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+			 *
+			 * Clients that support rendering icons SHOULD also support:
+			 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+			 * - `image/webp` - WebP images (modern, efficient format)
+			 */
+			readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+				/**
+				 * URL or data URI for the icon.
+				 */
+				readonly src: v.StringSchema<undefined>;
+				/**
+				 * Optional MIME type for the icon.
+				 */
+				readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+				/**
+				 * Optional array of strings that specify sizes at which the icon can be used.
+				 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+				 *
+				 * If not provided, the client should assume that the icon can be used at any size.
+				 */
+				readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+			}, undefined>, undefined>, undefined>;
 			readonly version: v.StringSchema<undefined>;
+			readonly websiteUrl: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 			/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
 			readonly name: v.StringSchema<undefined>;
 			/**
@@ -361,6 +470,34 @@ declare module 'tmcp' {
 	 * A known resource that the server is capable of reading.
 	 */
 	const ResourceSchema: v.ObjectSchema<{
+		/**
+		 * Optional set of sized icons that the client can display in a user interface.
+		 *
+		 * Clients that support rendering icons MUST support at least the following MIME types:
+		 * - `image/png` - PNG images (safe, universal compatibility)
+		 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+		 *
+		 * Clients that support rendering icons SHOULD also support:
+		 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+		 * - `image/webp` - WebP images (modern, efficient format)
+		 */
+		readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+			/**
+			 * URL or data URI for the icon.
+			 */
+			readonly src: v.StringSchema<undefined>;
+			/**
+			 * Optional MIME type for the icon.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * Optional array of strings that specify sizes at which the icon can be used.
+			 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+			 *
+			 * If not provided, the client should assume that the icon can be used at any size.
+			 */
+			readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+		}, undefined>, undefined>, undefined>;
 		/**
 		 * The URI of this resource.
 		 */
@@ -492,6 +629,34 @@ declare module 'tmcp' {
 				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			}, undefined>, v.ObjectSchema<{
 				readonly type: v.LiteralSchema<"resource_link", undefined>;
+				/**
+				 * Optional set of sized icons that the client can display in a user interface.
+				 *
+				 * Clients that support rendering icons MUST support at least the following MIME types:
+				 * - `image/png` - PNG images (safe, universal compatibility)
+				 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+				 *
+				 * Clients that support rendering icons SHOULD also support:
+				 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+				 * - `image/webp` - WebP images (modern, efficient format)
+				 */
+				readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+					/**
+					 * URL or data URI for the icon.
+					 */
+					readonly src: v.StringSchema<undefined>;
+					/**
+					 * Optional MIME type for the icon.
+					 */
+					readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+					/**
+					 * Optional array of strings that specify sizes at which the icon can be used.
+					 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+					 *
+					 * If not provided, the client should assume that the icon can be used at any size.
+					 */
+					readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+				}, undefined>, undefined>, undefined>;
 				/**
 				 * The URI of this resource.
 				 */
@@ -676,6 +841,34 @@ declare module 'tmcp' {
 			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		}, undefined>, v.ObjectSchema<{
 			readonly type: v.LiteralSchema<"resource_link", undefined>;
+			/**
+			 * Optional set of sized icons that the client can display in a user interface.
+			 *
+			 * Clients that support rendering icons MUST support at least the following MIME types:
+			 * - `image/png` - PNG images (safe, universal compatibility)
+			 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+			 *
+			 * Clients that support rendering icons SHOULD also support:
+			 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+			 * - `image/webp` - WebP images (modern, efficient format)
+			 */
+			readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+				/**
+				 * URL or data URI for the icon.
+				 */
+				readonly src: v.StringSchema<undefined>;
+				/**
+				 * Optional MIME type for the icon.
+				 */
+				readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+				/**
+				 * Optional array of strings that specify sizes at which the icon can be used.
+				 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+				 *
+				 * If not provided, the client should assume that the icon can be used at any size.
+				 */
+				readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+			}, undefined>, undefined>, undefined>;
 			/**
 			 * The URI of this resource.
 			 */
@@ -982,8 +1175,12 @@ declare module 'tmcp' {
 		 */
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
+	type Icons = v.InferInput<typeof IconsSchema>;
 	type ClientCapabilities_1 = v.InferInput<typeof ClientCapabilitiesSchema>;
 	type ServerCapabilities = v.InferInput<typeof ServerCapabilitiesSchema>;
+	type ServerInfo = v.InferInput<typeof ImplementationSchema> & {
+		description?: string;
+	};
 	type InitializeRequestParams = v.InferInput<typeof InitializeRequestParamsSchema>;
 	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;

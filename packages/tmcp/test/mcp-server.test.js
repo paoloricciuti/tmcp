@@ -76,6 +76,20 @@ const server_info = {
 	description: 'A test MCP server',
 };
 
+/**
+ * Utility helper to build icon payloads for list responses.
+ * @param {string} name
+ */
+const create_icons = (name) => ({
+	icons: [
+		{
+			src: `https://example.com/${name}.png`,
+			mimeType: 'image/png',
+			sizes: ['64x64'],
+		},
+	],
+});
+
 describe('McpServer', () => {
 	/**
 	 * @type {McpServer<MockSchema<any>, any>}
@@ -225,12 +239,14 @@ describe('McpServer', () => {
 			const tool = vi.fn().mockResolvedValue({
 				content: [{ type: 'text', text: 'result' }],
 			});
+			const tool_icons = create_icons('list-tool');
 
 			server.tool(
 				{
 					name: 'list-test-tool',
 					description: 'A tool for list testing',
 					title: 'List Test Tool',
+					icons: tool_icons,
 				},
 				tool,
 			);
@@ -265,6 +281,7 @@ describe('McpServer', () => {
 							name: 'list-test-tool',
 							title: 'List Test Tool',
 							description: 'A tool for list testing',
+							icons: tool_icons,
 							inputSchema: { type: 'object', properties: {} },
 						},
 						{
@@ -289,6 +306,7 @@ describe('McpServer', () => {
 							},
 							name: 'list-test-tool-schemas',
 							title: 'List Test Tool',
+							icons: undefined,
 						},
 					],
 				},
@@ -480,12 +498,14 @@ describe('McpServer', () => {
 					},
 				],
 			});
+			const prompt_icons = create_icons('list-prompt');
 
 			server.prompt(
 				{
 					name: 'list-test-prompt',
 					description: 'A prompt for list testing',
 					title: 'List Test Prompt',
+					icons: prompt_icons,
 				},
 				prompt,
 			);
@@ -509,6 +529,7 @@ describe('McpServer', () => {
 							name: 'list-test-prompt',
 							title: 'List Test Prompt',
 							description: 'A prompt for list testing',
+							icons: prompt_icons,
 							arguments: [],
 						},
 					],
@@ -608,12 +629,14 @@ describe('McpServer', () => {
 			const resource = vi.fn().mockResolvedValue({
 				contents: [{ uri: 'test://resource', text: 'content' }],
 			});
+			const resource_icons = create_icons('list-resource');
 
 			server.resource(
 				{
 					name: 'list-test-resource',
 					description: 'A resource for list testing',
 					uri: 'test://list-resource',
+					icons: resource_icons,
 				},
 				resource,
 			);
@@ -638,6 +661,101 @@ describe('McpServer', () => {
 							title: 'A resource for list testing',
 							description: 'A resource for list testing',
 							uri: 'test://list-resource',
+							icons: resource_icons,
+						},
+					],
+				},
+			});
+		});
+
+		it('should include icons when listing resource templates', async () => {
+			const template_icons = create_icons('template-icons');
+
+			server.template(
+				{
+					name: 'icon-template',
+					description: 'A template with icons',
+					title: 'Template With Icons',
+					uri: 'test://template/{id}',
+					icons: template_icons,
+				},
+				async (uri) => ({
+					contents: [{ uri, text: `Content for ${uri}` }],
+				}),
+			);
+
+			const list_templates = request({
+				jsonrpc: '2.0',
+				id: 3,
+				method: 'resources/templates/list',
+			});
+
+			const result = await server.receive(list_templates, {
+				sessionId: 'session-1',
+			});
+
+			expect(result).toEqual({
+				jsonrpc: '2.0',
+				id: 3,
+				result: {
+					resourceTemplates: [
+						{
+							name: 'icon-template',
+							title: 'Template With Icons',
+							description: 'A template with icons',
+							uriTemplate: 'test://template/{id}',
+							icons: template_icons,
+						},
+					],
+				},
+			});
+		});
+
+		it('should include icons returned from template list results', async () => {
+			const generated_icons = create_icons('generated-template-resource');
+
+			server.template(
+				{
+					name: 'list-template-with-icons',
+					description: 'Template whose list results include icons',
+					title: 'List Template With Icons',
+					uri: 'test://template-with-icons/{id}',
+					list() {
+						return [
+							{
+								name: 'generated-resource',
+								description: 'Generated resource with icons',
+								uri: 'test://template-with-icons/generated-resource',
+								icons: generated_icons.icons,
+							},
+						];
+					},
+				},
+				async (uri) => ({
+					contents: [{ uri, text: `Generated content for ${uri}` }],
+				}),
+			);
+
+			const resources_list = request({
+				jsonrpc: '2.0',
+				id: 4,
+				method: 'resources/list',
+			});
+
+			const result = await server.receive(resources_list, {
+				sessionId: 'session-1',
+			});
+
+			expect(result).toEqual({
+				jsonrpc: '2.0',
+				id: 4,
+				result: {
+					resources: [
+						{
+							name: 'generated-resource',
+							description: 'Generated resource with icons',
+							uri: 'test://template-with-icons/generated-resource',
+							icons: generated_icons.icons,
 						},
 					],
 				},
@@ -857,18 +975,7 @@ describe('McpServer', () => {
 			});
 
 			await server.receive(init_request, { sessionId: 'session-1' });
-
-			expect(listener).toHaveBeenNthCalledWith(1, {
-				context: {
-					sessions: ['session-1'],
-				},
-				request: {
-					id: 1,
-					jsonrpc: '2.0',
-					method: 'roots/list',
-					params: undefined,
-				},
-			});
+			expect(listener).not.toHaveBeenCalled();
 
 			// called when resource list changes
 			server.resource(
@@ -884,7 +991,7 @@ describe('McpServer', () => {
 				},
 			);
 
-			expect(listener).toHaveBeenNthCalledWith(2, {
+			expect(listener).toHaveBeenNthCalledWith(1, {
 				context: {},
 				request: {
 					jsonrpc: '2.0',
@@ -905,7 +1012,7 @@ describe('McpServer', () => {
 			await server.receive(subscribe_request, { sessionId: 'session-1' });
 			server.changed('resource', 'test://subscribe-resource');
 
-			expect(listener).toHaveBeenNthCalledWith(3, {
+			expect(listener).toHaveBeenNthCalledWith(2, {
 				context: {
 					sessions: ['session-1'],
 				},
@@ -932,7 +1039,7 @@ describe('McpServer', () => {
 				},
 			);
 
-			expect(listener).toHaveBeenNthCalledWith(4, {
+			expect(listener).toHaveBeenNthCalledWith(3, {
 				context: {},
 				request: {
 					jsonrpc: '2.0',
@@ -961,7 +1068,7 @@ describe('McpServer', () => {
 				},
 			);
 
-			expect(listener).toHaveBeenNthCalledWith(5, {
+			expect(listener).toHaveBeenNthCalledWith(4, {
 				context: {},
 				request: {
 					jsonrpc: '2.0',
@@ -982,24 +1089,24 @@ describe('McpServer', () => {
 			// trigger the prompt read to test elicitation, refreshRoots and message
 			await server.receive(get_request, { sessionId: 'session-1' });
 
-			expect(listener).toHaveBeenNthCalledWith(6, {
+			expect(listener).toHaveBeenNthCalledWith(5, {
 				context: {
 					sessions: ['session-1'],
 				},
 				request: {
-					id: 2,
+					id: 1,
 					jsonrpc: '2.0',
 					method: 'roots/list',
 					params: undefined,
 				},
 			});
 
-			expect(listener).toHaveBeenNthCalledWith(7, {
+			expect(listener).toHaveBeenNthCalledWith(6, {
 				context: {
 					sessions: ['session-1'],
 				},
 				request: {
-					id: 3,
+					id: 2,
 					jsonrpc: '2.0',
 					method: 'sampling/createMessage',
 					params: {
@@ -1009,12 +1116,12 @@ describe('McpServer', () => {
 				},
 			});
 
-			expect(listener).toHaveBeenNthCalledWith(8, {
+			expect(listener).toHaveBeenNthCalledWith(7, {
 				context: {
 					sessions: ['session-1'],
 				},
 				request: {
-					id: 4,
+					id: 3,
 					jsonrpc: '2.0',
 					method: 'elicitation/create',
 					params: {

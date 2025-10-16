@@ -10,7 +10,8 @@ import {
 	Resource,
 	ServerCapabilities,
 	LoggingLevel,
-	ToolAnnotations
+	ToolAnnotations,
+	Icons
 } from '../validation/index.js';
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
@@ -20,6 +21,7 @@ export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutp
 	title?: string;
 	annotations?: ToolAnnotations;
 	enabled?: () => boolean | Promise<boolean>;
+	icons?: Icons;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<CallToolResult> | CallToolResult;
@@ -34,6 +36,7 @@ export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
 	title?: string;
+	icons?: Icons;
 	enabled?: () => boolean | Promise<boolean>;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
@@ -46,6 +49,7 @@ export type StoredResource =
 			name: string;
 			template: true;
 			title?: string;
+			icons?: Icons;
 			enabled?: () => boolean | Promise<boolean>;
 			list_resources?: () =>
 				| Promise<Array<Resource>>
@@ -59,6 +63,7 @@ export type StoredResource =
 			description: string;
 			name: string;
 			template: false;
+			icons?: Icons;
 			title?: string;
 			enabled?: () => boolean | Promise<boolean>;
 			execute: (
@@ -77,12 +82,6 @@ export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	logging?: {
 		default: LoggingLevel;
 	}
-};
-
-export type ServerInfo = {
-	name: string;
-	version: string;
-	description: string;
 };
 
 export type ChangedArgs = {

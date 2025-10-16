@@ -4,8 +4,8 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations, ClientInfo, ElicitResult } from "./validation/index.js";
- * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, ServerInfo, SubscriptionsKeys, ChangedArgs, McpEvents } from "./internal/internal.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ServerInfo, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations, ClientInfo, ElicitResult, Icons } from "./validation/index.js";
+ * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -390,7 +390,7 @@ export class McpServer {
 							name,
 							title: tool.title || tool.description,
 							description: tool.description,
-
+							icons: tool.icons,
 							inputSchema: tool.schema
 								? await this.#options.adapter.toJsonSchema(
 										tool.schema,
@@ -507,6 +507,7 @@ export class McpServer {
 						return {
 							name,
 							title: prompt.title || prompt.description,
+							icons: prompt.icons,
 							description: prompt.description,
 							arguments: keys.map((key) => {
 								const property =
@@ -598,8 +599,10 @@ export class McpServer {
 			const all_resources = [];
 
 			// Add static resources
-			for (const [uri, { description, name, title, ...resource }] of this
-				.#resources) {
+			for (const [
+				uri,
+				{ description, name, title, icons, ...resource },
+			] of this.#resources) {
 				if (!resource.template) {
 					if (
 						resource.enabled != null &&
@@ -611,6 +614,7 @@ export class McpServer {
 						title: title || description,
 						description,
 						uri,
+						icons,
 					});
 				} else if (resource.list_resources) {
 					if (
@@ -651,7 +655,14 @@ export class McpServer {
 						[...this.#resources].map(
 							async ([
 								uri,
-								{ description, name, title, template, enabled },
+								{
+									description,
+									name,
+									title,
+									template,
+									icons,
+									enabled,
+								},
 							]) => {
 								if (!template) return null;
 								if (
@@ -661,6 +672,7 @@ export class McpServer {
 									return null;
 								return {
 									name,
+									icons,
 									title: title || description,
 									description,
 									uriTemplate: uri,
@@ -785,7 +797,7 @@ export class McpServer {
 	 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
-	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations }} options
+	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations, icons?: Icons }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
 	 */
 	tool(
@@ -797,6 +809,7 @@ export class McpServer {
 			outputSchema,
 			annotations,
 			enabled,
+			icons,
 		},
 		execute,
 	) {
@@ -809,6 +822,7 @@ export class McpServer {
 			outputSchema,
 			execute,
 			annotations,
+			icons,
 		});
 	}
 	/**
@@ -818,10 +832,13 @@ export class McpServer {
 	 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
 	 * for each input that will be used to provide completions for the user.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
+	 * @param {{ name: string; description: string; icons?: Icons; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
 	 * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} execute
 	 */
-	prompt({ name, description, title, schema, complete, enabled }, execute) {
+	prompt(
+		{ name, description, title, schema, complete, enabled, icons },
+		execute,
+	) {
 		if (complete) {
 			this.#completions['ref/prompt'].set(name, complete);
 		}
@@ -832,6 +849,7 @@ export class McpServer {
 			schema,
 			execute,
 			enabled,
+			icons,
 		});
 	}
 	/**
@@ -851,10 +869,10 @@ export class McpServer {
 	/**
 	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 	 * Use the description and title to help the user to understand what the resource is.
-	 * @param {{ name: string; description: string; title?: string; uri: string, enabled?: ()=>boolean | Promise<boolean>; }} options
+	 * @param {{ name: string; description: string; title?: string; icons?: Icons, uri: string, enabled?: ()=>boolean | Promise<boolean>; }} options
 	 * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
-	resource({ name, description, title, uri, enabled }, execute) {
+	resource({ name, description, title, uri, enabled, icons }, execute) {
 		this.#resource({
 			name,
 			description,
@@ -862,6 +880,7 @@ export class McpServer {
 			uri,
 			execute,
 			enabled,
+			icons,
 			template: false,
 		});
 	}
@@ -873,7 +892,7 @@ export class McpServer {
 	 * Use the description and title to help the user to understand what the resource is.
 	 * @template {string} TUri
 	 * @template {ExtractURITemplateVariables<TUri>} TVariables
-	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
+	 * @param {{ name: string; description: string; title?: string; icons?: Icons; enabled?: ()=>boolean | Promise<boolean>; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
 	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
 	template(
@@ -885,6 +904,7 @@ export class McpServer {
 			complete,
 			list: list_resources,
 			enabled,
+			icons,
 		},
 		execute,
 	) {
@@ -896,6 +916,7 @@ export class McpServer {
 			uri,
 			execute,
 			complete,
+			icons,
 			list_resources,
 			template: true,
 		});

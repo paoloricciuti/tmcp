@@ -188,6 +188,43 @@ export const BaseMetadataSchema = v.object({
 	 */
 	title: v.optional(v.string()),
 });
+
+/**
+ * Icon schema for use in tools, prompts, resources, and implementations.
+ */
+export const IconSchema = v.object({
+	/**
+	 * URL or data URI for the icon.
+	 */
+	src: v.string(),
+	/**
+	 * Optional MIME type for the icon.
+	 */
+	mimeType: v.optional(v.string()),
+	/**
+	 * Optional array of strings that specify sizes at which the icon can be used.
+	 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+	 *
+	 * If not provided, the client should assume that the icon can be used at any size.
+	 */
+	sizes: v.optional(v.array(v.string())),
+});
+
+export const IconsSchema = v.object({
+	/**
+	 * Optional set of sized icons that the client can display in a user interface.
+	 *
+	 * Clients that support rendering icons MUST support at least the following MIME types:
+	 * - `image/png` - PNG images (safe, universal compatibility)
+	 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+	 *
+	 * Clients that support rendering icons SHOULD also support:
+	 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+	 * - `image/webp` - WebP images (modern, efficient format)
+	 */
+	icons: v.optional(v.array(IconSchema)),
+});
+
 /* Initialization */
 
 /**
@@ -196,6 +233,8 @@ export const BaseMetadataSchema = v.object({
 export const ImplementationSchema = v.object({
 	...BaseMetadataSchema.entries,
 	version: v.string(),
+	websiteUrl: v.optional(v.string()),
+	...IconsSchema.entries,
 });
 
 /**
@@ -473,6 +512,7 @@ export const ResourceSchema = v.object({
 	 * for notes on _meta usage.
 	 */
 	_meta: v.optional(v.object({})),
+	...IconsSchema.entries,
 });
 
 /**
@@ -503,6 +543,7 @@ export const ResourceTemplateSchema = v.object({
 	 * for notes on _meta usage.
 	 */
 	_meta: v.optional(v.object({})),
+	...IconsSchema.entries,
 });
 
 /**
@@ -661,6 +702,7 @@ export const PromptSchema = v.object({
 	 * for notes on _meta usage.
 	 */
 	_meta: v.optional(v.object({})),
+	...IconsSchema.entries,
 });
 
 /**
@@ -925,6 +967,7 @@ export const ToolSchema = v.object({
 	 * for notes on _meta usage.
 	 */
 	_meta: v.optional(v.object({})),
+	...IconsSchema.entries,
 });
 
 /**
@@ -1477,6 +1520,9 @@ export const ServerResultSchema = v.union([
 ]);
 
 /**
+ * @typedef {v.InferInput<typeof IconsSchema>} Icons
+ */
+/**
  * @typedef {v.InferInput<typeof ClientCapabilitiesSchema>} ClientCapabilities
  */
 /**
@@ -1485,8 +1531,9 @@ export const ServerResultSchema = v.union([
 /**
  * @typedef {v.InferInput<typeof ImplementationSchema>} ClientInfo
  */
+// TODO remove description from ServerInfo on next major...it was never in the protocol
 /**
- * @typedef {v.InferInput<typeof ImplementationSchema>} ServerInfo
+ * @typedef {v.InferInput<typeof ImplementationSchema> & { description?: string }} ServerInfo
  */
 /**
  * @typedef {v.InferInput<typeof InitializeRequestParamsSchema>} InitializeRequestParams
