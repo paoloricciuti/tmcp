@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.15.0
+
+### Minor Changes
+
+- b7065e1: feat: support icons for server, tools, prompts and resources
+
 ## 1.14.0
 
 ### Minor Changes
