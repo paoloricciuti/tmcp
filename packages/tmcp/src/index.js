@@ -797,7 +797,7 @@ export class McpServer {
 	 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
-	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations, icons?: Icons }} options
+	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & Icons} options
 	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
 	 */
 	tool(
@@ -832,7 +832,7 @@ export class McpServer {
 	 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
 	 * for each input that will be used to provide completions for the user.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; icons?: Icons; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> }} options
+	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> } & Icons} options
 	 * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} execute
 	 */
 	prompt(
@@ -869,7 +869,7 @@ export class McpServer {
 	/**
 	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 	 * Use the description and title to help the user to understand what the resource is.
-	 * @param {{ name: string; description: string; title?: string; icons?: Icons, uri: string, enabled?: ()=>boolean | Promise<boolean>; }} options
+	 * @param {{ name: string; description: string; title?: string; uri: string, enabled?: ()=>boolean | Promise<boolean>; } & Icons} options
 	 * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
 	resource({ name, description, title, uri, enabled, icons }, execute) {
@@ -892,7 +892,7 @@ export class McpServer {
 	 * Use the description and title to help the user to understand what the resource is.
 	 * @template {string} TUri
 	 * @template {ExtractURITemplateVariables<TUri>} TVariables
-	 * @param {{ name: string; description: string; title?: string; icons?: Icons; enabled?: ()=>boolean | Promise<boolean>; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> }} options
+	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> } & Icons} options
 	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} execute
 	 */
 	template(

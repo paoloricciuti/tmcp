@@ -80,15 +80,13 @@ const server_info = {
  * Utility helper to build icon payloads for list responses.
  * @param {string} name
  */
-const create_icons = (name) => ({
-	icons: [
-		{
-			src: `https://example.com/${name}.png`,
-			mimeType: 'image/png',
-			sizes: ['64x64'],
-		},
-	],
-});
+const create_icons = (name) => [
+	{
+		src: `https://example.com/${name}.png`,
+		mimeType: 'image/png',
+		sizes: ['64x64'],
+	},
+];
 
 describe('McpServer', () => {
 	/**
@@ -726,7 +724,7 @@ describe('McpServer', () => {
 								name: 'generated-resource',
 								description: 'Generated resource with icons',
 								uri: 'test://template-with-icons/generated-resource',
-								icons: generated_icons.icons,
+								icons: generated_icons,
 							},
 						];
 					},
@@ -755,7 +753,7 @@ describe('McpServer', () => {
 							name: 'generated-resource',
 							description: 'Generated resource with icons',
 							uri: 'test://template-with-icons/generated-resource',
-							icons: generated_icons.icons,
+							icons: generated_icons,
 						},
 					],
 				},

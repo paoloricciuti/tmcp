@@ -62,8 +62,7 @@ declare module 'tmcp' {
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
 			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
 			annotations?: ToolAnnotations;
-			icons?: Icons;
-		}, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
+		} & Icons, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
 		/**
 		 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
 		 * Use the description and title to help the user to understand what the prompt does and when to use it.
@@ -74,12 +73,11 @@ declare module 'tmcp' {
 		prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete, enabled, icons }: {
 			name: string;
 			description: string;
-			icons?: Icons;
 			title?: string;
 			enabled?: () => boolean | Promise<boolean>;
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
 			complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>>;
-		}, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): void;
+		} & Icons, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): void;
 		/**
 		 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 		 * Use the description and title to help the user to understand what the resource is.
@@ -88,10 +86,9 @@ declare module 'tmcp' {
 			name: string;
 			description: string;
 			title?: string;
-			icons?: Icons;
 			uri: string;
 			enabled?: () => boolean | Promise<boolean>;
-		}, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): void;
+		} & Icons, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): void;
 		/**
 		 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 		 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
@@ -103,12 +100,11 @@ declare module 'tmcp' {
 			name: string;
 			description: string;
 			title?: string;
-			icons?: Icons;
 			enabled?: () => boolean | Promise<boolean>;
 			uri: TUri;
 			complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
 			list?: () => Promise<Array<Resource>> | Array<Resource>;
-		}, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
+		} & Icons, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
 		/**
 		 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 		 *

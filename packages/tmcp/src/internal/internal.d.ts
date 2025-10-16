@@ -21,11 +21,10 @@ export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutp
 	title?: string;
 	annotations?: ToolAnnotations;
 	enabled?: () => boolean | Promise<boolean>;
-	icons?: Icons;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<CallToolResult> | CallToolResult;
-};
+} & Icons;
 
 export type Completion = (
 	query: string,
@@ -36,12 +35,11 @@ export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;
 	title?: string;
-	icons?: Icons;
 	enabled?: () => boolean | Promise<boolean>;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<GetPromptResult> | GetPromptResult;
-};
+} & Icons;
 
 export type StoredResource =
 	| {
@@ -49,7 +47,6 @@ export type StoredResource =
 			name: string;
 			template: true;
 			title?: string;
-			icons?: Icons;
 			enabled?: () => boolean | Promise<boolean>;
 			list_resources?: () =>
 				| Promise<Array<Resource>>
@@ -58,18 +55,17 @@ export type StoredResource =
 				uri: string,
 				params: Record<string, string | string[]>,
 			) => Promise<ReadResourceResult> | ReadResourceResult;
-	  }
+	  } & Icons
 	| {
 			description: string;
 			name: string;
 			template: false;
-			icons?: Icons;
 			title?: string;
 			enabled?: () => boolean | Promise<boolean>;
 			execute: (
 				uri: string,
 			) => Promise<ReadResourceResult> | ReadResourceResult;
-	  };
+	  } & Icons;
 
 export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	capabilities?: ServerCapabilities;
