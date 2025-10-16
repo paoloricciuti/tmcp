@@ -10,7 +10,8 @@ import {
 	Resource,
 	ServerCapabilities,
 	LoggingLevel,
-	ToolAnnotations
+	ToolAnnotations,
+	Icons
 } from '../validation/index.js';
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
@@ -23,7 +24,7 @@ export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutp
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<CallToolResult> | CallToolResult;
-};
+} & Icons;
 
 export type Completion = (
 	query: string,
@@ -38,7 +39,7 @@ export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<GetPromptResult> | GetPromptResult;
-};
+} & Icons;
 
 export type StoredResource =
 	| {
@@ -54,7 +55,7 @@ export type StoredResource =
 				uri: string,
 				params: Record<string, string | string[]>,
 			) => Promise<ReadResourceResult> | ReadResourceResult;
-	  }
+	  } & Icons
 	| {
 			description: string;
 			name: string;
@@ -64,7 +65,7 @@ export type StoredResource =
 			execute: (
 				uri: string,
 			) => Promise<ReadResourceResult> | ReadResourceResult;
-	  };
+	  } & Icons;
 
 export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	capabilities?: ServerCapabilities;
@@ -77,12 +78,6 @@ export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	logging?: {
 		default: LoggingLevel;
 	}
-};
-
-export type ServerInfo = {
-	name: string;
-	version: string;
-	description: string;
 };
 
 export type ChangedArgs = {
