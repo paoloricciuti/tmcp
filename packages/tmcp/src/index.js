@@ -4,7 +4,7 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ServerInfo, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations, ClientInfo, ElicitResult, Icons } from "./validation/index.js";
+ * @import { CallToolResult, ReadResourceResult, GetPromptResult, ServerInfo, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations, ClientInfo, ElicitResult, Icons as IconsType } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
@@ -51,6 +51,10 @@ import { should_version_negotiation_fail } from './validation/version.js';
  * @property {string} [sessionId]
  * @property {AuthInfo} [auth]
  * @property {TCustom} [custom]
+ */
+
+/**
+ * @typedef {IconsType} Icons
  */
 
 /**

@@ -185,6 +185,7 @@ declare module 'tmcp' {
 		auth?: AuthInfo | undefined;
 		custom?: TCustom | undefined;
 	};
+	export type Icons = Icons_1;
 	export type ClientCapabilities = ClientCapabilities_1;
 	type Completion = (
 		query: string,
@@ -1171,7 +1172,7 @@ declare module 'tmcp' {
 		 */
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
-	type Icons = v.InferInput<typeof IconsSchema>;
+	type Icons_1 = v.InferInput<typeof IconsSchema>;
 	type ClientCapabilities_1 = v.InferInput<typeof ClientCapabilitiesSchema>;
 	type ServerCapabilities = v.InferInput<typeof ServerCapabilitiesSchema>;
 	type ServerInfo = v.InferInput<typeof ImplementationSchema> & {

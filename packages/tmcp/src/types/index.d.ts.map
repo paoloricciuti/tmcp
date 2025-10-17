@@ -3,6 +3,7 @@
 	"file": "index.d.ts",
 	"names": [
 		"McpServer",
+		"Icons",
 		"ClientCapabilities",
 		"Completion",
 		"ServerOptions",
@@ -24,7 +25,6 @@
 		"CreateMessageResultSchema",
 		"ElicitResultSchema",
 		"CompleteResultSchema",
-		"Icons",
 		"ServerCapabilities",
 		"ServerInfo",
 		"InitializeRequestParams",
@@ -60,6 +60,6 @@
 		null,
 		null
 	],
-	"mappings": ";;;;;cAuGaA,SAASA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aC84CsCC,kBAAkBA;MCz9ClEC,UAAUA;;;;;MAyCVC,aAAaA;;;;;;;;;;;;;MAabC,WAAWA;;;;;;;MAaXC,SAASA;;;;;;;;;;;;ODKRC,qBAAqBA;;;;;;;;;;;OAgHrBC,WAAWA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OAoBXC,oBAAoBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OAUpBC,wBAAwBA;;;;;;;;;;;;;;;;;;;;;;;OA6BxBC,6BAA6BA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OAuB7BC,wBAAwBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OAmMxBC,cAAcA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA8GdC,wBAAwBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA+PxBC,qBAAqBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA6BrBC,qBAAqBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA4GrBC,oBAAoBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OAoEpBC,kBAAkBA;OAuGlBC,gCAAgCA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA8ChCC,yBAAyBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA6GzBC,kBAAkBA;;;;;;;;;;;;;;;;;;OAkFlBC,oBAAoBA;;;;;;;;;;;;;;;;;;;;;MA2HcC,KAAKA;;MAMQC,kBAAkBA;MAOKC,UAAUA;;;MAG5BC,uBAAuBA;;;;;;;;;;;MAO5BC,kBAAkBA;MAGrBC,eAAeA;MAGhBC,cAAcA;MAGFC,0BAA0BA;MAGjCC,mBAAmBA;MAY9BC,QAAQA;MAMDC,eAAeA;MAGlBC,YAAYA;MAGTC,eAAeA;MAGlBC,YAAYA;;ME/iD7DC,IAAIA;;;;;;;MAOJC,cAAcA;;;;;;;MAOdC,cAAcA;;;;;MAKdC,qBAAqBA;;;;;;;;;;;;;;;;;MAiBrBC,4BAA4BA;;;;;;MAMrBC,2BAA2BA;;;;;;;OCjC1BC,iBAAiBA;;;;;;;;;;;;;;;;cAAjBA,iBAAiBA",
+	"mappings": ";;;;;cA2GaA,SAASA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aCu4CyBC,KAAKA;aAGQC,kBAAkBA;MCz9ClEC,UAAUA;;;;;MAyCVC,aAAaA;;;;;;;;;;;;;MAabC,WAAWA;;;;;;;MAaXC,SAASA;;;;;;;;;;;;ODKRC,qBAAqBA;;;;;;;;;;;OAgHrBC,WAAWA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OAoBXC,oBAAoBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OAUpBC,wBAAwBA;;;;;;;;;;;;;;;;;;;;;;;OA6BxBC,6BAA6BA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OAuB7BC,wBAAwBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OAmMxBC,cAAcA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA8GdC,wBAAwBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA+PxBC,qBAAqBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA6BrBC,qBAAqBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA4GrBC,oBAAoBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OAoEpBC,kBAAkBA;OAuGlBC,gCAAgCA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA8ChCC,yBAAyBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;OA6GzBC,kBAAkBA;;;;;;;;;;;;;;;;;;OAkFlBC,oBAAoBA;;;;;;;;;;;;;;;;;;;;;;;MAiI2BC,kBAAkBA;MAOKC,UAAUA;;;MAG5BC,uBAAuBA;;;;;;;;;;;MAO5BC,kBAAkBA;MAGrBC,eAAeA;MAGhBC,cAAcA;MAGFC,0BAA0BA;MAGjCC,mBAAmBA;MAY9BC,QAAQA;MAMDC,eAAeA;MAGlBC,YAAYA;MAGTC,eAAeA;MAGlBC,YAAYA;;ME/iD7DC,IAAIA;;;;;;;MAOJC,cAAcA;;;;;;;MAOdC,cAAcA;;;;;MAKdC,qBAAqBA;;;;;;;;;;;;;;;;;MAiBrBC,4BAA4BA;;;;;;MAMrBC,2BAA2BA;;;;;;;OCjC1BC,iBAAiBA;;;;;;;;;;;;;;;;cAAjBA,iBAAiBA",
 	"ignoreList": []
 }
