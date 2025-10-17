@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.15.1
+
+### Patch Changes
+
+- b9a0498: fix: export `Icons` types
+
 ## 1.15.0
 
 ### Minor Changes
