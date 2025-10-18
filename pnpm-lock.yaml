@@ -142,7 +142,7 @@ importers:
         version: 7.0.15
       zod:
         specifier: ^4.0.5
-        version: 4.0.13
+        version: 4.1.12
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
@@ -164,10 +164,10 @@ importers:
         version: 7.0.15
       zod:
         specifier: ^3.0.0
-        version: 3.25.76
+        version: 4.1.12
       zod-to-json-schema:
         specifier: ^3.24.6
-        version: 3.24.6(zod@3.25.76)
+        version: 3.24.6(zod@4.1.12)
     devDependencies:
       dts-buddy:
         specifier: ^0.6.2
@@ -2925,8 +2925,8 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.0.13:
-    resolution: {integrity: sha512-jv+zRxuZQxTrFHzxZ46ezL2FtnE+M4HIJHJEwLsZ7UjrXHltdG6HrxvqM0twoVCWxJiYf8WqKjAcjztegpkB+Q==}
+  zod@4.1.12:
+    resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
 
 snapshots:
 
@@ -5370,6 +5370,10 @@ snapshots:
     dependencies:
       zod: 3.25.76
 
+  zod-to-json-schema@3.24.6(zod@4.1.12):
+    dependencies:
+      zod: 4.1.12
+
   zod@3.25.76: {}
 
-  zod@4.0.13: {}
+  zod@4.1.12: {}
