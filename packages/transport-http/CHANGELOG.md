@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.7.0
+
+### Minor Changes
+
+- 509eb41: feat: setting `options.path` to null respond on every path
+
 ## 0.6.3
 
 ### Patch Changes
