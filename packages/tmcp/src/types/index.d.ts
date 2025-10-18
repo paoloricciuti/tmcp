@@ -186,7 +186,17 @@ declare module 'tmcp' {
 		custom?: TCustom | undefined;
 	};
 	export type Icons = Icons_1;
+	export type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = CallToolResult_1<TStructuredContent>;
+	export type ReadResourceResult = ReadResourceResult_1;
+	export type GetPromptResult = GetPromptResult_1;
 	export type ClientCapabilities = ClientCapabilities_1;
+	export type ServerInfo = ServerInfo_1;
+	export type CreateMessageRequestParams = CreateMessageRequestParams_1;
+	export type CreateMessageResult = CreateMessageResult_1;
+	export type Resource = Resource_1;
+	export type LoggingLevel = LoggingLevel_1;
+	export type ClientInfo = ClientInfo_1;
+	export type ElicitResult = ElicitResult_1;
 	type Completion = (
 		query: string,
 		context: { arguments: Record<string, string> },
@@ -201,7 +211,7 @@ declare module 'tmcp' {
 			prompts?: { size?: number };
 		};
 		logging?: {
-			default: LoggingLevel;
+			default: LoggingLevel_1;
 		}
 	};
 
@@ -1175,11 +1185,12 @@ declare module 'tmcp' {
 	type Icons_1 = v.InferInput<typeof IconsSchema>;
 	type ClientCapabilities_1 = v.InferInput<typeof ClientCapabilitiesSchema>;
 	type ServerCapabilities = v.InferInput<typeof ServerCapabilitiesSchema>;
-	type ServerInfo = v.InferInput<typeof ImplementationSchema> & {
+	type ClientInfo_1 = v.InferInput<typeof ImplementationSchema>;
+	type ServerInfo_1 = v.InferInput<typeof ImplementationSchema> & {
 		description?: string;
 	};
 	type InitializeRequestParams = v.InferInput<typeof InitializeRequestParamsSchema>;
-	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
+	type CallToolResult_1<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;
 		isError?: boolean;
 	} : ({
@@ -1189,16 +1200,16 @@ declare module 'tmcp' {
 		isError: true;
 		structuredContent?: TStructuredContent;
 	}));
-	type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
-	type GetPromptResult = v.InferInput<typeof GetPromptResultSchema>;
+	type ReadResourceResult_1 = v.InferInput<typeof ReadResourceResultSchema>;
+	type GetPromptResult_1 = v.InferInput<typeof GetPromptResultSchema>;
 	type CompleteResult = v.InferInput<typeof CompleteResultSchema>;
-	type CreateMessageRequestParams = v.InferInput<typeof CreateMessageRequestParamsSchema>;
-	type CreateMessageResult = v.InferInput<typeof CreateMessageResultSchema>;
-	type Resource = v.InferInput<typeof ResourceSchema>;
+	type CreateMessageRequestParams_1 = v.InferInput<typeof CreateMessageRequestParamsSchema>;
+	type CreateMessageResult_1 = v.InferInput<typeof CreateMessageResultSchema>;
+	type Resource_1 = v.InferInput<typeof ResourceSchema>;
 	type JSONRPCResponse = v.InferInput<typeof JSONRPCResponseSchema>;
-	type LoggingLevel = v.InferInput<typeof LoggingLevelSchema>;
+	type LoggingLevel_1 = v.InferInput<typeof LoggingLevelSchema>;
 	type ToolAnnotations = v.InferInput<typeof ToolAnnotationsSchema>;
-	type ElicitResult = v.InferInput<typeof ElicitResultSchema>;
+	type ElicitResult_1 = v.InferInput<typeof ElicitResultSchema>;
 	// Helper type to remove whitespace
 	type Trim<S extends string> = S extends ` ${infer R}`
 		? Trim<R>

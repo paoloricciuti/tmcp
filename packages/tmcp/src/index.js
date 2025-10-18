@@ -4,7 +4,7 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult, ReadResourceResult, GetPromptResult, ServerInfo, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams, CreateMessageResult, Resource, LoggingLevel, ToolAnnotations, ClientInfo, ElicitResult, Icons as IconsType } from "./validation/index.js";
+ * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
@@ -58,6 +58,51 @@ import { should_version_negotiation_fail } from './validation/version.js';
  */
 
 /**
+ * @template {Record<string, unknown> | undefined} TStructuredContent
+ * @typedef {CallToolResultType<TStructuredContent>} CallToolResult
+ */
+
+/**
+ * @typedef {ReadResourceResultType} ReadResourceResult
+ */
+
+/**
+ * @typedef {GetPromptResultType} GetPromptResult
+ */
+
+/**
+ * @typedef {ClientCapabilitiesType} ClientCapabilities
+ */
+
+/**
+ * @typedef {ServerInfoType} ServerInfo
+ */
+
+/**
+ * @typedef {CreateMessageRequestParamsType} CreateMessageRequestParams
+ */
+
+/**
+ * @typedef {CreateMessageResultType} CreateMessageResult
+ */
+
+/**
+ * @typedef {ResourceType} Resource
+ */
+
+/**
+ * @typedef  {LoggingLevelType} LoggingLevel
+ */
+
+/**
+ * @typedef  {ClientInfoType} ClientInfo
+ */
+
+/**
+ * @typedef  {ElicitResultType} ElicitResult
+ */
+
+/**
  * @type {SqidsType | undefined}
  */
 let Sqids;
@@ -96,10 +141,6 @@ async function safe_enabled(enabled) {
 		return false;
 	}
 }
-
-/**
- * @typedef {ClientCapabilitiesType} ClientCapabilities
- */
 
 /**
  * @template {StandardSchemaV1 | undefined} [StandardSchema=undefined]
