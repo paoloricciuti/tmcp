@@ -31,7 +31,8 @@
 		"directory": "packages/transport-sse"
 	},
 	"dependencies": {
-		"@tmcp/session-manager": "workspace:^"
+		"@tmcp/session-manager": "workspace:^",
+		"esm-env": "^1.2.2"
 	},
 	"devDependencies": {
 		"@tmcp/auth": "workspace:^",

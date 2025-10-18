@@ -5,7 +5,7 @@
  */
 
 import { InMemorySessionManager } from '@tmcp/session-manager';
-
+import { DEV } from 'esm-env';
 /**
  * @typedef {{
  * 	origin?: string | string[] | boolean
@@ -20,7 +20,7 @@ import { InMemorySessionManager } from '@tmcp/session-manager';
 /**
  * @typedef {{
  * 	getSessionId?: () => string
- * 	path?: string
+ * 	path?: string | null
  * 	endpoint?: string
  * 	oauth?: OAuth<"built">
  * 	cors?: CorsConfig | boolean
@@ -43,7 +43,7 @@ export class SseTransport {
 	#options;
 
 	/**
-	 * @type {string}
+	 * @type {string | null}
 	 */
 	#path;
 
@@ -74,9 +74,16 @@ export class SseTransport {
 			sessionManager = new InMemorySessionManager(),
 		} = options ?? {
 			getSessionId: () => crypto.randomUUID(),
-			path: '/sse',
 			endpoint: '/message',
 		};
+
+		if (options?.path === undefined && DEV) {
+			// TODO: remove on 1.0.0 release
+			console.warn(
+				"[tmcp][transport-sse] `options.path` is `undefined`, in future versions passing `undefined` will default to respond on all paths. To keep the current behavior, explicitly set `path` to '/sse' or your desired path.",
+			);
+		}
+
 		if (oauth) {
 			this.#oauth = oauth;
 		}
@@ -397,7 +404,7 @@ export class SseTransport {
 		// Check if the request path matches the configured SSE path
 		if (
 			request.method === 'GET'
-				? url.pathname !== this.#path
+				? url.pathname !== this.#path && this.#path !== null
 				: url.pathname !== this.#endpoint
 		) {
 			return null;
