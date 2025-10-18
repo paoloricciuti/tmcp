@@ -1,5 +1,11 @@
 # @tmcp/transport-sse
 
+## 0.4.0
+
+### Minor Changes
+
+- 509eb41: feat: setting `options.path` to null respond on every path
+
 ## 0.3.3
 
 ### Patch Changes
