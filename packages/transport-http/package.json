@@ -38,7 +38,7 @@
 	},
 	"devDependencies": {
 		"@modelcontextprotocol/sdk": "^1.17.1",
-		"@remix-run/node-fetch-server": "^0.8.0",
+		"@remix-run/node-fetch-server": "^0.10.0",
 		"@tmcp/adapter-valibot": "workspace:^",
 		"@tmcp/auth": "workspace:^",
 		"@types/node": "^24.0.15",
