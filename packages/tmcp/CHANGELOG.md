@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.15.2
+
+### Patch Changes
+
+- dfa29f2: fix: export more types
+
 ## 1.15.1
 
 ### Patch Changes
