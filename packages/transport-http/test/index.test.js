@@ -12,6 +12,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import * as v from 'valibot';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HttpTransport } from '../src/index.js';
 import { new_server, server, set_custom_ctx } from './server.js';
 
 /**
@@ -752,6 +753,46 @@ describe('HTTP Transport', () => {
 					arguments: {},
 				}),
 			).rejects.toThrow('Tool non-existent not found');
+		});
+	});
+
+	describe('configuration', () => {
+		it('responds on any path when configured with a null path', async () => {
+			const transport = new HttpTransport(mcp_server, {
+				path: null,
+				getSessionId: () => 'session-id',
+			});
+
+			const response = await transport.respond(
+				new Request('http://localhost/custom', {
+					method: 'GET',
+					headers: {
+						'mcp-session-id': 'session-id',
+					},
+				}),
+			);
+
+			expect(response).not.toBeNull();
+			expect(response?.status).toBe(200);
+			expect(response?.headers.get('content-type')).toBe(
+				'text/event-stream',
+			);
+			await response?.body?.cancel();
+		});
+
+		it('emits a warning when no path is provided in development', () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+			try {
+				new HttpTransport(mcp_server, {
+					getSessionId: () => 'session-id',
+				});
+				expect(warn).toHaveBeenCalledWith(
+					"[tmcp][transport-http] `options.path` is undefined, in future versions passing `undefined` will default to respond on all paths. To keep the current behavior, explicitly set `path` to '/mcp' or your desired path.",
+				);
+			} finally {
+				warn.mockRestore();
+			}
 		});
 	});
 });

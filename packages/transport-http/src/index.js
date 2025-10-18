@@ -18,7 +18,7 @@
 /**
  * @typedef {{
  * 	getSessionId?: () => string
- * 	path?: string
+ * 	path?: string | null
  * 	oauth?: OAuth<"built">
  * 	cors?: CorsConfig | boolean,
  * 	sessionManager?: SessionManager
@@ -27,6 +27,7 @@
 
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { InMemorySessionManager } from '@tmcp/session-manager';
+import { DEV } from 'esm-env';
 
 /**
  * @template {Record<string, unknown> | undefined} [TCustom=undefined]
@@ -43,7 +44,7 @@ export class HttpTransport {
 	#options;
 
 	/**
-	 * @type {string}
+	 * @type {string | null}
 	 */
 	#path;
 
@@ -75,6 +76,13 @@ export class HttpTransport {
 		} = options ?? {
 			getSessionId: () => crypto.randomUUID(),
 		};
+
+		if (options?.path === undefined && DEV) {
+			// TODO: remove on 1.0.0 release
+			console.warn(
+				"[tmcp][transport-http] `options.path` is undefined, in future versions passing `undefined` will default to respond on all paths. To keep the current behavior, explicitly set `path` to '/mcp' or your desired path.",
+			);
+		}
 
 		if (oauth) {
 			this.#oauth = oauth;
@@ -415,7 +423,7 @@ export class HttpTransport {
 		}
 
 		// Check if the request path matches the configured MCP path
-		if (url.pathname !== this.#path) {
+		if (url.pathname !== this.#path && this.#path !== null) {
 			return null;
 		}
 

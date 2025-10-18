@@ -34,7 +34,8 @@
 		"directory": "packages/transport-http"
 	},
 	"dependencies": {
-		"@tmcp/session-manager": "workspace:^"
+		"@tmcp/session-manager": "workspace:^",
+		"esm-env": "^1.2.2"
 	},
 	"devDependencies": {
 		"@modelcontextprotocol/sdk": "^1.17.1",

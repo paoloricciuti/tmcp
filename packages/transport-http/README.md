@@ -72,13 +72,16 @@ httpServer.listen(3000, () => {
 
 ```javascript
 const transport = new HttpTransport(server, {
-	// Custom MCP endpoint path (default: '/mcp')
+	// Custom MCP endpoint path (default: '/mcp', use null to respond on every path)
 	path: '/api/mcp',
 	// Custom session ID generation
 	getSessionId: () => {
 		return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 	},
 });
+
+> [!NOTE]
+> When the transport runs in development mode and you omit the `path` option, a warning is emitted. Future releases will treat an `undefined` path as "respond on every path", so set the property explicitly (for example `path: '/mcp'` or `path: null`) to lock in the behavior you want today.
 ```
 
 ### With Custom Context
@@ -162,7 +165,7 @@ const transport = new HttpTransport(server, {
 - **🌐 HTTP/SSE Communication**: Uses Server-Sent Events for real-time bidirectional communication
 - **🔄 Session Management**: Maintains client sessions with automatic session ID generation
 - **📡 Streaming Responses**: Supports streaming responses through SSE
-- **🛤️ Configurable Path**: Customizable MCP endpoint path with automatic filtering
+- **🛤️ Configurable Path**: Customizable MCP endpoint path with automatic filtering (set `path` to `null` to respond everywhere)
 - **🔧 Framework Agnostic**: Works with any HTTP server framework (Fastify, Bun, Deno, etc.)
 - **⚡ Real-time Updates**: Server can push notifications and updates to connected clients
 - **🛡️ Error Handling**: Graceful error handling for malformed requests
@@ -190,7 +193,7 @@ Creates a new HTTP transport instance.
 ```typescript
 interface HttpTransportOptions {
 	getSessionId: () => string; // Custom session ID generator
-	path?: string; // MCP endpoint path (default: '/mcp')
+	path?: string | null; // MCP endpoint path (default: '/mcp', null responds on every path)
 	oauth?: OAuth; // an oauth provider generated from @tmcp/auth
 	sessionManager?: SessionManager; // Custom session manager (default: InMemorySessionManager)
 }

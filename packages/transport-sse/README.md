@@ -71,7 +71,7 @@ httpServer.listen(3000, () => {
 
 ```javascript
 const transport = new SseTransport(server, {
-	// Custom SSE endpoint path (default: '/sse')
+	// Custom SSE endpoint path (default: '/sse', use null to respond on every path)
 	path: '/api/events',
 	// Custom message endpoint path (default: '/message')
 	endpoint: '/api/message',
@@ -81,6 +81,9 @@ const transport = new SseTransport(server, {
 	},
 	oauth: OAuth; // an oauth provider generated from @tmcp/auth
 });
+
+> [!NOTE]
+> In development you'll see a warning when the `path` option is omitted. Upcoming releases will interpret an `undefined` path as "respond on every path", so set the field explicitly (for example `path: '/sse'` or `path: null`) to keep the behaviour you expect.
 ```
 
 ### With Custom Context
@@ -184,7 +187,7 @@ Creates a new SSE transport instance.
 ```typescript
 interface SseTransportOptions {
 	getSessionId?: () => string; // Custom session ID generator
-	path?: string; // SSE endpoint path (default: '/sse')
+	path?: string | null; // SSE endpoint path (default: '/sse', null responds on every path)
 	endpoint?: string; // Message endpoint path (default: '/message')
 	oauth?: OAuth; // an oauth provider generated from @tmcp/auth
 	sessionManager?: SessionManager; // Custom session manager (default: InMemorySessionManager)
