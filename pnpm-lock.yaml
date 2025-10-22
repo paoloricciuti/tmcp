@@ -342,8 +342,8 @@ importers:
         specifier: ^1.17.1
         version: 1.20.1
       '@remix-run/node-fetch-server':
-        specifier: ^0.10.0
-        version: 0.10.0
+        specifier: ^0.11.0
+        version: 0.11.0
       '@tmcp/adapter-valibot':
         specifier: workspace:^
         version: link:../adapter-valibot
@@ -1207,8 +1207,8 @@ packages:
     peerDependencies:
       '@redis/client': ^5.8.3
 
-  '@remix-run/node-fetch-server@0.10.0':
-    resolution: {integrity: sha512-FmYaJHQKEPrT0UFo5KaLTmrm4F6dz5DJBzRY42H93w8FpVg5zKifNWGbH+wYsyExyWVgVrOsifS7IGFtz7HkSA==}
+  '@remix-run/node-fetch-server@0.11.0':
+    resolution: {integrity: sha512-nCrFHVxDFioSHc0g/3m5ztwgjBt7g8qh/UwmYkDjuMePKFepMKfNGgH5S6L7iXKX+jUrf3ooVmhx3NGIoa9iYA==}
 
   '@rollup/rollup-android-arm-eabi@4.46.2':
     resolution: {integrity: sha512-Zj3Hl6sN34xJtMv7Anwb5Gu01yujyE/cLBDB2gnHTAHaWS1Z38L7kuSG+oAh0giZMqG060f/YBStXtMH6FvPMA==}
@@ -3752,7 +3752,7 @@ snapshots:
     dependencies:
       '@redis/client': 5.8.3
 
-  '@remix-run/node-fetch-server@0.10.0': {}
+  '@remix-run/node-fetch-server@0.11.0': {}
 
   '@rollup/rollup-android-arm-eabi@4.46.2':
     optional: true
