@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.7.1
+
+### Patch Changes
+
+- 4a7fa68: fix: send a comment when sse start to flush headers
+
 ## 0.7.0
 
 ### Minor Changes
