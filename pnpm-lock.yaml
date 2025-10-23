@@ -83,7 +83,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
@@ -105,7 +105,7 @@ importers:
         version: 3.18.4
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
@@ -127,7 +127,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
@@ -149,7 +149,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
@@ -174,7 +174,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
@@ -205,7 +205,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
@@ -242,7 +242,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
 
   packages/session-manager-durable-objects:
     dependencies:
@@ -258,7 +258,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
 
   packages/session-manager-postgres:
     dependencies:
@@ -277,7 +277,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
 
   packages/session-manager-redis:
     dependencies:
@@ -293,7 +293,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
 
   packages/tmcp:
     dependencies:
@@ -324,7 +324,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.9.1)
@@ -358,7 +358,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
@@ -386,7 +386,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
@@ -401,7 +401,7 @@ importers:
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
-        version: 0.3.14
+        version: 0.3.15
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
@@ -2234,8 +2234,8 @@ packages:
   package-manager-detector@0.2.11:
     resolution: {integrity: sha512-BEnLolu+yuz22S56CU1SUKq3XC3PkwD5wv4ikR4MfGvnRVcmzXR9DwSlW2fEamyTPyXHomBJRzgapeuBvRNzJQ==}
 
-  package-manager-detector@1.4.1:
-    resolution: {integrity: sha512-dSMiVLBEA4XaNJ0PRb4N5cV/SEP4BWrWZKBmfF+OUm2pQTiZ6DDkKeWaltwu3JRhLoy59ayIkJ00cx9K9CaYTg==}
+  package-manager-detector@1.5.0:
+    resolution: {integrity: sha512-uBj69dVlYe/+wxj8JOpr97XfsxH/eumMt6HqjNTmJDf/6NO9s+0uxeOneIz3AsPt2m6y9PqzDzd3ATcU17MNfw==}
 
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
@@ -2378,8 +2378,8 @@ packages:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
     engines: {node: '>= 0.10'}
 
-  publint@0.3.14:
-    resolution: {integrity: sha512-14/VNBvWsrBeqWNDw8c/DK5ERcZBUwL1rnkVx18cQnF3zadr3GfoYtvD8mxi1dhkWpaPHp8kfi92MDbjMeW3qw==}
+  publint@0.3.15:
+    resolution: {integrity: sha512-xPbRAPW+vqdiaKy5sVVY0uFAu3LaviaPO3pZ9FaRx59l9+U/RKR1OEbLhkug87cwiVKxPXyB4txsv5cad67u+A==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -4741,7 +4741,7 @@ snapshots:
     dependencies:
       quansync: 0.2.11
 
-  package-manager-detector@1.4.1: {}
+  package-manager-detector@1.5.0: {}
 
   parent-module@1.0.1:
     dependencies:
@@ -4847,10 +4847,10 @@ snapshots:
       forwarded: 0.2.0
       ipaddr.js: 1.9.1
 
-  publint@0.3.14:
+  publint@0.3.15:
     dependencies:
       '@publint/pack': 0.1.2
-      package-manager-detector: 1.4.1
+      package-manager-detector: 1.5.0
       picocolors: 1.1.1
       sade: 1.8.1
 
