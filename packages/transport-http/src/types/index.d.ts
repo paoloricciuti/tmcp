@@ -19,7 +19,7 @@ declare module '@tmcp/transport-http' {
 	};
 	export type HttpTransportOptions = {
 		getSessionId?: () => string;
-		path?: string;
+		path?: string | null;
 		oauth?: OAuth<"built">;
 		cors?: CorsConfig | boolean;
 		sessionManager?: SessionManager;

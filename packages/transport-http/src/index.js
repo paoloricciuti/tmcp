@@ -213,6 +213,7 @@ export class HttpTransport {
 	 */
 	async #handle_get(session_id) {
 		const sessions = this.#options.sessionManager;
+		const text_encoder = this.#text_encoder;
 		// If session already exists, return error
 		const existing_session = await sessions.has(session_id);
 		if (existing_session) {
@@ -240,6 +241,8 @@ export class HttpTransport {
 		const stream = new ReadableStream({
 			async start(controller) {
 				await sessions.create(session_id, controller);
+				// send a comment to flush the headers immediately
+				controller.enqueue(text_encoder.encode(': connected\n\n'));
 			},
 			async cancel() {
 				await sessions.delete(session_id);
@@ -325,18 +328,21 @@ export class HttpTransport {
 
 			const messages = Array.isArray(body) ? body : [body];
 
+			const has_request = messages.some((message) => message.id != null);
+
 			// Determine status code based on response type
 			// 202 Accepted for notifications/responses, 200 OK for standard requests
-			const status = !messages.some((message) => message.id != null)
-				? 202
-				: 200;
+			const status = !has_request ? 202 : 200;
 
-			return new Response(stream, {
-				headers: {
-					'Content-Type': 'text/event-stream',
-					'Cache-Control': 'no-cache',
-					'mcp-session-id': session_id,
-				},
+			return new Response(has_request ? stream : null, {
+				headers: has_request
+					? {
+							'Content-Type': 'text/event-stream',
+							'Cache-Control': 'no-cache',
+							connection: 'keep-alive',
+							'mcp-session-id': session_id,
+						}
+					: undefined,
 				status,
 			});
 		} catch (error) {
