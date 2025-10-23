@@ -523,7 +523,7 @@ declare module 'tmcp' {
 		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 		 * for notes on _meta usage.
 		 */
-		readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
 		readonly name: v.StringSchema<undefined>;
 		/**
@@ -557,7 +557,7 @@ declare module 'tmcp' {
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>, v.ObjectSchema<{
 			/**
 			 * A base64-encoded string representing the binary data of the item.
@@ -575,7 +575,7 @@ declare module 'tmcp' {
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>, undefined>;
 		/**
 		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
@@ -603,7 +603,7 @@ declare module 'tmcp' {
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			}, undefined>, v.ObjectSchema<{
 				readonly type: v.LiteralSchema<"image", undefined>;
 				/**
@@ -618,7 +618,7 @@ declare module 'tmcp' {
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			}, undefined>, v.ObjectSchema<{
 				readonly type: v.LiteralSchema<"audio", undefined>;
 				/**
@@ -633,7 +633,7 @@ declare module 'tmcp' {
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			}, undefined>, v.ObjectSchema<{
 				readonly type: v.LiteralSchema<"resource_link", undefined>;
 				/**
@@ -682,7 +682,7 @@ declare module 'tmcp' {
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 				/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
 				readonly name: v.StringSchema<undefined>;
 				/**
@@ -713,7 +713,7 @@ declare module 'tmcp' {
 					 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 					 * for notes on _meta usage.
 					 */
-					readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+					readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 				}, undefined>, v.ObjectSchema<{
 					/**
 					 * A base64-encoded string representing the binary data of the item.
@@ -731,13 +731,13 @@ declare module 'tmcp' {
 					 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 					 * for notes on _meta usage.
 					 */
-					readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+					readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 				}, undefined>], undefined>;
 				/**
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			}, undefined>], undefined>;
 		}, undefined>, undefined>;
 		/**
@@ -815,7 +815,7 @@ declare module 'tmcp' {
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>, v.ObjectSchema<{
 			readonly type: v.LiteralSchema<"image", undefined>;
 			/**
@@ -830,7 +830,7 @@ declare module 'tmcp' {
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>, v.ObjectSchema<{
 			readonly type: v.LiteralSchema<"audio", undefined>;
 			/**
@@ -845,7 +845,7 @@ declare module 'tmcp' {
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>, v.ObjectSchema<{
 			readonly type: v.LiteralSchema<"resource_link", undefined>;
 			/**
@@ -894,7 +894,7 @@ declare module 'tmcp' {
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
 			readonly name: v.StringSchema<undefined>;
 			/**
@@ -925,7 +925,7 @@ declare module 'tmcp' {
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			}, undefined>, v.ObjectSchema<{
 				/**
 				 * A base64-encoded string representing the binary data of the item.
@@ -943,13 +943,13 @@ declare module 'tmcp' {
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			}, undefined>], undefined>;
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>, undefined>, readonly []>;
 		/**
 		 * An object containing structured tool output.
@@ -995,7 +995,7 @@ declare module 'tmcp' {
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			}, undefined>, v.ObjectSchema<{
 				readonly type: v.LiteralSchema<"image", undefined>;
 				/**
@@ -1010,7 +1010,7 @@ declare module 'tmcp' {
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			}, undefined>, v.ObjectSchema<{
 				readonly type: v.LiteralSchema<"audio", undefined>;
 				/**
@@ -1025,7 +1025,7 @@ declare module 'tmcp' {
 				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 				 * for notes on _meta usage.
 				 */
-				readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			}, undefined>], undefined>;
 		}, undefined>, undefined>;
 		/**
@@ -1102,7 +1102,7 @@ declare module 'tmcp' {
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>, v.ObjectSchema<{
 			readonly type: v.LiteralSchema<"image", undefined>;
 			/**
@@ -1117,7 +1117,7 @@ declare module 'tmcp' {
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>, v.ObjectSchema<{
 			readonly type: v.LiteralSchema<"audio", undefined>;
 			/**
@@ -1132,7 +1132,7 @@ declare module 'tmcp' {
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.
 			 */
-			readonly _meta: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>;
 		/**
 		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)

@@ -465,7 +465,7 @@ export const ResourceContentsSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 });
 export const TextResourceContentsSchema = v.object({
 	...ResourceContentsSchema.entries,
@@ -511,7 +511,7 @@ export const ResourceSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 	...IconsSchema.entries,
 });
 
@@ -542,7 +542,7 @@ export const ResourceTemplateSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 	...IconsSchema.entries,
 });
 
@@ -701,7 +701,7 @@ export const PromptSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 	...IconsSchema.entries,
 });
 
@@ -757,7 +757,7 @@ export const TextContentSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 });
 
 /**
@@ -780,7 +780,7 @@ export const ImageContentSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 });
 
 /**
@@ -803,7 +803,7 @@ export const AudioContentSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 });
 
 /**
@@ -817,7 +817,7 @@ export const EmbeddedResourceSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 });
 
 /**
@@ -966,7 +966,7 @@ export const ToolSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 	...IconsSchema.entries,
 });
 
@@ -1436,7 +1436,7 @@ export const RootSchema = v.object({
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.object({})),
+	_meta: v.optional(v.looseObject({})),
 });
 
 /**
