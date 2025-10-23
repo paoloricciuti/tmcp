@@ -26,7 +26,7 @@
 	"dependencies": {
 		"@standard-schema/spec": "^1.0.0",
 		"@types/json-schema": "^7.0.15",
-		"pkce-challenge": "^4.1.0",
+		"pkce-challenge": "^5.0.0",
 		"valibot": "^1.1.0"
 	},
 	"keywords": [
