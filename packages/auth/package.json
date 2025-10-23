@@ -48,7 +48,7 @@
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^",
-		"vitest": "^3.2.4"
+		"vitest": "^4.0.0"
 	},
 	"publishConfig": {
 		"access": "public"

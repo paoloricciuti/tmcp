@@ -47,7 +47,7 @@
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^",
 		"valibot": "^1.1.0",
-		"vitest": "^3.2.4"
+		"vitest": "^4.0.0"
 	},
 	"publishConfig": {
 		"access": "public"
