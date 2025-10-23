@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.15.3
+
+### Patch Changes
+
+- 5b62c34: fix: use `looseObject` for all `_meta` fields
+
 ## 1.15.2
 
 ### Patch Changes
