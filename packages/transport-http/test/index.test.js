@@ -35,7 +35,7 @@ let mcp_server;
  */
 let sse_connected;
 
-describe.sequential('HTTP Transport', () => {
+describe('HTTP Transport', () => {
 	beforeEach(async () => {
 		/**
 		 * @type {()=>void};
