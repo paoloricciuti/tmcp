@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.15.4
+
+### Patch Changes
+
+- 98de0e6: fix: return `isError` result from `tools/call` instead of `MCPError`
+
 ## 1.15.3
 
 ### Patch Changes
