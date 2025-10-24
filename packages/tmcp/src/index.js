@@ -467,7 +467,15 @@ export class McpServer {
 			async ({ name, arguments: args }) => {
 				const tool = this.#tools.get(name);
 				if (!tool) {
-					throw new McpError(-32601, `Tool ${name} not found`);
+					return /** @type {CallToolResult<any>} */ ({
+						isError: true,
+						content: [
+							{
+								type: 'text',
+								text: `Tool ${name} not found`,
+							},
+						],
+					});
 				}
 
 				// Validate input arguments if schema is provided
@@ -478,10 +486,15 @@ export class McpServer {
 					if (validation_result instanceof Promise)
 						validation_result = await validation_result;
 					if (validation_result.issues) {
-						throw new McpError(
-							-32602,
-							`Invalid arguments for tool ${name}: ${JSON.stringify(validation_result.issues)}`,
-						);
+						return /** @type {CallToolResult<any>} */ ({
+							isError: true,
+							content: [
+								{
+									type: 'text',
+									text: `Invalid arguments for tool ${name}: ${JSON.stringify(validation_result.issues)}`,
+								},
+							],
+						});
 					}
 					validated_args = validation_result.value;
 				}
@@ -508,10 +521,15 @@ export class McpServer {
 					if (output_validation instanceof Promise)
 						output_validation = await output_validation;
 					if (output_validation.issues) {
-						throw new McpError(
-							-32603,
-							`Tool ${name} returned invalid structured content: ${JSON.stringify(output_validation.issues)}`,
-						);
+						return /** @type {CallToolResult<any>} */ ({
+							isError: true,
+							content: [
+								{
+									type: 'text',
+									text: `Tool ${name} returned invalid structured content: ${JSON.stringify(output_validation.issues)}`,
+								},
+							],
+						});
 					}
 					// Update with validated structured content
 					parsed_result.structuredContent = output_validation.value;

@@ -462,12 +462,144 @@ describe('McpServer', () => {
 			expect(result).toEqual({
 				jsonrpc: '2.0',
 				id: 5,
-				error: expect.objectContaining({
-					code: expect.any(Number),
-					message: expect.stringContaining(
-						'Tool non-existent-tool not found',
-					),
-				}),
+				result: {
+					isError: true,
+					content: [
+						{
+							type: 'text',
+							text: 'Tool non-existent-tool not found',
+						},
+					],
+				},
+			});
+		});
+
+		it('should return error result when tool arguments validation fails', async () => {
+			const validation_error_schema =
+				/** @type {StandardSchemaV1<any>} */ ({
+					'~standard': {
+						validate: vi.fn().mockResolvedValue({
+							issues: [{ message: 'Invalid input' }],
+						}),
+						vendor: 'mock',
+						version: 1,
+					},
+				});
+			const tool = vi.fn();
+
+			server.tool(
+				{
+					name: 'validation-error-tool',
+					description: 'A tool with invalid arguments',
+					schema: validation_error_schema,
+				},
+				tool,
+			);
+
+			const call_request = request({
+				jsonrpc: '2.0',
+				id: 6,
+				method: 'tools/call',
+				params: {
+					name: 'validation-error-tool',
+					arguments: { test: 'value' },
+				},
+			});
+
+			const result = await server.receive(call_request, {
+				sessionId: 'session-1',
+			});
+
+			expect(tool).not.toHaveBeenCalled();
+			expect(result).toEqual({
+				jsonrpc: '2.0',
+				id: 6,
+				result: {
+					isError: true,
+					content: [
+						{
+							type: 'text',
+							text: 'Invalid arguments for tool validation-error-tool: [{"message":"Invalid input"}]',
+						},
+					],
+				},
+			});
+		});
+
+		it('should return error result when structured content validation fails', async () => {
+			const validation_error_schema =
+				/** @type {StandardSchemaV1<any>} */ ({
+					'~standard': {
+						validate: vi.fn().mockResolvedValue({
+							value: { test: 'value' },
+						}),
+						vendor: 'mock',
+						version: 1,
+					},
+				});
+			const failing_output_schema =
+				/** @type {StandardSchemaV1<any>} */ ({
+					'~standard': {
+						validate: vi.fn().mockResolvedValue({
+							issues: [{ message: 'Invalid output' }],
+						}),
+						vendor: 'mock',
+						version: 1,
+					},
+				});
+			const tool = vi.fn().mockResolvedValue({
+				content: [
+					{
+						type: 'text',
+						text: 'structured response',
+					},
+				],
+				structuredContent: { cool: true },
+			});
+
+			server.tool(
+				{
+					name: 'output-validation-tool',
+					description: 'A tool with invalid structured output',
+					schema: validation_error_schema,
+					outputSchema: failing_output_schema,
+				},
+				tool,
+			);
+
+			const call_request = request({
+				jsonrpc: '2.0',
+				id: 7,
+				method: 'tools/call',
+				params: {
+					name: 'output-validation-tool',
+					arguments: { test: 'value' },
+				},
+			});
+
+			const result = await server.receive(call_request, {
+				sessionId: 'session-1',
+			});
+
+			expect(
+				validation_error_schema['~standard'].validate,
+			).toHaveBeenCalledWith({ test: 'value' });
+			expect(tool).toHaveBeenCalledWith({ test: 'value' });
+			expect(
+				failing_output_schema['~standard'].validate,
+			).toHaveBeenCalledWith({ cool: true });
+			expect(result).toEqual({
+				jsonrpc: '2.0',
+				id: 7,
+				result: {
+					isError: true,
+					content: [
+						{
+							type: 'text',
+							text: 'Tool output-validation-tool returned invalid structured content: [{"message":"Invalid output"}]',
+						},
+					],
+				},
 			});
 		});
 	});
