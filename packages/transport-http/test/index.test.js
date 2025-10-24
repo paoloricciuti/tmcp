@@ -63,10 +63,17 @@ describe('HTTP Transport', () => {
 		await promise;
 	});
 
-	afterEach(() => {
-		server.close();
-		client.close();
-		transport.close();
+	afterEach(async () => {
+		// Close client and transport first
+		await client.close();
+		await transport.close();
+
+		// Then close the server and wait for it to fully close
+		await /** @type {Promise<void>} */ (
+			new Promise((resolve) => {
+				server.close(() => resolve());
+			})
+		);
 	});
 
 	describe('basic connection', () => {
