@@ -231,41 +231,65 @@ describe('HTTP Transport', () => {
 			});
 		});
 
-		it('throws an error when calling a tool with invalid input', async () => {
-			await expect(
-				client.callTool({
-					name: 'test-tool',
-					arguments: {
-						input: 123, // Invalid type
+		it('returns an error result when calling a tool with invalid input', async () => {
+			const response = await client.callTool({
+				name: 'test-tool',
+				arguments: {
+					input: 123, // Invalid type
+				},
+			});
+
+			expect(response).toMatchObject({
+				isError: true,
+				content: [
+					{
+						type: 'text',
+						text: expect.stringContaining(
+							'Invalid arguments for tool test-tool',
+						),
 					},
-				}),
-			).rejects.toThrow(
-				'MCP error 0: MCP error -32602: Invalid arguments for tool test-tool: [{"kind":"schema","type":"string","input":123,"expected":"string","received":"123","message":"Invalid type: Expected string but received 123","path":[{"type":"object","origin":"value","input":{"input":123},"key":"input","value":123}]}]',
-			);
+				],
+			});
 		});
 
-		it('throws an error when calling a non-existent tool', async () => {
-			await expect(
-				client.callTool({
-					name: 'non-existent-tool',
-					arguments: {},
-				}),
-			).rejects.toThrow(
-				'MCP error 0: MCP error -32601: Tool non-existent-tool not found',
-			);
+		it('returns an error result when calling a non-existent tool', async () => {
+			const response = await client.callTool({
+				name: 'non-existent-tool',
+				arguments: {},
+			});
+
+			expect(response).toMatchObject({
+				isError: true,
+				content: [
+					{
+						type: 'text',
+						text: expect.stringContaining(
+							'Tool non-existent-tool not found',
+						),
+					},
+				],
+			});
 		});
 
-		it('throws an error when calling a tool with missing required arguments', async () => {
-			await expect(
-				client.callTool({
-					name: 'test-tool-2',
-					arguments: {
-						first: 42, // Missing second argument
+		it('returns an error result when calling a tool with missing required arguments', async () => {
+			const response = await client.callTool({
+				name: 'test-tool-2',
+				arguments: {
+					first: 42, // Missing second argument
+				},
+			});
+
+			expect(response).toMatchObject({
+				isError: true,
+				content: [
+					{
+						type: 'text',
+						text: expect.stringContaining(
+							'Invalid arguments for tool test-tool-2',
+						),
 					},
-				}),
-			).rejects.toThrow(
-				'MCP error 0: MCP error -32602: Invalid arguments for tool test-tool-2: [{"kind":"schema","type":"object","expected":"\\"second\\"","received":"undefined","message":"Invalid key: Expected \\"second\\" but received undefined","path":[{"type":"object","origin":"key","input":{"first":42},"key":"second"}]}]',
-			);
+				],
+			});
 		});
 
 		it('receives a notification when a tool is added', async () => {
@@ -747,12 +771,22 @@ describe('HTTP Transport', () => {
 
 		it('handles malformed requests gracefully', async () => {
 			// This test verifies that the transport handles errors properly
-			await expect(
-				client.callTool({
-					name: 'non-existent',
-					arguments: {},
-				}),
-			).rejects.toThrow('Tool non-existent not found');
+			const response = await client.callTool({
+				name: 'non-existent',
+				arguments: {},
+			});
+
+			expect(response).toMatchObject({
+				isError: true,
+				content: [
+					{
+						type: 'text',
+						text: expect.stringContaining(
+							'Tool non-existent not found',
+						),
+					},
+				],
+			});
 		});
 	});
 

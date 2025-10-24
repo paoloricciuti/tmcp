@@ -78,7 +78,7 @@ export function new_server(options = DEFAULT_OPTIONS) {
 		 */
 		setup(cb) {
 			cb(mcp_server);
-			transport = new HttpTransport(mcp_server);
+			transport = new HttpTransport(mcp_server, { path: '/mcp' });
 			/**
 			 * @type {Promise<void>}
 			 */
@@ -118,7 +118,6 @@ export const server = createServer(
 			);
 		} finally {
 			if (request.method === 'GET' && url.pathname === '/mcp') {
-				console.log('SSE connection established');
 				sse_connected_resolve?.();
 			}
 		}
