@@ -35,40 +35,40 @@ let mcp_server;
  */
 let sse_connected;
 
-beforeEach(async () => {
-	/**
-	 * @type {()=>void};
-	 */
-	let resolve;
+describe.sequential('HTTP Transport', () => {
+	beforeEach(async () => {
+		/**
+		 * @type {()=>void};
+		 */
+		let resolve;
 
-	/**
-	 * @type {Promise<void>}
-	 */
-	let promise = new Promise((r) => {
-		resolve = r;
-	});
-	server.listen(3000, 'localhost', async () => {
-		transport = new StreamableHTTPClientTransport(
-			new URL('http://localhost:3000/mcp'),
-		);
-		client = new Client({
-			name: 'example-client',
-			version: '1.0.0',
+		/**
+		 * @type {Promise<void>}
+		 */
+		let promise = new Promise((r) => {
+			resolve = r;
 		});
-		await client.connect(transport);
-		resolve();
+		server.listen(3000, 'localhost', async () => {
+			transport = new StreamableHTTPClientTransport(
+				new URL('http://localhost:3000/mcp'),
+			);
+			client = new Client({
+				name: 'example-client',
+				version: '1.0.0',
+			});
+			await client.connect(transport);
+			resolve();
+		});
+
+		await promise;
 	});
 
-	await promise;
-});
+	afterEach(() => {
+		server.close();
+		client.close();
+		transport.close();
+	});
 
-afterEach(() => {
-	server.close();
-	client.close();
-	transport.close();
-});
-
-describe('HTTP Transport', () => {
 	describe('basic connection', () => {
 		beforeEach(() => {
 			({ mcp_server, sse_connected } = new_server({
