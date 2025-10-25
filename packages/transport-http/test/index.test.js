@@ -11,7 +11,16 @@ import {
 	ToolListChangedNotificationSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import * as v from 'valibot';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from 'vitest';
 import { HttpTransport } from '../src/index.js';
 import { new_server, server, set_custom_ctx } from './server.js';
 
@@ -36,42 +45,50 @@ let mcp_server;
 let sse_connected;
 
 describe('HTTP Transport', () => {
-	beforeEach(async () => {
-		/**
-		 * @type {()=>void};
-		 */
-		let resolve;
+	/**
+	 * @type {()=>void};
+	 */
+	let resolve;
 
-		/**
-		 * @type {Promise<void>}
-		 */
-		let promise = new Promise((r) => {
-			resolve = r;
-		});
+	/**
+	 * @type {Promise<void>}
+	 */
+	let promise = new Promise((r) => {
+		resolve = r;
+	});
+
+	beforeAll(async () => {
 		server.listen(3000, 'localhost', async () => {
-			transport = new StreamableHTTPClientTransport(
-				new URL('http://localhost:3000/mcp'),
-			);
-			client = new Client({
-				name: 'example-client',
-				version: '1.0.0',
-			});
-			await client.connect(transport);
+			console.log('listening');
 			resolve();
 		});
-
 		await promise;
+	});
+
+	beforeEach(async () => {
+		transport = new StreamableHTTPClientTransport(
+			new URL('http://localhost:3000/mcp'),
+		);
+		client = new Client({
+			name: 'example-client',
+			version: '1.0.0',
+		});
+		await client.connect(transport);
 	});
 
 	afterEach(async () => {
 		// Close client and transport first
 		await client.close();
 		await transport.close();
+	});
 
+	afterAll(async () => {
 		// Then close the server and wait for it to fully close
 		await /** @type {Promise<void>} */ (
 			new Promise((resolve) => {
-				server.close(() => resolve());
+				server.close(() => {
+					resolve();
+				});
 			})
 		);
 	});
