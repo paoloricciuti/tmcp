@@ -1,6 +1,6 @@
 {
 	"name": "tmcp",
-	"version": "1.15.4",
+	"version": "1.15.5",
 	"description": "The main tmcp library",
 	"main": "src/index.js",
 	"type": "module",

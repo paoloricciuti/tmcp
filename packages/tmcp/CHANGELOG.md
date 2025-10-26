@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.15.5
+
+### Patch Changes
+
+- 0aeddf8: fix: only send logs to current session
+
 ## 1.15.4
 
 ### Patch Changes
