@@ -206,11 +206,6 @@ export class McpServer {
 	#client_info_map = new Map();
 
 	/**
-	 * @type {Map<string|undefined, string>}
-	 */
-	#negotiated_protocol_versions = new Map();
-
-	/**
 	 * @type {Map<string|undefined, LoggingLevel>}
 	 */
 	#session_log_levels = new Map();
@@ -248,12 +243,6 @@ export class McpServer {
 				// Negotiate protocol version
 				const negotiated_version = negotiate_protocol_version(
 					validated_initialize.protocolVersion,
-				);
-
-				// Store negotiated protocol version
-				this.#negotiated_protocol_versions.set(
-					session_id,
-					negotiated_version,
 				);
 
 				// Store client capabilities
@@ -1192,11 +1181,15 @@ export class McpServer {
 
 		const sessions = [];
 
-		for (let [session_id, session_log_level] of this.#session_log_levels) {
-			// Check if the current log level should be sent based on severity
-			if (this.#should_log(level, session_log_level)) {
-				sessions.push(session_id);
-			}
+		const current_session_level = this.#session_log_levels.get(
+			this.#session_id,
+		);
+
+		if (
+			current_session_level &&
+			this.#should_log(level, current_session_level)
+		) {
+			sessions.push(this.#session_id);
 		}
 
 		if (sessions.length === 0) return;

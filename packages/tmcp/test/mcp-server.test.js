@@ -1033,12 +1033,33 @@ describe('McpServer', () => {
 			});
 		});
 
-		it('should log messages when logging is enabled', () => {
+		it('should log messages when logging is enabled', async () => {
 			const on = vi.fn();
+			server.tool(
+				{
+					name: 'log-test-tool',
+					description: 'A tool for log testing',
+				},
+				() => {
+					server.log('info', 'test message', 'test-logger');
+					return {
+						content: [{ type: 'text', text: 'tool executed' }],
+					};
+				},
+			);
 			server.on('send', on, { once: true });
-			expect(() => {
-				server.log('info', 'test message', 'test-logger');
-			}).not.toThrow();
+
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 3,
+					method: 'tools/call',
+					params: {
+						name: 'log-test-tool',
+					},
+				}),
+				{ sessionId: 'session-1' },
+			);
 
 			expect(on).toHaveBeenCalledWith({
 				context: {
@@ -1960,11 +1981,48 @@ describe('McpServer', () => {
 					),
 				]);
 
+				server.tool(
+					{
+						name: 'log-test-tool',
+						description: 'A tool for log testing',
+					},
+					() => {
+						server.log('info', 'This is an info message');
+						return {
+							content: [{ type: 'text', text: 'tool executed' }],
+						};
+					},
+				);
+
 				const on = vi.fn();
 				const off = server.on('send', on);
 
+				await Promise.all([
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 3,
+							method: 'tools/call',
+							params: {
+								name: 'log-test-tool',
+							},
+						}),
+						{ sessionId: 'log-session-1' },
+					),
+					server.receive(
+						request({
+							jsonrpc: '2.0',
+							id: 3,
+							method: 'tools/call',
+							params: {
+								name: 'log-test-tool',
+							},
+						}),
+						{ sessionId: 'log-session-2' },
+					),
+				]);
+
 				// only sessions with debug level should receive this
-				server.log('info', 'This is an info message');
 				expect(on).toHaveBeenCalledWith({
 					context: {
 						sessions: ['log-session-1'],
