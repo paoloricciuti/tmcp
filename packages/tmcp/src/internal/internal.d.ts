@@ -20,6 +20,7 @@ export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutp
 	outputSchema?: TOutputSchema;
 	title?: string;
 	annotations?: ToolAnnotations;
+	_meta?: Record<string, unknown>;
 	enabled?: () => boolean | Promise<boolean>;
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,

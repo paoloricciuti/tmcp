@@ -260,6 +260,16 @@ describe('McpServer', () => {
 				tool,
 			);
 
+			server.tool(
+				{
+					name: 'list-test-meta',
+					description: 'A tool for list testing 3',
+					title: 'List Test Tool Meta field',
+					_meta: { custom: 'data' },
+				},
+				tool,
+			);
+
 			const list_request = request({
 				jsonrpc: '2.0',
 				id: 2,
@@ -304,6 +314,14 @@ describe('McpServer', () => {
 							},
 							name: 'list-test-tool-schemas',
 							title: 'List Test Tool',
+							icons: undefined,
+						},
+						{
+							name: 'list-test-meta',
+							title: 'List Test Tool Meta field',
+							description: 'A tool for list testing 3',
+							inputSchema: { type: 'object', properties: {} },
+							_meta: { custom: 'data' },
 							icons: undefined,
 						},
 					],

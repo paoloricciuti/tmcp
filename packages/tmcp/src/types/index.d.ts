@@ -54,8 +54,9 @@ declare module 'tmcp' {
 		 *
 		 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 		 * */
-		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations, enabled, icons, }: {
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations, enabled, icons, _meta, }: {
 			name: string;
+			_meta?: Record<string, any>;
 			description: string;
 			title?: string;
 			enabled?: () => boolean | Promise<boolean>;
