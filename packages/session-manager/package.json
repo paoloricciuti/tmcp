@@ -28,6 +28,9 @@
 	},
 	"packageManager": "pnpm@10.19.0",
 	"type": "module",
+	"peerDependencies": {
+		"tmcp": "^1.16.0"
+	},
 	"publishConfig": {
 		"access": "public"
 	},
