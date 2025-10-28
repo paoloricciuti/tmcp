@@ -140,10 +140,16 @@ The SSE transport supports custom session managers for different deployment scen
 #### In-Memory Sessions (Default)
 
 ```javascript
-import { InMemorySessionManager } from '@tmcp/session-manager';
+import {
+	InMemoryStreamSessionManager,
+	InMemoryInfoSessionManager,
+} from '@tmcp/session-manager';
 
 const transport = new SseTransport(server, {
-	sessionManager: new InMemorySessionManager(), // Default behavior
+	sessionManager: {
+		streams: new InMemoryStreamSessionManager(),
+		info: new InMemoryInfoSessionManager(),
+	},
 });
 ```
 
@@ -152,10 +158,16 @@ const transport = new SseTransport(server, {
 For deployments across multiple servers or serverless environments where sessions need to be shared:
 
 ```javascript
-import { RedisSessionManager } from '@tmcp/session-manager-redis';
+import {
+	RedisStreamSessionManager,
+	RedisInfoSessionManager,
+} from '@tmcp/session-manager-redis';
 
 const transport = new SseTransport(server, {
-	sessionManager: new RedisSessionManager('redis://localhost:6379'),
+	sessionManager: {
+		streams: new RedisStreamSessionManager('redis://localhost:6379'),
+		info: new RedisInfoSessionManager('redis://localhost:6379'),
+	},
 });
 ```
 
@@ -164,6 +176,8 @@ const transport = new SseTransport(server, {
 - **Multi-server deployments**: When your application runs on multiple servers and clients might connect to different instances
 - **Serverless deployments**: When your transport is deployed on serverless platforms where instances are ephemeral (attention, serverless environment generally kills SSE request after a not-so-long amount of time, it's generally preferable to use streaming-http)
 - **Load balancing**: When using load balancers that might route requests to different server instances
+
+No matter which backend you choose, the transport stores client capabilities, client info, and log level so you can access them later via `server.ctx.sessionInfo`.
 
 ## API
 
@@ -190,9 +204,14 @@ interface SseTransportOptions {
 	path?: string | null; // SSE endpoint path (default: '/sse', null responds on every path)
 	endpoint?: string; // Message endpoint path (default: '/message')
 	oauth?: OAuth; // an oauth provider generated from @tmcp/auth
-	sessionManager?: SessionManager; // Custom session manager (default: InMemorySessionManager)
+	sessionManager?: {
+		streams?: StreamSessionManager;
+		info?: InfoSessionManager;
+	}; // Provide custom managers; defaults to in-memory implementations
 }
 ```
+
+By default the transport instantiates the in-memory managers. You can mix different backends (for example, Durable Objects for streaming with Redis for metadata) by supplying only the field you want to override.
 
 #### Methods
 

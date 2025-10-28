@@ -1,10 +1,14 @@
 /**
  * @import { AuthInfo, McpServer } from "tmcp";
  * @import { OAuth } from "@tmcp/auth";
- * @import { SessionManager } from "@tmcp/session-manager";
+ * @import { StreamSessionManager, InfoSessionManager } from "@tmcp/session-manager";
  */
 
-import { InMemorySessionManager } from '@tmcp/session-manager';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import {
+	InMemoryStreamSessionManager,
+	InMemoryInfoSessionManager,
+} from '@tmcp/session-manager';
 import { DEV } from 'esm-env';
 /**
  * @typedef {{
@@ -24,7 +28,7 @@ import { DEV } from 'esm-env';
  * 	endpoint?: string
  * 	oauth?: OAuth<"built">
  * 	cors?: CorsConfig | boolean
- *  sessionManager?: SessionManager
+ * 	sessionManager?: { streams?: StreamSessionManager, info?: InfoSessionManager }
  * }} SseTransportOptions
  */
 
@@ -33,12 +37,16 @@ import { DEV } from 'esm-env';
  */
 export class SseTransport {
 	/**
+	 * @typedef {NonNullable<Required<Pick<SseTransportOptions, "sessionManager">["sessionManager"]>>} SessionManager
+	 */
+
+	/**
 	 * @type {McpServer<any, TCustom>}
 	 */
 	#server;
 
 	/**
-	 * @type {Required<Omit<SseTransportOptions, 'oauth' | 'cors'>> & { cors?: CorsConfig | boolean }}
+	 * @type {Required<Omit<SseTransportOptions, 'oauth' | 'cors' | 'sessionManager'>> & { cors?: CorsConfig | boolean, sessionManager: SessionManager }}
 	 */
 	#options;
 
@@ -60,6 +68,11 @@ export class SseTransport {
 	#text_encoder = new TextEncoder();
 
 	/**
+	 * @type {AsyncLocalStorage<string>}
+	 */
+	#session_id_storage = new AsyncLocalStorage();
+
+	/**
 	 * @param {McpServer<any, TCustom>} server
 	 * @param {SseTransportOptions} [options]
 	 */
@@ -71,10 +84,22 @@ export class SseTransport {
 			endpoint = '/message',
 			oauth,
 			cors,
-			sessionManager = new InMemorySessionManager(),
+			sessionManager: _sessionManager = {
+				streams: new InMemoryStreamSessionManager(),
+				info: new InMemoryInfoSessionManager(),
+			},
 		} = options ?? {
 			getSessionId: () => crypto.randomUUID(),
 			endpoint: '/message',
+		};
+
+		/**
+		 * @type {SessionManager}
+		 */
+		const sessionManager = {
+			streams:
+				_sessionManager.streams ?? new InMemoryStreamSessionManager(),
+			info: _sessionManager.info ?? new InMemoryInfoSessionManager(),
 		};
 
 		if (options?.path === undefined && DEV) {
@@ -97,10 +122,51 @@ export class SseTransport {
 		this.#path = this.#options.path;
 		this.#endpoint = this.#options.endpoint;
 
-		// Listen for server send events
-		this.#server.on('send', async ({ request, context: { sessions } }) => {
-			await this.#options.sessionManager.send(
+		this.#server.on('initialize', ({ capabilities, clientInfo }) => {
+			const sessionId = this.#session_id_storage.getStore();
+			if (!sessionId) return;
+			this.#options.sessionManager.info.setClientCapabilities(
+				sessionId,
+				capabilities,
+			);
+			this.#options.sessionManager.info.setClientInfo(
+				sessionId,
+				clientInfo,
+			);
+		});
+
+		this.#server.on('subscription', async ({ uri }) => {
+			const sessionId = this.#session_id_storage.getStore();
+			if (!sessionId) return;
+			this.#options.sessionManager.info.addSubscription(sessionId, uri);
+		});
+
+		this.#server.on('loglevelchange', ({ level }) => {
+			const sessionId = this.#session_id_storage.getStore();
+			if (!sessionId) return;
+			this.#options.sessionManager.info.setLogLevel(sessionId, level);
+		});
+
+		this.#server.on('broadcast', async ({ request }) => {
+			let sessions = undefined;
+			if (request.method === 'notifications/resources/updated') {
+				sessions =
+					await this.#options.sessionManager.info.getSubscriptions(
+						request.params.uri,
+					);
+			}
+			await this.#options.sessionManager.streams.send(
 				sessions,
+				'data: ' + JSON.stringify(request) + '\n\n',
+			);
+		});
+
+		// Listen for server send events
+		this.#server.on('send', async ({ request }) => {
+			const session_id = this.#session_id_storage.getStore();
+			if (!session_id) return;
+			await this.#options.sessionManager.streams.send(
+				[session_id],
 				`data: ${JSON.stringify(request)}\n\n`,
 			);
 		});
@@ -195,7 +261,7 @@ export class SseTransport {
 	async #handle_get(session_id) {
 		// If session already exists, close it first
 		const existing_controller =
-			await this.#options.sessionManager.has(session_id);
+			await this.#options.sessionManager.streams.has(session_id);
 		if (existing_controller) {
 			return new Response(
 				JSON.stringify({
@@ -220,7 +286,7 @@ export class SseTransport {
 		// Create new SSE stream
 		const stream = new ReadableStream({
 			start: async (controller) => {
-				await this.#options.sessionManager.create(
+				await this.#options.sessionManager.streams.create(
 					session_id,
 					controller,
 				);
@@ -237,7 +303,8 @@ export class SseTransport {
 				controller.enqueue(this.#text_encoder.encode(endpoint_event));
 			},
 			cancel: async () => {
-				await this.#options.sessionManager.delete(session_id);
+				await this.#options.sessionManager.streams.delete(session_id);
+				await this.#options.sessionManager.info.delete(session_id);
 			},
 		});
 
@@ -283,14 +350,33 @@ export class SseTransport {
 
 		try {
 			const body = await request.clone().json();
-			const response = await this.#server.receive(body, {
-				sessionId: session_id,
-				auth: auth_info ?? undefined,
-				custom: ctx,
-			});
+			const client_capabilities = await this.#options.sessionManager.info
+				.getClientCapabilities(session_id)
+				.catch(() => undefined);
+			const client_info = await this.#options.sessionManager.info
+				.getClientInfo(session_id)
+				.catch(() => undefined);
+			const log_level = await this.#options.sessionManager.info
+				.getLogLevel(session_id)
+				.catch(() => undefined);
+
+			const response = await this.#session_id_storage.run(
+				session_id,
+				() =>
+					this.#server.receive(body, {
+						sessionId: session_id,
+						auth: auth_info ?? undefined,
+						sessionInfo: {
+							clientCapabilities: client_capabilities,
+							clientInfo: client_info,
+							logLevel: log_level,
+						},
+						custom: ctx,
+					}),
+			);
 
 			const controller =
-				await this.#options.sessionManager.has(session_id);
+				await this.#options.sessionManager.streams.has(session_id);
 
 			if (!controller) {
 				return new Response('SSE connection not established', {
@@ -303,7 +389,7 @@ export class SseTransport {
 			}
 
 			if (response != null) {
-				await this.#options.sessionManager.send(
+				await this.#options.sessionManager.streams.send(
 					[session_id],
 					`data: ${JSON.stringify(response)}\n\n`,
 				);
@@ -333,7 +419,8 @@ export class SseTransport {
 	 * @param {string} session_id
 	 */
 	async #handle_delete(session_id) {
-		await this.#options.sessionManager.delete(session_id);
+		await this.#options.sessionManager.streams.delete(session_id);
+		await this.#options.sessionManager.info.delete(session_id);
 
 		return new Response(null, {
 			status: 200,
