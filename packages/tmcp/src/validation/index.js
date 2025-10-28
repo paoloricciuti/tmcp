@@ -1,4 +1,3 @@
-/* eslint-disable jsdoc/no-undefined-types */
 import * as v from 'valibot';
 export const LATEST_PROTOCOL_VERSION = '2025-06-18';
 export const DEFAULT_NEGOTIATED_PROTOCOL_VERSION = '2025-03-26';
@@ -62,7 +61,7 @@ export const NotificationSchema = v.object({
 	method: v.string(),
 	params: v.optional(BaseNotificationParamsSchema),
 });
-export const ResultSchema = v.object({
+export const ResultSchema = v.looseObject({
 	/**
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.

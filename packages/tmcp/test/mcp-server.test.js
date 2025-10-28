@@ -1080,9 +1080,6 @@ describe('McpServer', () => {
 			);
 
 			expect(on).toHaveBeenCalledWith({
-				context: {
-					sessions: ['session-1'],
-				},
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/message',
@@ -1123,10 +1120,14 @@ describe('McpServer', () => {
 			});
 		});
 
-		it('should handle send events', async () => {
-			const listener = vi.fn();
-			const off = server.on('send', listener);
-			expect(listener).not.toHaveBeenCalled();
+		it('should handle send/broadcast events', async () => {
+			const broadcast_listener = vi.fn();
+			const broadcast_off = server.on('broadcast', broadcast_listener);
+
+			const send_listener = vi.fn();
+			const send_off = server.on('send', send_listener);
+			expect(broadcast_listener).not.toHaveBeenCalled();
+			expect(send_listener).not.toHaveBeenCalled();
 
 			const init_request = request({
 				jsonrpc: '2.0',
@@ -1144,7 +1145,8 @@ describe('McpServer', () => {
 			});
 
 			await server.receive(init_request, { sessionId: 'session-1' });
-			expect(listener).not.toHaveBeenCalled();
+			expect(broadcast_listener).not.toHaveBeenCalled();
+			expect(send_listener).not.toHaveBeenCalled();
 
 			// called when resource list changes
 			server.resource(
@@ -1160,14 +1162,14 @@ describe('McpServer', () => {
 				},
 			);
 
-			expect(listener).toHaveBeenNthCalledWith(1, {
-				context: {},
+			expect(broadcast_listener).toHaveBeenNthCalledWith(1, {
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/resources/list_changed',
 					params: {},
 				},
 			});
+			expect(send_listener).not.toHaveBeenCalled();
 
 			const subscribe_request = request({
 				jsonrpc: '2.0',
@@ -1181,10 +1183,7 @@ describe('McpServer', () => {
 			await server.receive(subscribe_request, { sessionId: 'session-1' });
 			server.changed('resource', 'test://subscribe-resource');
 
-			expect(listener).toHaveBeenNthCalledWith(2, {
-				context: {
-					sessions: ['session-1'],
-				},
+			expect(broadcast_listener).toHaveBeenNthCalledWith(2, {
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/resources/updated',
@@ -1194,6 +1193,7 @@ describe('McpServer', () => {
 					},
 				},
 			});
+			expect(send_listener).not.toHaveBeenCalled();
 
 			server.tool(
 				{
@@ -1208,14 +1208,14 @@ describe('McpServer', () => {
 				},
 			);
 
-			expect(listener).toHaveBeenNthCalledWith(3, {
-				context: {},
+			expect(broadcast_listener).toHaveBeenNthCalledWith(3, {
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/tools/list_changed',
 					params: {},
 				},
 			});
+			expect(send_listener).not.toHaveBeenCalled();
 
 			server.prompt(
 				{
@@ -1237,14 +1237,14 @@ describe('McpServer', () => {
 				},
 			);
 
-			expect(listener).toHaveBeenNthCalledWith(4, {
-				context: {},
+			expect(broadcast_listener).toHaveBeenNthCalledWith(4, {
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/prompts/list_changed',
 					params: {},
 				},
 			});
+			expect(send_listener).not.toHaveBeenCalled();
 
 			const get_request = request({
 				jsonrpc: '2.0',
@@ -1256,12 +1256,21 @@ describe('McpServer', () => {
 			});
 
 			// trigger the prompt read to test elicitation, refreshRoots and message
-			await server.receive(get_request, { sessionId: 'session-1' });
-
-			expect(listener).toHaveBeenNthCalledWith(5, {
-				context: {
-					sessions: ['session-1'],
+			await server.receive(get_request, {
+				sessionId: 'session-1',
+				sessionInfo: {
+					clientCapabilities: {
+						roots: {},
+						sampling: {},
+						elicitation: {},
+					},
+					clientInfo: { name: 'test', version: '1.0.0' },
 				},
+			});
+
+			expect(send_listener).toHaveBeenCalled();
+
+			expect(send_listener).toHaveBeenNthCalledWith(1, {
 				request: {
 					id: 1,
 					jsonrpc: '2.0',
@@ -1270,10 +1279,7 @@ describe('McpServer', () => {
 				},
 			});
 
-			expect(listener).toHaveBeenNthCalledWith(6, {
-				context: {
-					sessions: ['session-1'],
-				},
+			expect(send_listener).toHaveBeenNthCalledWith(2, {
 				request: {
 					id: 2,
 					jsonrpc: '2.0',
@@ -1285,10 +1291,7 @@ describe('McpServer', () => {
 				},
 			});
 
-			expect(listener).toHaveBeenNthCalledWith(7, {
-				context: {
-					sessions: ['session-1'],
-				},
+			expect(send_listener).toHaveBeenNthCalledWith(3, {
 				request: {
 					id: 3,
 					jsonrpc: '2.0',
@@ -1308,7 +1311,8 @@ describe('McpServer', () => {
 				},
 			});
 
-			off();
+			broadcast_off();
+			send_off();
 		});
 	});
 
@@ -1336,726 +1340,6 @@ describe('McpServer', () => {
 	describe('refresh roots', () => {
 		it('should refresh roots', async () => {
 			await expect(server.refreshRoots()).resolves.toBeUndefined();
-		});
-	});
-
-	describe('multi-session functionality', () => {
-		describe('session initialization', () => {
-			it('should handle multiple session initializations independently', async () => {
-				const session1_init = request({
-					jsonrpc: '2.0',
-					id: 1,
-					method: 'initialize',
-					params: {
-						protocolVersion: '2025-06-18',
-						capabilities: { roots: { listChanged: true } },
-						clientInfo: { name: 'client-1', version: '1.0.0' },
-					},
-				});
-
-				const session2_init = request({
-					jsonrpc: '2.0',
-					id: 1,
-					method: 'initialize',
-					params: {
-						protocolVersion: '2025-06-18',
-						capabilities: { tools: { listChanged: true } },
-						clientInfo: { name: 'client-2', version: '2.0.0' },
-					},
-				});
-
-				const [result1, result2] = await Promise.all([
-					server.receive(session1_init, { sessionId: 'session-1' }),
-					server.receive(session2_init, { sessionId: 'session-2' }),
-				]);
-
-				expect(result1).toEqual({
-					jsonrpc: '2.0',
-					id: 1,
-					result: expect.objectContaining({
-						protocolVersion: '2025-06-18',
-						serverInfo: server_info,
-					}),
-				});
-
-				expect(result2).toEqual({
-					jsonrpc: '2.0',
-					id: 1,
-					result: expect.objectContaining({
-						protocolVersion: '2025-06-18',
-						serverInfo: server_info,
-					}),
-				});
-			});
-
-			it.todo(
-				'should track client capabilities per session',
-				async () => {
-					// Initialize two sessions with different capabilities
-					await server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 1,
-							method: 'initialize',
-							params: {
-								protocolVersion: '2025-06-18',
-								capabilities: { roots: {} },
-								clientInfo: {
-									name: 'client-1',
-									version: '1.0.0',
-								},
-							},
-						}),
-						{ sessionId: 'session-with-roots' },
-					);
-
-					await server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 1,
-							method: 'initialize',
-							params: {
-								protocolVersion: '2025-06-18',
-								capabilities: { elicitation: {} },
-								clientInfo: {
-									name: 'client-2',
-									version: '1.0.0',
-								},
-							},
-						}),
-						{ sessionId: 'session-with-tools' },
-					);
-
-					// Verify that sessions maintain different capability contexts
-					// This is internal behavior that would be tested through side effects
-					expect(server).toBeInstanceOf(McpServer);
-				},
-			);
-		});
-
-		describe('session isolation', () => {
-			beforeEach(async () => {
-				// Initialize multiple sessions
-				const sessions = [
-					{ sessionId: 'session-a' },
-					{ sessionId: 'session-b' },
-					{ sessionId: 'session-c' },
-				];
-				await Promise.all(
-					sessions.map((sessionId) =>
-						server.receive(
-							request({
-								jsonrpc: '2.0',
-								id: 1,
-								method: 'initialize',
-								params: {
-									protocolVersion: '2025-06-18',
-									capabilities: {},
-									clientInfo: {
-										name: `client-${sessionId}`,
-										version: '1.0.0',
-									},
-								},
-							}),
-							sessionId,
-						),
-					),
-				);
-			});
-
-			it('should handle tool calls across multiple sessions simultaneously', async () => {
-				const tool_handler = vi.fn().mockImplementation((args) => ({
-					content: [
-						{
-							type: 'text',
-							text: `Tool executed with: ${JSON.stringify(args || {})}`,
-						},
-					],
-				}));
-
-				server.tool(
-					{
-						name: 'multi-session-tool',
-						description: 'A tool for multi-session testing',
-						schema: mock_schema,
-					},
-					tool_handler,
-				);
-
-				// Call the same tool from different sessions with different arguments
-				const call_requests = [
-					{
-						request: request({
-							jsonrpc: '2.0',
-							id: 2,
-							method: 'tools/call',
-							params: {
-								name: 'multi-session-tool',
-								arguments: { test: 'session-a-data' },
-							},
-						}),
-						session: 'session-a',
-					},
-					{
-						request: request({
-							jsonrpc: '2.0',
-							id: 2,
-							method: 'tools/call',
-							params: {
-								name: 'multi-session-tool',
-								arguments: { test: 'session-b-data' },
-							},
-						}),
-						session: 'session-b',
-					},
-					{
-						request: request({
-							jsonrpc: '2.0',
-							id: 2,
-							method: 'tools/call',
-							params: {
-								name: 'multi-session-tool',
-								arguments: { test: 'session-c-data' },
-							},
-						}),
-						session: 'session-c',
-					},
-				];
-
-				const results = await Promise.all(
-					call_requests.map(({ request, session }) =>
-						server.receive(request, { sessionId: session }),
-					),
-				);
-
-				// Verify each session got its own result
-				expect(results[0].result.content[0].text).toContain(
-					'session-a-data',
-				);
-				expect(results[1].result.content[0].text).toContain(
-					'session-b-data',
-				);
-				expect(results[2].result.content[0].text).toContain(
-					'session-c-data',
-				);
-
-				// Verify the tool was called 3 times with different arguments
-				expect(tool_handler).toHaveBeenCalledTimes(3);
-				expect(tool_handler).toHaveBeenNthCalledWith(1, {
-					test: 'session-a-data',
-				});
-				expect(tool_handler).toHaveBeenNthCalledWith(2, {
-					test: 'session-b-data',
-				});
-				expect(tool_handler).toHaveBeenNthCalledWith(3, {
-					test: 'session-c-data',
-				});
-			});
-
-			it('should handle prompt calls across multiple sessions simultaneously', async () => {
-				const prompt_handler = vi.fn().mockImplementation((args) => ({
-					messages: [
-						{
-							role: 'user',
-							content: {
-								type: 'text',
-								text: `Prompt executed with: ${JSON.stringify(args || {})}`,
-							},
-						},
-					],
-				}));
-
-				server.prompt(
-					{
-						name: 'multi-session-prompt',
-						description: 'A prompt for multi-session testing',
-						schema: mock_schema,
-					},
-					prompt_handler,
-				);
-
-				const prompt_requests = [
-					{
-						request: request({
-							jsonrpc: '2.0',
-							id: 3,
-							method: 'prompts/get',
-							params: {
-								name: 'multi-session-prompt',
-								arguments: { sessionData: 'session-a-prompt' },
-							},
-						}),
-						session: 'session-a',
-					},
-					{
-						request: request({
-							jsonrpc: '2.0',
-							id: 3,
-							method: 'prompts/get',
-							params: {
-								name: 'multi-session-prompt',
-								arguments: { sessionData: 'session-b-prompt' },
-							},
-						}),
-						session: 'session-b',
-					},
-				];
-
-				const results = await Promise.all(
-					prompt_requests.map(({ request, session }) =>
-						server.receive(request, { sessionId: session }),
-					),
-				);
-
-				expect(results[0].result.messages[0].content.text).toContain(
-					'session-a-prompt',
-				);
-				expect(results[1].result.messages[0].content.text).toContain(
-					'session-b-prompt',
-				);
-
-				expect(prompt_handler).toHaveBeenCalledTimes(2);
-				expect(prompt_handler).toHaveBeenNthCalledWith(1, {
-					sessionData: 'session-a-prompt',
-				});
-				expect(prompt_handler).toHaveBeenNthCalledWith(2, {
-					sessionData: 'session-b-prompt',
-				});
-			});
-
-			it('should handle resource subscriptions per session', async () => {
-				const resource_handler = vi.fn().mockResolvedValue({
-					contents: [
-						{
-							uri: 'test://multi-session-resource',
-							text: 'content',
-						},
-					],
-				});
-
-				server.resource(
-					{
-						name: 'multi-session-resource',
-						description: 'A resource for multi-session testing',
-						uri: 'test://multi-session-resource',
-					},
-					resource_handler,
-				);
-
-				server.resource(
-					{
-						name: 'one-session-resource',
-						description: 'A resource for one-session testing',
-						uri: 'test://one-session-resource',
-					},
-					() => {
-						return {
-							contents: [],
-						};
-					},
-				);
-
-				const on = vi.fn();
-				const off = server.on('send', on);
-
-				// Subscribe from different sessions
-				const subscribe_requests = [
-					{
-						request: request({
-							jsonrpc: '2.0',
-							id: 4,
-							method: 'resources/subscribe',
-							params: { uri: 'test://multi-session-resource' },
-						}),
-						session: 'session-a',
-					},
-					{
-						request: request({
-							jsonrpc: '2.0',
-							id: 4,
-							method: 'resources/subscribe',
-							params: { uri: 'test://multi-session-resource' },
-						}),
-						session: 'session-b',
-					},
-				];
-
-				const results = await Promise.all(
-					subscribe_requests.map(({ request, session }) =>
-						server.receive(request, { sessionId: session }),
-					),
-				);
-
-				server.receive(
-					request(
-						request({
-							jsonrpc: '2.0',
-							id: 4,
-							method: 'resources/subscribe',
-							params: { uri: 'test://one-session-resource' },
-						}),
-					),
-					{ sessionId: 'session-a' },
-				);
-
-				expect(results[0]).toEqual({
-					jsonrpc: '2.0',
-					id: 4,
-					result: {},
-				});
-				expect(results[1]).toEqual({
-					jsonrpc: '2.0',
-					id: 4,
-					result: {},
-				});
-
-				server.changed('resource', 'test://multi-session-resource');
-
-				expect(on).toHaveBeenCalledWith({
-					context: {
-						sessions: ['session-a', 'session-b'],
-					},
-					request: {
-						jsonrpc: '2.0',
-						method: 'notifications/resources/updated',
-						params: {
-							title: 'multi-session-resource',
-							uri: 'test://multi-session-resource',
-						},
-					},
-				});
-
-				// change a resource only subscribed to from a and verify only session-a
-				// is sent to the send event
-
-				server.changed('resource', 'test://one-session-resource');
-
-				expect(on).toHaveBeenNthCalledWith(2, {
-					context: {
-						sessions: ['session-a'],
-					},
-					request: {
-						jsonrpc: '2.0',
-						method: 'notifications/resources/updated',
-						params: {
-							title: 'one-session-resource',
-							uri: 'test://one-session-resource',
-						},
-					},
-				});
-
-				off();
-			});
-		});
-
-		describe('concurrent operations', () => {
-			beforeEach(async () => {
-				// Initialize sessions
-				await Promise.all([
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 1,
-							method: 'initialize',
-							params: {
-								protocolVersion: '2025-06-18',
-								capabilities: {},
-								clientInfo: {
-									name: 'concurrent-client-1',
-									version: '1.0.0',
-								},
-							},
-						}),
-						{ sessionId: 'concurrent-session-1' },
-					),
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 1,
-							method: 'initialize',
-							params: {
-								protocolVersion: '2025-06-18',
-								capabilities: {},
-								clientInfo: {
-									name: 'concurrent-client-2',
-									version: '1.0.0',
-								},
-							},
-						}),
-						{ sessionId: 'concurrent-session-2' },
-					),
-				]);
-			});
-
-			it('should handle concurrent tool registrations and calls', async () => {
-				const tool1 = vi.fn().mockResolvedValue({
-					content: [{ type: 'text', text: 'tool1 result' }],
-				});
-				const tool2 = vi.fn().mockResolvedValue({
-					content: [{ type: 'text', text: 'tool2 result' }],
-				});
-
-				// Register tools concurrently
-				server.tool(
-					{ name: 'concurrent-tool-1', description: 'Tool 1' },
-					tool1,
-				);
-				server.tool(
-					{ name: 'concurrent-tool-2', description: 'Tool 2' },
-					tool2,
-				);
-
-				// Call tools concurrently from different sessions
-				const concurrent_calls = await Promise.all([
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 2,
-							method: 'tools/call',
-							params: { name: 'concurrent-tool-1' },
-						}),
-						{ sessionId: 'concurrent-session-1' },
-					),
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 2,
-							method: 'tools/call',
-							params: { name: 'concurrent-tool-2' },
-						}),
-						{ sessionId: 'concurrent-session-2' },
-					),
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 3,
-							method: 'tools/list',
-						}),
-						{ sessionId: 'concurrent-session-1' },
-					),
-				]);
-
-				expect(concurrent_calls[0].result.content[0].text).toBe(
-					'tool1 result',
-				);
-				expect(concurrent_calls[1].result.content[0].text).toBe(
-					'tool2 result',
-				);
-				expect(concurrent_calls[2].result.tools).toHaveLength(2);
-
-				expect(tool1).toHaveBeenCalledTimes(1);
-				expect(tool2).toHaveBeenCalledTimes(1);
-			});
-
-			it('should handle mixed request types concurrently', async () => {
-				// Setup tools, prompts, and resources
-				server.tool(
-					{ name: 'mixed-tool', description: 'Mixed test tool' },
-					vi.fn().mockResolvedValue({
-						content: [{ type: 'text', text: 'tool executed' }],
-					}),
-				);
-
-				server.prompt(
-					{ name: 'mixed-prompt', description: 'Mixed test prompt' },
-					vi.fn().mockResolvedValue({
-						messages: [
-							{
-								role: 'user',
-								content: {
-									type: 'text',
-									text: 'prompt executed',
-								},
-							},
-						],
-					}),
-				);
-
-				server.resource(
-					{
-						name: 'mixed-resource',
-						description: 'Mixed test resource',
-						uri: 'test://mixed-resource',
-					},
-					vi.fn().mockResolvedValue({
-						contents: [
-							{
-								uri: 'test://mixed-resource',
-								text: 'resource content',
-							},
-						],
-					}),
-				);
-
-				// Execute different types of requests concurrently
-				const mixed_results = await Promise.all([
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 10,
-							method: 'tools/call',
-							params: { name: 'mixed-tool' },
-						}),
-						{ sessionId: 'concurrent-session-1' },
-					),
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 11,
-							method: 'prompts/get',
-							params: { name: 'mixed-prompt' },
-						}),
-						{ sessionId: 'concurrent-session-2' },
-					),
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 12,
-							method: 'resources/read',
-							params: { uri: 'test://mixed-resource' },
-						}),
-						{ sessionId: 'concurrent-session-1' },
-					),
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 13,
-							method: 'ping',
-						}),
-						{ sessionId: 'concurrent-session-2' },
-					),
-				]);
-
-				expect(mixed_results[0].result.content[0].text).toBe(
-					'tool executed',
-				);
-				expect(mixed_results[1].result.messages[0].content.text).toBe(
-					'prompt executed',
-				);
-				expect(mixed_results[2].result.contents[0].text).toBe(
-					'resource content',
-				);
-				expect(mixed_results[3].result).toEqual({});
-			});
-		});
-
-		describe('session state management', () => {
-			it('should maintain separate logging states per session', async () => {
-				// Initialize sessions
-				await Promise.all([
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 1,
-							method: 'initialize',
-							params: {
-								protocolVersion: '2025-06-18',
-								capabilities: {},
-								clientInfo: {
-									name: 'log-client-1',
-									version: '1.0.0',
-								},
-							},
-						}),
-						{ sessionId: 'log-session-1' },
-					),
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 1,
-							method: 'initialize',
-							params: {
-								protocolVersion: '2025-06-18',
-								capabilities: {},
-								clientInfo: {
-									name: 'log-client-2',
-									version: '1.0.0',
-								},
-							},
-						}),
-						{ sessionId: 'log-session-2' },
-					),
-				]);
-
-				// Set different log levels for different sessions
-				await Promise.all([
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 2,
-							method: 'logging/setLevel',
-							params: { level: 'debug' },
-						}),
-						{ sessionId: 'log-session-1' },
-					),
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 2,
-							method: 'logging/setLevel',
-							params: { level: 'error' },
-						}),
-						{ sessionId: 'log-session-2' },
-					),
-				]);
-
-				server.tool(
-					{
-						name: 'log-test-tool',
-						description: 'A tool for log testing',
-					},
-					() => {
-						server.log('info', 'This is an info message');
-						return {
-							content: [{ type: 'text', text: 'tool executed' }],
-						};
-					},
-				);
-
-				const on = vi.fn();
-				const off = server.on('send', on);
-
-				await Promise.all([
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 3,
-							method: 'tools/call',
-							params: {
-								name: 'log-test-tool',
-							},
-						}),
-						{ sessionId: 'log-session-1' },
-					),
-					server.receive(
-						request({
-							jsonrpc: '2.0',
-							id: 3,
-							method: 'tools/call',
-							params: {
-								name: 'log-test-tool',
-							},
-						}),
-						{ sessionId: 'log-session-2' },
-					),
-				]);
-
-				// only sessions with debug level should receive this
-				expect(on).toHaveBeenCalledWith({
-					context: {
-						sessions: ['log-session-1'],
-					},
-					request: {
-						jsonrpc: '2.0',
-						method: 'notifications/message',
-						params: {
-							level: 'info',
-							data: 'This is an info message',
-						},
-					},
-				});
-				off();
-			});
 		});
 	});
 
@@ -2129,9 +1413,6 @@ describe('McpServer', () => {
 			expect(progress_calls).toHaveLength(3);
 
 			expect(progress_calls[0][0]).toEqual({
-				context: {
-					sessions: ['session-1'],
-				},
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/progress',
@@ -2145,9 +1426,6 @@ describe('McpServer', () => {
 			});
 
 			expect(progress_calls[1][0]).toEqual({
-				context: {
-					sessions: ['session-1'],
-				},
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/progress',
@@ -2161,9 +1439,6 @@ describe('McpServer', () => {
 			});
 
 			expect(progress_calls[2][0]).toEqual({
-				context: {
-					sessions: ['session-1'],
-				},
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/progress',
@@ -2213,9 +1488,6 @@ describe('McpServer', () => {
 			await server.receive(call_request, { sessionId: 'session-1' });
 
 			expect(on).toHaveBeenCalledWith({
-				context: {
-					sessions: ['session-1'],
-				},
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/progress',
@@ -2281,9 +1553,6 @@ describe('McpServer', () => {
 
 			expect(progress_calls).toHaveLength(3);
 			expect(progress_calls[0][0]).toEqual({
-				context: {
-					sessions: ['session-1'],
-				},
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/progress',
@@ -2346,9 +1615,6 @@ describe('McpServer', () => {
 
 			expect(progress_calls).toHaveLength(2);
 			expect(progress_calls[0][0]).toEqual({
-				context: {
-					sessions: ['session-1'],
-				},
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/progress',
@@ -2362,9 +1628,6 @@ describe('McpServer', () => {
 			});
 
 			expect(progress_calls[1][0]).toEqual({
-				context: {
-					sessions: ['session-1'],
-				},
 				request: {
 					jsonrpc: '2.0',
 					method: 'notifications/progress',
@@ -2451,22 +1714,18 @@ describe('McpServer', () => {
 			expect(progress_calls).toHaveLength(2);
 
 			// Check that each session got its own progress notification with the correct token
-			const session_one_call = progress_calls.find((call) =>
-				call[0].context.sessions.includes('session-1'),
+			const session_one_call = progress_calls.find(
+				(call) =>
+					call[0].request.params.progressToken === 'session-1-token',
 			);
-			const session_two_call = progress_calls.find((call) =>
-				call[0].context.sessions.includes('session-2'),
+			const session_two_call = progress_calls.find(
+				(call) =>
+					call[0].request.params.progressToken === 'session-2-token',
 			);
 
 			expect(session_one_call).toBeDefined();
-			expect(session_one_call?.[0].request.params.progressToken).toBe(
-				'session-1-token',
-			);
 
 			expect(session_two_call).toBeDefined();
-			expect(session_two_call?.[0].request.params.progressToken).toBe(
-				'session-2-token',
-			);
 
 			off();
 		});
@@ -3628,6 +2887,528 @@ describe('McpServer', () => {
 				);
 				expect(enabled_mock).toHaveBeenCalled();
 			});
+		});
+	});
+
+	describe('elicitation and sampling functionality', () => {
+		beforeEach(async () => {
+			const init = request({
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'initialize',
+				params: {
+					protocolVersion: '2025-06-18',
+					capabilities: {
+						elicitation: {},
+						sampling: {},
+						roots: {},
+					},
+					clientInfo: { name: 'test', version: '1.0.0' },
+				},
+			});
+			await server.receive(init, { sessionId: 'session-1' });
+		});
+
+		it('should send elicitation request and return validated response', async () => {
+			const send_listener = vi.fn();
+			const send_off = server.on('send', send_listener);
+
+			let elicitation_result;
+			server.tool(
+				{
+					name: 'elicitation-tool',
+					description: 'A tool that requests elicitation',
+				},
+				async () => {
+					elicitation_result = await server.elicitation(
+						'Please provide input',
+						mock_schema,
+					);
+					return {
+						content: [
+							{
+								type: 'text',
+								text: JSON.stringify(elicitation_result),
+							},
+						],
+					};
+				},
+			);
+
+			// Start the tool call (this will send the elicitation request)
+			const tool_promise = server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 2,
+					method: 'tools/call',
+					params: {
+						name: 'elicitation-tool',
+					},
+				}),
+				{
+					sessionId: 'session-1',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			await vi.waitFor(() => {
+				expect(send_listener).toHaveBeenCalled();
+			});
+
+			// Verify the elicitation request was sent
+			expect(send_listener).toHaveBeenCalledWith({
+				request: {
+					id: expect.any(Number),
+					jsonrpc: '2.0',
+					method: 'elicitation/create',
+					params: {
+						message: 'Please provide input',
+						requestedSchema: {
+							type: 'object',
+							properties: {
+								test: {
+									type: 'string',
+								},
+							},
+							required: ['test'],
+						},
+					},
+				},
+			});
+
+			// Get the request ID that was sent
+			const elicitation_request_id =
+				send_listener.mock.calls[0][0].request.id;
+
+			// Simulate client response to elicitation
+			await server.receive(
+				{
+					jsonrpc: '2.0',
+					id: elicitation_request_id,
+					result: {
+						action: 'accept',
+						content: { test: 'user input value' },
+					},
+				},
+				{
+					sessionId: 'session-1',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			// Wait for the tool to complete
+			const tool_result = await tool_promise;
+
+			// Verify the elicitation result was correctly returned
+			expect(elicitation_result).toEqual({
+				action: 'accept',
+				content: { test: 'user input value' },
+			});
+
+			expect(tool_result).toEqual({
+				id: 2,
+				jsonrpc: '2.0',
+				result: {
+					content: [
+						{
+							type: 'text',
+							text: JSON.stringify(elicitation_result),
+						},
+					],
+				},
+			});
+
+			send_off();
+		});
+
+		it('should not send elicitation when client lacks capability', async () => {
+			const send_listener = vi.fn();
+			const send_off = server.on('send', send_listener);
+
+			// Re-initialize without elicitation capability
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 10,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-06-18',
+						capabilities: {},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				}),
+				{ sessionId: 'session-2' },
+			);
+
+			server.tool(
+				{
+					name: 'elicitation-tool-no-cap',
+					description: 'A tool that requests elicitation',
+				},
+				async () => {
+					try {
+						await server.elicitation(
+							'Please provide input',
+							mock_schema,
+						);
+					} catch {
+						// Expected error when client lacks capability
+					}
+					return {
+						content: [{ type: 'text', text: 'Tool executed' }],
+					};
+				},
+			);
+
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 11,
+					method: 'tools/call',
+					params: {
+						name: 'elicitation-tool-no-cap',
+					},
+				}),
+				{
+					sessionId: 'session-2',
+					sessionInfo: {
+						clientCapabilities: {},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			// Should not have sent elicitation request
+			expect(send_listener).not.toHaveBeenCalledWith(
+				expect.objectContaining({
+					request: expect.objectContaining({
+						method: 'elicitation/create',
+					}),
+				}),
+			);
+
+			send_off();
+		});
+
+		it('should send sampling request and return model response', async () => {
+			const send_listener = vi.fn();
+			const send_off = server.on('send', send_listener);
+
+			let sampling_result;
+			server.tool(
+				{
+					name: 'sampling-tool',
+					description: 'A tool that requests sampling',
+				},
+				async () => {
+					sampling_result = await server.message({
+						maxTokens: 500,
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Test message',
+								},
+							},
+						],
+					});
+					return {
+						content: [
+							{
+								type: 'text',
+								text: JSON.stringify(sampling_result),
+							},
+						],
+					};
+				},
+			);
+
+			// Start the tool call (this will send the sampling request)
+			const tool_promise = server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 3,
+					method: 'tools/call',
+					params: {
+						name: 'sampling-tool',
+					},
+				}),
+				{
+					sessionId: 'session-1',
+					sessionInfo: {
+						clientCapabilities: {
+							sampling: {},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			await vi.waitFor(() => {
+				expect(send_listener).toHaveBeenCalled();
+			});
+
+			// Verify the sampling request was sent
+			expect(send_listener).toHaveBeenCalledWith({
+				request: {
+					id: expect.any(Number),
+					jsonrpc: '2.0',
+					method: 'sampling/createMessage',
+					params: {
+						maxTokens: 500,
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Test message',
+								},
+							},
+						],
+					},
+				},
+			});
+
+			// Get the request ID that was sent
+			const sampling_request_id =
+				send_listener.mock.calls[0][0].request.id;
+
+			// Simulate client response to sampling
+			await server.receive(
+				{
+					jsonrpc: '2.0',
+					id: sampling_request_id,
+					result: {
+						role: 'assistant',
+						content: {
+							type: 'text',
+							text: 'Model generated response',
+						},
+						model: 'test-model',
+						stopReason: 'endTurn',
+					},
+				},
+				{
+					sessionId: 'session-1',
+					sessionInfo: {
+						clientCapabilities: {
+							sampling: {},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			// Wait for the tool to complete
+			const tool_result = await tool_promise;
+
+			// Verify the sampling result was correctly returned
+			expect(sampling_result).toEqual({
+				role: 'assistant',
+				content: {
+					type: 'text',
+					text: 'Model generated response',
+				},
+				model: 'test-model',
+				stopReason: 'endTurn',
+			});
+
+			expect(tool_result).toEqual({
+				id: 3,
+				jsonrpc: '2.0',
+				result: {
+					content: [
+						{
+							type: 'text',
+							text: JSON.stringify(sampling_result),
+						},
+					],
+				},
+			});
+
+			send_off();
+		});
+
+		it('should not send sampling when client lacks capability', async () => {
+			const send_listener = vi.fn();
+			const send_off = server.on('send', send_listener);
+
+			// Re-initialize without sampling capability
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 12,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-06-18',
+						capabilities: {},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				}),
+				{ sessionId: 'session-3' },
+			);
+
+			server.tool(
+				{
+					name: 'sampling-tool-no-cap',
+					description: 'A tool that requests sampling',
+				},
+				async () => {
+					try {
+						await server.message({
+							maxTokens: 500,
+							messages: [],
+						});
+					} catch {
+						// Expected error when client lacks capability
+					}
+					return {
+						content: [{ type: 'text', text: 'Tool executed' }],
+					};
+				},
+			);
+
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 13,
+					method: 'tools/call',
+					params: {
+						name: 'sampling-tool-no-cap',
+					},
+				}),
+				{
+					sessionId: 'session-3',
+					sessionInfo: {
+						clientCapabilities: {},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			// Should not have sent sampling request
+			expect(send_listener).not.toHaveBeenCalledWith(
+				expect.objectContaining({
+					request: expect.objectContaining({
+						method: 'sampling/createMessage',
+					}),
+				}),
+			);
+
+			send_off();
+		});
+
+		it('should request roots list and update server.roots', async () => {
+			const send_listener = vi.fn();
+			const send_off = server.on('send', send_listener);
+
+			server.tool(
+				{
+					name: 'refresh-roots-tool',
+					description: 'A tool that refreshes roots',
+				},
+				async () => {
+					await server.refreshRoots();
+					return {
+						content: [{ type: 'text', text: 'Tool executed' }],
+					};
+				},
+			);
+
+			// Start the tool call (this will send the roots/list request)
+			const tool_promise = server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 6,
+					method: 'tools/call',
+					params: {
+						name: 'refresh-roots-tool',
+					},
+				}),
+				{
+					sessionId: 'session-1',
+					sessionInfo: {
+						clientCapabilities: {
+							roots: {},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			await vi.waitFor(() => {
+				expect(send_listener).toHaveBeenCalled();
+			});
+
+			// Verify the roots/list request was sent
+			expect(send_listener).toHaveBeenCalledWith({
+				request: {
+					id: expect.any(Number),
+					jsonrpc: '2.0',
+					method: 'roots/list',
+					params: undefined,
+				},
+			});
+
+			// Get the request ID that was sent
+			const roots_request_id = send_listener.mock.calls[0][0].request.id;
+
+			// Simulate client response with roots
+			await server.receive(
+				{
+					jsonrpc: '2.0',
+					id: roots_request_id,
+					result: {
+						roots: [
+							{
+								uri: 'file:///workspace/project1',
+								name: 'Project 1',
+							},
+							{
+								uri: 'file:///workspace/project2',
+								name: 'Project 2',
+							},
+						],
+					},
+				},
+				{
+					sessionId: 'session-1',
+					sessionInfo: {
+						clientCapabilities: {
+							roots: {},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			// Wait for the tool to complete
+			await tool_promise;
+
+			// Verify the server.roots was updated
+			expect(server.roots).toEqual([
+				{
+					uri: 'file:///workspace/project1',
+					name: 'Project 1',
+				},
+				{
+					uri: 'file:///workspace/project2',
+					name: 'Project 2',
+				},
+			]);
+
+			send_off();
 		});
 	});
 

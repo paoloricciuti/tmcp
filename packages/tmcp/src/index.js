@@ -49,12 +49,17 @@ import { should_version_negotiation_fail } from './validation/version.js';
  * @template {Record<string, unknown> | undefined} [TCustom=undefined]
  * @typedef {Object} Context
  * @property {string} [sessionId]
+ * @property {{ clientCapabilities?: ClientCapabilitiesType, clientInfo?: ClientInfoType, logLevel?: LoggingLevel }} [sessionInfo]
  * @property {AuthInfo} [auth]
  * @property {TCustom} [custom]
  */
 
 /**
  * @typedef {IconsType} Icons
+ */
+
+/**
+ * @typedef {Record<SubscriptionsKeys, string[]>} Subscriptions
  */
 
 /**
@@ -149,7 +154,7 @@ async function safe_enabled(enabled) {
 export class McpServer {
 	#server = new JSONRPCServer();
 	/**
-	 * @type {JSONRPCClient<Record<string, any> | undefined> | undefined}
+	 * @type {JSONRPCClient<"broadcast" | "standalone"> | undefined}
 	 */
 	#client;
 	#options;
@@ -181,34 +186,9 @@ export class McpServer {
 	#event_target = new EventTarget();
 
 	/**
-	 * @type {Record<SubscriptionsKeys, Map<string, Set<string | undefined>>>}
-	 */
-	#subscriptions = {
-		/**
-		 * @type {Map<string, Set<string>>}
-		 */
-		resource: new Map(),
-	};
-
-	/**
 	 * @type {AsyncLocalStorage<Context<CustomContext> & { progress_token?: string }>}
 	 */
 	#ctx_storage = new AsyncLocalStorage();
-
-	/**
-	 * @type {Map<string|undefined, ClientCapabilities>}
-	 */
-	#client_capabilities_map = new Map();
-
-	/**
-	 * @type {Map<string|undefined, ClientInfo>}
-	 */
-	#client_info_map = new Map();
-
-	/**
-	 * @type {Map<string|undefined, LoggingLevel>}
-	 */
-	#session_log_levels = new Map();
 
 	/**
 	 * @param {ServerInfo} server_info
@@ -223,8 +203,6 @@ export class McpServer {
 					InitializeRequestParamsSchema,
 					initialize_request,
 				);
-
-				const session_id = this.#session_id;
 
 				// Validate protocol version format
 				if (
@@ -243,18 +221,6 @@ export class McpServer {
 				// Negotiate protocol version
 				const negotiated_version = negotiate_protocol_version(
 					validated_initialize.protocolVersion,
-				);
-
-				// Store client capabilities
-				this.#client_capabilities_map.set(
-					session_id,
-					validated_initialize.capabilities,
-				);
-
-				// Store client info
-				this.#client_info_map.set(
-					session_id,
-					validated_initialize.clientInfo,
 				);
 
 				// Dispatch initialization event
@@ -324,10 +290,6 @@ export class McpServer {
 		);
 	}
 
-	get #session_id() {
-		return this.#ctx_storage.getStore()?.sessionId;
-	}
-
 	get #progress_token() {
 		return this.#ctx_storage.getStore()?.progress_token;
 	}
@@ -343,18 +305,20 @@ export class McpServer {
 	}
 
 	get #client_capabilities() {
-		return this.#client_capabilities_map.get(this.#session_id);
+		return this.#ctx_storage.getStore()?.sessionInfo?.clientCapabilities;
 	}
 
 	/**
 	 * Get the client information (name, version, etc.) of the client that initiated the current request...useful if you want to do something different based on the client.
+	 * @deprecated Use `server.ctx.sessionInfo.clientInfo` instead.
 	 */
 	currentClientInfo() {
-		return this.#client_info_map.get(this.#session_id);
+		return this.#ctx_storage.getStore()?.sessionInfo?.clientInfo;
 	}
 
 	/**
 	 * Get the client capabilities of the client that initiated the current request, you can use this to verify the client support something before invoking the respective method.
+	 * @deprecated Use `server.ctx.sessionInfo.clientCapabilities` instead.
 	 */
 	currentClientCapabilities() {
 		return this.#client_capabilities;
@@ -362,10 +326,18 @@ export class McpServer {
 
 	#lazyily_create_client() {
 		if (!this.#client) {
-			this.#client = new JSONRPCClient((payload, context = {}) => {
+			this.#client = new JSONRPCClient((payload, kind) => {
+				if (kind === 'broadcast') {
+					this.#event_target.dispatchEvent(
+						new CustomEvent('broadcast', {
+							detail: { request: payload },
+						}),
+					);
+					return;
+				}
 				this.#event_target.dispatchEvent(
 					new CustomEvent('send', {
-						detail: { request: payload, context },
+						detail: { request: payload },
 					}),
 				);
 			});
@@ -379,7 +351,7 @@ export class McpServer {
 	 * @param {AddEventListenerOptions} [options]
 	 */
 	on(event, callback, options) {
-		if (event === 'send') {
+		if (event === 'send' || event === 'broadcast') {
 			this.#lazyily_create_client();
 		}
 
@@ -400,10 +372,10 @@ export class McpServer {
 	/**
 	 * @param {string} method
 	 * @param {JSONRPCParams} [params]
-	 * @param {Record<string, any>} [extra]
+	 * @param {"broadcast" | "standalone"} [kind]
 	 */
-	#notify(method, params, extra) {
-		this.#client?.notify(method, params, extra);
+	#notify(method, params, kind = 'standalone') {
+		this.#client?.notify(method, params, kind);
 	}
 
 	/**
@@ -638,12 +610,11 @@ export class McpServer {
 
 		if (this.#options.capabilities?.resources?.subscribe) {
 			this.#server.addMethod('resources/subscribe', async ({ uri }) => {
-				let subscriptions = this.#subscriptions.resource.get(uri);
-				if (!subscriptions) {
-					subscriptions = new Set();
-					this.#subscriptions.resource.set(uri, subscriptions);
-				}
-				subscriptions.add(this.#session_id);
+				this.#event_target.dispatchEvent(
+					new CustomEvent('subscription', {
+						detail: { uri },
+					}),
+				);
 				return {};
 			});
 		}
@@ -787,9 +758,7 @@ export class McpServer {
 			const response = await this.#client?.request(
 				'roots/list',
 				undefined,
-				{
-					sessions: [this.#session_id],
-				},
+				'standalone',
 			);
 			this.roots = response?.roots || [];
 		} catch {
@@ -820,26 +789,34 @@ export class McpServer {
 		if (!this.#options.capabilities?.logging) return;
 
 		this.#server.addMethod('logging/setLevel', ({ level }) => {
-			this.#session_log_levels.set(this.#session_id, level);
+			this.#event_target.dispatchEvent(
+				new CustomEvent('loglevelchange', {
+					detail: { level },
+				}),
+			);
 			return {};
 		});
 	}
 
 	#notify_tools_list_changed() {
 		if (this.#options.capabilities?.tools?.listChanged) {
-			this.#notify('notifications/tools/list_changed', {});
+			this.#notify('notifications/tools/list_changed', {}, 'broadcast');
 		}
 	}
 
 	#notify_prompts_list_changed() {
 		if (this.#options.capabilities?.prompts?.listChanged) {
-			this.#notify('notifications/prompts/list_changed', {});
+			this.#notify('notifications/prompts/list_changed', {}, 'broadcast');
 		}
 	}
 
 	#notify_resources_list_changed() {
 		if (this.#options.capabilities?.resources?.listChanged) {
-			this.#notify('notifications/resources/list_changed', {});
+			this.#notify(
+				'notifications/resources/list_changed',
+				{},
+				'broadcast',
+			);
 		}
 	}
 
@@ -992,18 +969,6 @@ export class McpServer {
 
 		// Check if it's a request or response
 		if (validated_message.success) {
-			// we want to set a default log level for each session
-			// so that if the user calls `log` it can send a notification
-			// to each client that didn't explicitly set a log level too
-			if (
-				!!this.#options.capabilities?.logging &&
-				!this.#session_log_levels.has(ctx?.sessionId)
-			) {
-				this.#session_log_levels.set(
-					ctx?.sessionId,
-					this.#options.logging?.default ?? 'info',
-				);
-			}
 			const progress_token = /** @type {string | undefined} */ (
 				validated_message.output.params?._meta?.progressToken
 			);
@@ -1038,28 +1003,16 @@ export class McpServer {
 		} else if (what === 'resources') {
 			this.#notify_resources_list_changed();
 		} else {
-			if (
-				this.#subscriptions[
-					/** @type {SubscriptionsKeys} */ (what)
-				].has(id)
-			) {
-				const resource = this.#resources.get(id);
-				if (!resource) return;
-				const sessions =
-					this.#subscriptions[
-						/** @type {SubscriptionsKeys} */ (what)
-					].get(id);
-				this.#notify(
-					`notifications/resources/updated`,
-					{
-						uri: id,
-						title: resource.name,
-					},
-					{
-						sessions: sessions ? [...sessions] : undefined,
-					},
-				);
-			}
+			const resource = this.#resources.get(id);
+			if (!resource) return;
+			this.#notify(
+				`notifications/resources/updated`,
+				{
+					uri: id,
+					title: resource.name,
+				},
+				'broadcast',
+			);
 		}
 	}
 
@@ -1094,9 +1047,7 @@ export class McpServer {
 				requestedSchema:
 					await this.#options.adapter.toJsonSchema(schema),
 			},
-			{
-				sessions: [this.#session_id],
-			},
+			'standalone',
 		);
 		const elicit_result = v.parse(ElicitResultSchema, result);
 		let validated_result = schema['~standard'].validate(
@@ -1134,9 +1085,7 @@ export class McpServer {
 		const response = await this.#client?.request(
 			'sampling/createMessage',
 			validated_request,
-			{
-				sessions: [this.#session_id],
-			},
+			'standalone',
 		);
 
 		// Validate and return the response
@@ -1152,18 +1101,12 @@ export class McpServer {
 	 */
 	progress(progress, total = 1, message = undefined) {
 		if (this.#progress_token != null) {
-			this.#notify(
-				'notifications/progress',
-				{
-					progress,
-					total,
-					message,
-					progressToken: this.#progress_token,
-				},
-				{
-					sessions: this.#session_id ? [this.#session_id] : undefined,
-				},
-			);
+			this.#notify('notifications/progress', {
+				progress,
+				total,
+				message,
+				progressToken: this.#progress_token,
+			});
 		}
 	}
 
@@ -1182,33 +1125,21 @@ export class McpServer {
 			);
 		}
 
-		const sessions = [];
-
-		const current_session_level = this.#session_log_levels.get(
-			this.#session_id,
-		);
+		const current_session_level =
+			this.#ctx_storage.getStore()?.sessionInfo?.logLevel ??
+			this.#options.logging?.default ??
+			'info';
 
 		if (
 			current_session_level &&
 			this.#should_log(level, current_session_level)
 		) {
-			sessions.push(this.#session_id);
-		}
-
-		if (sessions.length === 0) return;
-
-		// Send the log notification to the client
-		this.#notify(
-			'notifications/message',
-			{
+			this.#notify('notifications/message', {
 				level,
 				data,
 				logger,
-			},
-			{
-				sessions,
-			},
-		);
+			});
+		}
 	}
 
 	/**

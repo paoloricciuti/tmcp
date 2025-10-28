@@ -97,9 +97,11 @@ export type SubscriptionsKeys = SubscriptionsKeysObj["with_args"];
 export type McpEvents = {
 	send: (message: {
 		request: JSONRPCRequest;
-		context: {
-			sessions?: string[] | undefined;
-		};
+	}) => void;
+	broadcast: (message: {
+		request: JSONRPCRequest;
 	}) => void;
 	initialize: (initialize_request: InitializeRequestParams) => void;
+	subscription: (subscriptions_request: { uri: string }) => void;
+	loglevelchange: (change: { level: LoggingLevel }) => void;
 };
