@@ -21,7 +21,7 @@
 		"src/**/*"
 	],
 	"peerDependencies": {
-		"tmcp": "^1.16.0",
+		"tmcp": "workspace:^1.16.0",
 		"@tmcp/auth": "^0.5.0"
 	},
 	"keywords": [

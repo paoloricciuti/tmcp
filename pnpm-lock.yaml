@@ -235,7 +235,7 @@ importers:
   packages/session-manager:
     dependencies:
       tmcp:
-        specifier: workspace:^
+        specifier: workspace:^1.16.0
         version: link:../tmcp
     devDependencies:
       '@tmcp/internal-ts-helpers':
