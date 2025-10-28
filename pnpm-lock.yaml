@@ -233,6 +233,10 @@ importers:
         version: 5.9.3
 
   packages/session-manager:
+    dependencies:
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
     devDependencies:
       '@tmcp/internal-ts-helpers':
         specifier: workspace:^
@@ -381,6 +385,9 @@ importers:
       '@tmcp/auth':
         specifier: workspace:^
         version: link:../auth
+      '@types/node':
+        specifier: ^24.9.1
+        version: 24.9.1
       dts-buddy:
         specifier: ^0.6.2
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
