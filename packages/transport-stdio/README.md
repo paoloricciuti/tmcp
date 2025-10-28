@@ -86,6 +86,8 @@ Starts listening for JSON-RPC messages on stdin and sets up response handling on
 3. **Output**: Server responses are written to `stdout`
 4. **Errors**: Processing errors are logged to `stderr`
 
+The transport automatically tracks `clientInfo`, client capabilities, and log level reported by the client and exposes them through `server.ctx.sessionInfo`. Resource subscriptions declared by the client are also recorded so `server.changed('resource', uri)` only emits notifications when the client has opted in.
+
 ## Integration with MCP Inspector
 
 This transport is designed to work seamlessly with [MCP Inspector](https://github.com/modelcontextprotocol/inspector):
