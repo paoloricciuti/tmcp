@@ -59,7 +59,6 @@ describe('HTTP Transport', () => {
 
 	beforeAll(async () => {
 		server.listen(3000, 'localhost', async () => {
-			console.log('listening');
 			resolve();
 		});
 		await promise;
