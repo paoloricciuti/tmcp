@@ -1,7 +1,7 @@
 declare module '@tmcp/session-manager-durable-objects' {
-	import type { SessionManager } from '@tmcp/session-manager';
+	import type { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
 	import type { DurableObject } from 'cloudflare:workers';
-	export class DurableObjectSessionManager implements SessionManager {
+	export class DurableObjectStreamSessionManager implements StreamSessionManager {
 		
 		constructor(binding?: string);
 		
@@ -14,6 +14,21 @@ declare module '@tmcp/session-manager-durable-objects' {
 		send(sessions: undefined | string[], data: unknown): Promise<void>;
 		#private;
 	}
+
+	export class KVInfoSessionManager implements InfoSessionManager {
+		
+		constructor(binding?: string);
+		getClientInfo(id: string): Promise<NonNullable<import("tmcp").Context["sessionInfo"]>["clientInfo"]>;
+		setClientInfo(id: string, client_info: NonNullable<import("tmcp").Context["sessionInfo"]>["clientInfo"]): void;
+		getClientCapabilities(id: string): Promise<NonNullable<import("tmcp").Context["sessionInfo"]>["clientCapabilities"]>;
+		setClientCapabilities(id: string, client_capabilities: NonNullable<import("tmcp").Context["sessionInfo"]>["clientCapabilities"]): void;
+		getLogLevel(id: string): Promise<NonNullable<import("tmcp").Context["sessionInfo"]>["logLevel"]>;
+		setLogLevel(id: string, log_level: NonNullable<import("tmcp").Context["sessionInfo"]>["logLevel"]): void;
+		getSubscriptions(uri: string): Promise<string[]>;
+		addSubscription(id: string, uri: string): void;
+		delete(id: string): void;
+		#private;
+	}
 	/**
 	 * WebSocket Hibernation Server using Cloudflare Durable Objects
 	 *
@@ -23,7 +38,7 @@ declare module '@tmcp/session-manager-durable-objects' {
 	 * the connection state is restored.
 	 *
 	 */
-	export class SyncLayer extends DurableObject<any> {
+	export class SyncLayer extends DurableObject<any, any> {
 		/**
 		 * Creates a new WebSocketHibernationServer instance
 		 *
