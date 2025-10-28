@@ -1,6 +1,6 @@
 # @tmcp/session-manager-postgres
 
-PostgreSQL-based session manager for TMCP (TypeScript Model Context Protocol) transport implementations. This package provides a distributed session manager that uses PostgreSQL for session storage and LISTEN/NOTIFY messaging, enabling multi-server and serverless deployments.
+PostgreSQL-based session managers for TMCP (TypeScript Model Context Protocol) transport implementations. This package provides distributed implementations that use PostgreSQL for both streaming session coordination and durable session metadata, enabling multi-server and serverless deployments.
 
 ## Installation
 
@@ -10,7 +10,7 @@ pnpm add @tmcp/session-manager-postgres
 
 ## Overview
 
-The `PostgresSessionManager` uses PostgreSQL to store and manage client sessions across multiple server instances. It leverages PostgreSQL's LISTEN/NOTIFY functionality to enable real-time communication between different server instances and client sessions.
+`PostgresStreamSessionManager` uses LISTEN/NOTIFY to route MCP notifications to whichever process owns the streaming response, while `PostgresInfoSessionManager` persists client capabilities, client info, log levels, and resource subscriptions in regular Postgres tables so transports can restore context on every request.
 
 LISTEN/NOTIFY have some trade-off and do require some setup to properly work so you might want to read [their documentation](https://www.postgresql.org/docs/current/sql-listen.html) or this [guide from neon](https://neon.com/guides/pub-sub-listen-notify) to learn about them.
 
@@ -21,51 +21,89 @@ LISTEN/NOTIFY have some trade-off and do require some setup to properly work so 
 - **Real-time Messaging**: Uses PostgreSQL LISTEN/NOTIFY for instant message delivery
 - **Load Balancer Compatible**: Works seamlessly with load balancers
 - **Automatic Session Expiry**: Sessions are automatically cleaned up after 10 seconds of inactivity
+- **Session Metadata**: Stores client info, capabilities, log levels, and subscriptions in dedicated tables
 
 ## Usage
 
 ### Basic Setup
 
 ```javascript
-import { PostgresSessionManager } from '@tmcp/session-manager-postgres';
+import {
+	PostgresStreamSessionManager,
+	PostgresInfoSessionManager,
+} from '@tmcp/session-manager-postgres';
 
-const sessionManager = new PostgresSessionManager({
-	connectionString: 'postgresql://localhost:5432/mydb',
-});
+const sessionManager = {
+	streams: new PostgresStreamSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb',
+	}),
+	info: new PostgresInfoSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb',
+	}),
+};
+
+Both managers can share the same database connection string, or you can point them at different databases if you need to scale metadata separately from streaming state.
 ```
 
 ### With Authentication
 
 ```javascript
-const sessionManager = new PostgresSessionManager({
-	connectionString: 'postgresql://username:password@localhost:5432/mydb',
-});
+const sessionManager = {
+	streams: new PostgresStreamSessionManager({
+		connectionString: 'postgresql://username:password@localhost:5432/mydb',
+	}),
+	info: new PostgresInfoSessionManager({
+		connectionString: 'postgresql://username:password@localhost:5432/mydb',
+	}),
+};
 ```
 
 ### With TLS
 
 ```javascript
-const sessionManager = new PostgresSessionManager({
-	connectionString: 'postgresql://localhost:5432/mydb?sslmode=require',
-});
+const sessionManager = {
+	streams: new PostgresStreamSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb?sslmode=require',
+	}),
+	info: new PostgresInfoSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb?sslmode=require',
+	}),
+};
 ```
 
 ### Custom Table Name
 
 ```javascript
-const sessionManager = new PostgresSessionManager({
-	connectionString: 'postgresql://localhost:5432/mydb',
-	tableName: 'my_sessions',
-});
+const sessionManager = {
+	streams: new PostgresStreamSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb',
+		tableName: 'my_sessions',
+	}),
+	info: new PostgresInfoSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb',
+		tableNames: {
+			clientCapabilities: 'my_session_capabilities',
+			clientInfo: 'my_session_client_info',
+			logLevel: 'my_session_log_level',
+			subscriptions: 'my_session_subscriptions',
+		},
+	}),
+};
 ```
 
 ### Disable Automatic Table Creation
 
 ```javascript
-const sessionManager = new PostgresSessionManager({
-	connectionString: 'postgresql://localhost:5432/mydb',
-	create: false,
-});
+const sessionManager = {
+	streams: new PostgresStreamSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb',
+		create: false,
+	}),
+	info: new PostgresInfoSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb',
+		create: false,
+	}),
+};
 ```
 
 ### Using with Transport Layers
@@ -74,11 +112,19 @@ const sessionManager = new PostgresSessionManager({
 
 ```javascript
 import { HttpTransport } from '@tmcp/transport-http';
-import { PostgresSessionManager } from '@tmcp/session-manager-postgres';
+import {
+	PostgresStreamSessionManager,
+	PostgresInfoSessionManager,
+} from '@tmcp/session-manager-postgres';
 
-const sessionManager = new PostgresSessionManager({
-	connectionString: 'postgresql://localhost:5432/mydb',
-});
+const sessionManager = {
+	streams: new PostgresStreamSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb',
+	}),
+	info: new PostgresInfoSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb',
+	}),
+};
 const transport = new HttpTransport(server, { sessionManager });
 ```
 
@@ -86,26 +132,34 @@ const transport = new HttpTransport(server, { sessionManager });
 
 ```javascript
 import { SseTransport } from '@tmcp/transport-sse';
-import { PostgresSessionManager } from '@tmcp/session-manager-postgres';
+import {
+	PostgresStreamSessionManager,
+	PostgresInfoSessionManager,
+} from '@tmcp/session-manager-postgres';
 
-const sessionManager = new PostgresSessionManager({
-	connectionString: 'postgresql://localhost:5432/mydb',
-});
+const sessionManager = {
+	streams: new PostgresStreamSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb',
+	}),
+	info: new PostgresInfoSessionManager({
+		connectionString: 'postgresql://localhost:5432/mydb',
+	}),
+};
 const transport = new SseTransport(server, { sessionManager });
 ```
 
 ## How It Works
 
-The PostgreSQL session manager uses two PostgreSQL features:
+The PostgreSQL session managers use two PostgreSQL features:
 
-1. **Table Storage**: Session availability is tracked using a table with `id` and `updated_at` columns
-2. **LISTEN/NOTIFY Messaging**: Messages are sent to sessions via channels like `session:{id}` and `delete:session:{id}`
+1. **LISTEN/NOTIFY Messaging**: `PostgresStreamSessionManager` subscribes to `session:{id}` and `delete:session:{id}` channels so that responses can be relayed to whichever worker holds the streaming controller.
+2. **Table Storage**: Both managers persist state in tables—`tmcp_sessions` tracks active streams with `updated_at` timestamps, while `PostgresInfoSessionManager` stores JSON blobs and subscriptions in dedicated tables.
 
 ### Session Lifecycle
 
-1. **Session Creation**: When a client connects, a session record is created in the database and the manager listens to the session's notification channels
-2. **Message Delivery**: Messages are sent via NOTIFY to the session channel and delivered to the connected stream controller
-3. **Session Cleanup**: When a session disconnects, records are deleted and listeners are removed
+1. **Session Creation**: When a client connects, the stream manager inserts/refreshes a row in `tmcp_sessions` and begins listening on the session's channels, while the info manager stores the client's capabilities and info.
+2. **Message Delivery**: Messages are sent via NOTIFY to `session:{id}` and picked up by the correct worker. Broadcast notifications resolve their recipient list via the subscriptions table before publishing.
+3. **Session Cleanup**: When a session disconnects, the stream record is removed (or allowed to expire) and metadata rows/subscriptions for that session are deleted.
 
 ### Multi-Server Communication
 
@@ -113,60 +167,57 @@ When you deploy your MCP server to multiple servers (or in a serverless environm
 
 ### Session Expiry
 
-Sessions are automatically expired after 10 seconds the stream they were managed is closed. This ensure that even if your process suddenly crashes (or your serverless function shuts down because it reached the timeout) it will not waste space on your db. Each session has an interval that updates the `updated_at` timestamp every 10 seconds to keep it alive. When querying for active sessions, only those updated within the last 10 seconds are considered.
+Stream sessions are automatically expired after 10 seconds once their controller disconnects. This ensures that even if your process suddenly crashes (or your serverless function shuts down because it reached the timeout) it will not waste space on your db. Each session has an interval that updates the `updated_at` timestamp every 10 seconds to keep it alive. When querying for active sessions, only those updated within the last 10 seconds are considered. The info manager removes metadata as part of the same cleanup routine.
 
 ## Database Schema
 
-The session manager creates a table with the following structure:
+By default the managers create the following tables:
 
 ```sql
 CREATE TABLE IF NOT EXISTS tmcp_sessions (
     id TEXT PRIMARY KEY,
     updated_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS tmcp_session_client_capabilities (
+    id TEXT PRIMARY KEY,
+    value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS tmcp_session_client_info (
+    id TEXT PRIMARY KEY,
+    value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS tmcp_session_log_level (
+    id TEXT PRIMARY KEY,
+    value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS tmcp_session_subscriptions (
+    id TEXT PRIMARY KEY,
+    value TEXT
+);
 ```
 
 ## API
 
-### `PostgresSessionManager`
+### `PostgresStreamSessionManager`
 
-#### Constructor
+- `new PostgresStreamSessionManager({ connectionString, tableName, create })`
+- `create(id, controller)` – stores the controller, registers LISTEN handlers, and keeps the session alive
+- `delete(id)` – removes listeners and deletes the session row
+- `has(id)` – checks whether a fresh row exists in `tmcp_sessions`
+- `send(sessions, data)` – NOTIFY the appropriate `session:{id}` channels (broadcast when `sessions` is `undefined`)
 
-```typescript
-new PostgresSessionManager(options: {
-    connectionString: string;
-    tableName?: string;
-    create?: boolean;
-})
-```
+### `PostgresInfoSessionManager`
 
-Creates a new PostgreSQL session manager instance.
-
-**Parameters:**
-
-- `connectionString` - PostgreSQL connection string
-- `tableName` - Custom table name for sessions (defaults to `'tmcp_sessions'`)
-- `create` - Whether to create the table if it doesn't exist (defaults to `true`). If you know for sure the table exists you can pass false to save a bit of compute time.
-
-#### Methods
-
-All methods implement the `SessionManager` interface:
-
-##### `create(id: string, controller: ReadableStreamDefaultController): Promise<void>`
-
-Creates a new session and sets up PostgreSQL LISTEN subscriptions.
-
-##### `delete(id: string): Promise<void>`
-
-Removes a session and cleans up database records and subscriptions.
-
-##### `has(id: string): Promise<boolean>`
-
-Checks if a session exists by querying the database table.
-
-##### `send(sessions: string[] | undefined, data: string): Promise<void>`
-
-Sends data to specified sessions or all active sessions via PostgreSQL NOTIFY.
+- `new PostgresInfoSessionManager({ connectionString, tableNames, create })`
+- `setClientInfo(id, info)` / `getClientInfo(id)` – JSON stored in the `clientInfo` table
+- `setClientCapabilities(id, capabilities)` / `getClientCapabilities(id)` – JSON stored in the `clientCapabilities` table
+- `setLogLevel(id, level)` / `getLogLevel(id)` – string stored in the `logLevel` table
+- `addSubscription(id, uri)` / `getSubscriptions(uri)` – rows stored in the `subscriptions` table
+- `delete(id)` – removes all metadata rows for the session and clears subscriptions
 
 ## Related Packages
 

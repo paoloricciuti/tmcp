@@ -1,13 +1,14 @@
+/* eslint-disable jsdoc/no-undefined-types */
 /**
- * @import { SessionManager } from '@tmcp/session-manager';
+ * @import { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
  */
 
 import { Client } from 'pg';
 
 /**
- * @implements {SessionManager}
+ * @implements {StreamSessionManager}
  */
-export class PostgresSessionManager {
+export class PostgresStreamSessionManager {
 	#text_encoder = new TextEncoder();
 	/**
 	 * @type {Client}
@@ -51,7 +52,7 @@ export class PostgresSessionManager {
 		if (create) {
 			this.#connected = this.#connected.then(async () => {
 				await this.#client.query(
-					`CREATE TABLE IF NOT EXISTS "${table_name}" (id TEXT PRIMARY_KEY, updated_at TIMESTAMP DEFAULT NOW())`,
+					`CREATE TABLE IF NOT EXISTS "${table_name}" (id TEXT PRIMARY KEY, updated_at TIMESTAMP DEFAULT NOW())`,
 				);
 			});
 		}
@@ -162,5 +163,208 @@ export class PostgresSessionManager {
 				this.#client.query(`NOTIFY "session:${session}", ${data}`);
 			}
 		}
+	}
+}
+
+/**
+ * @implements {InfoSessionManager}
+ */
+export class PostgresInfoSessionManager {
+	/**
+	 * @typedef {{ clientCapabilities: string, clientInfo: string, logLevel: string, subscriptions: string }} TableNames
+	 */
+
+	/**
+	 *
+	 * @param {string} level
+	 * @returns {level is Awaited<ReturnType<InfoSessionManager["getLogLevel"]>>}
+	 */
+	#is_log_level(level) {
+		return (
+			typeof level === 'string' &&
+			[
+				'debug',
+				'info',
+				'notice',
+				'warning',
+				'error',
+				'critical',
+				'alert',
+				'emergency',
+			].includes(level)
+		);
+	}
+
+	/**
+	 * @type {Client}
+	 */
+	#client;
+
+	/**
+	 * @type {Promise<void>}
+	 */
+	#connected;
+
+	/**
+	 * @type {TableNames}
+	 */
+	#table_names;
+
+	/**
+	 * @param {Object} options
+	 * @param {string} options.connectionString The connection string to connect to Postgres
+	 * @param {{ clientCapabilities: string, clientInfo: string, logLevel: string, subscriptions: string }} [options.tableNames] The table name to use for storing sessions, it defaults to 'tmcp_sessions'
+	 * @param {boolean} [options.create] Whether to create the table if it doesn't exist, defaults to true
+	 */
+	constructor({
+		connectionString: connection_string,
+		tableNames: table_names = {
+			clientCapabilities: 'tmcp_session_client_capabilities',
+			clientInfo: 'tmcp_session_client_info',
+			logLevel: 'tmcp_session_log_level',
+			subscriptions: 'tmcp_session_subscriptions',
+		},
+		create = true,
+	}) {
+		this.#table_names = table_names;
+		this.#client = new Client({ connectionString: connection_string });
+		this.#connected = this.#client.connect();
+		if (create) {
+			this.#connected = this.#connected.then(async () => {
+				for (let table_name of Object.values(table_names)) {
+					await this.#client.query(
+						`CREATE TABLE IF NOT EXISTS "${table_name}" (id TEXT PRIMARY KEY, value TEXT)`,
+					);
+				}
+			});
+		}
+	}
+
+	/**
+	 * @type {InfoSessionManager['getClientInfo']}
+	 */
+	async getClientInfo(id) {
+		const client_info_result = await this.#client.query(
+			`SELECT value FROM ${this.#table_names.clientInfo} WHERE id=$1`,
+			[id],
+		);
+		const client_info = client_info_result.rows[0].value;
+
+		if (client_info != null && typeof client_info === 'string') {
+			return JSON.parse(client_info);
+		}
+
+		throw new Error(`Client info not found for session ${id}`);
+	}
+	/**
+	 * @type {InfoSessionManager["setClientInfo"]}
+	 */
+	async setClientInfo(id, client_info) {
+		await this.#client.query(
+			`INSERT INTO ${this.#table_names.clientInfo} (id, value) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value`,
+			[id, JSON.stringify(client_info)],
+		);
+	}
+	/**
+	 * @type {InfoSessionManager["getClientCapabilities"]}
+	 */
+	async getClientCapabilities(id) {
+		const client_capabilities_result = await this.#client.query(
+			`SELECT value FROM ${this.#table_names.clientCapabilities} WHERE id=$1`,
+			[id],
+		);
+		const client_capabilities = client_capabilities_result.rows[0].value;
+
+		if (
+			client_capabilities != null &&
+			typeof client_capabilities === 'string'
+		) {
+			return JSON.parse(client_capabilities);
+		}
+
+		throw new Error(`Client capabilities not found for session ${id}`);
+	}
+	/**
+	 * @type {InfoSessionManager["setClientCapabilities"]}
+	 */
+	async setClientCapabilities(id, client_capabilities) {
+		await this.#client.query(
+			`INSERT INTO ${this.#table_names.clientCapabilities} (id, value) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value`,
+			[id, JSON.stringify(client_capabilities)],
+		);
+	}
+	/**
+	 * @type {InfoSessionManager["getLogLevel"]}
+	 */
+	async getLogLevel(id) {
+		const log_level_result = await this.#client.query(
+			`SELECT value FROM ${this.#table_names.logLevel} WHERE id=$1`,
+			[id],
+		);
+		const log_level = log_level_result.rows[0].value;
+
+		if (this.#is_log_level(log_level)) {
+			return log_level;
+		}
+
+		throw new Error(`Log level not found for session ${id}`);
+	}
+	/**
+	 * @type {InfoSessionManager["setLogLevel"]}
+	 */
+	async setLogLevel(id, log_level) {
+		await this.#client.query(
+			`INSERT INTO ${this.#table_names.logLevel} (id, value) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value`,
+			[id, JSON.stringify(log_level)],
+		);
+	}
+	/**
+	 * @type {InfoSessionManager["getSubscriptions"]}
+	 */
+	async getSubscriptions(uri) {
+		const subscriptions_result = await this.#client.query(
+			`SELECT id FROM ${this.#table_names.subscriptions} WHERE value=$1`,
+			[uri],
+		);
+		const subscriptions = subscriptions_result.rows[0].value;
+
+		if (subscriptions != null && typeof subscriptions === 'string') {
+			return JSON.parse(subscriptions);
+		}
+
+		throw new Error(`Subscriptions not found for session ${uri}`);
+	}
+	/**
+	 * @type {InfoSessionManager["addSubscription"]}
+	 */
+	async addSubscription(id, uri) {
+		await this.#client.query(
+			`INSERT INTO ${this.#table_names.subscriptions} (id, value) VALUES ($1, $2)`,
+			[id, uri],
+		);
+	}
+
+	/**
+	 * @param {string} id
+	 */
+	async delete(id) {
+		await Promise.all([
+			this.#client.query(
+				`DELETE FROM ${this.#table_names.clientCapabilities} WHERE id=$1`,
+				[id],
+			),
+			this.#client.query(
+				`DELETE FROM ${this.#table_names.clientInfo} WHERE id=$1`,
+				[id],
+			),
+			this.#client.query(
+				`DELETE FROM ${this.#table_names.logLevel} WHERE id=$1`,
+				[id],
+			),
+			this.#client.query(
+				`DELETE FROM ${this.#table_names.subscriptions} WHERE value=$1`,
+				[id],
+			),
+		]);
 	}
 }

@@ -2,7 +2,8 @@
 	"version": 3,
 	"file": "index.d.ts",
 	"names": [
-		"PostgresSessionManager"
+		"PostgresStreamSessionManager",
+		"PostgresInfoSessionManager"
 	],
 	"sources": [
 		"../index.js"
@@ -10,6 +11,6 @@
 	"sourcesContent": [
 		null
 	],
-	"mappings": ";;cASaA,sBAAsBA",
+	"mappings": ";;cAUaA,4BAA4BA;;;;;;;;;;;;;;;;;;cAiK5BC,0BAA0BA",
 	"ignoreList": []
 }
