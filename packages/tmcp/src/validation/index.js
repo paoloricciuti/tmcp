@@ -1572,6 +1572,9 @@ export const ServerResultSchema = v.union([
  * @typedef {v.InferInput<typeof JSONRPCRequestSchema>} JSONRPCRequest
  */
 /**
+ * @typedef {v.InferInput<typeof JSONRPCMessageSchema>} JSONRPCMessage
+ */
+/**
  * @typedef {v.InferInput<typeof JSONRPCResponseSchema>} JSONRPCResponse
  */
 /**

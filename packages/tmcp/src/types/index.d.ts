@@ -1,6 +1,6 @@
 declare module 'tmcp' {
 	import type { StandardSchemaV1 } from '@standard-schema/spec';
-	import type { JSONRPCRequest, JSONRPCServer, JSONRPCClient } from 'json-rpc-2.0';
+	import type { JSONRPCServer, JSONRPCClient, JSONRPCRequest } from 'json-rpc-2.0';
 	import type { JSONSchema7 } from 'json-schema';
 	import * as v from 'valibot';
 	export class McpServer<StandardSchema extends StandardSchemaV1 | undefined = undefined, CustomContext extends Record<string, unknown> | undefined = undefined> {
@@ -112,7 +112,7 @@ declare module 'tmcp' {
 		 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 		 *
 		 * */
-		receive(message: JSONRPCResponse | JSONRPCRequest, ctx?: Context<CustomContext>): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
+		receive(message: JSONRPCMessage, ctx?: Context<CustomContext>): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
 		/**
 		 * Send a notification for subscriptions
 		 * */
@@ -248,10 +248,29 @@ declare module 'tmcp' {
 		subscription: (subscriptions_request: { uri: string }) => void;
 		loglevelchange: (change: { level: LoggingLevel_1 }) => void;
 	};
-	/**
-	 * A successful (non-error) response to a request.
-	 */
-	const JSONRPCResponseSchema: v.StrictObjectSchema<{
+	const JSONRPCMessageSchema: v.UnionSchema<[v.ObjectSchema<{
+		readonly method: v.StringSchema<undefined>;
+		readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+				/**
+				 * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
+				 */
+				readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
+			}, undefined>, undefined>;
+		}, undefined>, undefined>;
+		readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+		readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
+	}, undefined>, v.ObjectSchema<{
+		readonly method: v.StringSchema<undefined>;
+		readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, undefined>;
+		readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+	}, undefined>, v.StrictObjectSchema<{
 		readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
 		readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
 		readonly result: v.LooseObjectSchema<{
@@ -261,7 +280,24 @@ declare module 'tmcp' {
 			 */
 			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>;
-	}, undefined>;
+	}, undefined>, v.StrictObjectSchema<{
+		readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+		readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
+		readonly error: v.ObjectSchema<{
+			/**
+			 * The error type that occurred.
+			 */
+			readonly code: v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>;
+			/**
+			 * A short description of the error. The message SHOULD be limited to a concise single sentence.
+			 */
+			readonly message: v.StringSchema<undefined>;
+			/**
+			 * Additional information about the error. The value of this member is defined by the sender (e.g. detailed error information, nested errors etc.).
+			 */
+			readonly data: v.OptionalSchema<v.UnknownSchema, undefined>;
+		}, undefined>;
+	}, undefined>], undefined>;
 	const IconsSchema: v.ObjectSchema<{
 		/**
 		 * Optional set of sized icons that the client can display in a user interface.
@@ -1223,7 +1259,7 @@ declare module 'tmcp' {
 	type CreateMessageRequestParams_1 = v.InferInput<typeof CreateMessageRequestParamsSchema>;
 	type CreateMessageResult_1 = v.InferInput<typeof CreateMessageResultSchema>;
 	type Resource_1 = v.InferInput<typeof ResourceSchema>;
-	type JSONRPCResponse = v.InferInput<typeof JSONRPCResponseSchema>;
+	type JSONRPCMessage = v.InferInput<typeof JSONRPCMessageSchema>;
 	type LoggingLevel_1 = v.InferInput<typeof LoggingLevelSchema>;
 	type ToolAnnotations = v.InferInput<typeof ToolAnnotationsSchema>;
 	type ElicitResult_1 = v.InferInput<typeof ElicitResultSchema>;
