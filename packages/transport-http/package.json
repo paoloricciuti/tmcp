@@ -22,7 +22,7 @@
 	],
 	"peerDependencies": {
 		"tmcp": "workspace:^1.16.0",
-		"@tmcp/auth": "^0.5.0"
+		"@tmcp/auth": "^0.3.3"
 	},
 	"peerDependenciesMeta": {
 		"@tmcp/auth": {

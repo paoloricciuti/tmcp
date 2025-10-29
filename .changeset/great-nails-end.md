@@ -12,8 +12,8 @@
 breaking: move sessions out of core into the transports and allow for persistent mcp state
 
 This release moves the session management out of the core package into the SSE and HTTP transport separately.
-While technically a breaking change if you update both `tmcp` AND your transport be it `@tmcp/transport-http`
-`@tmcp/transport-sse` or `@tmcp/transport-stdio` you will not face a breaking change unless you were using a
+While technically a breaking change if you update both `tmcp` and your transport (`@tmcp/transport-http`,
+`@tmcp/transport-sse`, or `@tmcp/transport-stdio`), you will not face a breaking change unless you were using a
 session manager.
 
 If you were testing your `McpServer` instance manually you might need to update them to pass the `sessionInfo`
