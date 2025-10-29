@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/session-manager-redis",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"description": "",
 	"main": "src/index.js",
 	"repository": {

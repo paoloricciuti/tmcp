@@ -1,5 +1,14 @@
 # playground
 
+## 1.0.4
+
+### Patch Changes
+
+- Updated dependencies [8a04ee2]
+- Updated dependencies [a9254cb]
+    - @tmcp/transport-stdio@0.4.0
+    - tmcp@1.16.0
+
 ## 1.0.3
 
 ### Patch Changes
