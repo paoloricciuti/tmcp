@@ -17,7 +17,13 @@
 		"./package.json": "./package.json"
 	},
 	"peerDependencies": {
-		"tmcp": "workspace:^"
+		"tmcp": "workspace:^1.16.0",
+		"@tmcp/auth": "^0.3.3"
+	},
+	"peerDependenciesMeta": {
+		"@tmcp/auth": {
+			"optional": true
+		}
 	},
 	"keywords": [
 		"tmcp",
@@ -36,6 +42,7 @@
 	},
 	"devDependencies": {
 		"@tmcp/auth": "workspace:^",
+		"@types/node": "^24.9.1",
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^"

@@ -2,7 +2,8 @@
 	"version": 3,
 	"file": "index.d.ts",
 	"names": [
-		"DurableObjectSessionManager",
+		"DurableObjectStreamSessionManager",
+		"KVInfoSessionManager",
 		"SyncLayer"
 	],
 	"sources": [
@@ -11,6 +12,6 @@
 	"sourcesContent": [
 		null
 	],
-	"mappings": ";;;cA0BaA,2BAA2BA;;;;;;;;;;;;;;;;;;;;;;cA+G3BC,SAASA",
+	"mappings": ";;;cA+CaA,iCAAiCA;;;;;;;;;;;;;;cAyGjCC,oBAAoBA;;;;;;;;;;;;;;;;;;;;;;;cAsKpBC,SAASA",
 	"ignoreList": []
 }

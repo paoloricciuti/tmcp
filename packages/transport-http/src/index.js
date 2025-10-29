@@ -1,7 +1,7 @@
 /**
  * @import { AuthInfo, McpServer } from "tmcp";
  * @import { OAuth  } from "@tmcp/auth";
- * @import { SessionManager  } from "@tmcp/session-manager";
+ * @import { StreamSessionManager, InfoSessionManager } from "@tmcp/session-manager";
  */
 
 /**
@@ -21,12 +21,15 @@
  * 	path?: string | null
  * 	oauth?: OAuth<"built">
  * 	cors?: CorsConfig | boolean,
- * 	sessionManager?: SessionManager
+ * 	sessionManager?: { streams?: StreamSessionManager, info?: InfoSessionManager }
  * }} HttpTransportOptions
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { InMemorySessionManager } from '@tmcp/session-manager';
+import {
+	InMemoryStreamSessionManager,
+	InMemoryInfoSessionManager,
+} from '@tmcp/session-manager';
 import { DEV } from 'esm-env';
 
 /**
@@ -34,12 +37,16 @@ import { DEV } from 'esm-env';
  */
 export class HttpTransport {
 	/**
+	 * @typedef {NonNullable<Required<Pick<HttpTransportOptions, "sessionManager">["sessionManager"]>>} SessionManager
+	 */
+
+	/**
 	 * @type {McpServer<any, TCustom>}
 	 */
 	#server;
 
 	/**
-	 * @type {Required<Omit<HttpTransportOptions, 'oauth' | 'cors'>> & { cors?: CorsConfig | boolean }}
+	 * @type {Required<Omit<HttpTransportOptions, 'oauth' | 'cors' | 'sessionManager'>> & { cors?: CorsConfig | boolean, sessionManager: SessionManager }}
 	 */
 	#options;
 
@@ -52,6 +59,11 @@ export class HttpTransport {
 	 * @type {AsyncLocalStorage<ReadableStreamDefaultController | undefined>}
 	 */
 	#controller_storage = new AsyncLocalStorage();
+
+	/**
+	 * @type {AsyncLocalStorage<string>}
+	 */
+	#session_id_storage = new AsyncLocalStorage();
 
 	/**
 	 * @type {OAuth<"built"> | undefined}
@@ -72,9 +84,21 @@ export class HttpTransport {
 			path = '/mcp',
 			oauth,
 			cors,
-			sessionManager = new InMemorySessionManager(),
+			sessionManager: _sessionManager = {
+				streams: new InMemoryStreamSessionManager(),
+				info: new InMemoryInfoSessionManager(),
+			},
 		} = options ?? {
 			getSessionId: () => crypto.randomUUID(),
+		};
+
+		/**
+		 * @type {SessionManager}
+		 */
+		const sessionManager = {
+			streams:
+				_sessionManager.streams ?? new InMemoryStreamSessionManager(),
+			info: _sessionManager.info ?? new InMemoryInfoSessionManager(),
 		};
 
 		if (options?.path === undefined && DEV) {
@@ -90,7 +114,47 @@ export class HttpTransport {
 
 		this.#options = { getSessionId, path, cors, sessionManager };
 		this.#path = path;
-		this.#server.on('send', async ({ request, context: { sessions } }) => {
+
+		this.#server.on('initialize', ({ capabilities, clientInfo }) => {
+			const sessionId = this.#session_id_storage.getStore();
+			if (!sessionId) return;
+			this.#options.sessionManager.info.setClientCapabilities(
+				sessionId,
+				capabilities,
+			);
+			this.#options.sessionManager.info.setClientInfo(
+				sessionId,
+				clientInfo,
+			);
+		});
+
+		this.#server.on('subscription', async ({ uri }) => {
+			const sessionId = this.#session_id_storage.getStore();
+			if (!sessionId) return;
+			this.#options.sessionManager.info.addSubscription(sessionId, uri);
+		});
+
+		this.#server.on('loglevelchange', ({ level }) => {
+			const sessionId = this.#session_id_storage.getStore();
+			if (!sessionId) return;
+			this.#options.sessionManager.info.setLogLevel(sessionId, level);
+		});
+
+		this.#server.on('broadcast', async ({ request }) => {
+			let sessions = undefined;
+			if (request.method === 'notifications/resources/updated') {
+				sessions =
+					await this.#options.sessionManager.info.getSubscriptions(
+						request.params.uri,
+					);
+			}
+			await this.#options.sessionManager.streams.send(
+				sessions,
+				'data: ' + JSON.stringify(request) + '\n\n',
+			);
+		});
+
+		this.#server.on('send', async ({ request }) => {
 			// use the current controller if the request has an id (it means it's a request and not a notification)
 			if (request.id != null) {
 				const controller = this.#controller_storage.getStore();
@@ -103,8 +167,11 @@ export class HttpTransport {
 				);
 				return;
 			}
-			await this.#options.sessionManager.send(
-				sessions,
+			const session_id = this.#session_id_storage.getStore();
+			if (!session_id) return;
+
+			await this.#options.sessionManager.streams.send(
+				[session_id],
 				'data: ' + JSON.stringify(request) + '\n\n',
 			);
 		});
@@ -197,7 +264,8 @@ export class HttpTransport {
 	 * @param {string} session_id
 	 */
 	async #handle_delete(session_id) {
-		await this.#options.sessionManager.delete(session_id);
+		await this.#options.sessionManager.streams.delete(session_id);
+		await this.#options.sessionManager.info.delete(session_id);
 		return new Response(null, {
 			status: 200,
 			headers: {
@@ -215,7 +283,7 @@ export class HttpTransport {
 		const sessions = this.#options.sessionManager;
 		const text_encoder = this.#text_encoder;
 		// If session already exists, return error
-		const existing_session = await sessions.has(session_id);
+		const existing_session = await sessions.streams.has(session_id);
 		if (existing_session) {
 			return new Response(
 				JSON.stringify({
@@ -240,12 +308,12 @@ export class HttpTransport {
 		// Create new long-lived stream for notifications
 		const stream = new ReadableStream({
 			async start(controller) {
-				await sessions.create(session_id, controller);
+				await sessions.streams.create(session_id, controller);
 				// send a comment to flush the headers immediately
 				controller.enqueue(text_encoder.encode(': connected\n\n'));
 			},
 			async cancel() {
-				await sessions.delete(session_id);
+				await sessions.streams.delete(session_id);
 			},
 		});
 
@@ -305,15 +373,35 @@ export class HttpTransport {
 				},
 			});
 
+			const session_id_storage = this.#session_id_storage;
+
 			const handle = async () => {
+				const client_capabilities =
+					await this.#options.sessionManager.info
+						.getClientCapabilities(session_id)
+						.catch(() => undefined);
+				const client_info = await this.#options.sessionManager.info
+					.getClientInfo(session_id)
+					.catch(() => undefined);
+				const log_level = await this.#options.sessionManager.info
+					.getLogLevel(session_id)
+					.catch(() => undefined);
+
 				const response = await this.#controller_storage.run(
 					controller,
 					() =>
-						this.#server.receive(body, {
-							sessionId: session_id,
-							auth: auth_info ?? undefined,
-							custom: ctx,
-						}),
+						session_id_storage.run(session_id, () =>
+							this.#server.receive(body, {
+								sessionId: session_id,
+								auth: auth_info ?? undefined,
+								sessionInfo: {
+									clientCapabilities: client_capabilities,
+									clientInfo: client_info,
+									logLevel: log_level,
+								},
+								custom: ctx,
+							}),
+						),
 				);
 
 				controller?.enqueue(

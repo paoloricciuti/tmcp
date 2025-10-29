@@ -23,6 +23,7 @@ declare module 'tmcp' {
 		get ctx(): Context<CustomContext>;
 		/**
 		 * Get the client information (name, version, etc.) of the client that initiated the current request...useful if you want to do something different based on the client.
+		 * @deprecated Use `server.ctx.sessionInfo.clientInfo` instead.
 		 */
 		currentClientInfo(): {
 			icons?: {
@@ -37,6 +38,7 @@ declare module 'tmcp' {
 		} | undefined;
 		/**
 		 * Get the client capabilities of the client that initiated the current request, you can use this to verify the client support something before invoking the respective method.
+		 * @deprecated Use `server.ctx.sessionInfo.clientCapabilities` instead.
 		 */
 		currentClientCapabilities(): {
 			experimental?: {} | undefined;
@@ -183,10 +185,16 @@ declare module 'tmcp' {
 	};
 	export type Context<TCustom extends Record<string, unknown> | undefined = undefined> = {
 		sessionId?: string | undefined;
+		sessionInfo?: {
+			clientCapabilities?: ClientCapabilities_1;
+			clientInfo?: ClientInfo_1;
+			logLevel?: LoggingLevel;
+		} | undefined;
 		auth?: AuthInfo | undefined;
 		custom?: TCustom | undefined;
 	};
 	export type Icons = Icons_1;
+	export type Subscriptions = Record<SubscriptionsKeys, string[]>;
 	export type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = CallToolResult_1<TStructuredContent>;
 	export type ReadResourceResult = ReadResourceResult_1;
 	export type GetPromptResult = GetPromptResult_1;
@@ -223,14 +231,22 @@ declare module 'tmcp' {
 		'resources': [];
 	}
 
+	type SubscriptionsKeysObj = {
+		[K in keyof ChangedArgs as ChangedArgs[K]["length"] extends 0 ? "without_args" : "with_args"]: K
+	};
+
+	type SubscriptionsKeys = SubscriptionsKeysObj["with_args"];
+
 	type McpEvents = {
 		send: (message: {
 			request: JSONRPCRequest;
-			context: {
-				sessions?: string[] | undefined;
-			};
+		}) => void;
+		broadcast: (message: {
+			request: JSONRPCRequest;
 		}) => void;
 		initialize: (initialize_request: InitializeRequestParams) => void;
+		subscription: (subscriptions_request: { uri: string }) => void;
+		loglevelchange: (change: { level: LoggingLevel_1 }) => void;
 	};
 	/**
 	 * A successful (non-error) response to a request.
@@ -238,7 +254,7 @@ declare module 'tmcp' {
 	const JSONRPCResponseSchema: v.StrictObjectSchema<{
 		readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
 		readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
-		readonly result: v.ObjectSchema<{
+		readonly result: v.LooseObjectSchema<{
 			/**
 			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 			 * for notes on _meta usage.

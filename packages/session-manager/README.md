@@ -1,6 +1,6 @@
 # @tmcp/session-manager
 
-Session management for TMCP (TypeScript Model Context Protocol) transport implementations. This package provides the base `SessionManager` interface and an in-memory implementation for managing client sessions in MCP servers.
+Session management for TMCP (TypeScript Model Context Protocol) transport implementations. This package provides the base classes and in-memory implementations for both streaming session coordination and session metadata persistence.
 
 ## Installation
 
@@ -10,132 +10,151 @@ pnpm add @tmcp/session-manager
 
 ## Overview
 
-Session managers handle the storage and communication with client sessions in TMCP transport layers. They manage:
+Session management is split into two concerns:
+
+- **Stream session managers** handle the storage of long-lived streaming connections (SSE/HTTP) and the fan-out of notifications back to the right session.
+- **Info session managers** persist metadata that MCP transports need across requests, such as client capabilities, client info, requested log level, and resource subscriptions.
+
+Together they manage:
 
 - **Session Creation**: Establishing new client sessions with stream controllers
-- **Session Deletion**: Cleaning up disconnected sessions
-- **Session Queries**: Checking if sessions exist
-- **Message Broadcasting**: Sending messages to specific sessions or all sessions
+- **Session Deletion**: Cleaning up disconnected sessions and metadata
+- **Session Queries**: Checking whether a given session is still attached
+- **Message Delivery**: Sending messages to specific sessions or everyone
+- **Client Metadata**: Persisting capabilities, `clientInfo`, and log level between requests
+- **Resource Subscriptions**: Tracking which sessions subscribed to which URIs
 
 ## Usage
 
-### In-Memory Session Manager (Default)
+### In-Memory Session Managers (Default)
 
-The `InMemorySessionManager` stores sessions in memory and is suitable for single-server deployments:
+The package ships with `InMemoryStreamSessionManager` and `InMemoryInfoSessionManager`. Together they are suitable for single-server deployments or tests:
 
 ```javascript
-import { InMemorySessionManager } from '@tmcp/session-manager';
+import {
+	InMemoryStreamSessionManager,
+	InMemoryInfoSessionManager,
+} from '@tmcp/session-manager';
 
-const sessionManager = new InMemorySessionManager();
+const sessionManagers = {
+	streams: new InMemoryStreamSessionManager(),
+	info: new InMemoryInfoSessionManager(),
+};
 ```
 
-### Custom Session Manager
+### Custom Session Managers
 
-You can implement your own session manager by extending the base `SessionManager` class:
+You can implement your own managers by extending the base classes that ship with this package.
+
+#### Stream session manager
 
 ```javascript
-import { SessionManager } from '@tmcp/session-manager';
+import { StreamSessionManager } from '@tmcp/session-manager';
 
-class CustomSessionManager extends SessionManager {
-	/**
-	 * Create a new session with the given ID and controller
-	 * @param {string} id - Session ID
-	 * @param {ReadableStreamDefaultController} controller - Stream controller
-	 */
+class CustomStreamSessionManager extends StreamSessionManager {
 	create(id, controller) {
-		// Implementation here
+		// Persist the ReadableStream controller for later notifications
 	}
 
-	/**
-	 * Delete a session by ID
-	 * @param {string} id - Session ID to delete
-	 */
 	delete(id) {
-		// Implementation here
+		// Clean up the controller and any associated timers
 	}
 
-	/**
-	 * Check if a session exists
-	 * @param {string} id - Session ID to check
-	 * @returns {Promise<boolean>} - Whether the session exists
-	 */
 	async has(id) {
-		// Implementation here
+		// Return whether a controller for the session exists
 	}
 
-	/**
-	 * Send data to specific sessions or all sessions
-	 * @param {string[] | undefined} sessions - Session IDs to send to (undefined = all sessions)
-	 * @param {string} data - Data to send
-	 */
 	send(sessions, data) {
-		// Implementation here
+		// Fan out the payload to the targeted sessions (or everyone if sessions is undefined)
+	}
+}
+```
+
+#### Info session manager
+
+```javascript
+import { InfoSessionManager } from '@tmcp/session-manager';
+
+class CustomInfoSessionManager extends InfoSessionManager {
+	async getClientInfo(id) {
+		// Return the last clientInfo payload for the session
+	}
+
+	setClientInfo(id, info) {
+		// Persist clientInfo for later requests
+	}
+
+	async getClientCapabilities(id) {
+		// Retrieve cached client capabilities
+	}
+
+	setClientCapabilities(id, capabilities) {
+		// Persist the negotiated capabilities
+	}
+
+	async getLogLevel(id) {
+		// Return the log level requested by the client
+	}
+
+	setLogLevel(id, level) {
+		// Store the latest log level
+	}
+
+	async getSubscriptions(uri) {
+		// Return all session ids subscribed to the URI
+	}
+
+	addSubscription(id, uri) {
+		// Track that the session subscribed to the URI
+	}
+
+	delete(id) {
+		// Remove all metadata for the session (client info, capabilities, subscriptions, etc.)
 	}
 }
 ```
 
 ## API
 
-### `SessionManager` (Abstract Base Class)
+### `StreamSessionManager` (Abstract Base Class)
 
-#### Methods
+Responsible for creating and managing streaming controllers.
 
-##### `create(id: string, controller: ReadableStreamDefaultController): void`
+- `create(id, controller)` – register a session and associate its stream controller
+- `delete(id)` – remove the controller and clean up resources
+- `has(id)` – resolve to `true` when a controller for the session exists
+- `send(sessions, data)` – push a payload to selected sessions (or everyone when `sessions` is `undefined`)
 
-Creates a new session with the specified ID and associates it with a stream controller.
+### `InfoSessionManager` (Abstract Base Class)
 
-**Parameters:**
+Stores session metadata that needs to survive across HTTP requests or reconnects.
 
-- `id` - Unique session identifier
-- `controller` - ReadableStreamDefaultController for sending data to the client
+- `getClientInfo(id)` / `setClientInfo(id, info)`
+- `getClientCapabilities(id)` / `setClientCapabilities(id, capabilities)`
+- `getLogLevel(id)` / `setLogLevel(id, level)`
+- `getSubscriptions(uri)` – return all session IDs that subscribed to a resource
+- `addSubscription(id, uri)` – record a new resource subscription
+- `delete(id)` – remove all metadata for a session when it disconnects
 
-##### `delete(id: string): void`
+### `InMemoryStreamSessionManager` & `InMemoryInfoSessionManager`
 
-Removes a session and cleans up its resources.
-
-**Parameters:**
-
-- `id` - Session ID to delete
-
-##### `has(id: string): Promise<boolean>`
-
-Checks whether a session with the given ID exists.
-
-**Parameters:**
-
-- `id` - Session ID to check
-
-**Returns:**
-
-- Promise resolving to true if the session exists, false otherwise
-
-##### `send(sessions: string[] | undefined, data: string): void`
-
-Sends data to one or more sessions.
-
-**Parameters:**
-
-- `sessions` - Array of session IDs to send to, or undefined to send to all sessions
-- `data` - String data to send (typically SSE-formatted)
-
-### `InMemorySessionManager`
-
-Concrete implementation that stores sessions in a JavaScript Map. Suitable for single-server deployments.
-
-#### Usage with Transport Layers
+Concrete in-memory implementations that cover both responsibilities. Combine them when configuring a transport:
 
 ```javascript
 import { HttpTransport } from '@tmcp/transport-http';
 import { SseTransport } from '@tmcp/transport-sse';
-import { InMemorySessionManager } from '@tmcp/session-manager';
+import {
+	InMemoryStreamSessionManager,
+	InMemoryInfoSessionManager,
+} from '@tmcp/session-manager';
 
-const sessionManager = new InMemorySessionManager();
+const sessionManagers = {
+	streams: new InMemoryStreamSessionManager(),
+	info: new InMemoryInfoSessionManager(),
+};
 
-// Use with HTTP transport
-const httpTransport = new HttpTransport(server, { sessionManager });
-
-// Use with SSE transport
-const sseTransport = new SseTransport(server, { sessionManager });
+const httpTransport = new HttpTransport(server, { sessionManager: sessionManagers });
+const sseTransport = new SseTransport(server, { sessionManager: sessionManagers });
 ```
 
 ## Related Packages

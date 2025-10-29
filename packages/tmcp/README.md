@@ -129,6 +129,8 @@ server.tool(
 );
 ```
 
+`sessionInfo` contains the latest `clientCapabilities`, `clientInfo`, and `logLevel` reported by the connected client. Built-in transports populate it automatically, so every handler can branch on client features without additional bookkeeping.
+
 ##### `prompt(definition, handler)`
 
 Register a prompt template with optional schema validation.
@@ -232,30 +234,34 @@ server.tool(
 
 ##### `ctx`
 
-Access the current request context, including session ID, auth info, and custom context.
+Access the current request context, including session ID, auth info, client metadata, and custom context.
 
 ```javascript
 server.tool(
-    {
-        name: 'context-aware-tool',
-        description: 'Tool that uses request context',
-    },
-    async () => {
-        const { sessionId, auth, custom } = server.ctx;
-        
-        if (!custom?.userId) {
-            throw new Error('User authentication required');
-        }
-        
-        return {
-            content: [
-                {
-                    type: 'text',
-                    text: `Hello user ${custom.userId} in session ${sessionId}`,
-                },
-            ],
-        };
-    },
+	{
+		name: 'context-aware-tool',
+		description: 'Tool that uses request context',
+	},
+	async () => {
+		const { sessionId, auth, sessionInfo, custom } = server.ctx;
+
+		if (!custom?.userId) {
+			throw new Error('User authentication required');
+		}
+
+		if (sessionInfo?.clientInfo) {
+			console.log(`Serving ${sessionInfo.clientInfo.name}`);
+		}
+
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `Hello user ${custom.userId} in session ${sessionId}`,
+				},
+			],
+		};
+	},
 );
 ```
 
@@ -269,9 +275,14 @@ const response = server.receive(jsonRpcRequest);
 
 // With custom context (typically used by transports)
 const response = server.receive(jsonRpcRequest, {
-    sessionId: 'session-123',
-    auth: authInfo,
-    custom: customContextData,
+	sessionId: 'session-123',
+	auth: authInfo,
+	sessionInfo: {
+		clientCapabilities,
+		clientInfo,
+		logLevel,
+	},
+	custom: customContextData,
 });
 ```
 
@@ -309,7 +320,7 @@ console.log(server.roots); // Access current roots
 
 ##### `changed(type, id)`
 
-Send notifications for subscriptions.
+Send notifications for subscriptions. When you call `changed('resource', uri)` the server now emits a broadcast notification, and the built-in transports look up which sessions subscribed to that URI before delivering it.
 
 ```javascript
 server.changed('resource', 'file://path/to/resource');
@@ -380,13 +391,25 @@ server.log('error', 'Failed to connect to database', 'database-logger');
 
 Listen to server events.
 
+Available events:
+
+- `initialize` – fired after the client handshake with the parsed initialize payload
+- `send` – emitted for point-to-point responses/notifications destined for the active session
+- `broadcast` – emitted for fan-out notifications (for example `notifications/resources/updated`)
+- `subscription` – raised when the client subscribes to a resource URI
+- `loglevelchange` – fired when the client requests a different log level
+
 ```javascript
-server.on('initialize', (data) => {
-	console.log('Client initialized:', data);
+server.on('initialize', ({ clientInfo }) => {
+	console.log('Client initialized:', clientInfo?.name);
 });
 
-server.on('send', ({ request, context }) => {
-	console.log('Sending request:', request);
+server.on('send', ({ request }) => {
+	console.log('Sending message:', request);
+});
+
+server.on('broadcast', ({ request }) => {
+	console.log('Broadcasting:', request.method);
 });
 ```
 
@@ -516,8 +539,14 @@ server.on('initialize', (data) => {
 	console.log('Client capabilities:', data.capabilities);
 });
 
-server.on('send', ({ request, context }) => {
+server.on('send', ({ request }) => {
 	console.log('Outgoing request:', request.method);
+});
+
+server.on('broadcast', ({ request }) => {
+	if (request.method === 'notifications/resources/updated') {
+		console.log('Resource updated:', request.params.uri);
+	}
 });
 ```
 
@@ -923,7 +952,7 @@ server.prompt(
 );
 ```
 
-or enable a something based on client capabilities or info
+or enable something based on client capabilities or info
 
 ```javascript
 server.prompt(
@@ -932,8 +961,8 @@ server.prompt(
 		description: 'Claude Code prompt',
 		enabled: () => {
 			// Access session information
-			const clientInfo = server.currentClientInfo();
-			return clientInfo.name === 'Claude Code';
+			const clientInfo = server.ctx.sessionInfo?.clientInfo;
+			return clientInfo?.name === 'Claude Code';
 		},
 	},
 	async (input) => {
@@ -958,8 +987,9 @@ server.prompt(
 		description: 'fetch the repositories of the user',
 		enabled: () => {
 			// Access session information
-			const clientInfo = server.currentClientCapabilities();
-			return clientInfo.elicitation != null;
+			const clientCapabilities =
+				server.ctx.sessionInfo?.clientCapabilities;
+			return clientCapabilities?.elicitation != null;
 		},
 	},
 	async (input) => {

@@ -1,6 +1,6 @@
 # @tmcp/session-manager-redis
 
-Redis-based session manager for TMCP (TypeScript Model Context Protocol) transport implementations. This package provides a distributed session manager that uses Redis for session storage and pub/sub messaging, enabling multi-server and serverless deployments.
+Redis-based session managers for TMCP (TypeScript Model Context Protocol) transport implementations. This package provides distributed implementations for both streaming session coordination and session metadata persistence backed by Redis, enabling multi-server and serverless deployments.
 
 ## Installation
 
@@ -10,7 +10,7 @@ pnpm add @tmcp/session-manager-redis redis
 
 ## Overview
 
-The `RedisSessionManager` uses Redis to store and manage client sessions across multiple server instances. It leverages Redis pub/sub functionality to enable real-time communication between different server instances and client sessions.
+`RedisStreamSessionManager` uses Redis pub/sub to fan out MCP notifications across processes, while `RedisInfoSessionManager` keeps per-session metadata (client capabilities, client info, log level, resource subscriptions) in Redis so that stateless transports can hydrate the MCP context on every request.
 
 **Key Features:**
 
@@ -18,29 +18,46 @@ The `RedisSessionManager` uses Redis to store and manage client sessions across 
 - **Serverless Ready**: Perfect for serverless and ephemeral environments
 - **Real-time Messaging**: Uses Redis pub/sub for instant message delivery
 - **Load Balancer Compatible**: Works seamlessly with load balancers
+- **Client Metadata Storage**: Persists capabilities, client info, log levels, and resource subscriptions between requests
 
 ## Usage
 
 ### Basic Setup
 
 ```javascript
-import { RedisSessionManager } from '@tmcp/session-manager-redis';
+import {
+	RedisStreamSessionManager,
+	RedisInfoSessionManager,
+} from '@tmcp/session-manager-redis';
 
-const sessionManager = new RedisSessionManager('redis://localhost:6379');
+const sessionManager = {
+	streams: new RedisStreamSessionManager('redis://localhost:6379'),
+	info: new RedisInfoSessionManager('redis://localhost:6379'),
+};
+
+// You can point the two managers at different Redis instances if desired, but using the same URL is a convenient default.
 ```
 
 ### With Authentication
 
 ```javascript
-const sessionManager = new RedisSessionManager(
-	'redis://username:password@localhost:6379',
-);
+const sessionManager = {
+	streams: new RedisStreamSessionManager(
+		'redis://username:password@localhost:6379',
+	),
+	info: new RedisInfoSessionManager(
+		'redis://username:password@localhost:6379',
+	),
+};
 ```
 
 ### With TLS
 
 ```javascript
-const sessionManager = new RedisSessionManager('rediss://localhost:6380');
+const sessionManager = {
+	streams: new RedisStreamSessionManager('rediss://localhost:6380'),
+	info: new RedisInfoSessionManager('rediss://localhost:6380'),
+};
 ```
 
 ### Using with Transport Layers
@@ -49,9 +66,15 @@ const sessionManager = new RedisSessionManager('rediss://localhost:6380');
 
 ```javascript
 import { HttpTransport } from '@tmcp/transport-http';
-import { RedisSessionManager } from '@tmcp/session-manager-redis';
+import {
+	RedisStreamSessionManager,
+	RedisInfoSessionManager,
+} from '@tmcp/session-manager-redis';
 
-const sessionManager = new RedisSessionManager('redis://localhost:6379');
+const sessionManager = {
+	streams: new RedisStreamSessionManager('redis://localhost:6379'),
+	info: new RedisInfoSessionManager('redis://localhost:6379'),
+};
 const transport = new HttpTransport(server, { sessionManager });
 ```
 
@@ -59,24 +82,30 @@ const transport = new HttpTransport(server, { sessionManager });
 
 ```javascript
 import { SseTransport } from '@tmcp/transport-sse';
-import { RedisSessionManager } from '@tmcp/session-manager-redis';
+import {
+	RedisStreamSessionManager,
+	RedisInfoSessionManager,
+} from '@tmcp/session-manager-redis';
 
-const sessionManager = new RedisSessionManager('redis://localhost:6379');
+const sessionManager = {
+	streams: new RedisStreamSessionManager('redis://localhost:6379'),
+	info: new RedisInfoSessionManager('redis://localhost:6379'),
+};
 const transport = new SseTransport(server, { sessionManager });
 ```
 
 ## How It Works
 
-The Redis session manager uses two Redis features:
+The Redis session managers use two Redis capabilities:
 
-1. **Key-Value Storage**: Session availability is tracked using keys like `available:session:{id}`
-2. **Pub/Sub Messaging**: Messages are sent to sessions via channels like `session:{id}`
+1. **Pub/Sub Messaging**: `RedisStreamSessionManager` publishes JSON payloads to channels like `session:{id}` so that whichever process holds the streaming controller can forward the message.
+2. **Key-Value Storage & Sets**: `RedisInfoSessionManager` stores metadata under keys such as `tmcp:client_info:{id}`, `tmcp:client_capabilities:{id}`, `tmcp:log_level:{id}`, and tracks resource subscriptions in sets like `tmcp:subscriptions:{uri}`.
 
 ### Session Lifecycle
 
-1. **Session Creation**: When a client connects, a session key is created and the manager subscribes to the session's pub/sub channel
-2. **Message Delivery**: Messages are published to the session channel and delivered to the connected stream controller
-3. **Session Cleanup**: When a session disconnects, keys are deleted and subscriptions are removed
+1. **Session Creation**: When a client connects, the stream manager spins up a pub/sub subscription while the info manager stores the client's capabilities and info.
+2. **Message Delivery**: Messages are published to the session channel and delivered to the connected stream controller. Broadcasts look up all subscribers for a resource via the info manager before publishing.
+3. **Session Cleanup**: When a session disconnects, stream controllers are disposed and all metadata keys/sets for the session are removed.
 
 ### Multi-Server Communication
 
@@ -84,39 +113,22 @@ When you deploy your MCP server to multiple servers (or in a serverless environm
 
 ## API
 
-### `RedisSessionManager`
+### `RedisStreamSessionManager`
 
-#### Constructor
+- `new RedisStreamSessionManager(redisUrl: string)` – establishes pub/sub connections for streaming traffic
+- `create(id, controller)` – stores the stream controller for the session and subscribes to `session:{id}`
+- `delete(id)` – unsubscribes and removes controller state
+- `has(id)` – resolves to `true` if a controller is tracked
+- `send(sessions, data)` – publishes to either `session:{id}` channels or broadcasts to all active sessions
 
-```typescript
-new RedisSessionManager(redisUrl: string)
-```
+### `RedisInfoSessionManager`
 
-Creates a new Redis session manager instance.
-
-**Parameters:**
-
-- `redisUrl` - Redis connection URL (supports redis:// and rediss:// protocols)
-
-#### Methods
-
-All methods implement the `SessionManager` interface:
-
-##### `create(id: string, controller: ReadableStreamDefaultController): Promise<void>`
-
-Creates a new session and sets up Redis pub/sub subscriptions.
-
-##### `delete(id: string): Promise<void>`
-
-Removes a session and cleans up Redis keys and subscriptions.
-
-##### `has(id: string): Promise<boolean>`
-
-Checks if a session exists by looking for its Redis key.
-
-##### `send(sessions: string[] | undefined, data: string): Promise<void>`
-
-Sends data to specified sessions or all sessions via Redis pub/sub.
+- `new RedisInfoSessionManager(redisUrl: string)` – reuses Redis to persist metadata
+- `setClientInfo(id, info)` / `getClientInfo(id)` – JSON stored under `tmcp:client_info:{id}`
+- `setClientCapabilities(id, capabilities)` / `getClientCapabilities(id)` – JSON stored under `tmcp:client_capabilities:{id}`
+- `setLogLevel(id, level)` / `getLogLevel(id)` – string stored under `tmcp:log_level:{id}`
+- `addSubscription(id, uri)` / `getSubscriptions(uri)` – maintain membership in `tmcp:subscriptions:{uri}`
+- `delete(id)` – clears all metadata and removes the session from every subscription set
 
 ## Related Packages
 

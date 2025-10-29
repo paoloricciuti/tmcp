@@ -1,7 +1,7 @@
 declare module '@tmcp/transport-sse' {
 	import type { McpServer } from 'tmcp';
 	import type { OAuth } from '@tmcp/auth';
-	import type { SessionManager } from '@tmcp/session-manager';
+	import type { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
 	export class SseTransport<TCustom extends Record<string, unknown> | undefined = undefined> {
 		
 		constructor(server: McpServer<any, TCustom>, options?: SseTransportOptions);
@@ -23,11 +23,14 @@ declare module '@tmcp/transport-sse' {
 	};
 	export type SseTransportOptions = {
 		getSessionId?: () => string;
-		path?: string;
+		path?: string | null;
 		endpoint?: string;
 		oauth?: OAuth<"built">;
 		cors?: CorsConfig | boolean;
-		sessionManager?: SessionManager;
+		sessionManager?: {
+			streams?: StreamSessionManager;
+			info?: InfoSessionManager;
+		};
 	};
 
 	export {};

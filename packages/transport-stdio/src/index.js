@@ -1,5 +1,5 @@
 /**
- * @import { McpServer, ClientCapabilities } from "tmcp";
+ * @import { McpServer, Context, Subscriptions } from "tmcp";
  */
 import process from 'node:process';
 
@@ -18,16 +18,57 @@ export class StdioTransport {
 	#cleaners = new Set();
 
 	/**
+	 * @type {NonNullable<Partial<Context["sessionInfo"]>>}
+	 */
+	#session_info = {};
+
+	/**
+	 * @type {Subscriptions}
+	 */
+	#subscriptions = {
+		resource: [],
+	};
+
+	/**
 	 *
 	 * @param {McpServer<any, TCustom>} server
 	 */
 	constructor(server) {
 		this.#server = server;
 		this.#cleaners.add(
-			this.#server.on('initialize', () => {
+			this.#server.on('initialize', ({ capabilities, clientInfo }) => {
+				this.#session_info.clientCapabilities = capabilities;
+				this.#session_info.clientInfo = clientInfo;
 				this.#cleaners.add(
 					this.#server.on('send', ({ request }) => {
 						process.stdout.write(JSON.stringify(request) + '\n');
+					}),
+				);
+				this.#cleaners.add(
+					this.#server.on('broadcast', ({ request }) => {
+						if (
+							request.method ===
+								'notifications/resources/updated' &&
+							!this.#subscriptions.resource.includes(
+								request.params.uri,
+							)
+						) {
+							return;
+						}
+						process.stdout.write(JSON.stringify(request) + '\n');
+					}),
+				);
+				this.#cleaners.add(
+					this.#server.on('loglevelchange', ({ level }) => {
+						this.#session_info.logLevel = level;
+					}),
+				);
+				this.#cleaners.add(
+					this.#server.on('subscription', ({ uri }) => {
+						this.#subscriptions ??= {
+							resource: [],
+						};
+						this.#subscriptions.resource?.push(uri);
 					}),
 				);
 			}),
@@ -63,6 +104,9 @@ export class StdioTransport {
 						const message = JSON.parse(line);
 						const response = await this.#server.receive(message, {
 							custom: ctx,
+							sessionInfo: /** @type {Context["sessionInfo"]} */ (
+								this.#session_info
+							),
 						});
 						if (response) {
 							process.stdout.write(

@@ -135,10 +135,16 @@ The HTTP transport supports custom session managers for different deployment sce
 #### In-Memory Sessions (Default)
 
 ```javascript
-import { InMemorySessionManager } from '@tmcp/session-manager';
+import {
+	InMemoryStreamSessionManager,
+	InMemoryInfoSessionManager,
+} from '@tmcp/session-manager';
 
 const transport = new HttpTransport(server, {
-	sessionManager: new InMemorySessionManager(), // Default behavior
+	sessionManager: {
+		streams: new InMemoryStreamSessionManager(),
+		info: new InMemoryInfoSessionManager(),
+	},
 });
 ```
 
@@ -147,10 +153,16 @@ const transport = new HttpTransport(server, {
 For deployments across multiple servers or serverless environments where sessions need to be shared:
 
 ```javascript
-import { RedisSessionManager } from '@tmcp/session-manager-redis';
+import {
+	RedisStreamSessionManager,
+	RedisInfoSessionManager,
+} from '@tmcp/session-manager-redis';
 
 const transport = new HttpTransport(server, {
-	sessionManager: new RedisSessionManager('redis://localhost:6379'),
+	sessionManager: {
+		streams: new RedisStreamSessionManager('redis://localhost:6379'),
+		info: new RedisInfoSessionManager('redis://localhost:6379'),
+	},
 });
 ```
 
@@ -170,6 +182,7 @@ const transport = new HttpTransport(server, {
 - **⚡ Real-time Updates**: Server can push notifications and updates to connected clients
 - **🛡️ Error Handling**: Graceful error handling for malformed requests
 - **🔀 Multiple HTTP Methods**: Supports GET (notifications), POST (messages), and DELETE (disconnect)
+- **🧠 Session Metadata**: Automatically persists client capabilities, info, and log levels and exposes them via `server.ctx.sessionInfo`
 
 ## API
 
@@ -195,9 +208,14 @@ interface HttpTransportOptions {
 	getSessionId: () => string; // Custom session ID generator
 	path?: string | null; // MCP endpoint path (default: '/mcp', null responds on every path)
 	oauth?: OAuth; // an oauth provider generated from @tmcp/auth
-	sessionManager?: SessionManager; // Custom session manager (default: InMemorySessionManager)
+	sessionManager?: {
+		streams?: StreamSessionManager;
+		info?: InfoSessionManager;
+	}; // Provide custom managers; defaults to in-memory implementations
 }
 ```
+
+If you omit `sessionManager` the transport creates `InMemoryStreamSessionManager` and `InMemoryInfoSessionManager` instances for you. You can override either field independently (for example, Redis streams with in-memory metadata during development).
 
 #### Methods
 

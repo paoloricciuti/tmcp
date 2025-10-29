@@ -213,13 +213,27 @@ server.template(
 );
 ```
 
-##### `receive(request)`
+##### `receive(request, context?)`
 
-Process an incoming MCP request.
+Process an incoming MCP request with optional context information.
 
 ```javascript
-const response = server.receive(jsonRpcRequest);
+const response = server.receive(jsonRpcRequest, {
+	sessionId: 'session-123',
+	auth: authInfo,
+	sessionInfo: {
+		clientCapabilities, // cached from the client's initialize call
+		clientInfo,         // client name/version metadata
+		logLevel,           // last log level requested by the client
+	},
+	custom: {
+		userId: 'alice',
+	},
+});
 ```
+
+> [!TIP]
+> `sessionInfo` is automatically populated by the built-in transports. You can read it from handlers via `server.ctx.sessionInfo` to tailor behaviour to the connected client.
 
 ## Advanced Examples
 

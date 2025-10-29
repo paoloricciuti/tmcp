@@ -1,7 +1,7 @@
 /* eslint-disable jsdoc/no-undefined-types */
 /* eslint-disable no-undef */
 /**
- * @import { SessionManager } from '@tmcp/session-manager';
+ * @import { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
  */
 
 import { DurableObject, env } from 'cloudflare:workers';
@@ -22,9 +22,30 @@ function is_durable_object_namespace(namespace) {
 }
 
 /**
- * @implements {SessionManager}
+ * @param {unknown} namespace
+ * @returns {namespace is KVNamespace}
  */
-export class DurableObjectSessionManager {
+function is_kv_namespace(namespace) {
+	return (
+		typeof namespace === 'object' &&
+		namespace !== null &&
+		'get' in namespace &&
+		typeof namespace.get === 'function' &&
+		'list' in namespace &&
+		typeof namespace.list === 'function' &&
+		'put' in namespace &&
+		typeof namespace.put === 'function' &&
+		'getWithMetadata' in namespace &&
+		typeof namespace.getWithMetadata === 'function' &&
+		'delete' in namespace &&
+		typeof namespace.delete === 'function'
+	);
+}
+
+/**
+ * @implements {StreamSessionManager}
+ */
+export class DurableObjectStreamSessionManager {
 	/**
 	 * @type {string}
 	 */
@@ -123,6 +144,166 @@ export class DurableObjectSessionManager {
 	 */
 	async send(sessions, data) {
 		await this.#stub.broadcast(sessions, data);
+	}
+}
+
+/**
+ * @implements {InfoSessionManager}
+ */
+export class KVInfoSessionManager {
+	/**
+	 * @type {string}
+	 */
+	#binding;
+
+	/**
+	 *
+	 * @param {string | null} level
+	 * @returns {level is Awaited<ReturnType<InfoSessionManager["getLogLevel"]>>}
+	 */
+	#is_log_level(level) {
+		return (
+			typeof level === 'string' &&
+			[
+				'debug',
+				'info',
+				'notice',
+				'warning',
+				'error',
+				'critical',
+				'alert',
+				'emergency',
+			].includes(level)
+		);
+	}
+
+	/**
+	 * @param {string} binding
+	 */
+	constructor(binding = 'TMCP_SESSION_INFO') {
+		this.#binding = binding;
+	}
+	get #client() {
+		const namespace = /** @type {any} */ (env)[this.#binding];
+		if (!is_kv_namespace(namespace)) {
+			throw new Error(`${this.#binding} is not a KV namespace`);
+		}
+		return namespace;
+	}
+
+	/**
+	 * @type {InfoSessionManager['getClientInfo']}
+	 */
+	async getClientInfo(id) {
+		const client_info = await this.#client.get(`tmcp:client_info:${id}`);
+		if (client_info != null) {
+			return JSON.parse(client_info);
+		}
+
+		throw new Error(`Client info not found for session ${id}`);
+	}
+	/**
+	 * @type {InfoSessionManager["setClientInfo"]}
+	 */
+	async setClientInfo(id, client_info) {
+		await this.#client.put(
+			`tmcp:client_info:${id}`,
+			JSON.stringify(client_info),
+		);
+	}
+	/**
+	 * @type {InfoSessionManager["getClientCapabilities"]}
+	 */
+	async getClientCapabilities(id) {
+		const client_capabilities = await this.#client.get(
+			`tmcp:client_capabilities:${id}`,
+		);
+		if (client_capabilities != null) {
+			return JSON.parse(client_capabilities);
+		}
+
+		throw new Error(`Client capabilities not found for session ${id}`);
+	}
+	/**
+	 * @type {InfoSessionManager["setClientCapabilities"]}
+	 */
+	async setClientCapabilities(id, client_capabilities) {
+		await this.#client.put(
+			`tmcp:client_capabilities:${id}`,
+			JSON.stringify(client_capabilities),
+		);
+	}
+	/**
+	 * @type {InfoSessionManager["getLogLevel"]}
+	 */
+	async getLogLevel(id) {
+		const log_level = await this.#client.get(`tmcp:log_level:${id}`);
+
+		if (this.#is_log_level(log_level)) {
+			return log_level;
+		}
+
+		throw new Error(`Log level not found for session ${id}`);
+	}
+	/**
+	 * @type {InfoSessionManager["setLogLevel"]}
+	 */
+	async setLogLevel(id, log_level) {
+		await this.#client.put(
+			`tmcp:log_level:${id}`,
+			JSON.stringify(log_level),
+		);
+	}
+	/**
+	 * @type {InfoSessionManager["getSubscriptions"]}
+	 */
+	async getSubscriptions(uri) {
+		const subscriptions = await this.#client.list({
+			prefix: `tmcp:subscriptions:${uri}:`,
+		});
+		return (
+			await Promise.all(
+				subscriptions.keys.map(async (key) => {
+					const id = await this.#client.get(key.name);
+					return id;
+				}),
+			)
+		).filter((id) => id != null);
+	}
+	/**
+	 * @type {InfoSessionManager["addSubscription"]}
+	 */
+	async addSubscription(id, uri) {
+		await this.#client.put(
+			`tmcp:subscriptions:${uri}:${crypto.randomUUID()}`,
+			id,
+		);
+	}
+
+	/**
+	 * @param {string} id
+	 */
+	async #remove_id_from_subscriptions(id) {
+		const list = await this.#client.list({
+			prefix: 'tmcp:subscriptions:',
+		});
+		for (const key of list.keys) {
+			if ((await this.#client.get(key.name)) === id) {
+				await this.#client.delete(key.name);
+			}
+		}
+	}
+
+	/**
+	 * @type {InfoSessionManager["delete"]}
+	 */
+	async delete(id) {
+		await Promise.all([
+			this.#client.delete(`tmcp:client_info:${id}`),
+			this.#client.delete(`tmcp:client_capabilities:${id}`),
+			this.#client.delete(`tmcp:log_level:${id}`),
+			this.#remove_id_from_subscriptions(id),
+		]);
 	}
 }
 

@@ -1,7 +1,7 @@
 declare module '@tmcp/transport-http' {
 	import type { McpServer } from 'tmcp';
 	import type { OAuth } from '@tmcp/auth';
-	import type { SessionManager } from '@tmcp/session-manager';
+	import type { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
 	export class HttpTransport<TCustom extends Record<string, unknown> | undefined = undefined> {
 		
 		constructor(server: McpServer<any, TCustom>, options?: HttpTransportOptions);
@@ -22,7 +22,10 @@ declare module '@tmcp/transport-http' {
 		path?: string | null;
 		oauth?: OAuth<"built">;
 		cors?: CorsConfig | boolean;
-		sessionManager?: SessionManager;
+		sessionManager?: {
+			streams?: StreamSessionManager;
+			info?: InfoSessionManager;
+		};
 	};
 
 	export {};
