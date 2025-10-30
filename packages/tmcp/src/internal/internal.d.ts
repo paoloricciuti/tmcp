@@ -71,7 +71,7 @@ export type StoredResource =
 export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	capabilities?: ServerCapabilities;
 	instructions?: string;
-	adapter: JsonSchemaAdapter<TSchema>;
+	adapter: JsonSchemaAdapter<TSchema> | undefined;
 	pagination?: {
 		resources?: { size?: number };
 		prompts?: { size?: number };

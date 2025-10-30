@@ -57,6 +57,10 @@ const server = new McpServer(
 	},
 );
 
+// While the adapter is optional (you can opt out by explicitly passing `adapter: undefined`)
+// without an adapter the server cannot accept inputs, produce structured outputs, or request
+// elicitations at all only do this for very simple servers.
+
 // Define a tool with type-safe schema
 server.tool(
 	{
@@ -107,7 +111,10 @@ new McpServer(serverInfo, options);
 ```
 
 - `serverInfo`: Server metadata (name, version, description)
-- `options`: Configuration object with adapter and capabilities
+- `options`: Configuration object with optional adapter (for schema conversion) and capabilities
+
+> [!IMPORTANT]
+> While the adapter is optional (you can opt out by explicitly passing `adapter: undefined`) without an adapter the server cannot accept inputs, produce structured outputs, or request elicitations at all only do this for very simple servers.
 
 #### Methods
 

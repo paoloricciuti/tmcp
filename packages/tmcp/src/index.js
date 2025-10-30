@@ -398,12 +398,13 @@ export class McpServer {
 							description: tool.description,
 							icons: tool.icons,
 							_meta: tool._meta,
-							inputSchema: tool.schema
-								? await this.#options.adapter.toJsonSchema(
-										tool.schema,
-									)
-								: { type: 'object', properties: {} },
-							...(tool.outputSchema
+							inputSchema:
+								tool.schema && this.#options.adapter
+									? await this.#options.adapter.toJsonSchema(
+											tool.schema,
+										)
+									: { type: 'object', properties: {} },
+							...(tool.outputSchema && this.#options.adapter
 								? {
 										outputSchema:
 											await this.#options.adapter.toJsonSchema(
@@ -515,16 +516,17 @@ export class McpServer {
 							(await safe_enabled(prompt.enabled)) === false
 						)
 							return null;
-						const arguments_schema = prompt.schema
-							? await this.#options.adapter.toJsonSchema(
-									prompt.schema,
-								)
-							: {
-									type: 'object',
-									properties:
-										/** @type {Record<string, {description: string}>} */ ({}),
-									required: [],
-								};
+						const arguments_schema =
+							prompt.schema && this.#options.adapter
+								? await this.#options.adapter.toJsonSchema(
+										prompt.schema,
+									)
+								: {
+										type: 'object',
+										properties:
+											/** @type {Record<string, {description: string}>} */ ({}),
+										required: [],
+									};
 						const keys = Object.keys(
 							arguments_schema.properties ?? {},
 						);
@@ -1045,7 +1047,7 @@ export class McpServer {
 			{
 				message,
 				requestedSchema:
-					await this.#options.adapter.toJsonSchema(schema),
+					await this.#options.adapter?.toJsonSchema(schema),
 			},
 			'standalone',
 		);
