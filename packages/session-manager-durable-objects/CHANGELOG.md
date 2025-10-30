@@ -1,5 +1,11 @@
 # @tmcp/session-manager-durable-objects
 
+## 0.2.1
+
+### Patch Changes
+
+- 5119b33: fix: use `waitUntil`in info session manager
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # tmcp
 
+## 1.16.1
+
+### Patch Changes
+
+- 4465e9d: fix: allow explicitly passing undefined adapter for simple servers
+- ce38e88: fix: receive argument type
+
 ## 1.16.0
 
 ### Minor Changes
