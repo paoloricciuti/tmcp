@@ -4,7 +4,7 @@
  * @import { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
  */
 
-import { DurableObject, env } from 'cloudflare:workers';
+import { DurableObject, env, waitUntil } from 'cloudflare:workers';
 
 /**
  * @param {unknown} namespace
@@ -206,9 +206,11 @@ export class KVInfoSessionManager {
 	 * @type {InfoSessionManager["setClientInfo"]}
 	 */
 	async setClientInfo(id, client_info) {
-		await this.#client.put(
-			`tmcp:client_info:${id}`,
-			JSON.stringify(client_info),
+		waitUntil(
+			this.#client.put(
+				`tmcp:client_info:${id}`,
+				JSON.stringify(client_info),
+			),
 		);
 	}
 	/**
@@ -228,9 +230,11 @@ export class KVInfoSessionManager {
 	 * @type {InfoSessionManager["setClientCapabilities"]}
 	 */
 	async setClientCapabilities(id, client_capabilities) {
-		await this.#client.put(
-			`tmcp:client_capabilities:${id}`,
-			JSON.stringify(client_capabilities),
+		waitUntil(
+			this.#client.put(
+				`tmcp:client_capabilities:${id}`,
+				JSON.stringify(client_capabilities),
+			),
 		);
 	}
 	/**
@@ -249,9 +253,8 @@ export class KVInfoSessionManager {
 	 * @type {InfoSessionManager["setLogLevel"]}
 	 */
 	async setLogLevel(id, log_level) {
-		await this.#client.put(
-			`tmcp:log_level:${id}`,
-			JSON.stringify(log_level),
+		waitUntil(
+			this.#client.put(`tmcp:log_level:${id}`, JSON.stringify(log_level)),
 		);
 	}
 	/**
@@ -274,9 +277,11 @@ export class KVInfoSessionManager {
 	 * @type {InfoSessionManager["addSubscription"]}
 	 */
 	async addSubscription(id, uri) {
-		await this.#client.put(
-			`tmcp:subscriptions:${uri}:${crypto.randomUUID()}`,
-			id,
+		waitUntil(
+			this.#client.put(
+				`tmcp:subscriptions:${uri}:${crypto.randomUUID()}`,
+				id,
+			),
 		);
 	}
 
@@ -298,12 +303,14 @@ export class KVInfoSessionManager {
 	 * @type {InfoSessionManager["delete"]}
 	 */
 	async delete(id) {
-		await Promise.all([
-			this.#client.delete(`tmcp:client_info:${id}`),
-			this.#client.delete(`tmcp:client_capabilities:${id}`),
-			this.#client.delete(`tmcp:log_level:${id}`),
-			this.#remove_id_from_subscriptions(id),
-		]);
+		waitUntil(
+			Promise.all([
+				this.#client.delete(`tmcp:client_info:${id}`),
+				this.#client.delete(`tmcp:client_capabilities:${id}`),
+				this.#client.delete(`tmcp:log_level:${id}`),
+				this.#remove_id_from_subscriptions(id),
+			]),
+		);
 	}
 }
 
