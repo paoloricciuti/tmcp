@@ -1193,3 +1193,5 @@ export class McpServer {
 		return message_severity >= session_severity;
 	}
 }
+
+export { Tool } from './tool.js';
