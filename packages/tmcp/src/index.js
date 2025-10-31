@@ -825,24 +825,26 @@ export class McpServer {
 	/**
 	 * Use the Tool class to create a reusable tool and pass it to this method to add it to the server.
 	 *
-	 * @param {import("./tool.js").Tool} tool
+	 * @param {import("./tool.js").Tool[]} tools
 	 */
-	addTool(tool) {
-		this.tool(
-			{
-				name: tool.name,
-				description: tool.description,
-				title: tool.title,
-				// types were already checked by the Tool class
-				schema: /** @type {any} */ (tool.schema),
-				outputSchema: /** @type {any} */ (tool.outputSchema),
-				annotations: tool.annotations,
-				enabled: tool.enabled,
-				icons: tool.icons,
-				_meta: tool._meta,
-			},
-			tool.execute,
-		);
+	addTool(...tools) {
+		for (const tool of tools) {
+			this.tool(
+				{
+					name: tool.name,
+					description: tool.description,
+					title: tool.title,
+					// types were already checked by the Tool class
+					schema: /** @type {any} */ (tool.schema),
+					outputSchema: /** @type {any} */ (tool.outputSchema),
+					annotations: tool.annotations,
+					enabled: tool.enabled,
+					icons: tool.icons,
+					_meta: tool._meta,
+				},
+				tool.execute,
+			);
+		}
 	}
 
 	/**
