@@ -1,11 +1,20 @@
 /**
+ * @import { StandardSchemaV1 } from "@standard-schema/spec";
+ * @import { ToolAnnotations } from "./validation/index.js";
+ */
+
+/**
  * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
  * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+ *
+ * @template {StandardSchemaV1 | undefined} [StandardSchema=undefined]
+ * @template {StandardSchema | undefined} [TSchema=undefined]
+ * @template {StandardSchema | undefined} [TOutputSchema=undefined]
  */
 export class Tool {
 	/**
-	 * @param {{ name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: import("@standard-schema/spec").StandardSchemaV1; outputSchema?: import("@standard-schema/spec").StandardSchemaV1; annotations?: import("./validation/index.js").ToolAnnotations } & import("./index.js").Icons} options
-	 * @param {((input?: any) => Promise<import("./index.js").CallToolResult<any>> | import("./index.js").CallToolResult<any>)} execute
+	 * @param {{ name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & import("./index.js").Icons} options
+	 * @param {TSchema extends undefined ? (()=>Promise<import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
 	 */
 	constructor(
 		{

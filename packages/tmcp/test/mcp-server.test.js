@@ -252,6 +252,20 @@ describe('McpServer', () => {
 				),
 			);
 
+			server.addTool(
+				new Tool(
+					{
+						name: 'list-test-tool-class-schemas',
+						description: 'A tool for list testing',
+						title: 'List Test Tool',
+						icons: tool_icons,
+						schema: mock_schema,
+						outputSchema: output_mock_schema,
+					},
+					tool,
+				),
+			);
+
 			server.tool(
 				{
 					name: 'list-test-tool-schemas',
@@ -294,6 +308,30 @@ describe('McpServer', () => {
 							description: 'A tool for list testing',
 							icons: tool_icons,
 							inputSchema: { type: 'object', properties: {} },
+						},
+						{
+							name: 'list-test-tool-class-schemas',
+							description: 'A tool for list testing',
+							title: 'List Test Tool',
+							icons: tool_icons,
+							inputSchema: {
+								properties: {
+									test: {
+										type: 'string',
+									},
+								},
+								required: ['test'],
+								type: 'object',
+							},
+							outputSchema: {
+								type: 'object',
+								properties: {
+									test: {
+										type: 'string',
+									},
+								},
+								required: ['test'],
+							},
 						},
 						{
 							description: 'A tool for list testing 2',
