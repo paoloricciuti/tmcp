@@ -834,9 +834,8 @@ export class McpServer {
 					name: tool.name,
 					description: tool.description,
 					title: tool.title,
-					// types were already checked by the Tool class
-					schema: /** @type {any} */ (tool.schema),
-					outputSchema: /** @type {any} */ (tool.outputSchema),
+					schema: tool.schema,
+					outputSchema: tool.outputSchema,
 					annotations: tool.annotations,
 					enabled: tool.enabled,
 					icons: tool.icons,
