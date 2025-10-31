@@ -1,0 +1,44 @@
+{
+	"name": "@tmcp/test",
+	"version": "0.0.1",
+	"description": "",
+	"main": "src/index.js",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/paoloricciuti/tmcp.git",
+		"directory": "packages/test"
+	},
+	"scripts": {
+		"generate:types": "dts-buddy && publint",
+		"prepublish": "pnpm generate:types"
+	},
+	"keywords": [
+		"tmcp",
+		"testing",
+		"transport",
+		"test"
+	],
+	"types": "./src/types/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/types/index.d.ts",
+			"import": "./src/index.js"
+		}
+	},
+	"packageManager": "pnpm@10.20.0",
+	"type": "module",
+	"peerDependencies": {
+		"tmcp": "workspace:^1.16.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"devDependencies": {
+		"@types/node": "^24.9.2",
+		"dts-buddy": "^0.6.2",
+		"publint": "^0.3.12"
+	},
+	"dependencies": {
+		"json-rpc-2.0": "^1.7.1"
+	}
+}
