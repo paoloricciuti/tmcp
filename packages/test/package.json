@@ -1,7 +1,7 @@
 {
 	"name": "@tmcp/test",
 	"version": "0.0.1",
-	"description": "",
+	"description": "Testing utility for `tmcp` servers",
 	"main": "src/index.js",
 	"repository": {
 		"type": "git",
