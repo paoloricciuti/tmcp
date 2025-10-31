@@ -1258,8 +1258,3 @@ export class McpServer {
 		return message_severity >= session_severity;
 	}
 }
-
-export { Tool } from './tool.js';
-export { Prompt } from './prompt.js';
-export { Resource as ResourceClass } from './resource.js';
-export { Template } from './template.js';
