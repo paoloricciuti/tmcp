@@ -847,6 +847,72 @@ export class McpServer {
 	}
 
 	/**
+	 * Use the Prompt class to create a reusable prompt and pass it to this method to add it to the server.
+	 *
+	 * @param {import("./prompt.js").Prompt<StandardSchema, any>[]} prompts
+	 */
+	prompts(...prompts) {
+		for (const prompt of prompts) {
+			this.prompt(
+				{
+					name: prompt.name,
+					description: prompt.description,
+					title: prompt.title,
+					schema: prompt.schema,
+					complete: prompt.complete,
+					enabled: prompt.enabled,
+					icons: prompt.icons,
+				},
+				prompt.execute,
+			);
+		}
+	}
+
+	/**
+	 * Use the Resource class to create a reusable resource and pass it to this method to add it to the server.
+	 *
+	 * @param {import("./resource.js").Resource[]} resources
+	 */
+	resources(...resources) {
+		for (const resource of resources) {
+			this.resource(
+				{
+					name: resource.name,
+					description: resource.description,
+					title: resource.title,
+					uri: resource.uri,
+					enabled: resource.enabled,
+					icons: resource.icons,
+				},
+				resource.execute,
+			);
+		}
+	}
+
+	/**
+	 * Use the Template class to create a reusable template and pass it to this method to add it to the server.
+	 *
+	 * @param {import("./template.js").Template<any, any>[]} templates
+	 */
+	templates(...templates) {
+		for (const template of templates) {
+			this.template(
+				{
+					name: template.name,
+					description: template.description,
+					title: template.title,
+					uri: template.uri,
+					complete: template.complete,
+					list: template.list,
+					enabled: template.enabled,
+					icons: template.icons,
+				},
+				template.execute,
+			);
+		}
+	}
+
+	/**
 	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
 	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
 	 *
@@ -1194,3 +1260,6 @@ export class McpServer {
 }
 
 export { Tool } from './tool.js';
+export { Prompt } from './prompt.js';
+export { Resource as ResourceClass } from './resource.js';
+export { Template } from './template.js';
