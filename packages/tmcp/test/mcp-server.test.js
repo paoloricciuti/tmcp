@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JsonSchemaAdapter } from '../src/adapter.js';
 import { McpServer } from '../src/index.js';
+import { Tool } from '../src/tool.js';
 
 /**
  * @template T
@@ -239,14 +240,16 @@ describe('McpServer', () => {
 			});
 			const tool_icons = create_icons('list-tool');
 
-			server.tool(
-				{
-					name: 'list-test-tool',
-					description: 'A tool for list testing',
-					title: 'List Test Tool',
-					icons: tool_icons,
-				},
-				tool,
+			server.addTool(
+				new Tool(
+					{
+						name: 'list-test-tool',
+						description: 'A tool for list testing',
+						title: 'List Test Tool',
+						icons: tool_icons,
+					},
+					tool,
+				),
 			);
 
 			server.tool(

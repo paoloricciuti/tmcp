@@ -823,6 +823,29 @@ export class McpServer {
 	}
 
 	/**
+	 * Use the Tool class to create a reusable tool and pass it to this method to add it to the server.
+	 *
+	 * @param {import("./tool.js").Tool} tool
+	 */
+	addTool(tool) {
+		this.tool(
+			{
+				name: tool.name,
+				description: tool.description,
+				title: tool.title,
+				// types were already checked by the Tool class
+				schema: /** @type {any} */ (tool.schema),
+				outputSchema: /** @type {any} */ (tool.outputSchema),
+				annotations: tool.annotations,
+				enabled: tool.enabled,
+				icons: tool.icons,
+				_meta: tool._meta,
+			},
+			tool.execute,
+		);
+	}
+
+	/**
 	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
 	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
 	 *
