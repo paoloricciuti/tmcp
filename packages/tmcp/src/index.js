@@ -827,7 +827,7 @@ export class McpServer {
 	 *
 	 * @param {import("./tool.js").Tool<StandardSchema, any, any>[]} tools
 	 */
-	addTool(...tools) {
+	tools(...tools) {
 		for (const tool of tools) {
 			this.tool(
 				{

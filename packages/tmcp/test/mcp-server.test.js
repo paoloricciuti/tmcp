@@ -240,7 +240,7 @@ describe('McpServer', () => {
 			});
 			const tool_icons = create_icons('list-tool');
 
-			server.addTool(
+			server.tools(
 				new Tool(
 					{
 						name: 'list-test-tool',
@@ -252,7 +252,7 @@ describe('McpServer', () => {
 				),
 			);
 
-			server.addTool(
+			server.tools(
 				new Tool(
 					{
 						name: 'list-test-tool-class-schemas',
