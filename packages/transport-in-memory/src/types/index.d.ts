@@ -1,4 +1,4 @@
-declare module '@tmcp/test' {
+declare module '@tmcp/transport-in-memory' {
 	import type { McpServer, Context, Subscriptions } from 'tmcp';
 	import type { JSONRPCRequest } from 'json-rpc-2.0';
 	export class InMemoryTransport<TCustom extends Record<string, unknown> | undefined = undefined> {

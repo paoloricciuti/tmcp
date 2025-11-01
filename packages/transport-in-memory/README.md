@@ -1,16 +1,16 @@
-# @tmcp/test
+# @tmcp/transport-in-memory
 
 In-memory transport for testing MCP servers.
 
 ## Installation
 
 ```bash
-pnpm add -D @tmcp/test
+pnpm add -D @tmcp/transport-in-memory
 ```
 
 ## Overview
 
-`@tmcp/test` provides an in-memory transport layer for testing MCP (Model Context Protocol) servers without the need for actual network connections or stdio communication. It's designed to make testing MCP servers fast, reliable, and straightforward.
+`@tmcp/transport-in-memory` provides an in-memory transport layer for testing MCP (Model Context Protocol) servers without the need for actual network connections or stdio communication. It's designed to make testing MCP servers fast, reliable, and straightforward.
 
 ## Features
 
@@ -25,7 +25,7 @@ pnpm add -D @tmcp/test
 
 ```javascript
 import { McpServer } from 'tmcp';
-import { InMemoryTransport } from '@tmcp/test';
+import { InMemoryTransport } from '@tmcp/transport-in-memory';
 
 // Create your MCP server
 const server = new McpServer({
@@ -329,7 +329,7 @@ await session.callTool(
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { McpServer } from 'tmcp';
-import { InMemoryTransport } from '@tmcp/test';
+import { InMemoryTransport } from '@tmcp/transport-in-memory';
 import * as v from 'valibot';
 import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 

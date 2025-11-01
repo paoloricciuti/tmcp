@@ -299,25 +299,6 @@ importers:
         specifier: ^0.3.12
         version: 0.3.15
 
-  packages/test:
-    dependencies:
-      json-rpc-2.0:
-        specifier: ^1.7.1
-        version: 1.7.1
-      tmcp:
-        specifier: workspace:^1.16.0
-        version: link:../tmcp
-    devDependencies:
-      '@types/node':
-        specifier: ^24.9.2
-        version: 24.9.2
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
-      publint:
-        specifier: ^0.3.12
-        version: 0.3.15
-
   packages/tmcp:
     dependencies:
       '@standard-schema/spec':
@@ -391,6 +372,25 @@ importers:
       vitest:
         specifier: ^4.0.0
         version: 4.0.5(@types/node@24.9.2)
+
+  packages/transport-in-memory:
+    dependencies:
+      json-rpc-2.0:
+        specifier: ^1.7.1
+        version: 1.7.1
+      tmcp:
+        specifier: workspace:^1.16.0
+        version: link:../tmcp
+    devDependencies:
+      '@types/node':
+        specifier: ^24.9.2
+        version: 24.9.2
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
+      publint:
+        specifier: ^0.3.12
+        version: 0.3.15
 
   packages/transport-sse:
     dependencies:

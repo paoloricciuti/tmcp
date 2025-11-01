@@ -1,7 +1,7 @@
 {
-	"name": "@tmcp/test",
+	"name": "@tmcp/transport-in-memory",
 	"version": "0.0.1",
-	"description": "Testing utility for `tmcp` servers",
+	"description": "In memory transport for `tmcp` servers",
 	"main": "src/index.js",
 	"repository": {
 		"type": "git",
