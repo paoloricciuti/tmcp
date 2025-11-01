@@ -28,7 +28,7 @@
 	"packageManager": "pnpm@10.20.0",
 	"type": "module",
 	"peerDependencies": {
-		"tmcp": "workspace:^1.16.0"
+		"tmcp": "workspace:^1.16.2"
 	},
 	"publishConfig": {
 		"access": "public"
