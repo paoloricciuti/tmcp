@@ -4,7 +4,7 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage } from "./validation/index.js";
+ * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
@@ -105,6 +105,29 @@ import { should_version_negotiation_fail } from './validation/version.js';
 
 /**
  * @typedef  {ElicitResultType} ElicitResult
+ */
+
+/**
+ * @typedef {InitializeResultType} InitializeResult
+ */
+
+/**
+ * @typedef {ListToolsResultType} ListToolsResult
+ */
+
+/**
+ * @typedef {ListPromptsResultType} ListPromptsResult
+ */
+
+/**
+ * @typedef {ListResourceTemplatesResultType} ListResourceTemplatesResult
+ */
+
+/**
+ * @typedef {ListResourcesResultType} ListResourcesResult
+ */
+/**
+ * @typedef {CompleteResultType} CompleteResult
  */
 
 /**

@@ -1586,3 +1586,18 @@ export const ServerResultSchema = v.union([
 /**
  * @typedef {v.InferInput<typeof ElicitResultSchema>} ElicitResult
  */
+/**
+ * @typedef {v.InferInput<typeof InitializeResultSchema>} InitializeResult
+ */
+/**
+ * @typedef {v.InferInput<typeof ListToolsResultSchema>} ListToolsResult
+ */
+/**
+ * @typedef {v.InferInput<typeof ListPromptsResultSchema>} ListPromptsResult
+ */
+/**
+ * @typedef {v.InferInput<typeof ListResourcesResultSchema>} ListResourcesResult
+ */
+/**
+ * @typedef {v.InferInput<typeof ListResourceTemplatesResultSchema>} ListResourceTemplatesResult
+ */
