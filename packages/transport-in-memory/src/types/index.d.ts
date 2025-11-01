@@ -1,64 +1,7 @@
 declare module '@tmcp/transport-in-memory' {
-	import type { McpServer, Context, Subscriptions } from 'tmcp';
 	import type { JSONRPCRequest } from 'json-rpc-2.0';
-	export class InMemoryTransport<TCustom extends Record<string, unknown> | undefined = undefined> {
-		
-		constructor(server: McpServer<any, TCustom>);
-		/**
-		 * Get the underlying server instance
-		 * */
-		get server(): McpServer<any, TCustom>;
-		/**
-		 * Get or create a session
-		 * */
-		session(session_id?: string): Session<TCustom>;
-		/**
-		 * Send a request to the server by method name and params
-		 * */
-		request(method: string, params?: Record<string, unknown>, sessionId?: string, ctx?: TCustom): Promise<any>;
-		/**
-		 * Send a response to a request that was sent by the server
-		 * @param request_id - The ID of the request to respond to
-		 * @param result - The result to send back (either result or error must be provided)
-		 * @param error - The error to send back (either result or error must be provided)
-		 * */
-		response(request_id: number | string, result?: any, error?: {
-			code: number;
-			message: string;
-			data?: any;
-		}, sessionId?: string, ctx?: TCustom): Promise<void>;
-		/**
-		 * Internal method to get the current session ID from AsyncLocalStorage
-		 * */
-		get sessionId(): string | undefined;
-		/**
-		 * Internal method to get sent messages for a session
-		 * */
-		sentMessages(session_id: string): Array<JSONRPCRequest>;
-		/**
-		 * Internal method to get broadcast messages for a session
-		 * */
-		broadcastMessages(session_id: string): Array<JSONRPCRequest>;
-		/**
-		 * Internal method to clear messages for a session
-		 * */
-		clearSessionMessages(session_id: string): void;
-		/**
-		 * Internal method to remove a session
-		 * */
-		closeSession(session_id: string): void;
-		/**
-		 * Clear all messages for all sessions
-		 */
-		clear(): void;
-		/**
-		 * Close all sessions and clean up all event listeners
-		 */
-		close(): void;
-		#private;
-	}
-
-	class Session<TCustom extends Record<string, unknown> | undefined = undefined> {
+	import type { Context, Subscriptions, McpServer } from 'tmcp';
+	export class Session<TCustom extends Record<string, unknown> | undefined = undefined> {
 		
 		constructor(adapter: InMemoryTransport<TCustom>, session_id: string);
 		get sessionId(): string;
@@ -200,6 +143,63 @@ declare module '@tmcp/transport-in-memory' {
 		 * Internal method to get and increment request ID
 		 * */
 		nextId(): number;
+		#private;
+	}
+
+	export class InMemoryTransport<TCustom extends Record<string, unknown> | undefined = undefined> {
+		
+		constructor(server: McpServer<any, TCustom>);
+		/**
+		 * Get the underlying server instance
+		 * */
+		get server(): McpServer<any, TCustom>;
+		/**
+		 * Get or create a session
+		 * */
+		session(session_id?: string): Session<TCustom>;
+		/**
+		 * Send a request to the server by method name and params
+		 * */
+		request(method: string, params?: Record<string, unknown>, sessionId?: string, ctx?: TCustom): Promise<any>;
+		/**
+		 * Send a response to a request that was sent by the server
+		 * @param request_id - The ID of the request to respond to
+		 * @param result - The result to send back (either result or error must be provided)
+		 * @param error - The error to send back (either result or error must be provided)
+		 * */
+		response(request_id: number | string, result?: any, error?: {
+			code: number;
+			message: string;
+			data?: any;
+		}, sessionId?: string, ctx?: TCustom): Promise<void>;
+		/**
+		 * Internal method to get the current session ID from AsyncLocalStorage
+		 * */
+		get sessionId(): string | undefined;
+		/**
+		 * Internal method to get sent messages for a session
+		 * */
+		sentMessages(session_id: string): Array<JSONRPCRequest>;
+		/**
+		 * Internal method to get broadcast messages for a session
+		 * */
+		broadcastMessages(session_id: string): Array<JSONRPCRequest>;
+		/**
+		 * Internal method to clear messages for a session
+		 * */
+		clearSessionMessages(session_id: string): void;
+		/**
+		 * Internal method to remove a session
+		 * */
+		closeSession(session_id: string): void;
+		/**
+		 * Clear all messages for all sessions
+		 */
+		clear(): void;
+		/**
+		 * Close all sessions and clean up all event listeners
+		 */
+		close(): void;
 		#private;
 	}
 

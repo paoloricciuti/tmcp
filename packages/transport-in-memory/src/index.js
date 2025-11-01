@@ -8,7 +8,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 /**
  * @template {Record<string, unknown> | undefined} [TCustom=undefined]
  */
-class Session {
+export class Session {
 	/**
 	 * @type {InMemoryTransport<TCustom>}
 	 */
@@ -94,7 +94,7 @@ class Session {
 	 * @param {import("tmcp").ClientCapabilities} capabilities - Client capabilities
 	 * @param {import("tmcp").ClientInfo} clientInfo - Client information
 	 * @param {TCustom} [ctx]
-	 * @returns {Promise<any>}
+	 * @returns {Promise<import("tmcp").InitializeResult>}
 	 */
 	async initialize(protocolVersion, capabilities, clientInfo, ctx) {
 		return this.#adapter.request(
@@ -108,7 +108,7 @@ class Session {
 	/**
 	 * Ping the server
 	 * @param {TCustom} [ctx]
-	 * @returns {Promise<any>}
+	 * @returns {Promise<{}>}
 	 */
 	async ping(ctx) {
 		return this.#adapter.request('ping', undefined, this.#session_id, ctx);
@@ -118,7 +118,7 @@ class Session {
 	 * List all available tools
 	 * @param {{ cursor?: string }} [params]
 	 * @param {TCustom} [ctx]
-	 * @returns {Promise<{ tools: any, nextCursor?: string }>}
+	 * @returns {Promise<import("tmcp").ListToolsResult>}
 	 */
 	async listTools(params, ctx) {
 		return this.#adapter.request(
@@ -149,7 +149,7 @@ class Session {
 	 * List all available prompts
 	 * @param {{ cursor?: string }} [params]
 	 * @param {TCustom} [ctx]
-	 * @returns {Promise<{ prompts: any, nextCursor?: string }>}
+	 * @returns {Promise<import("tmcp").ListPromptsResult>}
 	 */
 	async listPrompts(params, ctx) {
 		return this.#adapter.request(
@@ -180,7 +180,7 @@ class Session {
 	 * List all available resources
 	 * @param {{ cursor?: string }} [params]
 	 * @param {TCustom} [ctx]
-	 * @returns {Promise<{ resources: import("tmcp").Resource[], nextCursor?: string }>}
+	 * @returns {Promise<import("tmcp").ListResourcesResult>}
 	 */
 	async listResources(params, ctx) {
 		return this.#adapter.request(
@@ -195,7 +195,7 @@ class Session {
 	 * List all available resource templates
 	 * @param {{ cursor?: string }} [params]
 	 * @param {TCustom} [ctx]
-	 * @returns {Promise<{ resourceTemplates: any[], nextCursor?: string }>}
+	 * @returns {Promise<import("tmcp").ListResourceTemplatesResult>}
 	 */
 	async listResourceTemplates(params, ctx) {
 		return this.#adapter.request(
@@ -225,26 +225,11 @@ class Session {
 	 * Subscribe to resource updates
 	 * @param {string} uri - Resource URI to subscribe to
 	 * @param {TCustom} [ctx]
-	 * @returns {Promise<any>}
+	 * @returns {Promise<{}>}
 	 */
 	async subscribeResource(uri, ctx) {
 		return this.#adapter.request(
 			'resources/subscribe',
-			{ uri },
-			this.#session_id,
-			ctx,
-		);
-	}
-
-	/**
-	 * Unsubscribe from resource updates
-	 * @param {string} uri - Resource URI to unsubscribe from
-	 * @param {TCustom} [ctx]
-	 * @returns {Promise<any>}
-	 */
-	async unsubscribeResource(uri, ctx) {
-		return this.#adapter.request(
-			'resources/unsubscribe',
 			{ uri },
 			this.#session_id,
 			ctx,
@@ -257,7 +242,7 @@ class Session {
 	 * @param {{ name: string, value: string }} argument - Argument to complete
 	 * @param {{ arguments?: Record<string, string> }} [context] - Optional context
 	 * @param {TCustom} [ctx]
-	 * @returns {Promise<any>}
+	 * @returns {Promise<import("tmcp").CompleteResult>}
 	 */
 	async complete(ref, argument, context, ctx) {
 		return this.#adapter.request(
@@ -272,7 +257,7 @@ class Session {
 	 * Set the logging level
 	 * @param {import("tmcp").LoggingLevel} level - Logging level
 	 * @param {TCustom} [ctx]
-	 * @returns {Promise<any>}
+	 * @returns {Promise<{}>}
 	 */
 	async setLogLevel(level, ctx) {
 		return this.#adapter.request(
