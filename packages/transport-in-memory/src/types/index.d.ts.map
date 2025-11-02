@@ -1,0 +1,16 @@
+{
+	"version": 3,
+	"file": "index.d.ts",
+	"names": [
+		"Session",
+		"InMemoryTransport"
+	],
+	"sources": [
+		"../index.js"
+	],
+	"sourcesContent": [
+		null
+	],
+	"mappings": ";;;cAUaA,OAAOA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cA8VPC,iBAAiBA",
+	"ignoreList": []
+}

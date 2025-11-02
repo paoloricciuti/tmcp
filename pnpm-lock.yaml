@@ -373,6 +373,34 @@ importers:
         specifier: ^4.0.0
         version: 4.0.6(@types/node@24.9.2)
 
+  packages/transport-in-memory:
+    dependencies:
+      json-rpc-2.0:
+        specifier: ^1.7.1
+        version: 1.7.1
+    devDependencies:
+      '@tmcp/adapter-valibot':
+        specifier: workspace:^
+        version: link:../adapter-valibot
+      '@types/node':
+        specifier: ^24.9.2
+        version: 24.9.2
+      dts-buddy:
+        specifier: ^0.6.2
+        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
+      publint:
+        specifier: ^0.3.12
+        version: 0.3.15
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
+      valibot:
+        specifier: ^1.1.0
+        version: 1.1.0(typescript@5.9.3)
+      vitest:
+        specifier: ^4.0.6
+        version: 4.0.6(@types/node@24.9.2)
+
   packages/transport-sse:
     dependencies:
       '@tmcp/session-manager':
