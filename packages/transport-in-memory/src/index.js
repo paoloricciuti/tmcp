@@ -136,7 +136,7 @@ export class Session {
 	 * @param {TCustom} [ctx]
 	 * @returns {Promise<import("tmcp").CallToolResult<any>>}
 	 */
-	async callTool(name, args, ctx) {
+	async callTool(name, args = {}, ctx) {
 		return this.#adapter.request(
 			'tools/call',
 			{ name, arguments: args },
@@ -167,7 +167,7 @@ export class Session {
 	 * @param {TCustom} [ctx]
 	 * @returns {Promise<import("tmcp").GetPromptResult>}
 	 */
-	async getPrompt(name, args, ctx) {
+	async getPrompt(name, args = {}, ctx) {
 		return this.#adapter.request(
 			'prompts/get',
 			{ name, arguments: args },
@@ -409,22 +409,27 @@ export class InMemoryTransport {
 
 		this.#cleaners.add(
 			this.#server.on('broadcast', ({ request }) => {
-				const sessionId = this.#session_id_storage.getStore();
-				const session = this.#sessions.get(sessionId);
-				if (!session) return;
-
-				// Check if session is subscribed to this resource notification
-				if (
-					request.method === 'notifications/resources/updated' &&
-					!session.subscriptions.resource.includes(request.params.uri)
-				) {
-					return;
+				// Broadcasts should be delivered to ALL subscribed sessions
+				// not just the current async context
+				for (const [sessionId, session] of this.#sessions.entries()) {
+					// Check if session is subscribed to this resource notification
+					if (
+						request.method === 'notifications/resources/updated' &&
+						!session.subscriptions.resource.includes(
+							request.params.uri,
+						)
+					) {
+						continue;
+					}
+					let messages = this.#broadcast_messages.get(sessionId);
+					if (!messages) {
+						this.#broadcast_messages.set(
+							sessionId,
+							(messages = []),
+						);
+					}
+					messages.push(request);
 				}
-				let messages = this.#broadcast_messages.get(sessionId);
-				if (!messages) {
-					this.#broadcast_messages.set(sessionId, (messages = []));
-				}
-				messages.push(request);
 			}),
 		);
 	}

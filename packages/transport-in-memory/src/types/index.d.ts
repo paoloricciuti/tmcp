@@ -11,20 +11,17 @@ declare module '@tmcp/transport-in-memory' {
 		 * @param capabilities - Client capabilities
 		 * @param clientInfo - Client information
 		 * */
-		initialize(protocolVersion: string, capabilities: import("tmcp").ClientCapabilities, clientInfo: import("tmcp").ClientInfo, ctx?: TCustom): Promise<any>;
+		initialize(protocolVersion: string, capabilities: import("tmcp").ClientCapabilities, clientInfo: import("tmcp").ClientInfo, ctx?: TCustom): Promise<import("tmcp").InitializeResult>;
 		/**
 		 * Ping the server
 		 * */
-		ping(ctx?: TCustom): Promise<any>;
+		ping(ctx?: TCustom): Promise<{}>;
 		/**
 		 * List all available tools
 		 * */
 		listTools(params?: {
 			cursor?: string;
-		}, ctx?: TCustom): Promise<{
-			tools: any;
-			nextCursor?: string;
-		}>;
+		}, ctx?: TCustom): Promise<import("tmcp").ListToolsResult>;
 		/**
 		 * Call a tool
 		 * @param name - Tool name
@@ -36,10 +33,7 @@ declare module '@tmcp/transport-in-memory' {
 		 * */
 		listPrompts(params?: {
 			cursor?: string;
-		}, ctx?: TCustom): Promise<{
-			prompts: any;
-			nextCursor?: string;
-		}>;
+		}, ctx?: TCustom): Promise<import("tmcp").ListPromptsResult>;
 		/**
 		 * Get a prompt with optional arguments
 		 * @param name - Prompt name
@@ -51,19 +45,13 @@ declare module '@tmcp/transport-in-memory' {
 		 * */
 		listResources(params?: {
 			cursor?: string;
-		}, ctx?: TCustom): Promise<{
-			resources: import("tmcp").Resource[];
-			nextCursor?: string;
-		}>;
+		}, ctx?: TCustom): Promise<import("tmcp").ListResourcesResult>;
 		/**
 		 * List all available resource templates
 		 * */
 		listResourceTemplates(params?: {
 			cursor?: string;
-		}, ctx?: TCustom): Promise<{
-			resourceTemplates: any[];
-			nextCursor?: string;
-		}>;
+		}, ctx?: TCustom): Promise<import("tmcp").ListResourceTemplatesResult>;
 		/**
 		 * Read a resource by URI
 		 * @param uri - Resource URI
@@ -73,12 +61,7 @@ declare module '@tmcp/transport-in-memory' {
 		 * Subscribe to resource updates
 		 * @param uri - Resource URI to subscribe to
 		 * */
-		subscribeResource(uri: string, ctx?: TCustom): Promise<any>;
-		/**
-		 * Unsubscribe from resource updates
-		 * @param uri - Resource URI to unsubscribe from
-		 * */
-		unsubscribeResource(uri: string, ctx?: TCustom): Promise<any>;
+		subscribeResource(uri: string, ctx?: TCustom): Promise<{}>;
 		/**
 		 * Request completion suggestions
 		 * @param ref - Reference to prompt or resource
@@ -94,12 +77,12 @@ declare module '@tmcp/transport-in-memory' {
 			value: string;
 		}, context?: {
 			arguments?: Record<string, string>;
-		}, ctx?: TCustom): Promise<any>;
+		}, ctx?: TCustom): Promise<import("tmcp").CompleteResult>;
 		/**
 		 * Set the logging level
 		 * @param level - Logging level
 		 * */
-		setLogLevel(level: import("tmcp").LoggingLevel, ctx?: TCustom): Promise<any>;
+		setLogLevel(level: import("tmcp").LoggingLevel, ctx?: TCustom): Promise<{}>;
 		/**
 		 * Send a response to a request that was sent by the server (available in sentMessages)
 		 * @param request_id - The ID of the request to respond to
