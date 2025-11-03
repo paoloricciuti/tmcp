@@ -17,6 +17,10 @@ export class ZodJsonSchemaAdapter extends JsonSchemaAdapter {
 	 * @returns {Promise<JSONSchema7>} The JSON Schema representation
 	 */
 	async toJsonSchema(schema) {
-		return /** @type {JSONSchema7} */ (z.toJSONSchema(schema));
+		return /** @type {JSONSchema7} */ (
+			z.toJSONSchema(schema, {
+				target: 'draft-7',
+			})
+		);
 	}
 }

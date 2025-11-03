@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.16.2
+
+### Patch Changes
+
+- 0152bae: chore: export more types
+
 ## 1.16.1
 
 ### Patch Changes
