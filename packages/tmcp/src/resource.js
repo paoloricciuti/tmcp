@@ -4,6 +4,34 @@
  */
 export class Resource {
 	/**
+	 * @readonly
+	 */
+	name;
+	/**
+	 * @readonly
+	 */
+	description;
+	/**
+	 * @readonly
+	 */
+	title;
+	/**
+	 * @readonly
+	 */
+	uri;
+	/**
+	 * @readonly
+	 */
+	enabled;
+	/**
+	 * @readonly
+	 */
+	icons;
+	/**
+	 * @readonly
+	 */
+	execute;
+	/**
 	 * @param {{ name: string; description: string; title?: string; uri: string, enabled?: ()=>boolean | Promise<boolean>; } & import("./index.js").Icons} options
 	 * @param {(uri: string) => Promise<import("./index.js").ReadResourceResult> | import("./index.js").ReadResourceResult} execute
 	 */

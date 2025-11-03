@@ -11,22 +11,46 @@
  * @template {StandardSchemaV1 | undefined} [TOutputSchema=undefined]
  */
 export class Tool {
+	/**
+	 * @readonly
+	 */
 	name;
+	/**
+	 * @readonly
+	 */
 	description;
+	/**
+	 * @readonly
+	 */
 	title;
 	/**
+	 * @readonly
 	 * @type {(StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined}
 	 */
 	schema;
 	/**
+	 * @readonly
 	 * @type {(StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never) | undefined}
 	 */
 	outputSchema;
+	/**
+	 * @readonly
+	 */
 	annotations;
+	/**
+	 * @readonly
+	 */
 	enabled;
+	/**
+	 * @readonly
+	 */
 	icons;
+	/**
+	 * @readonly
+	 */
 	_meta;
 	/**
+	 * @readonly
 	 * @type {*}
 	 */
 	execute;

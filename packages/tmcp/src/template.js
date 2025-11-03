@@ -16,6 +16,43 @@
  */
 export class Template {
 	/**
+	 * @readonly
+	 */
+	name;
+	/**
+	 * @readonly
+	 */
+	description;
+	/**
+	 * @readonly
+	 */
+	title;
+	/**
+	 * @readonly
+	 */
+	uri;
+	/**
+	 * @readonly
+	 */
+	complete;
+	/**
+	 * @readonly
+	 */
+	list;
+	/**
+	 * @readonly
+	 */
+	enabled;
+	/**
+	 * @readonly
+	 */
+	icons;
+	/**
+	 * @readonly
+	 */
+	execute;
+
+	/**
 	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<import("./index.js").Resource>> | Array<import("./index.js").Resource> } & import("./index.js").Icons} options
 	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<import("./index.js").ReadResourceResult> | import("./index.js").ReadResourceResult} execute
 	 */

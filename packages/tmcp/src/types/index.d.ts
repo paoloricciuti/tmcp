@@ -244,17 +244,24 @@ declare module 'tmcp' {
 			uri: string;
 			enabled?: () => boolean | Promise<boolean>;
 		} & Icons, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult);
-		name: string;
-		description: string;
-		title: string | undefined;
-		uri: string;
-		enabled: (() => boolean | Promise<boolean>) | undefined;
-		icons: {
+		
+		readonly name: string;
+		
+		readonly description: string;
+		
+		readonly title: string | undefined;
+		
+		readonly uri: string;
+		
+		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
+		
+		readonly icons: {
 			src: string;
 			mimeType?: string | undefined;
 			sizes?: string[] | undefined;
 		}[] | undefined;
-		execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult;
+		
+		readonly execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult;
 	}
 	/**
 	 * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
@@ -279,19 +286,28 @@ declare module 'tmcp' {
 			complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
 			list?: () => Promise<Array<Resource>> | Array<Resource>;
 		} & Icons, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult);
-		name: string;
-		description: string;
-		title: string | undefined;
-		uri: TUri;
-		complete: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>> | undefined;
-		list: (() => Promise<Array<Resource>> | Array<Resource>) | undefined;
-		enabled: (() => boolean | Promise<boolean>) | undefined;
-		icons: {
+		
+		readonly name: string;
+		
+		readonly description: string;
+		
+		readonly title: string | undefined;
+		
+		readonly uri: TUri;
+		
+		readonly complete: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>> | undefined;
+		
+		readonly list: (() => Promise<Array<Resource>> | Array<Resource>) | undefined;
+		
+		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
+		
+		readonly icons: {
 			src: string;
 			mimeType?: string | undefined;
 			sizes?: string[] | undefined;
 		}[] | undefined;
-		execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult;
+		
+		readonly execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult;
 	}
 	type Completion = (
 		query: string,
@@ -357,29 +373,36 @@ declare module 'tmcp' {
 			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
 			annotations?: ToolAnnotations;
 		} & Icons, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>));
-		name: string;
-		description: string;
-		title: string | undefined;
 		
-		schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
+		readonly name: string;
 		
-		outputSchema: (StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never) | undefined;
-		annotations: {
+		readonly description: string;
+		
+		readonly title: string | undefined;
+		
+		readonly schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
+		
+		readonly outputSchema: (StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never) | undefined;
+		
+		readonly annotations: {
 			title?: string | undefined;
 			readOnlyHint?: boolean | undefined;
 			destructiveHint?: boolean | undefined;
 			idempotentHint?: boolean | undefined;
 			openWorldHint?: boolean | undefined;
 		} | undefined;
-		enabled: (() => boolean | Promise<boolean>) | undefined;
-		icons: {
+		
+		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
+		
+		readonly icons: {
 			src: string;
 			mimeType?: string | undefined;
 			sizes?: string[] | undefined;
 		}[] | undefined;
-		_meta: Record<string, any> | undefined;
 		
-		execute: any;
+		readonly _meta: Record<string, any> | undefined;
+		
+		readonly execute: any;
 	}
 	/**
 	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
@@ -404,20 +427,26 @@ declare module 'tmcp' {
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
 			complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>>;
 		} & Icons, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult);
-		name: string;
-		description: string;
-		title: string | undefined;
 		
-		schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
-		complete: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>> | undefined;
-		enabled: (() => boolean | Promise<boolean>) | undefined;
-		icons: {
+		readonly name: string;
+		
+		readonly description: string;
+		
+		readonly title: string | undefined;
+		
+		readonly schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
+		
+		readonly complete: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>> | undefined;
+		
+		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
+		
+		readonly icons: {
 			src: string;
 			mimeType?: string | undefined;
 			sizes?: string[] | undefined;
 		}[] | undefined;
 		
-		execute: any;
+		readonly execute: any;
 	}
 	const JSONRPCMessageSchema: v.UnionSchema<[v.ObjectSchema<{
 		readonly method: v.StringSchema<undefined>;
@@ -1986,29 +2015,36 @@ declare module 'tmcp/tool' {
 			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
 			annotations?: ToolAnnotations;
 		} & Icons, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>));
-		name: string;
-		description: string;
-		title: string | undefined;
 		
-		schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
+		readonly name: string;
 		
-		outputSchema: (StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never) | undefined;
-		annotations: {
+		readonly description: string;
+		
+		readonly title: string | undefined;
+		
+		readonly schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
+		
+		readonly outputSchema: (StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never) | undefined;
+		
+		readonly annotations: {
 			title?: string | undefined;
 			readOnlyHint?: boolean | undefined;
 			destructiveHint?: boolean | undefined;
 			idempotentHint?: boolean | undefined;
 			openWorldHint?: boolean | undefined;
 		} | undefined;
-		enabled: (() => boolean | Promise<boolean>) | undefined;
-		icons: {
+		
+		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
+		
+		readonly icons: {
 			src: string;
 			mimeType?: string | undefined;
 			sizes?: string[] | undefined;
 		}[] | undefined;
-		_meta: Record<string, any> | undefined;
 		
-		execute: any;
+		readonly _meta: Record<string, any> | undefined;
+		
+		readonly execute: any;
 	}
 	type Icons = Icons_1;
 	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = CallToolResult_1<TStructuredContent>;
@@ -2316,20 +2352,26 @@ declare module 'tmcp/prompt' {
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
 			complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>>;
 		} & Icons, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult);
-		name: string;
-		description: string;
-		title: string | undefined;
 		
-		schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
-		complete: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>> | undefined;
-		enabled: (() => boolean | Promise<boolean>) | undefined;
-		icons: {
+		readonly name: string;
+		
+		readonly description: string;
+		
+		readonly title: string | undefined;
+		
+		readonly schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
+		
+		readonly complete: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>> | undefined;
+		
+		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
+		
+		readonly icons: {
 			src: string;
 			mimeType?: string | undefined;
 			sizes?: string[] | undefined;
 		}[] | undefined;
 		
-		execute: any;
+		readonly execute: any;
 	}
 	type Icons = Icons_1;
 	type GetPromptResult = GetPromptResult_1;
@@ -2576,17 +2618,24 @@ declare module 'tmcp/resource' {
 			uri: string;
 			enabled?: () => boolean | Promise<boolean>;
 		} & Icons, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult);
-		name: string;
-		description: string;
-		title: string | undefined;
-		uri: string;
-		enabled: (() => boolean | Promise<boolean>) | undefined;
-		icons: {
+		
+		readonly name: string;
+		
+		readonly description: string;
+		
+		readonly title: string | undefined;
+		
+		readonly uri: string;
+		
+		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
+		
+		readonly icons: {
 			src: string;
 			mimeType?: string | undefined;
 			sizes?: string[] | undefined;
 		}[] | undefined;
-		execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult;
+		
+		readonly execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult;
 	}
 	type Icons = Icons_1;
 	type ReadResourceResult = ReadResourceResult_1;
@@ -2698,19 +2747,28 @@ declare module 'tmcp/template' {
 			complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
 			list?: () => Promise<Array<Resource>> | Array<Resource>;
 		} & Icons, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult);
-		name: string;
-		description: string;
-		title: string | undefined;
-		uri: TUri;
-		complete: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>> | undefined;
-		list: (() => Promise<Array<Resource>> | Array<Resource>) | undefined;
-		enabled: (() => boolean | Promise<boolean>) | undefined;
-		icons: {
+		
+		readonly name: string;
+		
+		readonly description: string;
+		
+		readonly title: string | undefined;
+		
+		readonly uri: TUri;
+		
+		readonly complete: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>> | undefined;
+		
+		readonly list: (() => Promise<Array<Resource>> | Array<Resource>) | undefined;
+		
+		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
+		
+		readonly icons: {
 			src: string;
 			mimeType?: string | undefined;
 			sizes?: string[] | undefined;
 		}[] | undefined;
-		execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult;
+		
+		readonly execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult;
 	}
 	type Icons = Icons_1;
 	type ReadResourceResult = ReadResourceResult_1;

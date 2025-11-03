@@ -14,17 +14,37 @@
  * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
  */
 export class Prompt {
+	/**
+	 * @readonly
+	 */
 	name;
+	/**
+	 * @readonly
+	 */
 	description;
+	/**
+	 * @readonly
+	 */
 	title;
 	/**
+	 * @readonly
 	 * @type {(StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined}
 	 */
 	schema;
+	/**
+	 * @readonly
+	 */
 	complete;
+	/**
+	 * @readonly
+	 */
 	enabled;
+	/**
+	 * @readonly
+	 */
 	icons;
 	/**
+	 * @readonly
 	 * @type {*}
 	 */
 	execute;
