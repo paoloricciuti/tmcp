@@ -1,0 +1,54 @@
+{
+	"name": "@tmcp/transport-in-memory",
+	"version": "0.0.2",
+	"description": "In memory transport for `tmcp` servers",
+	"main": "src/index.js",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/paoloricciuti/tmcp.git",
+		"directory": "packages/test"
+	},
+	"scripts": {
+		"generate:types": "dts-buddy && publint",
+		"prepublish": "pnpm generate:types",
+		"test": "vitest"
+	},
+	"files": [
+		"src/**/*",
+		"package.json",
+		"README.md"
+	],
+	"keywords": [
+		"tmcp",
+		"testing",
+		"transport",
+		"test"
+	],
+	"types": "./src/types/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/types/index.d.ts",
+			"import": "./src/index.js"
+		}
+	},
+	"packageManager": "pnpm@10.20.0",
+	"type": "module",
+	"peerDependencies": {
+		"tmcp": "workspace:^1.16.2"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"devDependencies": {
+		"@tmcp/adapter-valibot": "workspace:^",
+		"@types/node": "^24.9.2",
+		"dts-buddy": "^0.6.2",
+		"publint": "^0.3.12",
+		"tmcp": "workspace:^",
+		"valibot": "^1.1.0",
+		"vitest": "^4.0.6"
+	},
+	"dependencies": {
+		"json-rpc-2.0": "^1.7.1"
+	}
+}
