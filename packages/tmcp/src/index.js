@@ -2,6 +2,8 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import SqidsType from "sqids";
+ * @import { Tool as ToolClass } from "./tool.js";
+ * @import { Prompt as PromptClass } from "./prompt.js";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage } from "./validation/index.js";
@@ -824,8 +826,7 @@ export class McpServer {
 
 	/**
 	 * Use the Tool class to create a reusable tool and pass it to this method to add it to the server.
-	 *
-	 * @param {import("./tool.js").Tool<StandardSchema, any, any>[]} tools
+	 * @param {Array<ToolClass<StandardSchema | undefined, StandardSchema | undefined>>} tools
 	 */
 	tools(...tools) {
 		for (const tool of tools) {
@@ -849,7 +850,7 @@ export class McpServer {
 	/**
 	 * Use the Prompt class to create a reusable prompt and pass it to this method to add it to the server.
 	 *
-	 * @param {import("./prompt.js").Prompt<StandardSchema, any>[]} prompts
+	 * @param {Array<PromptClass<StandardSchema | undefined>>} prompts
 	 */
 	prompts(...prompts) {
 		for (const prompt of prompts) {

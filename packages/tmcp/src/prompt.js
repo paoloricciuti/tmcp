@@ -1,3 +1,4 @@
+/* eslint-disable jsdoc/no-undefined-types */
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import { Completion } from "./internal/internal.js";
@@ -10,10 +11,24 @@
  * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
  * for each input that will be used to provide completions for the user.
  *
- * @template {StandardSchemaV1 | undefined} [StandardSchema=undefined]
- * @template {StandardSchema | undefined} [TSchema=undefined]
+ * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
  */
 export class Prompt {
+	name;
+	description;
+	title;
+	/**
+	 * @type {(StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined}
+	 */
+	schema;
+	complete;
+	enabled;
+	icons;
+	/**
+	 * @type {*}
+	 */
+	execute;
+
 	/**
 	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> } & import("./index.js").Icons} options
 	 * @param {TSchema extends undefined ? (()=>Promise<import("./index.js").GetPromptResult> | import("./index.js").GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<import("./index.js").GetPromptResult> | import("./index.js").GetPromptResult} execute

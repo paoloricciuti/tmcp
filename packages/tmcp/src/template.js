@@ -1,3 +1,4 @@
+/* eslint-disable jsdoc/no-undefined-types */
 /**
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { Completion } from "./internal/internal.js";
