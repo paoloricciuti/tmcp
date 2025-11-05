@@ -50,7 +50,10 @@ export class Tool {
 	 */
 	_meta;
 	/**
+	 * This is only available in the Tool class. Pass the execute function as the second argument.
 	 * @readonly
+	 * @private
+	 * @deprecated
 	 * @type {*}
 	 */
 	execute;

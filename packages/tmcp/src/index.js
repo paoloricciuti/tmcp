@@ -2,13 +2,13 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import SqidsType from "sqids";
- * @import { Tool as ToolClass } from "./tool.js";
  * @import { Prompt as PromptClass } from "./prompt.js";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents } from "./internal/internal.js";
  */
+import { Tool as ToolClass } from './tool.js';
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { UriTemplateMatcher } from 'uri-template-matcher';
@@ -851,7 +851,7 @@ export class McpServer {
 	 * Use the Tool class to create a reusable tool and pass it to this method to add it to the server.
 	 * @param {Array<ToolClass<StandardSchema | undefined, StandardSchema | undefined>>} tools
 	 */
-	tools(...tools) {
+	tools(tools) {
 		for (const tool of tools) {
 			this.tool(
 				{
@@ -865,6 +865,7 @@ export class McpServer {
 					icons: tool.icons,
 					_meta: tool._meta,
 				},
+				// @ts-expect-error execute is marked as private to prevent the intellisense to show it when declaring a tool inline
 				tool.execute,
 			);
 		}
@@ -875,7 +876,7 @@ export class McpServer {
 	 *
 	 * @param {Array<PromptClass<StandardSchema | undefined>>} prompts
 	 */
-	prompts(...prompts) {
+	prompts(prompts) {
 		for (const prompt of prompts) {
 			this.prompt(
 				{
@@ -897,7 +898,7 @@ export class McpServer {
 	 *
 	 * @param {import("./resource.js").Resource[]} resources
 	 */
-	resources(...resources) {
+	resources(resources) {
 		for (const resource of resources) {
 			this.resource(
 				{
@@ -918,7 +919,7 @@ export class McpServer {
 	 *
 	 * @param {import("./template.js").Template<any, any>[]} templates
 	 */
-	templates(...templates) {
+	templates(templates) {
 		for (const template of templates) {
 			this.template(
 				{
@@ -937,17 +938,37 @@ export class McpServer {
 	}
 
 	/**
+	 * @template {StandardSchema | undefined} [TSchema=undefined]
+	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
+	 * @overload
+	 * @param {ToolClass<TSchema, TOutputSchema>} tool_or_options
+	 * @returns {void}
+	 */
+	/**
+	 * @template {StandardSchema | undefined} [TSchema=undefined]
+	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
+	 * @overload
+	 * @param {{ name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & Icons} tool_or_options
+	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
+	 * @returns {void}
+	 * */
+	/**
 	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
 	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
 	 *
 	 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
-	 * @param {{ name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & Icons} options
-	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
+	 * @param {ToolClass<TSchema, TOutputSchema> | { name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & Icons} tool_or_options
+	 * @param {undefined | TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} [execute]
 	 */
-	tool(
-		{
+	tool(tool_or_options, execute) {
+		if (tool_or_options instanceof ToolClass) {
+			// @ts-expect-error execute is marked as private to prevent the intellisense to show it when declaring a tool inline
+			execute = tool_or_options.execute;
+		}
+
+		const {
 			name,
 			description,
 			title,
@@ -957,9 +978,7 @@ export class McpServer {
 			enabled,
 			icons,
 			_meta,
-		},
-		execute,
-	) {
+		} = tool_or_options;
 		this.#notify_tools_list_changed();
 		this.#tools.set(name, {
 			description,
@@ -967,7 +986,7 @@ export class McpServer {
 			enabled,
 			schema,
 			outputSchema,
-			execute,
+			execute: /** @type {NonNullable<typeof execute>} */ (execute),
 			annotations,
 			icons,
 			_meta,

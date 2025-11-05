@@ -263,7 +263,7 @@ describe('McpServer', () => {
 				tool,
 			);
 
-			server.tools(tool_one, tool_two);
+			server.tools([tool_one, tool_two]);
 
 			server.tool(
 				{
@@ -721,7 +721,7 @@ describe('McpServer', () => {
 				},
 			);
 
-			server.prompts(prompt_one, prompt_two);
+			server.prompts([prompt_one, prompt_two]);
 
 			const list = request({
 				jsonrpc: '2.0',

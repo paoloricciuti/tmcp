@@ -53,29 +53,26 @@ declare module 'tmcp' {
 		/**
 		 * Use the Tool class to create a reusable tool and pass it to this method to add it to the server.
 		 * */
-		tools(...tools: Array<Tool<StandardSchema | undefined, StandardSchema | undefined>>): void;
+		tools(tools: Array<Tool<StandardSchema | undefined, StandardSchema | undefined>>): void;
 		/**
 		 * Use the Prompt class to create a reusable prompt and pass it to this method to add it to the server.
 		 *
 		 * */
-		prompts(...prompts: Array<Prompt<StandardSchema | undefined>>): void;
+		prompts(prompts: Array<Prompt<StandardSchema | undefined>>): void;
 		/**
 		 * Use the Resource class to create a reusable resource and pass it to this method to add it to the server.
 		 *
 		 * */
-		resources(...resources: Resource_1[]): void;
+		resources(resources: Resource_1[]): void;
 		/**
 		 * Use the Template class to create a reusable template and pass it to this method to add it to the server.
 		 *
 		 * */
-		templates(...templates: Template<any, any>[]): void;
-		/**
-		 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
-		 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
-		 *
-		 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
-		 * */
-		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations, enabled, icons, _meta, }: {
+		templates(templates: Template<any, any>[]): void;
+		
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: Tool<TSchema, TOutputSchema>): void;
+		
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: {
 			name: string;
 			_meta?: Record<string, any>;
 			description: string;
@@ -401,8 +398,11 @@ declare module 'tmcp' {
 		}[] | undefined;
 		
 		readonly _meta: Record<string, any> | undefined;
-		
-		readonly execute: any;
+		/**
+		 * This is only available in the Tool class. Pass the execute function as the second argument.
+		 * @deprecated
+		 * */
+		private readonly execute;
 	}
 	/**
 	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
@@ -2043,8 +2043,11 @@ declare module 'tmcp/tool' {
 		}[] | undefined;
 		
 		readonly _meta: Record<string, any> | undefined;
-		
-		readonly execute: any;
+		/**
+		 * This is only available in the Tool class. Pass the execute function as the second argument.
+		 * @deprecated
+		 * */
+		private readonly execute;
 	}
 	type Icons = Icons_1;
 	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = CallToolResult_1<TStructuredContent>;
