@@ -156,23 +156,13 @@ export class HttpTransport {
 
 		this.#server.on('send', async ({ request }) => {
 			// use the current controller if the request has an id (it means it's a request and not a notification)
-			if (request.id != null) {
-				const controller = this.#controller_storage.getStore();
-				if (!controller) return;
+			const controller = this.#controller_storage.getStore();
+			if (!controller) return;
 
-				controller.enqueue(
-					this.#text_encoder.encode(
-						'data: ' + JSON.stringify(request) + '\n\n',
-					),
-				);
-				return;
-			}
-			const session_id = this.#session_id_storage.getStore();
-			if (!session_id) return;
-
-			await this.#options.sessionManager.streams.send(
-				[session_id],
-				'data: ' + JSON.stringify(request) + '\n\n',
+			controller.enqueue(
+				this.#text_encoder.encode(
+					'data: ' + JSON.stringify(request) + '\n\n',
+				),
 			);
 		});
 	}
