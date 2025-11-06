@@ -64,11 +64,18 @@ export class StdioTransport {
 					}),
 				);
 				this.#cleaners.add(
-					this.#server.on('subscription', ({ uri }) => {
+					this.#server.on('subscription', ({ uri, action }) => {
 						this.#subscriptions ??= {
 							resource: [],
 						};
-						this.#subscriptions.resource?.push(uri);
+						if (action === 'remove') {
+							this.#subscriptions.resource =
+								this.#subscriptions.resource?.filter(
+									(item) => item !== uri,
+								);
+						} else {
+							this.#subscriptions.resource?.push(uri);
+						}
 					}),
 				);
 			}),

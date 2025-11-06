@@ -286,11 +286,19 @@ export class KVInfoSessionManager {
 	}
 
 	/**
-	 * @param {string} id
+	 * @type {InfoSessionManager["removeSubscription"]}
 	 */
-	async #remove_id_from_subscriptions(id) {
+	async removeSubscription(id, uri) {
+		waitUntil(this.#remove_id_from_subscriptions(id, uri));
+	}
+
+	/**
+	 * @param {string} id
+	 * @param {string} [uri]
+	 */
+	async #remove_id_from_subscriptions(id, uri = '') {
 		const list = await this.#client.list({
-			prefix: 'tmcp:subscriptions:',
+			prefix: `tmcp:subscriptions:${uri}`,
 		});
 		for (const key of list.keys) {
 			if ((await this.#client.get(key.name)) === id) {

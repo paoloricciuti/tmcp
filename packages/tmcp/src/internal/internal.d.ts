@@ -102,6 +102,6 @@ export type McpEvents = {
 		request: JSONRPCRequest;
 	}) => void;
 	initialize: (initialize_request: InitializeRequestParams) => void;
-	subscription: (subscriptions_request: { uri: string }) => void;
+	subscription: (subscriptions_request: { uri: string, action?: "add" | "remove" }) => void;
 	loglevelchange: (change: { level: LoggingLevel }) => void;
 };

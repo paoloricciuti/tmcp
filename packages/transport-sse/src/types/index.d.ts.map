@@ -2,14 +2,18 @@
 	"version": 3,
 	"file": "index.d.ts",
 	"names": [
-		"SseTransport"
+		"SseTransport",
+		"ToOmit",
+		"OptionalizeSessionManager"
 	],
 	"sources": [
-		"../index.js"
+		"../index.js",
+		"../type-utils.d.ts"
 	],
 	"sourcesContent": [
+		null,
 		null
 	],
-	"mappings": ";;;;cAqCaA,YAAYA",
+	"mappings": ";;;;cAsCaA,YAAYA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;MCnCpBC,MAAMA;;MAECC,yBAAyBA",
 	"ignoreList": []
 }

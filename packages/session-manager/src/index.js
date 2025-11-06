@@ -177,6 +177,15 @@ export class InfoSessionManager {
 	/**
 	 * @abstract
 	 * @param {string} id
+	 * @param {string} uri
+	 */
+	removeSubscription(id, uri) {
+		throw new Error('Method not implemented.');
+	}
+
+	/**
+	 * @abstract
+	 * @param {string} id
 	 */
 	delete(id) {
 		throw new Error('Method not implemented.');
@@ -276,6 +285,16 @@ export class InMemoryInfoSessionManager extends InfoSessionManager {
 			this.#subscriptions.set(uri, subscriptions);
 		}
 		subscriptions.add(id);
+	}
+
+	/**
+	 * @type {InfoSessionManager["removeSubscription"]}
+	 */
+	removeSubscription(id, uri) {
+		let subscriptions = this.#subscriptions.get(uri);
+		if (subscriptions) {
+			subscriptions.delete(id);
+		}
 	}
 
 	/**

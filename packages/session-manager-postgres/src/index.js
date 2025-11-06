@@ -345,6 +345,16 @@ export class PostgresInfoSessionManager {
 	}
 
 	/**
+	 * @type {InfoSessionManager["removeSubscription"]}
+	 */
+	async removeSubscription(id, uri) {
+		await this.#client.query(
+			`DELETE FROM ${this.#table_names.subscriptions} WHERE id=$1 AND value=$2`,
+			[id, uri],
+		);
+	}
+
+	/**
 	 * @param {string} id
 	 */
 	async delete(id) {

@@ -2,14 +2,18 @@
 	"version": 3,
 	"file": "index.d.ts",
 	"names": [
-		"HttpTransport"
+		"HttpTransport",
+		"ToOmit",
+		"OptionalizeSessionManager"
 	],
 	"sources": [
-		"../index.js"
+		"../index.js",
+		"../type-utils.d.ts"
 	],
 	"sourcesContent": [
+		null,
 		null
 	],
-	"mappings": ";;;;cAqCaA,aAAaA",
+	"mappings": ";;;;cAsCaA,aAAaA;;;;;;;;;;;;;;;;;;;;;;;;;MCnCrBC,MAAMA;;MAECC,yBAAyBA",
 	"ignoreList": []
 }

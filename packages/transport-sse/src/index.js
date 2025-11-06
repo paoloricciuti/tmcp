@@ -2,6 +2,7 @@
  * @import { AuthInfo, McpServer } from "tmcp";
  * @import { OAuth } from "@tmcp/auth";
  * @import { StreamSessionManager, InfoSessionManager } from "@tmcp/session-manager";
+ * @import { OptionalizeSessionManager } from "./type-utils.js"
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -28,7 +29,7 @@ import { DEV } from 'esm-env';
  * 	endpoint?: string
  * 	oauth?: OAuth<"built">
  * 	cors?: CorsConfig | boolean
- * 	sessionManager?: { streams?: StreamSessionManager, info?: InfoSessionManager }
+ * 	sessionManager?: { streams?: StreamSessionManager, info?: OptionalizeSessionManager<InfoSessionManager> }
  * }} SseTransportOptions
  */
 
@@ -135,10 +136,20 @@ export class SseTransport {
 			);
 		});
 
-		this.#server.on('subscription', async ({ uri }) => {
+		this.#server.on('subscription', async ({ uri, action }) => {
 			const sessionId = this.#session_id_storage.getStore();
 			if (!sessionId) return;
-			this.#options.sessionManager.info.addSubscription(sessionId, uri);
+			if (action === 'remove') {
+				this.#options.sessionManager.info.removeSubscription?.(
+					sessionId,
+					uri,
+				);
+			} else {
+				this.#options.sessionManager.info.addSubscription(
+					sessionId,
+					uri,
+				);
+			}
 		});
 
 		this.#server.on('loglevelchange', ({ level }) => {

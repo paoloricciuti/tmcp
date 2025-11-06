@@ -25,6 +25,7 @@ declare module '@tmcp/session-manager-redis' {
 		setLogLevel(id: string, log_level: NonNullable<import("tmcp").Context["sessionInfo"]>["logLevel"]): void;
 		getSubscriptions(uri: string): Promise<string[]>;
 		addSubscription(id: string, uri: string): void;
+		removeSubscription(id: string, uri: string): void;
 		delete(id: string): void;
 		#private;
 	}
