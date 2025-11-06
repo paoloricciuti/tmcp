@@ -29,9 +29,12 @@ declare module '@tmcp/transport-sse' {
 		cors?: CorsConfig | boolean;
 		sessionManager?: {
 			streams?: StreamSessionManager;
-			info?: InfoSessionManager;
+			info?: OptionalizeSessionManager<InfoSessionManager>;
 		};
 	};
+	type ToOmit = 'removeSubscription';
+
+	type OptionalizeSessionManager<TInfoSessionManager extends InfoSessionManager> = Omit<TInfoSessionManager, ToOmit> & Partial<Pick<TInfoSessionManager, ToOmit>>;
 
 	export {};
 }

@@ -877,6 +877,263 @@ describe('InMemoryTransport', () => {
 				'test://subscribable',
 			);
 		});
+
+		it('should unsubscribe from resource updates', async () => {
+			// initialize server with subscribe capability
+			let server = new McpServer(server_config, {
+				adapter,
+				capabilities: {
+					resources: {
+						subscribe: true,
+					},
+				},
+			});
+
+			// register a resource
+			server.resource(
+				{
+					uri: 'test://subscribable',
+					name: 'Subscribable Resource',
+					description: 'A subscribable resource',
+				},
+				(uri) => {
+					return {
+						contents: [
+							{
+								uri,
+								text: 'Content',
+							},
+						],
+					};
+				},
+			);
+
+			// create an InMemoryTransport
+			const transport = new InMemoryTransport(server);
+			const session = transport.session();
+
+			// initialize the session
+			await session.initialize('2025-06-18', {}, client_info);
+
+			// subscribe first
+			await session.subscribeResource('test://subscribable');
+
+			// verify the subscription was recorded
+			expect(session.subscriptions.resource).toContain(
+				'test://subscribable',
+			);
+
+			// now unsubscribe
+			const result = await session.unsubscribeResource(
+				'test://subscribable',
+			);
+
+			expect(result).toEqual({});
+
+			// verify the subscription was removed
+			expect(session.subscriptions.resource).not.toContain(
+				'test://subscribable',
+			);
+		});
+
+		it('should stop receiving broadcasts after unsubscribe', async () => {
+			// initialize server with subscribe capability
+			let server = new McpServer(server_config, {
+				adapter,
+				capabilities: {
+					resources: {
+						subscribe: true,
+						listChanged: true,
+					},
+				},
+			});
+
+			// register a resource
+			server.resource(
+				{
+					uri: 'test://broadcast',
+					name: 'Broadcast Resource',
+					description: 'Broadcast resource',
+				},
+				(uri) => {
+					return {
+						contents: [
+							{
+								uri,
+								text: 'Content',
+							},
+						],
+					};
+				},
+			);
+
+			// create an InMemoryTransport
+			const transport = new InMemoryTransport(server);
+			const session = transport.session();
+
+			// initialize the session
+			await session.initialize('2025-06-18', {}, client_info);
+
+			// subscribe to resource
+			await session.subscribeResource('test://broadcast');
+
+			// trigger a broadcast
+			server.changed('resource', 'test://broadcast');
+
+			// check broadcast messages
+			expect(session.broadcastMessages).toHaveLength(1);
+			expect(session.broadcastMessages[0].method).toBe(
+				'notifications/resources/updated',
+			);
+
+			// clear messages
+			session.clear();
+
+			// unsubscribe
+			await session.unsubscribeResource('test://broadcast');
+
+			// trigger another broadcast
+			server.changed('resource', 'test://broadcast');
+
+			// verify no new broadcasts were received
+			expect(session.broadcastMessages).toHaveLength(0);
+		});
+
+		it('should handle unsubscribing from non-subscribed resource', async () => {
+			// initialize server with subscribe capability
+			let server = new McpServer(server_config, {
+				adapter,
+				capabilities: {
+					resources: {
+						subscribe: true,
+					},
+				},
+			});
+
+			// register a resource
+			server.resource(
+				{
+					uri: 'test://never-subscribed',
+					name: 'Never Subscribed Resource',
+					description: 'A resource that was never subscribed',
+				},
+				(uri) => {
+					return {
+						contents: [
+							{
+								uri,
+								text: 'Content',
+							},
+						],
+					};
+				},
+			);
+
+			// create an InMemoryTransport
+			const transport = new InMemoryTransport(server);
+			const session = transport.session();
+
+			// initialize the session
+			await session.initialize('2025-06-18', {}, client_info);
+
+			// verify no subscriptions initially
+			expect(session.subscriptions.resource).toHaveLength(0);
+
+			// unsubscribe without subscribing first
+			const result = await session.unsubscribeResource(
+				'test://never-subscribed',
+			);
+
+			expect(result).toEqual({});
+
+			// verify still no subscriptions
+			expect(session.subscriptions.resource).toHaveLength(0);
+		});
+
+		it('should handle multiple subscriptions and selective unsubscribe', async () => {
+			// initialize server with subscribe capability
+			let server = new McpServer(server_config, {
+				adapter,
+				capabilities: {
+					resources: {
+						subscribe: true,
+					},
+				},
+			});
+
+			// register multiple resources
+			server.resource(
+				{
+					uri: 'test://resource1',
+					name: 'Resource 1',
+					description: 'First resource',
+				},
+				(uri) => {
+					return {
+						contents: [{ uri, text: 'Content 1' }],
+					};
+				},
+			);
+
+			server.resource(
+				{
+					uri: 'test://resource2',
+					name: 'Resource 2',
+					description: 'Second resource',
+				},
+				(uri) => {
+					return {
+						contents: [{ uri, text: 'Content 2' }],
+					};
+				},
+			);
+
+			server.resource(
+				{
+					uri: 'test://resource3',
+					name: 'Resource 3',
+					description: 'Third resource',
+				},
+				(uri) => {
+					return {
+						contents: [{ uri, text: 'Content 3' }],
+					};
+				},
+			);
+
+			// create an InMemoryTransport
+			const transport = new InMemoryTransport(server);
+			const session = transport.session();
+
+			// initialize the session
+			await session.initialize('2025-06-18', {}, client_info);
+
+			// subscribe to all three resources
+			await session.subscribeResource('test://resource1');
+			await session.subscribeResource('test://resource2');
+			await session.subscribeResource('test://resource3');
+
+			// verify all subscriptions
+			expect(session.subscriptions.resource).toHaveLength(3);
+			expect(session.subscriptions.resource).toEqual([
+				'test://resource1',
+				'test://resource2',
+				'test://resource3',
+			]);
+
+			// unsubscribe from the middle one
+			await session.unsubscribeResource('test://resource2');
+
+			// verify only resource2 was removed
+			expect(session.subscriptions.resource).toHaveLength(2);
+			expect(session.subscriptions.resource).toEqual([
+				'test://resource1',
+				'test://resource3',
+			]);
+			expect(session.subscriptions.resource).not.toContain(
+				'test://resource2',
+			);
+		});
 	});
 
 	describe('complete', () => {

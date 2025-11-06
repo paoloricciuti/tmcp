@@ -72,14 +72,21 @@ export class Session {
 		);
 
 		this.#cleaners.add(
-			this.#adapter.server.on('subscription', ({ uri }) => {
+			this.#adapter.server.on('subscription', ({ uri, action }) => {
 				const sessionId = this.#adapter.sessionId;
 				if (sessionId !== this.#session_id) return;
 
 				this.#subscriptions ??= {
 					resource: [],
 				};
-				this.#subscriptions.resource?.push(uri);
+				if (action === 'remove') {
+					this.#subscriptions.resource =
+						this.#subscriptions.resource?.filter(
+							(item) => item !== uri,
+						);
+				} else {
+					this.#subscriptions.resource?.push(uri);
+				}
 			}),
 		);
 	}
@@ -230,6 +237,21 @@ export class Session {
 	async subscribeResource(uri, ctx) {
 		return this.#adapter.request(
 			'resources/subscribe',
+			{ uri },
+			this.#session_id,
+			ctx,
+		);
+	}
+
+	/**
+	 * Unsubscribe from resource updates
+	 * @param {string} uri - Resource URI to subscribe to
+	 * @param {TCustom} [ctx]
+	 * @returns {Promise<{}>}
+	 */
+	async unsubscribeResource(uri, ctx) {
+		return this.#adapter.request(
+			'resources/unsubscribe',
 			{ uri },
 			this.#session_id,
 			ctx,

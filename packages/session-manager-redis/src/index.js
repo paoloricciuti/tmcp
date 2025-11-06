@@ -253,6 +253,14 @@ export class RedisInfoSessionManager {
 	}
 
 	/**
+	 * @type {InfoSessionManager["addSubscription"]}
+	 */
+	async removeSubscription(id, uri) {
+		await this.#connected;
+		await this.#client.sRem(`tmcp:subscriptions:${uri}`, id);
+	}
+
+	/**
 	 * @param {string} id
 	 */
 	async #remove_id_from_subscriptions(id) {

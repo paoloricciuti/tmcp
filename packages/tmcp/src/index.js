@@ -31,6 +31,7 @@ import {
 	negotiate_protocol_version,
 } from './validation/version.js';
 import { should_version_negotiation_fail } from './validation/version.js';
+import { event } from './internal/utils.js';
 
 /**
  * Information about a validated access token, provided to request handlers.
@@ -248,9 +249,7 @@ export class McpServer {
 
 				// Dispatch initialization event
 				this.#event_target.dispatchEvent(
-					new CustomEvent('initialize', {
-						detail: validated_initialize,
-					}),
+					event('initialize', validated_initialize),
 				);
 
 				// Return server response with negotiated version and capabilities
@@ -352,16 +351,12 @@ export class McpServer {
 			this.#client = new JSONRPCClient((payload, kind) => {
 				if (kind === 'broadcast') {
 					this.#event_target.dispatchEvent(
-						new CustomEvent('broadcast', {
-							detail: { request: payload },
-						}),
+						event('broadcast', { request: payload }),
 					);
 					return;
 				}
 				this.#event_target.dispatchEvent(
-					new CustomEvent('send', {
-						detail: { request: payload },
-					}),
+					event('send', { request: payload }),
 				);
 			});
 		}
@@ -636,9 +631,13 @@ export class McpServer {
 		if (this.#options.capabilities?.resources?.subscribe) {
 			this.#server.addMethod('resources/subscribe', async ({ uri }) => {
 				this.#event_target.dispatchEvent(
-					new CustomEvent('subscription', {
-						detail: { uri },
-					}),
+					event('subscription', { uri, action: 'add' }),
+				);
+				return {};
+			});
+			this.#server.addMethod('resources/unsubscribe', async ({ uri }) => {
+				this.#event_target.dispatchEvent(
+					event('subscription', { uri, action: 'remove' }),
 				);
 				return {};
 			});
@@ -815,9 +814,7 @@ export class McpServer {
 
 		this.#server.addMethod('logging/setLevel', ({ level }) => {
 			this.#event_target.dispatchEvent(
-				new CustomEvent('loglevelchange', {
-					detail: { level },
-				}),
+				event('loglevelchange', { level }),
 			);
 			return {};
 		});

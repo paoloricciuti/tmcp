@@ -70,6 +70,10 @@ declare module '@tmcp/session-manager' {
         /**
          * @abstract
          * */
+        abstract removeSubscription(id: string, uri: string): void;
+        /**
+         * @abstract
+         * */
         abstract delete(id: string): void;
     }
     export class InMemoryInfoSessionManager extends InfoSessionManager {
