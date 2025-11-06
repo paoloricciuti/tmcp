@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/session-manager",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "",
 	"main": "src/index.js",
 	"repository": {
@@ -29,7 +29,7 @@
 	"packageManager": "pnpm@10.20.0",
 	"type": "module",
 	"peerDependencies": {
-		"tmcp": "workspace:^1.16.0"
+		"tmcp": "workspace:^1.16.3"
 	},
 	"publishConfig": {
 		"access": "public"
