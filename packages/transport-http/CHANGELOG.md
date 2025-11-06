@@ -1,5 +1,15 @@
 # @tmcp/transport-http
 
+## 0.8.1
+
+### Patch Changes
+
+- 5613d43: fix: handle `resources/unsubscribe`
+- ce935fa: fix: always use current controller for send events
+- Updated dependencies [5613d43]
+    - @tmcp/session-manager@0.2.1
+    - tmcp@1.16.3
+
 ## 0.8.0
 
 ### Minor Changes

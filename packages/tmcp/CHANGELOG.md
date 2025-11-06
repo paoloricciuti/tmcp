@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.16.3
+
+### Patch Changes
+
+- 5613d43: fix: handle `resources/unsubscribe`
+
 ## 1.16.2
 
 ### Patch Changes

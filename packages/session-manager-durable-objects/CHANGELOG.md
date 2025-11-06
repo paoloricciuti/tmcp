@@ -1,5 +1,13 @@
 # @tmcp/session-manager-durable-objects
 
+## 0.2.2
+
+### Patch Changes
+
+- 5613d43: fix: handle `resources/unsubscribe`
+- Updated dependencies [5613d43]
+    - @tmcp/session-manager@0.2.1
+
 ## 0.2.1
 
 ### Patch Changes

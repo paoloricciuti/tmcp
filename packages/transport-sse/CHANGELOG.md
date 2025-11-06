@@ -1,5 +1,14 @@
 # @tmcp/transport-sse
 
+## 0.5.1
+
+### Patch Changes
+
+- 5613d43: fix: handle `resources/unsubscribe`
+- Updated dependencies [5613d43]
+    - @tmcp/session-manager@0.2.1
+    - tmcp@1.16.3
+
 ## 0.5.0
 
 ### Minor Changes
