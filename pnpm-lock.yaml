@@ -38,6 +38,27 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  apps/everything-server:
+    dependencies:
+      '@tmcp/adapter-valibot':
+        specifier: workspace:^
+        version: link:../../packages/adapter-valibot
+      '@tmcp/transport-http':
+        specifier: workspace:^
+        version: link:../../packages/transport-http
+      '@types/node':
+        specifier: ^24.10.0
+        version: 24.10.0
+      srvx:
+        specifier: ^0.9.5
+        version: 0.9.5
+      tmcp:
+        specifier: workspace:^
+        version: link:../../packages/tmcp
+      valibot:
+        specifier: ^1.1.0
+        version: 1.1.0(typescript@5.9.3)
+
   apps/playground:
     dependencies:
       '@tmcp/adapter-valibot':
@@ -2650,6 +2671,11 @@ packages:
   sqids@0.3.0:
     resolution: {integrity: sha512-lOQK1ucVg+W6n3FhRwwSeUijxe93b51Bfz5PMRMihVf1iVkl82ePQG7V5vwrhzB11v0NtsR25PSZRGiSomJaJw==}
 
+  srvx@0.9.5:
+    resolution: {integrity: sha512-nQsA2c8q3XwbSn6kTxVQjz0zS096rV+Be2pzJwrYEAdtnYszLw4MTy8JWJjz1XEGBZwP0qW51SUIX3WdjdRemQ==}
+    engines: {node: '>=20.16.0'}
+    hasBin: true
+
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
@@ -5151,6 +5177,8 @@ snapshots:
   sprintf-js@1.0.3: {}
 
   sqids@0.3.0: {}
+
+  srvx@0.9.5: {}
 
   stackback@0.0.2: {}
 
