@@ -153,8 +153,12 @@ const sessionManagers = {
 	info: new InMemoryInfoSessionManager(),
 };
 
-const httpTransport = new HttpTransport(server, { sessionManager: sessionManagers });
-const sseTransport = new SseTransport(server, { sessionManager: sessionManagers });
+const httpTransport = new HttpTransport(server, {
+	sessionManager: sessionManagers,
+});
+const sseTransport = new SseTransport(server, {
+	sessionManager: sessionManagers,
+});
 ```
 
 ## Related Packages

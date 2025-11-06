@@ -135,7 +135,7 @@
 - **Description**: Add tool safety annotations (2025-06-18 requirement)
 - **Implementation Details**:
     - ✅ `readOnlyHint` for read-only operations supported
-    - ✅ `destructiveHint` for destructive operations supported  
+    - ✅ `destructiveHint` for destructive operations supported
     - ✅ `idempotentHint` for idempotent operations supported
     - ✅ `openWorldHint` for external interactions supported
     - ✅ Annotations passed through in tool registration and tools/list responses

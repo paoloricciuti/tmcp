@@ -41,7 +41,7 @@ export class OAuthError extends Error {
 		/** @type {OAuthErrorResponse} */
 		const response = {
 			error: this.errorCode,
-			error_description: this.message
+			error_description: this.message,
 		};
 
 		if (this.errorUri) {
