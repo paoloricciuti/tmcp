@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.16.4
+
+### Patch Changes
+
+- bc56fbc: fix: allow tools pagination
+
 ## 1.16.3
 
 ### Patch Changes
