@@ -73,6 +73,7 @@ export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	instructions?: string;
 	adapter: JsonSchemaAdapter<TSchema> | undefined;
 	pagination?: {
+		tools?: { size?: number };
 		resources?: { size?: number };
 		prompts?: { size?: number };
 	};

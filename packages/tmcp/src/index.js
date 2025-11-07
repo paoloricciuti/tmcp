@@ -401,8 +401,8 @@ export class McpServer {
 	 */
 	#init_tools() {
 		if (!this.#options.capabilities?.tools) return;
-		this.#server.addMethod('tools/list', async () => {
-			const available_tools = (
+		this.#server.addMethod('tools/list', async ({ cursor } = {}) => {
+			const all_tools = (
 				await Promise.all(
 					[...this.#tools].map(async ([name, tool]) => {
 						if (
@@ -439,8 +439,26 @@ export class McpServer {
 					}),
 				)
 			).filter((tool) => tool !== null);
+
+			const pagination_options = this.#options.pagination?.tools;
+			if (!pagination_options || pagination_options.size == null) {
+				return { tools: all_tools };
+			}
+
+			const page_length = pagination_options.size;
+			const offset = cursor ? await decode_cursor(cursor) : 0;
+			const start_index = offset;
+			const end_index = start_index + page_length;
+
+			const tools = all_tools.slice(start_index, end_index);
+			const has_next = end_index < all_tools.length;
+			const next_cursor = has_next
+				? await encode_cursor(end_index)
+				: null;
+
 			return {
-				tools: available_tools,
+				tools,
+				...(next_cursor && { nextCursor: next_cursor }),
 			};
 		});
 		this.#server.addMethod(

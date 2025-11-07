@@ -222,6 +222,7 @@ declare module 'tmcp' {
 		instructions?: string;
 		adapter: JsonSchemaAdapter<TSchema> | undefined;
 		pagination?: {
+			tools?: { size?: number };
 			resources?: { size?: number };
 			prompts?: { size?: number };
 		};
