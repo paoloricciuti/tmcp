@@ -266,6 +266,36 @@ server.tool(
 	},
 );
 
+server.tool(
+	{
+		name: 'test_elicitation_sep1034_defaults',
+		description: 'A description',
+	},
+	async () => {
+		const response = await server.elicitation(
+			'',
+			v.object({
+				name: v.optional(v.string(), 'John Doe'),
+				age: v.optional(v.pipe(v.number(), v.integer()), 30),
+				score: v.optional(v.number(), 95.5),
+				status: v.optional(
+					v.picklist(['active', 'inactive']),
+					'active',
+				),
+				verified: v.optional(v.boolean(), true),
+			}),
+		);
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `User response with default: <action: ${response.action}, content: ${JSON.stringify(response.content)}>`,
+				},
+			],
+		};
+	},
+);
+
 server.resource(
 	{
 		name: 'Static Text Resource',
