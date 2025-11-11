@@ -330,6 +330,15 @@ export class OAuth {
 			return null;
 		}
 
+		const paths = (
+			typeof this.#features.bearer === 'object'
+				? [
+						...(this.#features.bearer.paths?.GET ?? []),
+						...(this.#features.bearer.paths?.POST ?? []),
+					]
+				: []
+		).map((path) => `/.well-known/oauth-protected-resource${path}`);
+
 		// Handle different endpoints
 		try {
 			let response = null;
@@ -337,7 +346,8 @@ export class OAuth {
 			if (url.pathname === '/.well-known/oauth-authorization-server') {
 				response = await this.#handle_metadata();
 			} else if (
-				url.pathname === '/.well-known/oauth-protected-resource'
+				url.pathname === '/.well-known/oauth-protected-resource' ||
+				paths.includes(url.pathname)
 			) {
 				response = await this.#handle_resource_metadata();
 			} else if (url.pathname === '/authorize') {
