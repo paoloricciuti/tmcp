@@ -513,7 +513,7 @@ serve({
 	async fetch(request) {
 		return (
 			(await transport.respond(request)) ??
-			new Response('Not Found', { status: 404 })
+			new Response('', { status: 200 })
 		);
 	},
 });

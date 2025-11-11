@@ -6,7 +6,9 @@
 	"main": "index.js",
 	"scripts": {
 		"start": "node index.ts",
-		"dev": "node --watch index.ts"
+		"dev": "node --watch index.ts",
+		"conformance": "conformance server --url http://localhost:3000/mcp",
+		"test": "start-server-and-test http://localhost:3000/ conformance"
 	},
 	"keywords": [],
 	"author": "",
@@ -20,5 +22,9 @@
 		"srvx": "^0.9.5",
 		"tmcp": "workspace:^",
 		"valibot": "^1.1.0"
+	},
+	"devDependencies": {
+		"@modelcontextprotocol/conformance": "^0.1.0",
+		"start-server-and-test": "^2.1.2"
 	}
 }
