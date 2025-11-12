@@ -4,6 +4,7 @@ import { HttpTransport } from '@tmcp/transport-http';
 import { serve } from 'srvx';
 import * as v from 'valibot';
 import fs from 'node:fs/promises';
+import { tool, resource, prompt, complete } from 'tmcp/utils';
 
 const server = new McpServer(
 	{
@@ -35,14 +36,7 @@ server.tool(
 		description: 'A description',
 	},
 	() => {
-		return {
-			content: [
-				{
-					type: 'text',
-					text: 'This is a simple text response for testing.',
-				},
-			],
-		};
+		return tool.text('This is a simple text response for testing.');
 	},
 );
 
@@ -55,15 +49,7 @@ server.tool(
 		const data = await fs.readFile('./assets/red.png', {
 			encoding: 'base64',
 		});
-		return {
-			content: [
-				{
-					type: 'image',
-					data,
-					mimeType: 'image/png',
-				},
-			],
-		};
+		return tool.media('image', data, 'image/png');
 	},
 );
 
@@ -76,15 +62,7 @@ server.tool(
 		const data = await fs.readFile('./assets/record.wav', {
 			encoding: 'base64',
 		});
-		return {
-			content: [
-				{
-					type: 'audio',
-					data,
-					mimeType: 'audio/wav',
-				},
-			],
-		};
+		return tool.media('audio', data, 'audio/wav');
 	},
 );
 
@@ -94,18 +72,11 @@ server.tool(
 		description: 'A description',
 	},
 	async () => {
-		return {
-			content: [
-				{
-					type: 'resource',
-					resource: {
-						uri: 'test://embedded-resource',
-						mimeType: 'text/plain',
-						text: 'This is an embedded resource content.',
-					},
-				},
-			],
-		};
+		return tool.resource({
+			uri: 'test://embedded-resource',
+			mimeType: 'text/plain',
+			text: 'This is an embedded resource content.',
+		});
 	},
 );
 
@@ -118,20 +89,15 @@ server.tool(
 		const data = await fs.readFile('./assets/red.png', {
 			encoding: 'base64',
 		});
-		return {
-			content: [
-				{ type: 'text', text: 'Multiple content types test:' },
-				{ type: 'image', data, mimeType: 'image/png' },
-				{
-					type: 'resource',
-					resource: {
-						uri: 'test://mixed-content-resource',
-						mimeType: 'application/json',
-						text: '{"test":"data","value":123}',
-					},
-				},
-			],
-		};
+		return tool.mix([
+			tool.text('Multiple content types test:'),
+			tool.media('image', data, 'image/png'),
+			tool.resource({
+				uri: 'test://mixed-content-resource',
+				mimeType: 'application/json',
+				text: '{"test":"data","value":123}',
+			}),
+		]);
 	},
 );
 
@@ -146,14 +112,7 @@ server.tool(
 		server.log('info', 'Tool processing data');
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		server.log('info', 'Tool execution completed');
-		return {
-			content: [
-				{
-					type: 'text',
-					text: 'Tool with logging executed successfully.',
-				},
-			],
-		};
+		return tool.text('Tool with logging executed successfully.');
 	},
 );
 
@@ -168,15 +127,7 @@ server.tool(
 		server.progress(50, 100);
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		server.progress(100, 100);
-
-		return {
-			content: [
-				{
-					type: 'text',
-					text: 'Tool with progress executed successfully.',
-				},
-			],
-		};
+		return tool.text('Tool with progress executed successfully.');
 	},
 );
 
@@ -186,15 +137,9 @@ server.tool(
 		description: 'A description',
 	},
 	() => {
-		return {
-			isError: true,
-			content: [
-				{
-					type: 'text',
-					text: 'This tool intentionally returns an error for testing',
-				},
-			],
-		};
+		return tool.error(
+			'This tool intentionally returns an error for testing',
+		);
 	},
 );
 
@@ -222,14 +167,7 @@ server.tool(
 				},
 			],
 		});
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `LLM response: ${response.content}`,
-				},
-			],
-		};
+		return tool.text(`LLM response: ${response.content}`);
 	},
 );
 
@@ -255,14 +193,9 @@ server.tool(
 				),
 			}),
 		);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `User response: <action: ${response.action}, content: ${JSON.stringify(response.content)}>`,
-				},
-			],
-		};
+		return tool.text(
+			`User response: <action: ${response.action}, content: ${JSON.stringify(response.content)}>`,
+		);
 	},
 );
 
@@ -285,14 +218,9 @@ server.tool(
 				verified: v.optional(v.boolean(), true),
 			}),
 		);
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `User response with default: <action: ${response.action}, content: ${JSON.stringify(response.content)}>`,
-				},
-			],
-		};
+		return tool.text(
+			`User response with default: <action: ${response.action}, content: ${JSON.stringify(response.content)}>`,
+		);
 	},
 );
 
@@ -302,16 +230,12 @@ server.resource(
 		description: 'A static text resource for testing',
 		uri: 'test://static-text',
 	},
-	async () => {
-		return {
-			contents: [
-				{
-					uri: 'test://static-text',
-					mimeType: 'text/plain',
-					text: 'This is the content of the static text resource.',
-				},
-			],
-		};
+	async (uri) => {
+		return resource.text(
+			uri,
+			'This is the content of the static text resource.',
+			'text/plain',
+		);
 	},
 );
 
@@ -321,19 +245,11 @@ server.resource(
 		name: 'Static Binary Resource',
 		description: 'A static binary resource (image) for testing',
 	},
-	async () => {
+	async (uri) => {
 		const blob = await fs.readFile('./assets/red.png', {
 			encoding: 'base64',
 		});
-		return {
-			contents: [
-				{
-					uri: 'test://static-binary',
-					mimeType: 'image/png',
-					blob,
-				},
-			],
-		};
+		return resource.blob(uri, blob, 'image/png');
 	},
 );
 
@@ -344,19 +260,15 @@ server.template(
 		description: 'A resource template with parameter substitution',
 	},
 	async (uri, { id }) => {
-		return {
-			contents: [
-				{
-					uri,
-					mimeType: 'application/json',
-					text: JSON.stringify({
-						id,
-						templateTest: true,
-						data: `Data for ID: ${id}`,
-					}),
-				},
-			],
-		};
+		return resource.text(
+			uri,
+			JSON.stringify({
+				id,
+				templateTest: true,
+				data: `Data for ID: ${id}`,
+			}),
+			'application/json',
+		);
 	},
 );
 
@@ -366,19 +278,8 @@ server.resource(
 		name: 'Watched Resource',
 		description: 'A resource that can be subscribed to',
 	},
-	async () => {
-		const blob = await fs.readFile('./assets/red.png', {
-			encoding: 'base64',
-		});
-		return {
-			contents: [
-				{
-					uri: 'test://watched-resource',
-					mimeType: 'text/plain',
-					text: 'Watched resource content',
-				},
-			],
-		};
+	async (uri) => {
+		return resource.text(uri, 'Watched resource content', 'text/plain');
 	},
 );
 
@@ -388,17 +289,7 @@ server.prompt(
 		description: 'A description',
 	},
 	async () => {
-		return {
-			messages: [
-				{
-					role: 'user',
-					content: {
-						type: 'text',
-						text: 'This is a simple prompt for testing.',
-					},
-				},
-			],
-		};
+		return prompt.message('This is a simple prompt for testing.');
 	},
 );
 
@@ -412,28 +303,14 @@ server.prompt(
 		}),
 		complete: {
 			arg1(input) {
-				return {
-					completion: {
-						values: ['paris', 'park', 'party'],
-						total: 150,
-						hasMore: true,
-					},
-				};
+				return complete.values(['paris', 'park', 'party'], true, 150);
 			},
 		},
 	},
 	async ({ arg1, arg2 }) => {
-		return {
-			messages: [
-				{
-					role: 'user',
-					content: {
-						type: 'text',
-						text: `Prompt with arguments: arg1='${arg1}', arg2='${arg2}'`,
-					},
-				},
-			],
-		};
+		return prompt.message(
+			`Prompt with arguments: arg1='${arg1}', arg2='${arg2}'`,
+		);
 	},
 );
 
@@ -449,28 +326,20 @@ server.prompt(
 		}),
 	},
 	async ({ resourceUri }) => {
-		return {
-			messages: [
-				{
-					role: 'user',
-					content: {
-						type: 'resource',
-						resource: {
-							uri: resourceUri,
-							mimeType: 'text/plain',
-							text: 'Embedded resource content for testing.',
-						},
-					},
+		return prompt.various([
+			{
+				type: 'resource',
+				resource: {
+					uri: resourceUri,
+					mimeType: 'text/plain',
+					text: 'Embedded resource content for testing.',
 				},
-				{
-					role: 'user',
-					content: {
-						type: 'text',
-						text: 'Please process the embedded resource above.',
-					},
-				},
-			],
-		};
+			},
+			{
+				type: 'text',
+				text: 'Please process the embedded resource above.',
+			},
+		]);
 	},
 );
 
@@ -483,25 +352,17 @@ server.prompt(
 		const data = await fs.readFile('./assets/red.png', {
 			encoding: 'base64',
 		});
-		return {
-			messages: [
-				{
-					role: 'user',
-					content: {
-						type: 'image',
-						data,
-						mimeType: 'image/png',
-					},
-				},
-				{
-					role: 'user',
-					content: {
-						type: 'text',
-						text: 'Please analyze the image above.',
-					},
-				},
-			],
-		};
+		return prompt.various([
+			{
+				type: 'image',
+				data,
+				mimeType: 'image/png',
+			},
+			{
+				type: 'text',
+				text: 'Please analyze the image above.',
+			},
+		]);
 	},
 );
 
