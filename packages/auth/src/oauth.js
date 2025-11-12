@@ -515,6 +515,33 @@ export class OAuth {
 	}
 
 	/**
+	 * @param {string} client_id
+	 */
+	async #get_client_or_try_url(client_id) {
+		let client = await this.#client_store.getClient(client_id);
+		if (!client) {
+			try {
+				const url = new URL(client_id);
+				client = /** @type {OAuthClientInformationFull} */ (
+					await fetch(url).then((res) => res.json())
+				);
+			} catch {
+				throw new InvalidClientError('Invalid client');
+			}
+			if (!client) {
+				throw new InvalidClientError('Invalid client');
+			}
+			if (client.client_id !== client_id) {
+				throw new InvalidClientError(
+					'Client Metadata client_id does not match the requested client_id',
+				);
+			}
+			return client;
+		}
+		return client;
+	}
+
+	/**
 	 * Handle authorization endpoint
 	 * @param {Request} request - HTTP request
 	 * @returns {Promise<Response>}
@@ -541,13 +568,9 @@ export class OAuth {
 
 		// Validate basic client parameters
 		const client_params = v.parse(ClientAuthorizationParamsSchema, params);
-		const client = await this.#client_store.getClient(
+		const client = await this.#get_client_or_try_url(
 			client_params.client_id,
 		);
-
-		if (!client) {
-			throw new InvalidClientError('Invalid client');
-		}
 
 		// Validate request parameters
 		const request_params = v.parse(
@@ -631,13 +654,7 @@ export class OAuth {
 
 		// Authenticate client
 		const client_auth = v.parse(ClientAuthenticatedRequestSchema, params);
-		const client = await this.#client_store.getClient(
-			client_auth.client_id,
-		);
-
-		if (!client) {
-			throw new InvalidClientError('Invalid client');
-		}
+		const client = await this.#get_client_or_try_url(client_auth.client_id);
 
 		// Verify client secret if provided
 		if (
@@ -775,13 +792,7 @@ export class OAuth {
 
 		// Authenticate client
 		const client_auth = v.parse(ClientAuthenticatedRequestSchema, params);
-		const client = await this.#client_store.getClient(
-			client_auth.client_id,
-		);
-
-		if (!client) {
-			throw new InvalidClientError('Invalid client');
-		}
+		const client = await this.#get_client_or_try_url(client_auth.client_id);
 
 		if (
 			client.client_secret &&
