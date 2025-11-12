@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.17.0
+
+### Minor Changes
+
+- 61d7c9e: feat: expose low level `request` api
+
 ## 1.16.4
 
 ### Patch Changes
