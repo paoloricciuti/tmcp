@@ -293,6 +293,46 @@ const response = server.receive(jsonRpcRequest, {
 });
 ```
 
+##### `request({ method, params })`
+
+Send a raw JSON-RPC request to the connected client. This lets you call
+experimental MCP APIs or proprietary extensions before they gain a dedicated
+method on `McpServer` or to send a request with a custom JSON-schema that is not expressible with your validation library.
+
+```javascript
+const response = await server.request({
+	method: 'elicitation/create',
+	params: {
+		message: 'Describe the deployment plan',
+		requestedSchema: {
+			type: 'object',
+			required: ['region', 'replicas', 'features'],
+			properties: {
+				region: {
+					type: 'string',
+					enum: ['us-east-1', 'us-west-2', 'eu-central-1'],
+				},
+				replicas: { type: 'integer', minimum: 1, maximum: 20 },
+				features: {
+					type: 'array',
+					items: {
+						type: 'string',
+						enum: ['canary', 'observability', 'autoscaling'],
+					},
+					minItems: 1,
+				},
+			},
+		},
+	},
+});
+```
+
+- `method`: Fully qualified MCP client method name
+- `params` (optional): JSON-RPC params object/array accepted by that method
+
+Handle the resolved payload like any other JSON-RPC response—cast or (better) validate
+as needed when using this escape hatch.
+
 ##### `elicitation(schema)`
 
 Request client elicitation with schema validation.

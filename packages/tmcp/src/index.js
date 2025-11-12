@@ -1030,6 +1030,17 @@ export class McpServer {
 	}
 
 	/**
+	 * Lower level api to send a request to the client, mostly useful to call client methods that not yet supported by the server or
+	 * if you want to send requests with json schema that is not expressible with your validation library.
+	 * @param {{ method: string, params?: JSONRPCParams }} request
+	 * @returns {Promise<unknown>}
+	 */
+	async request({ method, params }) {
+		this.#lazyily_create_client();
+		return this.#client?.request(method, params, 'standalone');
+	}
+
+	/**
 	 * Send a notification for subscriptions
 	 * @template {keyof ChangedArgs} TWhat
 	 * @param {[what: TWhat, ...ChangedArgs[TWhat]]} args

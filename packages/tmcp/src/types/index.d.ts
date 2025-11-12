@@ -1,6 +1,6 @@
 declare module 'tmcp' {
 	import type { StandardSchemaV1 } from '@standard-schema/spec';
-	import type { JSONRPCServer, JSONRPCClient, JSONRPCRequest } from 'json-rpc-2.0';
+	import type { JSONRPCServer, JSONRPCClient, JSONRPCParams, JSONRPCRequest } from 'json-rpc-2.0';
 	import type { JSONSchema7 } from 'json-schema';
 	import * as v from 'valibot';
 	export class McpServer<StandardSchema extends StandardSchemaV1 | undefined = undefined, CustomContext extends Record<string, unknown> | undefined = undefined> {
@@ -113,6 +113,14 @@ declare module 'tmcp' {
 		 *
 		 * */
 		receive(message: JSONRPCMessage, ctx?: Context<CustomContext>): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
+		/**
+		 * Lower level api to send a request to the client, mostly useful to call client methods that not yet supported by the server or
+		 * if you want to send requests with json schema that is not expressible with your validation library.
+		 * */
+		request({ method, params }: {
+			method: string;
+			params?: JSONRPCParams;
+		}): Promise<unknown>;
 		/**
 		 * Send a notification for subscriptions
 		 * */
