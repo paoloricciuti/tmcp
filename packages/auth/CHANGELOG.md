@@ -1,5 +1,17 @@
 # @tmcp/auth
 
+## 0.4.0
+
+### Minor Changes
+
+- a8bae36: feat: support CIMD authentication
+
+### Patch Changes
+
+- d93d786: fix: expose resource metadata from paths
+- Updated dependencies [61d7c9e]
+    - tmcp@1.17.0
+
 ## 0.3.3
 
 ### Patch Changes
