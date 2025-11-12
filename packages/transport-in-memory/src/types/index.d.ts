@@ -63,6 +63,11 @@ declare module '@tmcp/transport-in-memory' {
 		 * */
 		subscribeResource(uri: string, ctx?: TCustom): Promise<{}>;
 		/**
+		 * Unsubscribe from resource updates
+		 * @param uri - Resource URI to subscribe to
+		 * */
+		unsubscribeResource(uri: string, ctx?: TCustom): Promise<{}>;
+		/**
 		 * Request completion suggestions
 		 * @param ref - Reference to prompt or resource
 		 * @param argument - Argument to complete
