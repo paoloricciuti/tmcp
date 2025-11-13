@@ -1,5 +1,13 @@
 # @tmcp/transport-sse
 
+## 0.5.2
+
+### Patch Changes
+
+- 49e18a8: chore: update peer dependency @tmcp/auth to ^0.3.3 || ^0.4.0
+- Updated dependencies [1d72e60]
+    - tmcp@1.18.0
+
 ## 0.5.1
 
 ### Patch Changes
