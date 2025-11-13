@@ -212,7 +212,7 @@ tool.mix(
 
 - `tool` – build `CallToolResult` objects via `text`, `error`, `media`, `resource`, `resourceLink`, `structured`, and `mix` (merge multiple kind of tool response).
 - `resource` – return `ReadResourceResult` through `text`, `blob`, or `mix` (merge `resource.text` and `resource.blob`).
-- `prompt` – generate `GetPromptResult` using `message` (single string), `messages` (array of strings), or `various` (for prompts with string, audio, images, resources etc).
+- `prompt` – generate `GetPromptResult` using `message` (single string), `messages` (array of strings), `text`, `media`, `resource`, `resourceLink` and `mix` (merge multiple kind of tool response).
 - `complete` – create `CompleteResult` payloads with `values(list, hasMore?, total?)`.
 
 All helpers are typed, so TypeScript will prevent you from returning malformed payloads while cutting down the repetitive envelopes that used to appear in almost every handler.

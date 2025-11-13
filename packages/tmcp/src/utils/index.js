@@ -173,6 +173,85 @@ export const prompt = {
 		};
 	},
 	/**
+	 * Alias for message
+	 * @param {string} text
+	 */
+	text(text) {
+		return {
+			messages: [
+				{
+					role: 'user',
+					content: {
+						type: 'text',
+						text,
+					},
+				},
+			],
+		};
+	},
+	/**
+	 *
+	 * @param {"audio" | "image"} type
+	 * @param {string} data
+	 * @param {string} mime_type
+	 */
+	media(type, data, mime_type) {
+		return {
+			messages: [
+				{
+					role: 'user',
+					content: {
+						type,
+						data,
+						mimeType: mime_type,
+					},
+				},
+			],
+		};
+	},
+	/**
+	 * @param {EmbeddedResource["resource"]} resource
+	 */
+	resource(resource) {
+		return {
+			messages: [
+				{
+					role: 'user',
+					content: {
+						type: 'resource',
+						resource,
+					},
+				},
+			],
+		};
+	},
+
+	/**
+	 * @param {Omit<ResourceLink, "type">} resource
+	 */
+	resourceLink(resource) {
+		return {
+			messages: [
+				{
+					role: 'user',
+					content: {
+						type: 'resource_link',
+						...resource,
+					},
+				},
+			],
+		};
+	},
+	/**
+	 *
+	 * @param {Array<GetPromptResult>} messages
+	 */
+	mix(messages) {
+		return {
+			messages: messages.flatMap((m) => m.messages),
+		};
+	},
+	/**
 	 *
 	 * @param {Array<string>} messages
 	 * @returns
@@ -194,6 +273,7 @@ export const prompt = {
 	 *
 	 * @param {Array<GetPromptResult["messages"][number]["content"]>} messages
 	 * @returns
+	 * @deprecated Use `mix` instead
 	 */
 	various(messages) {
 		return {

@@ -326,19 +326,13 @@ server.prompt(
 		}),
 	},
 	async ({ resourceUri }) => {
-		return prompt.various([
-			{
-				type: 'resource',
-				resource: {
-					uri: resourceUri,
-					mimeType: 'text/plain',
-					text: 'Embedded resource content for testing.',
-				},
-			},
-			{
-				type: 'text',
-				text: 'Please process the embedded resource above.',
-			},
+		return prompt.mix([
+			prompt.resource({
+				uri: resourceUri,
+				mimeType: 'text/plain',
+				text: 'Embedded resource content for testing.',
+			}),
+			prompt.text('Please process the embedded resource above.'),
 		]);
 	},
 );
@@ -352,16 +346,9 @@ server.prompt(
 		const data = await fs.readFile('./assets/red.png', {
 			encoding: 'base64',
 		});
-		return prompt.various([
-			{
-				type: 'image',
-				data,
-				mimeType: 'image/png',
-			},
-			{
-				type: 'text',
-				text: 'Please analyze the image above.',
-			},
+		return prompt.mix([
+			prompt.media('image', data, 'image/png'),
+			prompt.text('Please analyze the image above.'),
 		]);
 	},
 );

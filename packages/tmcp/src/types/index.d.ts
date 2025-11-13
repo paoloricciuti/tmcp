@@ -1945,6 +1945,137 @@ declare module 'tmcp/utils' {
 				};
 			}[];
 		};
+		/**
+		 * Alias for message
+		 * */
+		function text(text: string): {
+			messages: {
+				role: "user";
+				content: {
+					type: "text";
+					text: string;
+				};
+			}[];
+		};
+		
+		function media(type: "audio" | "image", data: string, mime_type: string): {
+			messages: {
+				role: "user";
+				content: {
+					type: "audio" | "image";
+					data: string;
+					mimeType: string;
+				};
+			}[];
+		};
+		
+		function resource(resource: EmbeddedResource["resource"]): {
+			messages: {
+				role: "user";
+				content: {
+					type: "resource";
+					resource: {
+						text: string;
+						uri: string;
+						mimeType?: string | undefined;
+						_meta?: ({} & {
+							[key: string]: unknown;
+						}) | undefined;
+					} | {
+						blob: string;
+						uri: string;
+						mimeType?: string | undefined;
+						_meta?: ({} & {
+							[key: string]: unknown;
+						}) | undefined;
+					};
+				};
+			}[];
+		};
+		
+		function resourceLink(resource: Omit<ResourceLink, "type">): {
+			messages: {
+				role: "user";
+				content: {
+					name: string;
+					description?: string | undefined;
+					title?: string | undefined;
+					uri: string;
+					_meta?: ({} & {
+						[key: string]: unknown;
+					}) | undefined;
+					mimeType?: string | undefined;
+					icons?: {
+						src: string;
+						mimeType?: string | undefined;
+						sizes?: string[] | undefined;
+					}[] | undefined;
+					type: "resource_link";
+				};
+			}[];
+		};
+		
+		function mix(messages: Array<GetPromptResult>): {
+			messages: {
+				role: "user" | "assistant";
+				content: {
+					type: "text";
+					text: string;
+					_meta?: ({} & {
+						[key: string]: unknown;
+					}) | undefined;
+				} | {
+					type: "image";
+					data: string;
+					mimeType: string;
+					_meta?: ({} & {
+						[key: string]: unknown;
+					}) | undefined;
+				} | {
+					type: "audio";
+					data: string;
+					mimeType: string;
+					_meta?: ({} & {
+						[key: string]: unknown;
+					}) | undefined;
+				} | {
+					type: "resource_link";
+					icons?: {
+						src: string;
+						mimeType?: string | undefined;
+						sizes?: string[] | undefined;
+					}[] | undefined;
+					uri: string;
+					description?: string | undefined;
+					mimeType?: string | undefined;
+					_meta?: ({} & {
+						[key: string]: unknown;
+					}) | undefined;
+					name: string;
+					title?: string | undefined;
+				} | {
+					type: "resource";
+					resource: {
+						text: string;
+						uri: string;
+						mimeType?: string | undefined;
+						_meta?: ({} & {
+							[key: string]: unknown;
+						}) | undefined;
+					} | {
+						blob: string;
+						uri: string;
+						mimeType?: string | undefined;
+						_meta?: ({} & {
+							[key: string]: unknown;
+						}) | undefined;
+					};
+					_meta?: ({} & {
+						[key: string]: unknown;
+					}) | undefined;
+				};
+			}[];
+		};
 		
 		function messages(messages: Array<string>): {
 			messages: {
@@ -1955,7 +2086,10 @@ declare module 'tmcp/utils' {
 				};
 			}[];
 		};
-		
+		/**
+		 *
+		 * @deprecated Use `mix` instead
+		 */
 		function various(messages: Array<GetPromptResult["messages"][number]["content"]>): {
 			messages: {
 				role: "user";
