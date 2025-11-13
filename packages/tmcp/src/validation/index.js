@@ -1601,3 +1601,9 @@ export const ServerResultSchema = v.union([
 /**
  * @typedef {v.InferInput<typeof ListResourceTemplatesResultSchema>} ListResourceTemplatesResult
  */
+/**
+ * @typedef {v.InferInput<typeof EmbeddedResourceSchema>} EmbeddedResource
+ */
+/**
+ * @typedef {v.InferInput<typeof ResourceLinkSchema>} ResourceLink
+ */

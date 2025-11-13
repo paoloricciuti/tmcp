@@ -31,6 +31,10 @@
 			"types": "./src/types/index.d.ts",
 			"default": "./src/adapter.js"
 		},
+		"./utils": {
+			"types": "./src/types/index.d.ts",
+			"default": "./src/utils/index.js"
+		},
 		"./package.json": "./package.json"
 	},
 	"dependencies": {
