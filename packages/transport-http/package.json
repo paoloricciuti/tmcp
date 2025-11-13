@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/transport-http",
-	"version": "0.8.1",
+	"version": "0.8.2",
 	"description": "Transport for TMCP using HTTP",
 	"type": "module",
 	"main": "src/index.js",
@@ -21,7 +21,7 @@
 		"src/**/*"
 	],
 	"peerDependencies": {
-		"tmcp": "workspace:^1.16.3",
+		"tmcp": "workspace:^1.18.0",
 		"@tmcp/auth": "^0.3.3 || ^0.4.0"
 	},
 	"peerDependenciesMeta": {
