@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.18.1
+
+### Patch Changes
+
+- 743b531: fix: deprecate various and implement fine grained prompt methods
+
 ## 1.18.0
 
 ### Minor Changes
