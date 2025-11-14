@@ -20,7 +20,4 @@ jobs:
             - name: Install dependencies
               run: pnpm install
 
-            - name: Build
-              run: pnpm build
-
             - run: pnpm dlx pkg-pr-new publish --compact './packages/*'
