@@ -313,7 +313,7 @@ describe('HTTP Transport', () => {
 			});
 		});
 
-		it.only('receives a notification when a tool is added', async () => {
+		it('receives a notification when a tool is added', async () => {
 			const handler = vi.fn();
 			client.setNotificationHandler(
 				ToolListChangedNotificationSchema,
