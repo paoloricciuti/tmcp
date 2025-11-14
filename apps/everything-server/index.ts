@@ -224,6 +224,91 @@ server.tool(
 	},
 );
 
+server.tool(
+	{
+		name: 'test_elicitation_sep1330_enums',
+		description: 'A description',
+		enabled() {
+			// TODO: enable this when the new conformance version is live
+			return false;
+		},
+	},
+	async () => {
+		const response = (await server.request({
+			method: 'elicitation/create',
+			params: {
+				message: 'Please select options from the enum fields',
+				requestedSchema: {
+					type: 'object',
+					properties: {
+						// Untitled single-select enum (basic)
+						untitledSingle: {
+							type: 'string',
+							description: 'Select one option',
+							enum: ['option1', 'option2', 'option3'],
+						},
+						// Titled single-select enum (using oneOf with const/title)
+						titledSingle: {
+							type: 'string',
+							description: 'Select one option with titles',
+							oneOf: [
+								{ const: 'value1', title: 'First Option' },
+								{ const: 'value2', title: 'Second Option' },
+								{ const: 'value3', title: 'Third Option' },
+							],
+						},
+						// Legacy titled enum (using enumNames - deprecated)
+						legacyEnum: {
+							type: 'string',
+							description: 'Select one option (legacy)',
+							enum: ['opt1', 'opt2', 'opt3'],
+							enumNames: [
+								'Option One',
+								'Option Two',
+								'Option Three',
+							],
+						},
+						// Untitled multi-select enum
+						untitledMulti: {
+							type: 'array',
+							description: 'Select multiple options',
+							minItems: 1,
+							maxItems: 3,
+							items: {
+								type: 'string',
+								enum: ['option1', 'option2', 'option3'],
+							},
+						},
+						// Titled multi-select enum (using anyOf with const/title)
+						titledMulti: {
+							type: 'array',
+							description: 'Select multiple options with titles',
+							minItems: 1,
+							maxItems: 3,
+							items: {
+								anyOf: [
+									{ const: 'value1', title: 'First Choice' },
+									{ const: 'value2', title: 'Second Choice' },
+									{ const: 'value3', title: 'Third Choice' },
+								],
+							},
+						},
+					},
+					required: [],
+				},
+			},
+		})) as any;
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `Elicitation completed: action=${response.action}, content=${JSON.stringify(response.content || {})}`,
+				},
+			],
+		};
+	},
+);
+
 server.resource(
 	{
 		name: 'Static Text Resource',
