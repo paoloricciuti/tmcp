@@ -74,8 +74,8 @@ importers:
         specifier: ^5.9.2
         version: 5.9.3
       velite:
-        specifier: ^0.2.1
-        version: 0.2.4
+        specifier: ^0.3.0
+        version: 0.3.0
       vite:
         specifier: ^7.1.5
         version: 7.2.2(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1)
@@ -4134,8 +4134,8 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
-  velite@0.2.4:
-    resolution: {integrity: sha512-mNmtPBnEtsYEMlqZb5i0Adr0UJUHoaggQ81srsl+kjvJ3itWTmkCcNZ1zLzY3eQUcZAFXW49EdqyFcwhilAGvw==}
+  velite@0.3.0:
+    resolution: {integrity: sha512-sEqIsdRwVmkkLaizUQy1vhTPukL24l6ggTvhy85zJoHaociBWOOJmbKScNpUuIBq7L55Yk2GxQuTF0glkRQSCA==}
     engines: {node: ^18.17.0 || >=20.3.0}
     hasBin: true
 
@@ -8363,7 +8363,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  velite@0.2.4:
+  velite@0.3.0:
     dependencies:
       '@mdx-js/mdx': 3.1.1
       esbuild: 0.25.12
