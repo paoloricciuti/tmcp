@@ -7,7 +7,7 @@ import { cleanMarkdown, defineSearchContent } from '@svecodocs/kit/search';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export function clean_slug(slug) {
-	return slug.replace(/\d{3,}-/, '');
+	return slug.replace(/\d{2,}-/, '');
 }
 
 export function buildDocsSearchIndex() {

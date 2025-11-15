@@ -15,7 +15,7 @@
 	"devDependencies": {
 		"@svecodocs/kit": "latest",
 		"@sveltejs/adapter-static": "^3.0.10",
-		"@sveltejs/kit": "^2.42.0",
+		"@sveltejs/kit": "^2.48.5",
 		"@sveltejs/vite-plugin-svelte": "^6.2.0",
 		"@tailwindcss/vite": "^4.1.13",
 		"mdsx": "^0.0.6",

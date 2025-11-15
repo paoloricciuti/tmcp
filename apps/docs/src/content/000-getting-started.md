@@ -158,7 +158,7 @@ There are several adapters to convert from your validation library to JSON schem
 
 once you have picked your dependency install the validation library AND the relative `tmcp` adapter
 
-<Select options={["valibot", "zod", "arktype", "effect"]} title="Adapter">
+<Select options={["valibot", "zod", "zod (v3)", "arktype", "effect"]} title="Adapter">
 {#snippet children(adapter)}
 
 {#if adapter === "valibot"}
@@ -224,6 +224,40 @@ yarn add zod @tmcp/adapter-zod
 
 ```bash
 bun add zod @tmcp/adapter-zod
+```
+
+{/snippet}
+</PackageManagers>
+
+{:else if adapter === "zod (v3)"}
+
+<PackageManagers>
+{#snippet pnpm()}
+
+```bash
+pnpm add zod @tmcp/adapter-zod-v3
+```
+
+{/snippet}
+{#snippet npm()}
+
+```bash
+npm i zod @tmcp/adapter-zod-v3
+```
+
+{/snippet}
+{#snippet yarn()}
+
+```bash
+yarn add zod @tmcp/adapter-zod-v3
+```
+
+{/snippet}
+
+{#snippet bun()}
+
+```bash
+bun add zod @tmcp/adapter-zod-v3
 ```
 
 {/snippet}
@@ -463,6 +497,133 @@ And use it in your transport.
 
 <Card href="/docs/auth/oauth" title="Learn how to use the authentication helpers" icon={ArrowRight} horizontal>
 You can learn more about how to use the authentication helpers in the section dedicated to it.
+</Card>
+
+<Step>(Optional) Install the Session manager helper</Step>
+
+Building a remote MCP server at scale means either serverless or a distributed environment and that doesn't go well with the in-memory default behaviour of MCP servers. To ease that experience `tmcp` provides a session manager abstraction that solves two problems:
+
+1. when sending back notifications from the server (or if you are using the SSE transport) the handle of the SSE stream could be in a different server than the one receiving the POST request that triggers it
+2. all the information about the current MCP client (like client capabilities, client info, resources subscriptions) are stored in a different server than the one receiving the current POST request.
+
+A session manager exports two classes that uses an external system (redis, postgres, cloudflare durable objects) to store this information and as a pub/sub dispatcher. Pick your player, install it like this:
+
+<Select options={["Redis", "Postgres", "Cloudflare KV/Durable Objects"]} title="Session Manager">
+
+{#snippet children(session_manager)}
+
+{#if session_manager === "Redis"}
+
+<PackageManagers>
+{#snippet pnpm()}
+
+```bash
+pnpm add @tmcp/session-manager-redis
+```
+
+{/snippet}
+{#snippet npm()}
+
+```bash
+npm i @tmcp/session-manager-redis
+```
+
+{/snippet}
+{#snippet yarn()}
+
+```bash
+yarn add @tmcp/session-manager-redis
+```
+
+{/snippet}
+
+{#snippet bun()}
+
+```bash
+bun add @tmcp/session-manager-redis
+```
+
+{/snippet}
+</PackageManagers>
+
+{:else if session_manager === "Postgres"}
+
+<PackageManagers>
+{#snippet pnpm()}
+
+```bash
+pnpm add @tmcp/session-manager-postgres
+```
+
+{/snippet}
+{#snippet npm()}
+
+```bash
+npm i @tmcp/session-manager-postgres
+```
+
+{/snippet}
+{#snippet yarn()}
+
+```bash
+yarn add @tmcp/session-manager-postgres
+```
+
+{/snippet}
+
+{#snippet bun()}
+
+```bash
+bun add @tmcp/session-manager-postgres
+```
+
+{/snippet}
+</PackageManagers>
+
+{:else if session_manager === "Cloudflare KV/Durable Objects"}
+
+<PackageManagers>
+{#snippet pnpm()}
+
+```bash
+pnpm add @tmcp/session-manager-durable-objects
+```
+
+{/snippet}
+{#snippet npm()}
+
+```bash
+npm i @tmcp/session-manager-durable-objects
+```
+
+{/snippet}
+{#snippet yarn()}
+
+```bash
+yarn add @tmcp/session-manager-durable-objects
+```
+
+{/snippet}
+
+{#snippet bun()}
+
+```bash
+bun add @tmcp/session-manager-durable-objects
+```
+
+{/snippet}
+</PackageManagers>
+
+{/if}
+
+{/snippet}
+
+</Select>
+
+And use it in your transport.
+
+<Card href="/docs/session-managers/overview" title="Learn how to use the session managers" icon={ArrowRight} horizontal>
+You can learn more about how to use a session manager in the section dedicated to it.
 </Card>
 
 </Steps>

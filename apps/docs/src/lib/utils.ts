@@ -8,8 +8,8 @@ export function get_doc_metadata(slug: string = 'index') {
 
 export function get_all_docs() {
 	return docs.toSorted((a, b) => {
-		const order_a = a.path.match(/(\d{3,})-/);
-		const order_b = b.path.match(/(\d{3,})-/);
+		const order_a = a.path.match(/(\d{2,})-/);
+		const order_b = b.path.match(/(\d{2,})-/);
 		const num_a = order_a ? parseInt(order_a[1], 10) : Infinity;
 		const num_b = order_b ? parseInt(order_b[1], 10) : Infinity;
 		return num_a - num_b;
@@ -21,7 +21,7 @@ function slug_from_path(path: string) {
 }
 
 export function clean_slug(slug: string) {
-	return slug.replace(/\d{3,}-/, '');
+	return slug.replace(/\d{2,}-/, '');
 }
 
 export type DocResolver = () => Promise<{ default: Component; metadata: Doc }>;
@@ -40,6 +40,7 @@ export async function get_doc(slug: string = 'index') {
 	}
 	const doc = await match?.resolver?.();
 	const metadata = get_doc_metadata(slug);
+	console.log({ doc, metadata });
 	if (!doc || !metadata) {
 		error(404, 'Could not find the document.');
 	}
