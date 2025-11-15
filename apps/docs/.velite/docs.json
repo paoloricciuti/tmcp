@@ -1,0 +1,354 @@
+[
+  {
+    "title": "Getting Started",
+    "description": "A quick guide to get started using tmcp",
+    "path": "000-getting-started",
+    "content": "<script>\n\timport { Steps, Step, Callout, Card } from \"@svecodocs/kit\";\n\timport PackageManagers from \"$lib/components/package-managers.svelte\";\n\timport Select from \"$lib/components/select.svelte\";\n\timport ArrowRight from \"phosphor-svelte/lib/ArrowRight\";\n</script>\n<p>You have two ways to setup your project with <code>tmcp</code> to start building your MCP server:</p>\n<h2>Using the cli</h2>\n<steps>\n<step>Run the CLI</step>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm create tmcp\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm init tmcp\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn create tmcp\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun create tmcp\n</code></pre>\n<p>{/snippet}\n\n<step>Follow the wizard 🧙🏻</step></p>\n<p>The wizard will guide you towards the creation of a <code>tmcp</code> project. It will ask you for where do you want to create your project, which JSON schema adapter you want to use, which transport you want to use and if you want to include helpers to authenticate your MCP servers.</p>\n<p>It will also ask you if you want to have an example MCP server that will create a file with the minimal boilerplate (using <code>srvx</code> in case you are building an HTTP server).</p>\n<pre><code class=\"language-bash\">┌  🚀 Welcome to create-tmcp!\n│\n◇  Where should we create your TMCP project?\n│  my-awesome-mcp\n│\n◇  Which schema adapter would you like to use?\n│  Valibot (Recommended)\n│\n◇  Which transports would you like to include?\n│  STDIO, HTTP\n│\n◇  Would you like to include OAuth 2.1 authentication?\n│  Yes\n│\n◇  Would you like to include an example MCP server?\n│  Yes\n│\n◇  Where should we place the example server?\n│  src/index.js\n│\n◇  Would you like to automatically install dependencies?\n│  Yes\n│\n◇  Which package manager would you like to use?\n│  pnpm (Recommended)\n│\n◇  Project created successfully!\n│\n◇  Next steps: ───────╮\n│                     │\n│  cd my-awesome-mcp  │\n│  pnpm run dev       │\n│                     │\n├─────────────────────╯\n│\n└  Happy coding! 🎉\n</code></pre>\n<p><step>That's it</step></p>\n<p>That's it, <code>cd</code> into your folder and start building your awesome mcp server!</p>\n</packagemanagers></steps>\n<callout type=\"tip\" title=\"Info\">\n<p>The installer will create a <code>package.json</code> with the latest version of the required dependencies. If you want you can also run the boilerplate CLI in an existing project and it merge with your existing <code>package.json</code>.</p>\n</callout>\n<h2>Manual installation</h2>\n<p><code>tmcp</code> is very composable: what this means is that each functionality it's separated in it's own package so you only get the bare minimum dependencies depending on what you are building.</p>\n<p>So to setup a project manually you need to follow some steps:</p>\n<steps>\n<step>Install `tmcp`</step>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add tmcp\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i tmcp\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add tmcp\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add tmcp\n</code></pre>\n<p>{/snippet}\n</p>\n<p><step>Choose a validation library</step></p>\n<p>There are several adapters to convert from your validation library to JSON schema (the required format for the MCP protocol):</p>\n<ul>\n<li>Valibot</li>\n<li>Zod (v3 and v4)</li>\n<li>Arktype</li>\n<li>Effect</li>\n</ul>\n<p>once you have picked your dependency install the validation library AND the relative <code>tmcp</code> adapter</p>\n<p>&#x3C;Select options={[\"valibot\", \"zod\", \"arktype\", \"effect\"]} title=\"Adapter\">\n{#snippet children(adapter)}</p>\n<p>{#if adapter === \"valibot\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else if adapter === \"zod\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else if adapter === \"arktype\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{/if}</p>\n<p>{/snippet}</p>\n\n<p><step>Pick your transport</step></p>\n<p>The core <code>tmcp</code> library is just a JSON-rpc server...to communicate you need to install an adapter. You can pick between three different adapters</p>\n<ul>\n<li><strong>STDIO</strong>: used to build local servers that can be published on <code>npm</code> and communicate over <code>stdin</code> and <code>stdout</code></li>\n<li><strong>HTTP</strong>: used to build remote servers. You can deploy them anywhere node/bun/deno run and use Streamable HTTP to communicate with your MCP client.</li>\n<li><strong>SSE</strong>: also used to build remote servers. This transport is officially deprecated in the MCP spec so you should default to HTTP if possible.</li>\n</ul>\n<p>&#x3C;Select options={[\"STDIO\", \"HTTP\", \"SSE\"]} title=\"Transport\"></p>\n<p>{#snippet children(transport)}</p>\n<p>{#if transport === \"STDIO\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add @tmcp/transport-stdio\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i @tmcp/transport-stdio\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add @tmcp/transport-stdio\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add @tmcp/transport-stdio\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else if transport === \"HTTP\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add @tmcp/transport-http\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i @tmcp/transport-http\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add @tmcp/transport-http\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add @tmcp/transport-http\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else if transport === \"SSE\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add @tmcp/transport-sse\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i @tmcp/transport-sse\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add @tmcp/transport-sse\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add @tmcp/transport-sse\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{/if}</p>\n<p>{/snippet}</p>\n\n<p><step>(Optional) Install the Auth helper</step></p>\n<p>If you plan to use authentication for your MCP server <code>tmcp</code> you will need to act as an <em>Authorization server</em>. This can be challenging and that's why <code>tmcp</code> ships with a package dedicated to authentication. You can install it like this</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add @tmcp/auth\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i @tmcp/auth\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add @tmcp/auth\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add @tmcp/auth\n</code></pre>\n<p>{/snippet}\n</p>\n<p>And use it in your transport.</p>\n<card href=\"/docs/auth/oauth\" title=\"Learn how to use the authentication helpers\" icon=\"{ArrowRight}\" horizontal=\"\">\nYou can learn more about how to use the authentication helpers in the section dedicated to it.\n</card>\n</packagemanagers></packagemanagers></packagemanagers></packagemanagers></packagemanagers></packagemanagers></packagemanagers></packagemanagers></packagemanagers></steps>",
+    "raw": "<script>\n\timport { Steps, Step, Callout, Card } from \"@svecodocs/kit\";\n\timport PackageManagers from \"$lib/components/package-managers.svelte\";\n\timport Select from \"$lib/components/select.svelte\";\n\timport ArrowRight from \"phosphor-svelte/lib/ArrowRight\";\n</script>\n\nYou have two ways to setup your project with `tmcp` to start building your MCP server:\n\n## Using the cli\n\n<Steps>\n<Step>Run the CLI</Step>\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm create tmcp\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm init tmcp\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn create tmcp\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun create tmcp\n```\n\n{/snippet}\n</PackageManagers>\n<Step>Follow the wizard 🧙🏻</Step>\n\nThe wizard will guide you towards the creation of a `tmcp` project. It will ask you for where do you want to create your project, which JSON schema adapter you want to use, which transport you want to use and if you want to include helpers to authenticate your MCP servers.\n\nIt will also ask you if you want to have an example MCP server that will create a file with the minimal boilerplate (using `srvx` in case you are building an HTTP server).\n\n```bash\n┌  🚀 Welcome to create-tmcp!\n│\n◇  Where should we create your TMCP project?\n│  my-awesome-mcp\n│\n◇  Which schema adapter would you like to use?\n│  Valibot (Recommended)\n│\n◇  Which transports would you like to include?\n│  STDIO, HTTP\n│\n◇  Would you like to include OAuth 2.1 authentication?\n│  Yes\n│\n◇  Would you like to include an example MCP server?\n│  Yes\n│\n◇  Where should we place the example server?\n│  src/index.js\n│\n◇  Would you like to automatically install dependencies?\n│  Yes\n│\n◇  Which package manager would you like to use?\n│  pnpm (Recommended)\n│\n◇  Project created successfully!\n│\n◇  Next steps: ───────╮\n│                     │\n│  cd my-awesome-mcp  │\n│  pnpm run dev       │\n│                     │\n├─────────────────────╯\n│\n└  Happy coding! 🎉\n```\n\n<Step>That's it</Step>\n\nThat's it, `cd` into your folder and start building your awesome mcp server!\n\n</Steps>\n\n<Callout type=\"tip\" title=\"Info\">\n\nThe installer will create a `package.json` with the latest version of the required dependencies. If you want you can also run the boilerplate CLI in an existing project and it merge with your existing `package.json`.\n\n</Callout>\n\n## Manual installation\n\n`tmcp` is very composable: what this means is that each functionality it's separated in it's own package so you only get the bare minimum dependencies depending on what you are building.\n\nSo to setup a project manually you need to follow some steps:\n\n<Steps>\n<Step>Install `tmcp`</Step>\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add tmcp\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i tmcp\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add tmcp\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add tmcp\n```\n\n{/snippet}\n</PackageManagers>\n\n<Step>Choose a validation library</Step>\n\nThere are several adapters to convert from your validation library to JSON schema (the required format for the MCP protocol):\n\n- Valibot\n- Zod (v3 and v4)\n- Arktype\n- Effect\n\nonce you have picked your dependency install the validation library AND the relative `tmcp` adapter\n\n<Select options={[\"valibot\", \"zod\", \"arktype\", \"effect\"]} title=\"Adapter\">\n{#snippet children(adapter)}\n\n{#if adapter === \"valibot\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else if adapter === \"zod\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add zod @tmcp/adapter-zod\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i zod @tmcp/adapter-zod\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add zod @tmcp/adapter-zod\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add zod @tmcp/adapter-zod\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else if adapter === \"arktype\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n</PackageManagers>\n\n{/if}\n\n{/snippet}\n\n</Select>\n\n<Step>Pick your transport</Step>\n\nThe core `tmcp` library is just a JSON-rpc server...to communicate you need to install an adapter. You can pick between three different adapters\n\n- **STDIO**: used to build local servers that can be published on `npm` and communicate over `stdin` and `stdout`\n- **HTTP**: used to build remote servers. You can deploy them anywhere node/bun/deno run and use Streamable HTTP to communicate with your MCP client.\n- **SSE**: also used to build remote servers. This transport is officially deprecated in the MCP spec so you should default to HTTP if possible.\n\n<Select options={[\"STDIO\", \"HTTP\", \"SSE\"]} title=\"Transport\">\n\n{#snippet children(transport)}\n\n{#if transport === \"STDIO\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add @tmcp/transport-stdio\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i @tmcp/transport-stdio\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add @tmcp/transport-stdio\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add @tmcp/transport-stdio\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else if transport === \"HTTP\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add @tmcp/transport-http\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i @tmcp/transport-http\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add @tmcp/transport-http\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add @tmcp/transport-http\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else if transport === \"SSE\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add @tmcp/transport-sse\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i @tmcp/transport-sse\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add @tmcp/transport-sse\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add @tmcp/transport-sse\n```\n\n{/snippet}\n</PackageManagers>\n\n{/if}\n\n{/snippet}\n\n</Select>\n\n<Step>(Optional) Install the Auth helper</Step>\n\nIf you plan to use authentication for your MCP server `tmcp` you will need to act as an _Authorization server_. This can be challenging and that's why `tmcp` ships with a package dedicated to authentication. You can install it like this\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add @tmcp/auth\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i @tmcp/auth\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add @tmcp/auth\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add @tmcp/auth\n```\n\n{/snippet}\n</PackageManagers>\n\nAnd use it in your transport.\n\n<Card href=\"/docs/auth/oauth\" title=\"Learn how to use the authentication helpers\" icon={ArrowRight} horizontal>\nYou can learn more about how to use the authentication helpers in the section dedicated to it.\n</Card>\n\n</Steps>",
+    "toc": [
+      {
+        "title": "Using the cli",
+        "url": "#using-the-cli",
+        "items": []
+      },
+      {
+        "title": "Manual installation",
+        "url": "#manual-installation",
+        "items": []
+      }
+    ],
+    "section": "Overview",
+    "slug": "000-getting-started",
+    "slugFull": "/000-getting-started"
+  },
+  {
+    "title": "Introduction",
+    "description": "What and why is tmcp a thing?",
+    "path": "000-index",
+    "content": "<p>If you are ever come close to the world of Agentic AI I'm sure you've come across a certain acronym: MCP.</p>\n<h2>MCP: Model Context Protocol</h2>\n<p>As the name suggest Model Context Protocol is...well...a Protocol. Just like HTTP allow browsers (HTTP client) to communicate back and forth with our servers (HTTP server), MCP allows MCP clients to communicate back and forth with MCP servers. To do what? To allow LLMs (the Model in the acronym) to get additional Context (the Context in the acronym) and act on behalf of the user!</p>\n<p>The MCP is a way to standardize the communication method between those clients (<code>claude-code</code>, <code>codex</code>, <code>copilot</code> etc) and the servers (what you are probably here to build).</p>\n<p>The initiative was launched by Anthropic and quickly gained popularity and now has thousands of users.</p>\n<p>If you are interested <a href=\"https://modelcontextprotocol.io/docs/getting-started/intro\">you can read more here</a> but you are here to learn about <code>tmcp</code> so...</p>\n<h2><code>tmcp</code> a modern way to build MCP servers</h2>\n<p>Most modern platform nowadays standardized on the <code>fetch</code> API to handle their requests/responses. SvelteKit, Next.js, SolidStart, Bun, Cloudflare Workers, Deno, they all handle HTTP calls in the same way: you expose a function that receives a <code>Request</code> instance and return a <code>Response</code> instance from it.</p>\n<p>Simple, performant, modern.</p>\n<p>There's also a lot of validation libraries out there: <a href=\"https://valibot.dev\">Valibot</a>, <a href=\"https://arktype.io\">Arktype</a>, <a href=\"https://effect.website\">Effect</a> each with it's own strength and as a library author you don't have to pick your favorite: you can use <a href=\"https://github.com/standard-schema/standard-schema\">Standard Schema</a> to allow your users to pick their favorite!</p>\n<p>This and much more were the reasons that moved us to build <code>tmcp</code>: a simple, composable, modern and flexible SDK to build your MCP server where YOU get to pick your deployment target, you validation library and your preferred transport without all the rest coming as a baggage!</p>\n<p>But enough blabblering...you want to see the code!</p>",
+    "raw": "If you are ever come close to the world of Agentic AI I'm sure you've come across a certain acronym: MCP.\n\n## MCP: Model Context Protocol\n\nAs the name suggest Model Context Protocol is...well...a Protocol. Just like HTTP allow browsers (HTTP client) to communicate back and forth with our servers (HTTP server), MCP allows MCP clients to communicate back and forth with MCP servers. To do what? To allow LLMs (the Model in the acronym) to get additional Context (the Context in the acronym) and act on behalf of the user!\n\nThe MCP is a way to standardize the communication method between those clients (`claude-code`, `codex`, `copilot` etc) and the servers (what you are probably here to build).\n\nThe initiative was launched by Anthropic and quickly gained popularity and now has thousands of users.\n\nIf you are interested [you can read more here](https://modelcontextprotocol.io/docs/getting-started/intro) but you are here to learn about `tmcp` so...\n\n## `tmcp` a modern way to build MCP servers\n\nMost modern platform nowadays standardized on the `fetch` API to handle their requests/responses. SvelteKit, Next.js, SolidStart, Bun, Cloudflare Workers, Deno, they all handle HTTP calls in the same way: you expose a function that receives a `Request` instance and return a `Response` instance from it.\n\nSimple, performant, modern.\n\nThere's also a lot of validation libraries out there: [Valibot](https://valibot.dev), [Arktype](https://arktype.io), [Effect](https://effect.website) each with it's own strength and as a library author you don't have to pick your favorite: you can use [Standard Schema](https://github.com/standard-schema/standard-schema) to allow your users to pick their favorite!\n\nThis and much more were the reasons that moved us to build `tmcp`: a simple, composable, modern and flexible SDK to build your MCP server where YOU get to pick your deployment target, you validation library and your preferred transport without all the rest coming as a baggage!\n\nBut enough blabblering...you want to see the code!",
+    "toc": [
+      {
+        "title": "MCP: Model Context Protocol",
+        "url": "#mcp-model-context-protocol",
+        "items": []
+      },
+      {
+        "title": "tmcp a modern way to build MCP servers",
+        "url": "#tmcp-a-modern-way-to-build-mcp-servers",
+        "items": []
+      }
+    ],
+    "section": "Overview",
+    "slug": "000-index",
+    "slugFull": "/000-index"
+  },
+  {
+    "title": "OAuth",
+    "description": "Learn how to setup OAuth for your MCP server using the OAuth helper from `@tmcp/auth`",
+    "path": "auth/100-oauth",
+    "content": "<p>Puppa</p>",
+    "raw": "Puppa",
+    "toc": [],
+    "section": "Auth",
+    "slug": "auth/100-oauth",
+    "slugFull": "/auth/100-oauth"
+  },
+  {
+    "title": "SimpleProvider",
+    "description": "Learn how to setup OAuth for your MCP server using the SimpleProvider helper from `@tmcp/auth`",
+    "path": "auth/200-simple-provider",
+    "content": "<p>Puppa</p>",
+    "raw": "Puppa",
+    "toc": [],
+    "section": "Auth",
+    "slug": "auth/200-simple-provider",
+    "slugFull": "/auth/200-simple-provider"
+  },
+  {
+    "title": "Redis",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/100-redis",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/100-redis",
+    "slugFull": "/session-managers/100-redis"
+  },
+  {
+    "title": "Postgres",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/200-stdio",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/200-stdio",
+    "slugFull": "/session-managers/200-stdio"
+  },
+  {
+    "title": "Durable Objects",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/300-sse",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/300-sse",
+    "slugFull": "/session-managers/300-sse"
+  },
+  {
+    "title": "HTTP",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "transports/100-http",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/100-http",
+    "slugFull": "/transports/100-http"
+  },
+  {
+    "title": "STDIO",
+    "description": "Learn how to build an MCP server that runs locally.",
+    "path": "transports/200-stdio",
+    "content": "<p>stdio</p>",
+    "raw": "stdio",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/200-stdio",
+    "slugFull": "/transports/200-stdio"
+  },
+  {
+    "title": "SSE",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs using the deprecated SSE transport.",
+    "path": "transports/300-sse",
+    "content": "<p>SSE</p>",
+    "raw": "SSE",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/300-sse",
+    "slugFull": "/transports/300-sse"
+  },
+  {
+    "title": "McpServer",
+    "description": "The main McpServer class",
+    "path": "core/100-mcp-server",
+    "content": "<script>\n\timport { Callout, Card } from \"@svecodocs/kit\";\n</script>\n<p>This is the instance that controls the logic behind your MCP server. You will use this instance to register your tool/resource/prompts, to send notifications, to read the context etc.</p>\n<p>At his heart this class is basically a JSON-rpc server and you can use the method <a href=\"/docs/core/receive\">receive</a> to handle JSON-rpc payloads.</p>\n<h2>Initialization</h2>\n<p><code>McpServer</code> is a class that you can instantiate with the information of your server (mainly name and version) and your capabilities:</p>\n<pre><code class=\"language-ts\">const server = new McpServer(\n\t{\n\t\tname: 'a-super-basic-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {},\n\t},\n);\n</code></pre>\n<p>this will give you a very basic server that can only respond to <code>ping</code> requests and <code>initialize</code> requests. You can enhance your capabilities by specifying them in the <code>capabilities</code> object:</p>\n<pre><code class=\"language-ts\">const server = new McpServer(\n\t{\n\t\tname: 'mcp-conformance-test-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {\n\t\t\ttools: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsubscribe: true,\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tprompts: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tlogging: {},\n\t\t\tcompletions: {},\n\t\t},\n\t},\n);\n</code></pre>\n<callout type=\"warning\">\nIf you don't include a capability registering a tool/resource/prompt will not automatically include that capability and the server will not respond to that method invocation.\n</callout>\n<p>You might notice something unusual in both of this code snippets: we are explicitly setting the <code>adapter</code> to <code>undefined</code>. The adapter is required to receive any kind of input or to send elicitation requests so, unless you are planning only to add tools that don't receive any input you should actually specify an adapter. As a nicety and for quick prototyping you can omit the adapter but you will get errors as soon as you try to define a schema for a tool so that's why you need to specifically pass <code>undefined</code>.</p>\n<p>But we are not prototyping here so...</p>\n<h2>Specifying an adapter</h2>",
+    "raw": "<script>\n\timport { Callout, Card } from \"@svecodocs/kit\";\n</script>\n\nThis is the instance that controls the logic behind your MCP server. You will use this instance to register your tool/resource/prompts, to send notifications, to read the context etc.\n\nAt his heart this class is basically a JSON-rpc server and you can use the method [receive](/docs/core/receive) to handle JSON-rpc payloads.\n\n## Initialization\n\n`McpServer` is a class that you can instantiate with the information of your server (mainly name and version) and your capabilities:\n\n```ts\nconst server = new McpServer(\n\t{\n\t\tname: 'a-super-basic-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {},\n\t},\n);\n```\n\nthis will give you a very basic server that can only respond to `ping` requests and `initialize` requests. You can enhance your capabilities by specifying them in the `capabilities` object:\n\n```ts\nconst server = new McpServer(\n\t{\n\t\tname: 'mcp-conformance-test-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {\n\t\t\ttools: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsubscribe: true,\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tprompts: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tlogging: {},\n\t\t\tcompletions: {},\n\t\t},\n\t},\n);\n```\n\n<Callout type=\"warning\">\nIf you don't include a capability registering a tool/resource/prompt will not automatically include that capability and the server will not respond to that method invocation.\n</Callout>\n\nYou might notice something unusual in both of this code snippets: we are explicitly setting the `adapter` to `undefined`. The adapter is required to receive any kind of input or to send elicitation requests so, unless you are planning only to add tools that don't receive any input you should actually specify an adapter. As a nicety and for quick prototyping you can omit the adapter but you will get errors as soon as you try to define a schema for a tool so that's why you need to specifically pass `undefined`.\n\nBut we are not prototyping here so...\n\n## Specifying an adapter",
+    "toc": [
+      {
+        "title": "Initialization",
+        "url": "#initialization",
+        "items": []
+      },
+      {
+        "title": "Specifying an adapter",
+        "url": "#specifying-an-adapter",
+        "items": []
+      }
+    ],
+    "section": "Core",
+    "slug": "core/100-mcp-server",
+    "slugFull": "/core/100-mcp-server"
+  },
+  {
+    "title": "refreshRoots",
+    "description": "Learn how to refresh the list of allowed workspace folders from the client",
+    "path": "core/1000-refreshRoots",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/1000-refreshRoots",
+    "slugFull": "/core/1000-refreshRoots"
+  },
+  {
+    "title": "log",
+    "description": "Learn how to refresh the list of allowed workspace folders from the client",
+    "path": "core/1100-log",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/1100-log",
+    "slugFull": "/core/1100-log"
+  },
+  {
+    "title": "progress",
+    "description": "Learn how to refresh the list of allowed workspace folders from the client",
+    "path": "core/1200-progress",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/1200-progress",
+    "slugFull": "/core/1200-progress"
+  },
+  {
+    "title": "changed",
+    "description": "Learn how to refresh the list of allowed workspace folders from the client",
+    "path": "core/1300-changed",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/1300-changed",
+    "slugFull": "/core/1300-changed"
+  },
+  {
+    "title": "receive",
+    "description": "The main entrypoint to your MCP server",
+    "path": "core/1400-receive",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/1400-receive",
+    "slugFull": "/core/1400-receive"
+  },
+  {
+    "title": "request",
+    "description": "The main entrypoint to your MCP server",
+    "path": "core/1500-request",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/1500-request",
+    "slugFull": "/core/1500-request"
+  },
+  {
+    "title": "tool",
+    "description": "The start of the MCP protocol...learn how to register a tool that can be called by your Agent.",
+    "path": "core/200-tool",
+    "content": "<p>tool</p>",
+    "raw": "tool",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/200-tool",
+    "slugFull": "/core/200-tool"
+  },
+  {
+    "title": "resource",
+    "description": "Learn how to register a new resource for your MCP server.",
+    "path": "core/300-resource",
+    "content": "<p>resource</p>",
+    "raw": "resource",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/300-resource",
+    "slugFull": "/core/300-resource"
+  },
+  {
+    "title": "template",
+    "description": "Learn how to register a new dynamic resource for your MCP server.",
+    "path": "core/400-template",
+    "content": "<p>template</p>",
+    "raw": "template",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/400-template",
+    "slugFull": "/core/400-template"
+  },
+  {
+    "title": "prompt",
+    "description": "Learn how to register a new prompt for your MCP server.",
+    "path": "core/500-prompt",
+    "content": "<p>prompt</p>",
+    "raw": "prompt",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/500-prompt",
+    "slugFull": "/core/500-prompt"
+  },
+  {
+    "title": "on",
+    "description": "Learn how to register event listeners on the MCP server and which events are available.",
+    "path": "core/600-on",
+    "content": "<p>on</p>",
+    "raw": "on",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/600-on",
+    "slugFull": "/core/600-on"
+  },
+  {
+    "title": "ctx",
+    "description": "Learn everything about the context available on the server.",
+    "path": "core/700-ctx",
+    "content": "<p>ctx</p>",
+    "raw": "ctx",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/700-ctx",
+    "slugFull": "/core/700-ctx"
+  },
+  {
+    "title": "elicitation",
+    "description": "Learn how to ask for more information from the MCP client",
+    "path": "core/800-elicitation",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/800-elicitation",
+    "slugFull": "/core/800-elicitation"
+  },
+  {
+    "title": "message",
+    "description": "Learn how to request the user to use the LLM to do inference work",
+    "path": "core/900-message",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Core",
+    "slug": "core/900-message",
+    "slugFull": "/core/900-message"
+  },
+  {
+    "title": "tool",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/100-tool",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/100-tool",
+    "slugFull": "/utils/100-tool"
+  },
+  {
+    "title": "resource",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/200-resource",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/200-resource",
+    "slugFull": "/utils/200-resource"
+  },
+  {
+    "title": "prompt",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/300-prompt",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/300-prompt",
+    "slugFull": "/utils/300-prompt"
+  },
+  {
+    "title": "complete",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/400-complete",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/400-complete",
+    "slugFull": "/utils/400-complete"
+  }
+]
