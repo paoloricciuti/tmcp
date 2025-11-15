@@ -1,14 +1,46 @@
 <script lang="ts">
+	import { useSiteConfig } from '@svecodocs/kit';
 	import TmcpAnimated from '$lib/components/logos/tmcp-animated.svelte';
 	import Tmcp from '$lib/components/logos/tmcp.svelte';
 	// @ts-expect-error no dts for md files
 	import Example from './example-1.md';
 	// @ts-expect-error no dts for md files
 	import Example2 from './example-2.md';
+
+	const siteConfig = useSiteConfig();
+	const description =
+		'A modern, flexible, and composable SDK for building MCP servers with TypeScript.';
+	const title = 'tmcp - A modern SDK for MCP servers';
+	const ogImage = siteConfig.current.ogImage;
 </script>
 
-<div class="accent-shape"></div>
-<div class="accent-shape"></div>
+<svelte:head>
+	<title>{title}</title>
+	<meta name="description" content={description} />
+	<meta name="author" content="huntabyte" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:site" content={siteConfig.current.url} />
+	<meta name="twitter:title" content={title} />
+	<meta name="twitter:description" content={description} />
+	<meta name="twitter:image" content={ogImage?.url} />
+	<meta name="twitter:image:alt" content={title} />
+	<meta name="twitter:creator" content="huntabyte" />
+	<meta property="og:title" content={title} />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content={siteConfig.current.url} />
+	<meta property="og:image" content={ogImage?.url} />
+	<meta property="og:image:alt" content={title} />
+	<meta property="og:image:width" content={ogImage?.width} />
+	<meta property="og:image:height" content={ogImage?.height} />
+	<meta property="og:description" content={description} />
+	<meta property="og:site_name" content={siteConfig.current.name} />
+	<meta property="og:locale" content="EN_US" />
+</svelte:head>
+
+<div class="absolute inset-0 overflow-hidden pointer-events-none">
+	<div class="accent-shape"></div>
+	<div class="accent-shape"></div>
+</div>
 
 <header>
 	<div class="container">

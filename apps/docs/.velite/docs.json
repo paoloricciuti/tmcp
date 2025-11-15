@@ -99,39 +99,6 @@
     "slugFull": "/session-managers/300-sse"
   },
   {
-    "title": "HTTP",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "transports/100-http",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/100-http",
-    "slugFull": "/transports/100-http"
-  },
-  {
-    "title": "STDIO",
-    "description": "Learn how to build an MCP server that runs locally.",
-    "path": "transports/200-stdio",
-    "content": "<p>stdio</p>",
-    "raw": "stdio",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/200-stdio",
-    "slugFull": "/transports/200-stdio"
-  },
-  {
-    "title": "SSE",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs using the deprecated SSE transport.",
-    "path": "transports/300-sse",
-    "content": "<p>SSE</p>",
-    "raw": "SSE",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/300-sse",
-    "slugFull": "/transports/300-sse"
-  },
-  {
     "title": "McpServer",
     "description": "The main McpServer class",
     "path": "core/100-mcp-server",
@@ -306,6 +273,39 @@
     "section": "Core",
     "slug": "core/900-message",
     "slugFull": "/core/900-message"
+  },
+  {
+    "title": "HTTP",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "transports/100-http",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/100-http",
+    "slugFull": "/transports/100-http"
+  },
+  {
+    "title": "STDIO",
+    "description": "Learn how to build an MCP server that runs locally.",
+    "path": "transports/200-stdio",
+    "content": "<p>stdio</p>",
+    "raw": "stdio",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/200-stdio",
+    "slugFull": "/transports/200-stdio"
+  },
+  {
+    "title": "SSE",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs using the deprecated SSE transport.",
+    "path": "transports/300-sse",
+    "content": "<p>SSE</p>",
+    "raw": "SSE",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/300-sse",
+    "slugFull": "/transports/300-sse"
   },
   {
     "title": "tool",
