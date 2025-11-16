@@ -36,7 +36,7 @@ this will give you a very basic server that can only respond to `ping` requests 
 ```ts
 const server = new McpServer(
 	{
-		name: 'mcp-conformance-test-server',
+		name: 'my-awesome-server',
 		version: '1.0.0',
 	},
 	{
@@ -309,3 +309,84 @@ class MyCustomJsonSchemaAdapter extends JsonSchemaAdapter<BaseSchemaType> {
 That's it! Now you can use your library with `tmcp`...and if you feel it you can also [open a PR](https://github.com/paoloricciuti/tmcp/pulls) to `tmcp` to make this an officially supported library!
 
 </details>
+
+## Server instructions
+
+An optional property of the configuration object is `instructions`...you can fill this to instruct the LLM on how and when to use your server
+
+```ts {22-23}
+const server = new McpServer(
+	{
+		name: 'my-awesome-server',
+		version: '1.0.0',
+	},
+	{
+		adapter: undefined,
+		capabilities: {
+			tools: {
+				listChanged: true,
+			},
+			resources: {
+				subscribe: true,
+				listChanged: true,
+			},
+			prompts: {
+				listChanged: true,
+			},
+			logging: {},
+			completions: {},
+		},
+		instructions:
+			'You can use the server to do the most awesome thing in the world',
+	},
+);
+```
+
+## Pagination options
+
+The MCP spec allows servers to paginate the results of list calls so that if you have a lot of tools/resources/prompts you can send them in batches instead of returning a single list that could overflow the tokens limits of some agent. `tmcp` handle all of this for you automatically, you just need to specify the page size:
+
+```ts {22-32}
+const server = new McpServer(
+	{
+		name: 'my-awesome-server',
+		version: '1.0.0',
+	},
+	{
+		adapter: undefined,
+		capabilities: {
+			tools: {
+				listChanged: true,
+			},
+			resources: {
+				subscribe: true,
+				listChanged: true,
+			},
+			prompts: {
+				listChanged: true,
+			},
+			logging: {},
+			completions: {},
+		},
+		pagination: {
+			prompts: {
+				size: 15,
+			},
+			tools: {
+				size: 15,
+			},
+			resources: {
+				size: 15,
+			},
+		},
+	},
+);
+```
+
+## Context
+
+We are gonna explore how context work [in it's own section](/docs/core/ctx) but is worth mentioning here that after you create you `McpServer` instance you have a `withContext` utility that allows you to specify the type for the custom context you expect. This type flows through the transports and in the `server.ctx` getter so you can actually get intellisense about the context you defined. To specify a type you can do:
+
+```ts
+const server = new McpServer({...}).withContext<{ db: Db }>();
+```

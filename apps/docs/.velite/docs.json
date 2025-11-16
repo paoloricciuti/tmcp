@@ -66,132 +66,11 @@
     "slugFull": "/auth/200-simple-provider"
   },
   {
-    "title": "Redis",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/100-redis",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/100-redis",
-    "slugFull": "/session-managers/100-redis"
-  },
-  {
-    "title": "Postgres",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/200-stdio",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/200-stdio",
-    "slugFull": "/session-managers/200-stdio"
-  },
-  {
-    "title": "Durable Objects",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/300-sse",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/300-sse",
-    "slugFull": "/session-managers/300-sse"
-  },
-  {
-    "title": "Overview",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/50-overview",
-    "content": "",
-    "raw": "",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/50-overview",
-    "slugFull": "/session-managers/50-overview"
-  },
-  {
-    "title": "tool",
-    "description": "The main entrypoint to your MCP server",
-    "path": "utils/100-tool",
-    "content": "<p>receive</p>",
-    "raw": "receive",
-    "toc": [],
-    "section": "Utils",
-    "slug": "utils/100-tool",
-    "slugFull": "/utils/100-tool"
-  },
-  {
-    "title": "resource",
-    "description": "The main entrypoint to your MCP server",
-    "path": "utils/200-resource",
-    "content": "<p>receive</p>",
-    "raw": "receive",
-    "toc": [],
-    "section": "Utils",
-    "slug": "utils/200-resource",
-    "slugFull": "/utils/200-resource"
-  },
-  {
-    "title": "prompt",
-    "description": "The main entrypoint to your MCP server",
-    "path": "utils/300-prompt",
-    "content": "<p>receive</p>",
-    "raw": "receive",
-    "toc": [],
-    "section": "Utils",
-    "slug": "utils/300-prompt",
-    "slugFull": "/utils/300-prompt"
-  },
-  {
-    "title": "complete",
-    "description": "The main entrypoint to your MCP server",
-    "path": "utils/400-complete",
-    "content": "<p>receive</p>",
-    "raw": "receive",
-    "toc": [],
-    "section": "Utils",
-    "slug": "utils/400-complete",
-    "slugFull": "/utils/400-complete"
-  },
-  {
-    "title": "HTTP",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "transports/100-http",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/100-http",
-    "slugFull": "/transports/100-http"
-  },
-  {
-    "title": "STDIO",
-    "description": "Learn how to build an MCP server that runs locally.",
-    "path": "transports/200-stdio",
-    "content": "<p>stdio</p>",
-    "raw": "stdio",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/200-stdio",
-    "slugFull": "/transports/200-stdio"
-  },
-  {
-    "title": "SSE",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs using the deprecated SSE transport.",
-    "path": "transports/300-sse",
-    "content": "<p>SSE</p>",
-    "raw": "SSE",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/300-sse",
-    "slugFull": "/transports/300-sse"
-  },
-  {
     "title": "McpServer",
     "description": "The main McpServer class",
     "path": "core/100-mcp-server",
-    "content": "<script>\n\timport { Callout, Card } from \"@svecodocs/kit\";\n\timport PackageManagers from \"$lib/components/package-managers.svelte\";\n\timport Select from \"$lib/components/select.svelte\";\n</script>\n<p>This is the instance that controls the logic behind your MCP server. You will use this instance to register your tool/resource/prompts, to send notifications, to read the context etc.</p>\n<p>At his heart this class is basically a JSON-rpc server and you can use the method <a href=\"/docs/core/receive\">receive</a> to handle JSON-rpc payloads.</p>\n<h2>Initialization</h2>\n<p><code>McpServer</code> is a class that you can instantiate with the information of your server (mainly name and version) and your capabilities:</p>\n<pre><code class=\"language-ts\">const server = new McpServer(\n\t{\n\t\tname: 'a-super-basic-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {},\n\t},\n);\n</code></pre>\n<p>this will give you a very basic server that can only respond to <code>ping</code> requests and <code>initialize</code> requests. You can enhance your capabilities by specifying them in the <code>capabilities</code> object:</p>\n<pre><code class=\"language-ts\">const server = new McpServer(\n\t{\n\t\tname: 'mcp-conformance-test-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {\n\t\t\ttools: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsubscribe: true,\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tprompts: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tlogging: {},\n\t\t\tcompletions: {},\n\t\t},\n\t},\n);\n</code></pre>\n<callout type=\"warning\">\nIf you don't include a capability registering a tool/resource/prompt will not automatically include that capability and the server will not respond to that method invocation.\n</callout>\n<p>You might notice something unusual in both of this code snippets: we are explicitly setting the <code>adapter</code> to <code>undefined</code>. The adapter is required to receive any kind of input or to send elicitation requests so, unless you are planning only to add tools that don't receive any input you should actually specify an adapter. As a nicety and for quick prototyping you can omit the adapter but you will get errors as soon as you try to define a schema for a tool so that's why you need to specifically pass <code>undefined</code>.</p>\n<p>But we are not prototyping here so...</p>\n<h2>Specifying an adapter</h2>\n<p>The official MCP spec requires the server to send back the information about the input of a tool/prompt (or the requested schema of an elicitation request) in JSON-schema. While very powerful JSON-schema is also very verbose and very often developers already have a validation library installed in their project.</p>\n<p>Thanks to <a href=\"https://github.com/standard-schema/standard-schema\">standard schema</a> you can use every library that supports standard schema with <code>tmcp</code>. However we still need a way to convert from your validation library of choice to JSON-schema and that could be as simple as doing <code>schema.toJSONSchema()</code> in zod version 4 or as complex as finding and installing a separate library to do it for you (like zod v3 or valibot).</p>\n<p>Introducing, adapters.</p>\n<p>We did most of the work for you for the most common validation libraries:</p>\n<ul>\n<li>Valibot</li>\n<li>Zod V3</li>\n<li>Zod V4</li>\n<li>Arktype</li>\n<li>Effect</li>\n</ul>\n<p>so if you are using one of these libraries you are golden: just run</p>\n<p>&#x3C;Select options={[\"valibot\", \"zod\", \"zod (v3)\", \"arktype\", \"effect\"]} title=\"Adapter\">\n{#snippet children(adapter)}</p>\n<p>{#if adapter === \"valibot\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else if adapter === \"zod\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else if adapter === \"zod (v3)\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add zod @tmcp/adapter-zod-v3\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i zod @tmcp/adapter-zod-v3\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add zod @tmcp/adapter-zod-v3\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add zod @tmcp/adapter-zod-v3\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else if adapter === \"arktype\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{/if}</p>\n<p>{/snippet}</p>\n\n<p>once you do that you'll find a named export with a descriptive name that you can instantiate and pass as adapter to your McpServer class.</p>\n<pre><code class=\"language-ts\">import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';\n\nconst server = new McpServer(\n\t{\n\t\tname: 'a-super-basic-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: new ValibotJsonSchemaAdapter(),\n\t\tcapabilities: {},\n\t},\n);\n</code></pre>\n<p>Then you will be able to pass <code>valibot</code> schemas to your tools/prompts/elicitations.</p>\n<details class=\"mt-4\">\n\t<summary class=\"text-xl\">What if my standard schema library is not one of those?</summary>\n<p>Don't worry!</p>\n<p>Writing your own adapter is very simple (given that your library supports converting into JSON-schema...if that's not the case I have bad news 😅).</p>\n<p><code>tmcp</code> also exports a class named <code>JsonSchemaAdapter</code>, all you have to do is create a class extends that class and override the <code>toJsonSchema</code> method</p>\n<pre><code class=\"language-ts\">import { JsonSchemaAdapter } from 'tmcp/adapter';\n// every validation library exports their base type\n// which needs to be a StandardSchema compatible type\nimport type { BaseSchemaType } from 'your-validation-library';\n\nclass MyCustomJsonSchemaAdapter extends JsonSchemaAdapter&#x3C;BaseSchemaType> {\n\tasync toJsonSchema(schema: BaseSchemaType) {\n\t\t// find a way to convert to json schema\n\t\treturn schema.toJsonSchema();\n\t}\n}\n</code></pre>\n<p>That's it! Now you can use your library with <code>tmcp</code>...and if you feel it you can also <a href=\"https://github.com/paoloricciuti/tmcp/pulls\">open a PR</a> to <code>tmcp</code> to make this an officially supported library!</p>\n</details></packagemanagers></packagemanagers></packagemanagers></packagemanagers></packagemanagers>",
-    "raw": "<script>\n\timport { Callout, Card } from \"@svecodocs/kit\";\n\timport PackageManagers from \"$lib/components/package-managers.svelte\";\n\timport Select from \"$lib/components/select.svelte\";\n</script>\n\nThis is the instance that controls the logic behind your MCP server. You will use this instance to register your tool/resource/prompts, to send notifications, to read the context etc.\n\nAt his heart this class is basically a JSON-rpc server and you can use the method [receive](/docs/core/receive) to handle JSON-rpc payloads.\n\n## Initialization\n\n`McpServer` is a class that you can instantiate with the information of your server (mainly name and version) and your capabilities:\n\n```ts\nconst server = new McpServer(\n\t{\n\t\tname: 'a-super-basic-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {},\n\t},\n);\n```\n\nthis will give you a very basic server that can only respond to `ping` requests and `initialize` requests. You can enhance your capabilities by specifying them in the `capabilities` object:\n\n```ts\nconst server = new McpServer(\n\t{\n\t\tname: 'mcp-conformance-test-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {\n\t\t\ttools: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsubscribe: true,\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tprompts: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tlogging: {},\n\t\t\tcompletions: {},\n\t\t},\n\t},\n);\n```\n\n<Callout type=\"warning\">\nIf you don't include a capability registering a tool/resource/prompt will not automatically include that capability and the server will not respond to that method invocation.\n</Callout>\n\nYou might notice something unusual in both of this code snippets: we are explicitly setting the `adapter` to `undefined`. The adapter is required to receive any kind of input or to send elicitation requests so, unless you are planning only to add tools that don't receive any input you should actually specify an adapter. As a nicety and for quick prototyping you can omit the adapter but you will get errors as soon as you try to define a schema for a tool so that's why you need to specifically pass `undefined`.\n\nBut we are not prototyping here so...\n\n## Specifying an adapter\n\nThe official MCP spec requires the server to send back the information about the input of a tool/prompt (or the requested schema of an elicitation request) in JSON-schema. While very powerful JSON-schema is also very verbose and very often developers already have a validation library installed in their project.\n\nThanks to [standard schema](https://github.com/standard-schema/standard-schema) you can use every library that supports standard schema with `tmcp`. However we still need a way to convert from your validation library of choice to JSON-schema and that could be as simple as doing `schema.toJSONSchema()` in zod version 4 or as complex as finding and installing a separate library to do it for you (like zod v3 or valibot).\n\nIntroducing, adapters.\n\nWe did most of the work for you for the most common validation libraries:\n\n- Valibot\n- Zod V3\n- Zod V4\n- Arktype\n- Effect\n\nso if you are using one of these libraries you are golden: just run\n\n<Select options={[\"valibot\", \"zod\", \"zod (v3)\", \"arktype\", \"effect\"]} title=\"Adapter\">\n{#snippet children(adapter)}\n\n{#if adapter === \"valibot\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else if adapter === \"zod\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add zod @tmcp/adapter-zod\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i zod @tmcp/adapter-zod\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add zod @tmcp/adapter-zod\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add zod @tmcp/adapter-zod\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else if adapter === \"zod (v3)\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add zod @tmcp/adapter-zod-v3\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i zod @tmcp/adapter-zod-v3\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add zod @tmcp/adapter-zod-v3\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add zod @tmcp/adapter-zod-v3\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else if adapter === \"arktype\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n</PackageManagers>\n\n{/if}\n\n{/snippet}\n\n</Select>\n\nonce you do that you'll find a named export with a descriptive name that you can instantiate and pass as adapter to your McpServer class.\n\n```ts\nimport { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';\n\nconst server = new McpServer(\n\t{\n\t\tname: 'a-super-basic-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: new ValibotJsonSchemaAdapter(),\n\t\tcapabilities: {},\n\t},\n);\n```\n\nThen you will be able to pass `valibot` schemas to your tools/prompts/elicitations.\n\n<details class=\"mt-4\">\n\t<summary class=\"text-xl\">What if my standard schema library is not one of those?</summary>\n\nDon't worry!\n\nWriting your own adapter is very simple (given that your library supports converting into JSON-schema...if that's not the case I have bad news 😅).\n\n`tmcp` also exports a class named `JsonSchemaAdapter`, all you have to do is create a class extends that class and override the `toJsonSchema` method\n\n```ts\nimport { JsonSchemaAdapter } from 'tmcp/adapter';\n// every validation library exports their base type\n// which needs to be a StandardSchema compatible type\nimport type { BaseSchemaType } from 'your-validation-library';\n\nclass MyCustomJsonSchemaAdapter extends JsonSchemaAdapter<BaseSchemaType> {\n\tasync toJsonSchema(schema: BaseSchemaType) {\n\t\t// find a way to convert to json schema\n\t\treturn schema.toJsonSchema();\n\t}\n}\n```\n\nThat's it! Now you can use your library with `tmcp`...and if you feel it you can also [open a PR](https://github.com/paoloricciuti/tmcp/pulls) to `tmcp` to make this an officially supported library!\n\n</details>",
+    "content": "<script>\n\timport { Callout, Card } from \"@svecodocs/kit\";\n\timport PackageManagers from \"$lib/components/package-managers.svelte\";\n\timport Select from \"$lib/components/select.svelte\";\n</script>\n<p>This is the instance that controls the logic behind your MCP server. You will use this instance to register your tool/resource/prompts, to send notifications, to read the context etc.</p>\n<p>At his heart this class is basically a JSON-rpc server and you can use the method <a href=\"/docs/core/receive\">receive</a> to handle JSON-rpc payloads.</p>\n<h2>Initialization</h2>\n<p><code>McpServer</code> is a class that you can instantiate with the information of your server (mainly name and version) and your capabilities:</p>\n<pre><code class=\"language-ts\">const server = new McpServer(\n\t{\n\t\tname: 'a-super-basic-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {},\n\t},\n);\n</code></pre>\n<p>this will give you a very basic server that can only respond to <code>ping</code> requests and <code>initialize</code> requests. You can enhance your capabilities by specifying them in the <code>capabilities</code> object:</p>\n<pre><code class=\"language-ts\">const server = new McpServer(\n\t{\n\t\tname: 'my-awesome-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {\n\t\t\ttools: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsubscribe: true,\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tprompts: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tlogging: {},\n\t\t\tcompletions: {},\n\t\t},\n\t},\n);\n</code></pre>\n<callout type=\"warning\">\nIf you don't include a capability registering a tool/resource/prompt will not automatically include that capability and the server will not respond to that method invocation.\n</callout>\n<p>You might notice something unusual in both of this code snippets: we are explicitly setting the <code>adapter</code> to <code>undefined</code>. The adapter is required to receive any kind of input or to send elicitation requests so, unless you are planning only to add tools that don't receive any input you should actually specify an adapter. As a nicety and for quick prototyping you can omit the adapter but you will get errors as soon as you try to define a schema for a tool so that's why you need to specifically pass <code>undefined</code>.</p>\n<p>But we are not prototyping here so...</p>\n<h2>Specifying an adapter</h2>\n<p>The official MCP spec requires the server to send back the information about the input of a tool/prompt (or the requested schema of an elicitation request) in JSON-schema. While very powerful JSON-schema is also very verbose and very often developers already have a validation library installed in their project.</p>\n<p>Thanks to <a href=\"https://github.com/standard-schema/standard-schema\">standard schema</a> you can use every library that supports standard schema with <code>tmcp</code>. However we still need a way to convert from your validation library of choice to JSON-schema and that could be as simple as doing <code>schema.toJSONSchema()</code> in zod version 4 or as complex as finding and installing a separate library to do it for you (like zod v3 or valibot).</p>\n<p>Introducing, adapters.</p>\n<p>We did most of the work for you for the most common validation libraries:</p>\n<ul>\n<li>Valibot</li>\n<li>Zod V3</li>\n<li>Zod V4</li>\n<li>Arktype</li>\n<li>Effect</li>\n</ul>\n<p>so if you are using one of these libraries you are golden: just run</p>\n<p>&#x3C;Select options={[\"valibot\", \"zod\", \"zod (v3)\", \"arktype\", \"effect\"]} title=\"Adapter\">\n{#snippet children(adapter)}</p>\n<p>{#if adapter === \"valibot\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add valibot @tmcp/adapter-valibot\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else if adapter === \"zod\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add zod @tmcp/adapter-zod\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else if adapter === \"zod (v3)\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add zod @tmcp/adapter-zod-v3\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i zod @tmcp/adapter-zod-v3\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add zod @tmcp/adapter-zod-v3\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add zod @tmcp/adapter-zod-v3\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else if adapter === \"arktype\"}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add arktype @tmcp/adapter-arktype\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{:else}</p>\n<packagemanagers>\n{#snippet pnpm()}\n<pre><code class=\"language-bash\">pnpm add effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}\n{#snippet npm()}</p>\n<pre><code class=\"language-bash\">npm i effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}\n{#snippet yarn()}</p>\n<pre><code class=\"language-bash\">yarn add effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}</p>\n<p>{#snippet bun()}</p>\n<pre><code class=\"language-bash\">bun add effect-ts @tmcp/adapter-effect\n</code></pre>\n<p>{/snippet}\n</p>\n<p>{/if}</p>\n<p>{/snippet}</p>\n\n<p>once you do that you'll find a named export with a descriptive name that you can instantiate and pass as adapter to your McpServer class.</p>\n<pre><code class=\"language-ts\">import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';\n\nconst server = new McpServer(\n\t{\n\t\tname: 'a-super-basic-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: new ValibotJsonSchemaAdapter(),\n\t\tcapabilities: {},\n\t},\n);\n</code></pre>\n<p>Then you will be able to pass <code>valibot</code> schemas to your tools/prompts/elicitations.</p>\n<details class=\"mt-4\">\n\t<summary class=\"text-xl\">What if my standard schema library is not one of those?</summary>\n<p>Don't worry!</p>\n<p>Writing your own adapter is very simple (given that your library supports converting into JSON-schema...if that's not the case I have bad news 😅).</p>\n<p><code>tmcp</code> also exports a class named <code>JsonSchemaAdapter</code>, all you have to do is create a class extends that class and override the <code>toJsonSchema</code> method</p>\n<pre><code class=\"language-ts\">import { JsonSchemaAdapter } from 'tmcp/adapter';\n// every validation library exports their base type\n// which needs to be a StandardSchema compatible type\nimport type { BaseSchemaType } from 'your-validation-library';\n\nclass MyCustomJsonSchemaAdapter extends JsonSchemaAdapter&#x3C;BaseSchemaType> {\n\tasync toJsonSchema(schema: BaseSchemaType) {\n\t\t// find a way to convert to json schema\n\t\treturn schema.toJsonSchema();\n\t}\n}\n</code></pre>\n<p>That's it! Now you can use your library with <code>tmcp</code>...and if you feel it you can also <a href=\"https://github.com/paoloricciuti/tmcp/pulls\">open a PR</a> to <code>tmcp</code> to make this an officially supported library!</p>\n</details>\n<h2>Server instructions</h2>\n<p>An optional property of the configuration object is <code>instructions</code>...you can fill this to instruct the LLM on how and when to use your server</p>\n<pre><code class=\"language-ts\" metastring=\"{22-23}\">const server = new McpServer(\n\t{\n\t\tname: 'my-awesome-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {\n\t\t\ttools: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsubscribe: true,\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tprompts: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tlogging: {},\n\t\t\tcompletions: {},\n\t\t},\n\t\tinstructions:\n\t\t\t'You can use the server to do the most awesome thing in the world',\n\t},\n);\n</code></pre>\n<h2>Pagination options</h2>\n<p>The MCP spec allows servers to paginate the results of list calls so that if you have a lot of tools/resources/prompts you can send them in batches instead of returning a single list that could overflow the tokens limits of some agent. <code>tmcp</code> handle all of this for you automatically, you just need to specify the page size:</p>\n<pre><code class=\"language-ts\" metastring=\"{22-32}\">const server = new McpServer(\n\t{\n\t\tname: 'my-awesome-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {\n\t\t\ttools: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsubscribe: true,\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tprompts: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tlogging: {},\n\t\t\tcompletions: {},\n\t\t},\n\t\tpagination: {\n\t\t\tprompts: {\n\t\t\t\tsize: 15,\n\t\t\t},\n\t\t\ttools: {\n\t\t\t\tsize: 15,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsize: 15,\n\t\t\t},\n\t\t},\n\t},\n);\n</code></pre>\n<h2>Context</h2>\n<p>We are gonna explore how context work <a href=\"/docs/core/ctx\">in it's own section</a> but is worth mentioning here that after you create you <code>McpServer</code> instance you have a <code>withContext</code> utility that allows you to specify the type for the custom context you expect. This type flows through the transports and in the <code>server.ctx</code> getter so you can actually get intellisense about the context you defined. To specify a type you can do:</p>\n<pre><code class=\"language-ts\">const server = new McpServer({...}).withContext&#x3C;{ db: Db }>();\n</code></pre></packagemanagers></packagemanagers></packagemanagers></packagemanagers></packagemanagers>",
+    "raw": "<script>\n\timport { Callout, Card } from \"@svecodocs/kit\";\n\timport PackageManagers from \"$lib/components/package-managers.svelte\";\n\timport Select from \"$lib/components/select.svelte\";\n</script>\n\nThis is the instance that controls the logic behind your MCP server. You will use this instance to register your tool/resource/prompts, to send notifications, to read the context etc.\n\nAt his heart this class is basically a JSON-rpc server and you can use the method [receive](/docs/core/receive) to handle JSON-rpc payloads.\n\n## Initialization\n\n`McpServer` is a class that you can instantiate with the information of your server (mainly name and version) and your capabilities:\n\n```ts\nconst server = new McpServer(\n\t{\n\t\tname: 'a-super-basic-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {},\n\t},\n);\n```\n\nthis will give you a very basic server that can only respond to `ping` requests and `initialize` requests. You can enhance your capabilities by specifying them in the `capabilities` object:\n\n```ts\nconst server = new McpServer(\n\t{\n\t\tname: 'my-awesome-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {\n\t\t\ttools: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsubscribe: true,\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tprompts: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tlogging: {},\n\t\t\tcompletions: {},\n\t\t},\n\t},\n);\n```\n\n<Callout type=\"warning\">\nIf you don't include a capability registering a tool/resource/prompt will not automatically include that capability and the server will not respond to that method invocation.\n</Callout>\n\nYou might notice something unusual in both of this code snippets: we are explicitly setting the `adapter` to `undefined`. The adapter is required to receive any kind of input or to send elicitation requests so, unless you are planning only to add tools that don't receive any input you should actually specify an adapter. As a nicety and for quick prototyping you can omit the adapter but you will get errors as soon as you try to define a schema for a tool so that's why you need to specifically pass `undefined`.\n\nBut we are not prototyping here so...\n\n## Specifying an adapter\n\nThe official MCP spec requires the server to send back the information about the input of a tool/prompt (or the requested schema of an elicitation request) in JSON-schema. While very powerful JSON-schema is also very verbose and very often developers already have a validation library installed in their project.\n\nThanks to [standard schema](https://github.com/standard-schema/standard-schema) you can use every library that supports standard schema with `tmcp`. However we still need a way to convert from your validation library of choice to JSON-schema and that could be as simple as doing `schema.toJSONSchema()` in zod version 4 or as complex as finding and installing a separate library to do it for you (like zod v3 or valibot).\n\nIntroducing, adapters.\n\nWe did most of the work for you for the most common validation libraries:\n\n- Valibot\n- Zod V3\n- Zod V4\n- Arktype\n- Effect\n\nso if you are using one of these libraries you are golden: just run\n\n<Select options={[\"valibot\", \"zod\", \"zod (v3)\", \"arktype\", \"effect\"]} title=\"Adapter\">\n{#snippet children(adapter)}\n\n{#if adapter === \"valibot\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add valibot @tmcp/adapter-valibot\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else if adapter === \"zod\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add zod @tmcp/adapter-zod\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i zod @tmcp/adapter-zod\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add zod @tmcp/adapter-zod\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add zod @tmcp/adapter-zod\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else if adapter === \"zod (v3)\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add zod @tmcp/adapter-zod-v3\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i zod @tmcp/adapter-zod-v3\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add zod @tmcp/adapter-zod-v3\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add zod @tmcp/adapter-zod-v3\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else if adapter === \"arktype\"}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add arktype @tmcp/adapter-arktype\n```\n\n{/snippet}\n</PackageManagers>\n\n{:else}\n\n<PackageManagers>\n{#snippet pnpm()}\n\n```bash\npnpm add effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n{#snippet npm()}\n\n```bash\nnpm i effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n{#snippet yarn()}\n\n```bash\nyarn add effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n\n{#snippet bun()}\n\n```bash\nbun add effect-ts @tmcp/adapter-effect\n```\n\n{/snippet}\n</PackageManagers>\n\n{/if}\n\n{/snippet}\n\n</Select>\n\nonce you do that you'll find a named export with a descriptive name that you can instantiate and pass as adapter to your McpServer class.\n\n```ts\nimport { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';\n\nconst server = new McpServer(\n\t{\n\t\tname: 'a-super-basic-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: new ValibotJsonSchemaAdapter(),\n\t\tcapabilities: {},\n\t},\n);\n```\n\nThen you will be able to pass `valibot` schemas to your tools/prompts/elicitations.\n\n<details class=\"mt-4\">\n\t<summary class=\"text-xl\">What if my standard schema library is not one of those?</summary>\n\nDon't worry!\n\nWriting your own adapter is very simple (given that your library supports converting into JSON-schema...if that's not the case I have bad news 😅).\n\n`tmcp` also exports a class named `JsonSchemaAdapter`, all you have to do is create a class extends that class and override the `toJsonSchema` method\n\n```ts\nimport { JsonSchemaAdapter } from 'tmcp/adapter';\n// every validation library exports their base type\n// which needs to be a StandardSchema compatible type\nimport type { BaseSchemaType } from 'your-validation-library';\n\nclass MyCustomJsonSchemaAdapter extends JsonSchemaAdapter<BaseSchemaType> {\n\tasync toJsonSchema(schema: BaseSchemaType) {\n\t\t// find a way to convert to json schema\n\t\treturn schema.toJsonSchema();\n\t}\n}\n```\n\nThat's it! Now you can use your library with `tmcp`...and if you feel it you can also [open a PR](https://github.com/paoloricciuti/tmcp/pulls) to `tmcp` to make this an officially supported library!\n\n</details>\n\n## Server instructions\n\nAn optional property of the configuration object is `instructions`...you can fill this to instruct the LLM on how and when to use your server\n\n```ts {22-23}\nconst server = new McpServer(\n\t{\n\t\tname: 'my-awesome-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {\n\t\t\ttools: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsubscribe: true,\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tprompts: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tlogging: {},\n\t\t\tcompletions: {},\n\t\t},\n\t\tinstructions:\n\t\t\t'You can use the server to do the most awesome thing in the world',\n\t},\n);\n```\n\n## Pagination options\n\nThe MCP spec allows servers to paginate the results of list calls so that if you have a lot of tools/resources/prompts you can send them in batches instead of returning a single list that could overflow the tokens limits of some agent. `tmcp` handle all of this for you automatically, you just need to specify the page size:\n\n```ts {22-32}\nconst server = new McpServer(\n\t{\n\t\tname: 'my-awesome-server',\n\t\tversion: '1.0.0',\n\t},\n\t{\n\t\tadapter: undefined,\n\t\tcapabilities: {\n\t\t\ttools: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsubscribe: true,\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tprompts: {\n\t\t\t\tlistChanged: true,\n\t\t\t},\n\t\t\tlogging: {},\n\t\t\tcompletions: {},\n\t\t},\n\t\tpagination: {\n\t\t\tprompts: {\n\t\t\t\tsize: 15,\n\t\t\t},\n\t\t\ttools: {\n\t\t\t\tsize: 15,\n\t\t\t},\n\t\t\tresources: {\n\t\t\t\tsize: 15,\n\t\t\t},\n\t\t},\n\t},\n);\n```\n\n## Context\n\nWe are gonna explore how context work [in it's own section](/docs/core/ctx) but is worth mentioning here that after you create you `McpServer` instance you have a `withContext` utility that allows you to specify the type for the custom context you expect. This type flows through the transports and in the `server.ctx` getter so you can actually get intellisense about the context you defined. To specify a type you can do:\n\n```ts\nconst server = new McpServer({...}).withContext<{ db: Db }>();\n```",
     "toc": [
       {
         "title": "Initialization",
@@ -201,6 +80,21 @@
       {
         "title": "Specifying an adapter",
         "url": "#specifying-an-adapter",
+        "items": []
+      },
+      {
+        "title": "Server instructions",
+        "url": "#server-instructions",
+        "items": []
+      },
+      {
+        "title": "Pagination options",
+        "url": "#pagination-options",
+        "items": []
+      },
+      {
+        "title": "Context",
+        "url": "#context",
         "items": []
       }
     ],
@@ -361,5 +255,126 @@
     "section": "Core",
     "slug": "core/900-message",
     "slugFull": "/core/900-message"
+  },
+  {
+    "title": "Redis",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/100-redis",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/100-redis",
+    "slugFull": "/session-managers/100-redis"
+  },
+  {
+    "title": "Postgres",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/200-stdio",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/200-stdio",
+    "slugFull": "/session-managers/200-stdio"
+  },
+  {
+    "title": "Durable Objects",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/300-sse",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/300-sse",
+    "slugFull": "/session-managers/300-sse"
+  },
+  {
+    "title": "Overview",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/50-overview",
+    "content": "",
+    "raw": "",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/50-overview",
+    "slugFull": "/session-managers/50-overview"
+  },
+  {
+    "title": "HTTP",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "transports/100-http",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/100-http",
+    "slugFull": "/transports/100-http"
+  },
+  {
+    "title": "STDIO",
+    "description": "Learn how to build an MCP server that runs locally.",
+    "path": "transports/200-stdio",
+    "content": "<p>stdio</p>",
+    "raw": "stdio",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/200-stdio",
+    "slugFull": "/transports/200-stdio"
+  },
+  {
+    "title": "SSE",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs using the deprecated SSE transport.",
+    "path": "transports/300-sse",
+    "content": "<p>SSE</p>",
+    "raw": "SSE",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/300-sse",
+    "slugFull": "/transports/300-sse"
+  },
+  {
+    "title": "tool",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/100-tool",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/100-tool",
+    "slugFull": "/utils/100-tool"
+  },
+  {
+    "title": "resource",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/200-resource",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/200-resource",
+    "slugFull": "/utils/200-resource"
+  },
+  {
+    "title": "prompt",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/300-prompt",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/300-prompt",
+    "slugFull": "/utils/300-prompt"
+  },
+  {
+    "title": "complete",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/400-complete",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/400-complete",
+    "slugFull": "/utils/400-complete"
   }
 ]
