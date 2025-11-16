@@ -56,8 +56,8 @@ importers:
         specifier: ^4.1.13
         version: 4.1.17(vite@7.2.2(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1))
       mdsx:
-        specifier: ^0.0.6
-        version: 0.0.6(svelte@5.43.7)
+        specifier: ^0.0.7
+        version: 0.0.7(svelte@5.43.7)
       phosphor-svelte:
         specifier: ^3.0.1
         version: 3.0.1(svelte@5.43.7)(vite@7.2.2(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1))
@@ -3070,10 +3070,10 @@ packages:
   mdast-util-to-string@4.0.0:
     resolution: {integrity: sha512-0H44vDimn51F0YwvxSJSm0eCDOJTRlmN0R1yBh4HLj9wiV1Dn0QoXGbvFAWj2hSItVTlCmBF1hqKlIyUBVFLPg==}
 
-  mdsx@0.0.6:
-    resolution: {integrity: sha512-hfIlNzOlT153M37ZzbjuGSN8ZFNqlyEWaPnGr9L92Ty/dkZdIfgyDeFrsJDuQ77oY1bf3jeNCycR19ocD/BpfA==}
+  mdsx@0.0.7:
+    resolution: {integrity: sha512-Ftgb6Yq47WMaYoFznJ+jNxnn82sDUvot9Nw2uSaolbkghUV6Le1stDzEVHClaKA1hMJnc+jbMagK/HM7nT6FJg==}
     peerDependencies:
-      svelte: ^4.0.0 || ^5.0.0-next.1
+      svelte: ^5.0.0
 
   media-typer@1.1.0:
     resolution: {integrity: sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw==}
@@ -7052,7 +7052,7 @@ snapshots:
     dependencies:
       '@types/mdast': 4.0.4
 
-  mdsx@0.0.6(svelte@5.43.7):
+  mdsx@0.0.7(svelte@5.43.7):
     dependencies:
       esrap: 1.4.9
       hast-util-to-html: 9.0.5
