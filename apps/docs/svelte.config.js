@@ -9,6 +9,12 @@ const config = {
 	kit: {
 		alias: { '$content/*': '.velite/*' },
 		adapter: adapter(),
+		prerender: {
+			handleMissingId({ id }) {
+				if (id !== 'empty')
+					throw new Error(`Missing prerender id: ${id}`);
+			},
+		},
 	},
 	extensions: ['.svelte', '.md'],
 };

@@ -66,50 +66,6 @@
     "slugFull": "/auth/200-simple-provider"
   },
   {
-    "title": "Redis",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/100-redis",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/100-redis",
-    "slugFull": "/session-managers/100-redis"
-  },
-  {
-    "title": "Postgres",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/200-stdio",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/200-stdio",
-    "slugFull": "/session-managers/200-stdio"
-  },
-  {
-    "title": "Durable Objects",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/300-sse",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/300-sse",
-    "slugFull": "/session-managers/300-sse"
-  },
-  {
-    "title": "Overview",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/50-overview",
-    "content": "",
-    "raw": "",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/50-overview",
-    "slugFull": "/session-managers/50-overview"
-  },
-  {
     "title": "McpServer",
     "description": "The main McpServer class",
     "path": "core/100-mcp-server",
@@ -301,6 +257,83 @@
     "slugFull": "/core/900-message"
   },
   {
+    "title": "HTTP",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "transports/100-http",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/100-http",
+    "slugFull": "/transports/100-http"
+  },
+  {
+    "title": "STDIO",
+    "description": "Learn how to build an MCP server that runs locally.",
+    "path": "transports/200-stdio",
+    "content": "<p>stdio</p>",
+    "raw": "stdio",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/200-stdio",
+    "slugFull": "/transports/200-stdio"
+  },
+  {
+    "title": "SSE",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs using the deprecated SSE transport.",
+    "path": "transports/300-sse",
+    "content": "<p>SSE</p>",
+    "raw": "SSE",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/300-sse",
+    "slugFull": "/transports/300-sse"
+  },
+  {
+    "title": "Redis",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/100-redis",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/100-redis",
+    "slugFull": "/session-managers/100-redis"
+  },
+  {
+    "title": "Postgres",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/200-stdio",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/200-stdio",
+    "slugFull": "/session-managers/200-stdio"
+  },
+  {
+    "title": "Durable Objects",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/300-sse",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/300-sse",
+    "slugFull": "/session-managers/300-sse"
+  },
+  {
+    "title": "Overview",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/50-overview",
+    "content": "",
+    "raw": "",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/50-overview",
+    "slugFull": "/session-managers/50-overview"
+  },
+  {
     "title": "tool",
     "description": "The main entrypoint to your MCP server",
     "path": "utils/100-tool",
@@ -343,38 +376,5 @@
     "section": "Utils",
     "slug": "utils/400-complete",
     "slugFull": "/utils/400-complete"
-  },
-  {
-    "title": "HTTP",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "transports/100-http",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/100-http",
-    "slugFull": "/transports/100-http"
-  },
-  {
-    "title": "STDIO",
-    "description": "Learn how to build an MCP server that runs locally.",
-    "path": "transports/200-stdio",
-    "content": "<p>stdio</p>",
-    "raw": "stdio",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/200-stdio",
-    "slugFull": "/transports/200-stdio"
-  },
-  {
-    "title": "SSE",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs using the deprecated SSE transport.",
-    "path": "transports/300-sse",
-    "content": "<p>SSE</p>",
-    "raw": "SSE",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/300-sse",
-    "slugFull": "/transports/300-sse"
   }
 ]
