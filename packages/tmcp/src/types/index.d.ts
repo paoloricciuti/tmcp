@@ -59,7 +59,7 @@ declare module 'tmcp' {
 		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations, enabled, icons, _meta, }: {
 			name: string;
 			_meta?: Record<string, any>;
-			description: string;
+			description: string | (() => string | Promise<string>);
 			title?: string;
 			enabled?: () => boolean | Promise<boolean>;
 			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
