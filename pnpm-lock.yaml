@@ -102,8 +102,8 @@ importers:
         version: 1.1.0(typescript@5.9.3)
     devDependencies:
       '@modelcontextprotocol/conformance':
-        specifier: ^0.1.0
-        version: 0.1.5
+        specifier: ^0.1.6
+        version: 0.1.6
       start-server-and-test:
         specifier: ^2.1.2
         version: 2.1.2
@@ -1030,8 +1030,8 @@ packages:
   '@mdx-js/mdx@3.1.1':
     resolution: {integrity: sha512-f6ZO2ifpwAQIpzGWaBQT2TXxPv6z3RBzQKpVftEWN78Vl/YweF1uwussDx8ECAXVtr3Rs89fKyG9YlzUs9DyGQ==}
 
-  '@modelcontextprotocol/conformance@0.1.5':
-    resolution: {integrity: sha512-xlwgt+Sjyf/b1eDwkeQAdTrpMLiD0nOjFRPslbtK/Slys5G0+8yKlB/E2Fb0YVX60jIs1yZ5N+/4pwMHkC2jLw==}
+  '@modelcontextprotocol/conformance@0.1.6':
+    resolution: {integrity: sha512-ZK4/9K+4e6XjaPAzkgb39MkrB5aOYfttlOydD6SJbaqCYRkQDgBdDgAlGkIHHy+YTg4Jw0mSavwd9K6gPcLGAg==}
     hasBin: true
 
   '@modelcontextprotocol/inspector-cli@0.17.2':
@@ -1054,15 +1054,6 @@ packages:
   '@modelcontextprotocol/sdk@1.20.2':
     resolution: {integrity: sha512-6rqTdFt67AAAzln3NOKsXRmv5ZzPkgbfaebKBqUbts7vK1GZudqnrun5a8d3M/h955cam9RHZ6Jb4Y1XhnmFPg==}
     engines: {node: '>=18'}
-
-  '@modelcontextprotocol/sdk@1.21.0':
-    resolution: {integrity: sha512-YFBsXJMFCyI1zP98u7gezMFKX4lgu/XpoZJk7ufI6UlFKXLj2hAMUuRlQX/nrmIPOmhRrG6tw2OQ2ZA/ZlXYpQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      '@cfworker/json-schema': ^4.1.1
-    peerDependenciesMeta:
-      '@cfworker/json-schema':
-        optional: true
 
   '@modelcontextprotocol/sdk@1.22.0':
     resolution: {integrity: sha512-VUpl106XVTCpDmTBil2ehgJZjhyLY2QZikzF8NvTXtLRF1CvO5iEE2UNZdVIUer35vFOwMKYeUGbjJtvPWan3g==}
@@ -4863,9 +4854,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@modelcontextprotocol/conformance@0.1.5':
+  '@modelcontextprotocol/conformance@0.1.6':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.21.0
+      '@modelcontextprotocol/sdk': 1.22.0
       commander: 14.0.2
       express: 5.1.0
       lefthook: 2.0.3
@@ -4955,24 +4946,6 @@ snapshots:
   '@modelcontextprotocol/sdk@1.20.2':
     dependencies:
       ajv: 6.12.6
-      content-type: 1.0.5
-      cors: 2.8.5
-      cross-spawn: 7.0.6
-      eventsource: 3.0.7
-      eventsource-parser: 3.0.6
-      express: 5.1.0
-      express-rate-limit: 7.5.1(express@5.1.0)
-      pkce-challenge: 5.0.0
-      raw-body: 3.0.1
-      zod: 3.25.76
-      zod-to-json-schema: 3.24.6(zod@3.25.76)
-    transitivePeerDependencies:
-      - supports-color
-
-  '@modelcontextprotocol/sdk@1.21.0':
-    dependencies:
-      ajv: 8.17.1
-      ajv-formats: 3.0.1(ajv@8.17.1)
       content-type: 1.0.5
       cors: 2.8.5
       cross-spawn: 7.0.6

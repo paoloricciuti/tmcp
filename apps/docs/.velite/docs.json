@@ -66,6 +66,83 @@
     "slugFull": "/auth/200-simple-provider"
   },
   {
+    "title": "tool",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/100-tool",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/100-tool",
+    "slugFull": "/utils/100-tool"
+  },
+  {
+    "title": "resource",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/200-resource",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/200-resource",
+    "slugFull": "/utils/200-resource"
+  },
+  {
+    "title": "prompt",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/300-prompt",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/300-prompt",
+    "slugFull": "/utils/300-prompt"
+  },
+  {
+    "title": "complete",
+    "description": "The main entrypoint to your MCP server",
+    "path": "utils/400-complete",
+    "content": "<p>receive</p>",
+    "raw": "receive",
+    "toc": [],
+    "section": "Utils",
+    "slug": "utils/400-complete",
+    "slugFull": "/utils/400-complete"
+  },
+  {
+    "title": "HTTP",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "transports/100-http",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/100-http",
+    "slugFull": "/transports/100-http"
+  },
+  {
+    "title": "STDIO",
+    "description": "Learn how to build an MCP server that runs locally.",
+    "path": "transports/200-stdio",
+    "content": "<p>stdio</p>",
+    "raw": "stdio",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/200-stdio",
+    "slugFull": "/transports/200-stdio"
+  },
+  {
+    "title": "SSE",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs using the deprecated SSE transport.",
+    "path": "transports/300-sse",
+    "content": "<p>SSE</p>",
+    "raw": "SSE",
+    "toc": [],
+    "section": "Transports",
+    "slug": "transports/300-sse",
+    "slugFull": "/transports/300-sse"
+  },
+  {
     "title": "McpServer",
     "description": "The main McpServer class",
     "path": "core/100-mcp-server",
@@ -170,11 +247,37 @@
   },
   {
     "title": "tool",
-    "description": "The start of the MCP protocol...learn how to register a tool that can be called by your Agent.",
+    "description": "The star of the MCP protocol...learn how to register a tool that can be called by your Agent.",
     "path": "core/200-tool",
-    "content": "<p>tool</p>",
-    "raw": "tool",
-    "toc": [],
+    "content": "<script>\n\timport { Callout, Card } from \"@svecodocs/kit\";\n</script>\n<p>Tools are one of the main MCP primitive: each tool you add to your MCP server will be available from the <code>tools/list</code> call the MCP client does (generally at the beginning of a session) and provides to the LLM.</p>\n<p>Once there the LLM will be able to invoke one of the available tool and the MCP client will, in turn, invoke a <code>tools/call</code> on the MCP server. This makes them a very powerful primitive that allows LLMs to get additional context but also to interact with the real world.</p>\n<h2>Basic API</h2>\n<p>You can register a tool invoking the <code>tool</code> method on the server instance. The first argument is a configuration object and the second a handler that will be invoked whenever that tool is invoked by the MCP client.</p>\n<pre><code class=\"language-ts\">server.tool(\n\t{\n\t\tname: 'your-tool',\n\t\tdescription: 'A description for the LLM',\n\t\ttitle: 'Your Tool',\n\t},\n\t() => {\n\t\treturn {\n\t\t\tcontent: [\n\t\t\t\t{\n\t\t\t\t\ttype: 'text',\n\t\t\t\t\ttext: \"Here's the result of the tool\",\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n</code></pre>\n<p><code>name</code> and <code>description</code> are the only required properties (you can also specify a <code>title</code> for a human readable title but that's optional) of the configuration object. The return value of the handler must be an object with a <code>content</code> property which is an array of one or more contents (you can refer to the <a href=\"https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-result\">MCP spec</a> to know the possible return values)</p>\n<h2>Accepting inputs</h2>\n<p>If you want more powerful tools however you can also accept some inputs. However to be able to accept an input you need to specify the schema of your expected input</p>\n<callout type=\"note\">\n<p>If you didn't define an adapter in you <a href=\"/docs/core/mcp-server#specifying-an-adapter\">McpServer</a> instance trying to pass a schema will fail with a type error.</p>\n</callout>\n<p>If you defined your adapter accepting some input is as simple as passing the <code>schema</code> property</p>\n<pre><code class=\"language-ts\">server.tool(\n\t{\n\t\tname: 'fun-number-fact',\n\t\tdescription: 'Get a fun fact from a number',\n\t\ttitle: 'Fun Number Fact',\n\t\tschema: v.object({\n\t\t\tinput: v.number(),\n\t\t}),\n\t},\n\tasync ({ input }) => {\n\t\tconst fun_fact = await get_fun_number_fact(input);\n\t\treturn {\n\t\t\tcontent: [\n\t\t\t\t{\n\t\t\t\t\ttype: 'text',\n\t\t\t\t\ttext: fun_fact,\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n</code></pre>\n<callout type=\"warning\">\n<p>The schema <strong>MUST</strong> be an object and you'll get a type error if it's not.</p>\n</callout>\n<h2>Structured output</h2>\n<p>Some MCP clients are also able to ingest structured output from a tool call to use the return value of a tool call programmatically (eg. code mode from <a href=\"https://blog.cloudflare.com/code-mode/\">Cloudflare</a> or <a href=\"https://www.anthropic.com/engineering/code-execution-with-mcp\">Anthropic</a>).</p>\n<p>Just like the inputs, since the output can potentially go over the wire, the protocol requires the developer to define a schema for it. To do so, define an <code>outputSchema</code> in the configuration object and return a <code>structuredContent</code> from the handler.</p>\n<callout type=\"note\">\n<p>The spec requires you to <em>ALSO</em> return the structured content as <code>JSON.stringify</code>-ied text from one of the element of <code>content</code></p>\n</callout>\n<pre><code class=\"language-ts\">server.tool(\n\t{\n\t\tname: 'fun-number-fact',\n\t\tdescription: 'Get a fun fact from a number',\n\t\ttitle: 'Fun Number Fact',\n\t\tschema: v.object({\n\t\t\tinput: v.number(),\n\t\t}),\n\t\toutputSchema: v.object({\n\t\t\tfact: v.string(),\n\t\t}),\n\t},\n\tasync ({ input }) => {\n\t\tconst fun_fact = await get_fun_number_fact(input);\n\t\treturn {\n\t\t\tcontent: [\n\t\t\t\t{\n\t\t\t\t\ttype: 'text',\n\t\t\t\t\ttext: JSON.stringify({ fact: fun_fact }),\n\t\t\t\t},\n\t\t\t],\n\t\t\tstructuredContent: { fact: fun_fact },\n\t\t};\n\t},\n);\n</code></pre>\n<callout type=\"warning\">\n<p>The output schema <strong>MUST</strong> be an object and you'll get a type error if it's not. Also once you define an <code>outputSchema</code> you <strong>MUST</strong> return the <code>structuredContent</code> from the handler (unless you are returning an error).</p>\n</callout>\n<h2>Error handling</h2>\n<p>Tools are a bit special when it comes to error handling. Since they are invoked by the LLM to give them the context about what the error is and how to recover from it the spec requires you to return an object containing <code>isError: true</code> instead of throwing. <code>tmcp</code> does that for you automatically in case the input does not validate with the provided schema or if the LLM tries to call a non existent tool but to give you maximum freedom it doesn't automatically catches errors for you.</p>\n<p>So it's recommended to do your error handling like this</p>\n<pre><code class=\"language-ts\">server.tool(\n\t{\n\t\tname: 'fun-number-fact',\n\t\tdescription: 'Get a fun fact from a number',\n\t\ttitle: 'Fun Number Fact',\n\t\tschema: v.object({\n\t\t\tinput: v.number(),\n\t\t}),\n\t\toutputSchema: v.object({\n\t\t\tfact: v.string(),\n\t\t}),\n\t},\n\tasync ({ input }) => {\n\t\ttry {\n\t\t\tconst fun_fact = await get_fun_number_fact(input);\n\t\t\treturn {\n\t\t\t\tcontent: [\n\t\t\t\t\t{\n\t\t\t\t\t\ttype: 'text',\n\t\t\t\t\t\ttext: JSON.stringify({ fact: fun_fact }),\n\t\t\t\t\t},\n\t\t\t\t],\n\t\t\t\tstructuredContent: { fact: fun_fact },\n\t\t\t};\n\t\t} catch {\n\t\t\treturn {\n\t\t\t\tisError: true,\n\t\t\t\tcontent: [\n\t\t\t\t\t{\n\t\t\t\t\t\ttype: 'text',\n\t\t\t\t\t\t// be more descriptive than this for better results 😅\n\t\t\t\t\t\ttext: 'Unable to get a fun number fact',\n\t\t\t\t\t},\n\t\t\t\t],\n\t\t\t};\n\t\t}\n\t},\n);\n</code></pre>\n<h2><code>enabled</code> function</h2>\n<p>One pattern that is quite common in every software is having a different feature-set based on some flag or the status of some user. You could technically create a new instance of the <code>McpServer</code> for each request and conditionally add a tool but to facilitate the process <code>tmcp</code> exposes an <code>enabled</code> property on the configuration object. The property is a function that returns a boolean and, as you might have guessed, allows you to include a specific tool in the list of tools conditionally. Within the function you have access to the <a href=\"/docs/core/ctx\">context</a> so you can make decisions based on the client capabilities (for example turning off a tool that requires sampling if the client doesn't supports it), the client info (for example turning off a tool that is too long for codex to handle) or even just reading a feature flag in the db to do A/B testing or to allow your admin to turn on or off a tool without a re-deploy.</p>\n<pre><code class=\"language-ts\">server.tool(\n\t{\n\t\tname: 'get-divine-comedy',\n\t\tdescription: 'Get the whole Divine Comedy',\n\t\tenabled() {\n\t\t\treturn server.ctx.sessionInfo?.clientInfo?.name !== 'codex';\n\t\t},\n\t},\n\tasync () => {\n\t\treturn {\n\t\t\tcontent: [\n\t\t\t\t{\n\t\t\t\t\ttype: 'text',\n\t\t\t\t\ttext: \"Halfway along our life's path...\",\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n</code></pre>",
+    "raw": "<script>\n\timport { Callout, Card } from \"@svecodocs/kit\";\n</script>\n\nTools are one of the main MCP primitive: each tool you add to your MCP server will be available from the `tools/list` call the MCP client does (generally at the beginning of a session) and provides to the LLM.\n\nOnce there the LLM will be able to invoke one of the available tool and the MCP client will, in turn, invoke a `tools/call` on the MCP server. This makes them a very powerful primitive that allows LLMs to get additional context but also to interact with the real world.\n\n## Basic API\n\nYou can register a tool invoking the `tool` method on the server instance. The first argument is a configuration object and the second a handler that will be invoked whenever that tool is invoked by the MCP client.\n\n```ts\nserver.tool(\n\t{\n\t\tname: 'your-tool',\n\t\tdescription: 'A description for the LLM',\n\t\ttitle: 'Your Tool',\n\t},\n\t() => {\n\t\treturn {\n\t\t\tcontent: [\n\t\t\t\t{\n\t\t\t\t\ttype: 'text',\n\t\t\t\t\ttext: \"Here's the result of the tool\",\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n```\n\n`name` and `description` are the only required properties (you can also specify a `title` for a human readable title but that's optional) of the configuration object. The return value of the handler must be an object with a `content` property which is an array of one or more contents (you can refer to the [MCP spec](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-result) to know the possible return values)\n\n## Accepting inputs\n\nIf you want more powerful tools however you can also accept some inputs. However to be able to accept an input you need to specify the schema of your expected input\n\n<Callout type=\"note\">\n\nIf you didn't define an adapter in you [McpServer](/docs/core/mcp-server#specifying-an-adapter) instance trying to pass a schema will fail with a type error.\n\n</Callout>\n\nIf you defined your adapter accepting some input is as simple as passing the `schema` property\n\n```ts\nserver.tool(\n\t{\n\t\tname: 'fun-number-fact',\n\t\tdescription: 'Get a fun fact from a number',\n\t\ttitle: 'Fun Number Fact',\n\t\tschema: v.object({\n\t\t\tinput: v.number(),\n\t\t}),\n\t},\n\tasync ({ input }) => {\n\t\tconst fun_fact = await get_fun_number_fact(input);\n\t\treturn {\n\t\t\tcontent: [\n\t\t\t\t{\n\t\t\t\t\ttype: 'text',\n\t\t\t\t\ttext: fun_fact,\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n```\n\n<Callout type=\"warning\">\n\nThe schema **MUST** be an object and you'll get a type error if it's not.\n\n</Callout>\n\n## Structured output\n\nSome MCP clients are also able to ingest structured output from a tool call to use the return value of a tool call programmatically (eg. code mode from [Cloudflare](https://blog.cloudflare.com/code-mode/) or [Anthropic](https://www.anthropic.com/engineering/code-execution-with-mcp)).\n\nJust like the inputs, since the output can potentially go over the wire, the protocol requires the developer to define a schema for it. To do so, define an `outputSchema` in the configuration object and return a `structuredContent` from the handler.\n\n<Callout type=\"note\">\n\nThe spec requires you to _ALSO_ return the structured content as `JSON.stringify`-ied text from one of the element of `content`\n\n</Callout>\n\n```ts\nserver.tool(\n\t{\n\t\tname: 'fun-number-fact',\n\t\tdescription: 'Get a fun fact from a number',\n\t\ttitle: 'Fun Number Fact',\n\t\tschema: v.object({\n\t\t\tinput: v.number(),\n\t\t}),\n\t\toutputSchema: v.object({\n\t\t\tfact: v.string(),\n\t\t}),\n\t},\n\tasync ({ input }) => {\n\t\tconst fun_fact = await get_fun_number_fact(input);\n\t\treturn {\n\t\t\tcontent: [\n\t\t\t\t{\n\t\t\t\t\ttype: 'text',\n\t\t\t\t\ttext: JSON.stringify({ fact: fun_fact }),\n\t\t\t\t},\n\t\t\t],\n\t\t\tstructuredContent: { fact: fun_fact },\n\t\t};\n\t},\n);\n```\n\n<Callout type=\"warning\">\n\nThe output schema **MUST** be an object and you'll get a type error if it's not. Also once you define an `outputSchema` you **MUST** return the `structuredContent` from the handler (unless you are returning an error).\n\n</Callout>\n\n## Error handling\n\nTools are a bit special when it comes to error handling. Since they are invoked by the LLM to give them the context about what the error is and how to recover from it the spec requires you to return an object containing `isError: true` instead of throwing. `tmcp` does that for you automatically in case the input does not validate with the provided schema or if the LLM tries to call a non existent tool but to give you maximum freedom it doesn't automatically catches errors for you.\n\nSo it's recommended to do your error handling like this\n\n```ts\nserver.tool(\n\t{\n\t\tname: 'fun-number-fact',\n\t\tdescription: 'Get a fun fact from a number',\n\t\ttitle: 'Fun Number Fact',\n\t\tschema: v.object({\n\t\t\tinput: v.number(),\n\t\t}),\n\t\toutputSchema: v.object({\n\t\t\tfact: v.string(),\n\t\t}),\n\t},\n\tasync ({ input }) => {\n\t\ttry {\n\t\t\tconst fun_fact = await get_fun_number_fact(input);\n\t\t\treturn {\n\t\t\t\tcontent: [\n\t\t\t\t\t{\n\t\t\t\t\t\ttype: 'text',\n\t\t\t\t\t\ttext: JSON.stringify({ fact: fun_fact }),\n\t\t\t\t\t},\n\t\t\t\t],\n\t\t\t\tstructuredContent: { fact: fun_fact },\n\t\t\t};\n\t\t} catch {\n\t\t\treturn {\n\t\t\t\tisError: true,\n\t\t\t\tcontent: [\n\t\t\t\t\t{\n\t\t\t\t\t\ttype: 'text',\n\t\t\t\t\t\t// be more descriptive than this for better results 😅\n\t\t\t\t\t\ttext: 'Unable to get a fun number fact',\n\t\t\t\t\t},\n\t\t\t\t],\n\t\t\t};\n\t\t}\n\t},\n);\n```\n\n## `enabled` function\n\nOne pattern that is quite common in every software is having a different feature-set based on some flag or the status of some user. You could technically create a new instance of the `McpServer` for each request and conditionally add a tool but to facilitate the process `tmcp` exposes an `enabled` property on the configuration object. The property is a function that returns a boolean and, as you might have guessed, allows you to include a specific tool in the list of tools conditionally. Within the function you have access to the [context](/docs/core/ctx) so you can make decisions based on the client capabilities (for example turning off a tool that requires sampling if the client doesn't supports it), the client info (for example turning off a tool that is too long for codex to handle) or even just reading a feature flag in the db to do A/B testing or to allow your admin to turn on or off a tool without a re-deploy.\n\n```ts\nserver.tool(\n\t{\n\t\tname: 'get-divine-comedy',\n\t\tdescription: 'Get the whole Divine Comedy',\n\t\tenabled() {\n\t\t\treturn server.ctx.sessionInfo?.clientInfo?.name !== 'codex';\n\t\t},\n\t},\n\tasync () => {\n\t\treturn {\n\t\t\tcontent: [\n\t\t\t\t{\n\t\t\t\t\ttype: 'text',\n\t\t\t\t\ttext: \"Halfway along our life's path...\",\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n```",
+    "toc": [
+      {
+        "title": "Basic API",
+        "url": "#basic-api",
+        "items": []
+      },
+      {
+        "title": "Accepting inputs",
+        "url": "#accepting-inputs",
+        "items": []
+      },
+      {
+        "title": "Structured output",
+        "url": "#structured-output",
+        "items": []
+      },
+      {
+        "title": "Error handling",
+        "url": "#error-handling",
+        "items": []
+      },
+      {
+        "title": "enabled function",
+        "url": "#enabled-function",
+        "items": []
+      }
+    ],
     "section": "Core",
     "slug": "core/200-tool",
     "slugFull": "/core/200-tool"
@@ -257,39 +360,6 @@
     "slugFull": "/core/900-message"
   },
   {
-    "title": "HTTP",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "transports/100-http",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/100-http",
-    "slugFull": "/transports/100-http"
-  },
-  {
-    "title": "STDIO",
-    "description": "Learn how to build an MCP server that runs locally.",
-    "path": "transports/200-stdio",
-    "content": "<p>stdio</p>",
-    "raw": "stdio",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/200-stdio",
-    "slugFull": "/transports/200-stdio"
-  },
-  {
-    "title": "SSE",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs using the deprecated SSE transport.",
-    "path": "transports/300-sse",
-    "content": "<p>SSE</p>",
-    "raw": "SSE",
-    "toc": [],
-    "section": "Transports",
-    "slug": "transports/300-sse",
-    "slugFull": "/transports/300-sse"
-  },
-  {
     "title": "Redis",
     "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
     "path": "session-managers/100-redis",
@@ -332,49 +402,5 @@
     "section": "Session Managers",
     "slug": "session-managers/50-overview",
     "slugFull": "/session-managers/50-overview"
-  },
-  {
-    "title": "tool",
-    "description": "The main entrypoint to your MCP server",
-    "path": "utils/100-tool",
-    "content": "<p>receive</p>",
-    "raw": "receive",
-    "toc": [],
-    "section": "Utils",
-    "slug": "utils/100-tool",
-    "slugFull": "/utils/100-tool"
-  },
-  {
-    "title": "resource",
-    "description": "The main entrypoint to your MCP server",
-    "path": "utils/200-resource",
-    "content": "<p>receive</p>",
-    "raw": "receive",
-    "toc": [],
-    "section": "Utils",
-    "slug": "utils/200-resource",
-    "slugFull": "/utils/200-resource"
-  },
-  {
-    "title": "prompt",
-    "description": "The main entrypoint to your MCP server",
-    "path": "utils/300-prompt",
-    "content": "<p>receive</p>",
-    "raw": "receive",
-    "toc": [],
-    "section": "Utils",
-    "slug": "utils/300-prompt",
-    "slugFull": "/utils/300-prompt"
-  },
-  {
-    "title": "complete",
-    "description": "The main entrypoint to your MCP server",
-    "path": "utils/400-complete",
-    "content": "<p>receive</p>",
-    "raw": "receive",
-    "toc": [],
-    "section": "Utils",
-    "slug": "utils/400-complete",
-    "slugFull": "/utils/400-complete"
   }
 ]

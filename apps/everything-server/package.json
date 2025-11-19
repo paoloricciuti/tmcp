@@ -24,7 +24,7 @@
 		"valibot": "^1.1.0"
 	},
 	"devDependencies": {
-		"@modelcontextprotocol/conformance": "^0.1.0",
+		"@modelcontextprotocol/conformance": "^0.1.6",
 		"start-server-and-test": "^2.1.2"
 	}
 }
