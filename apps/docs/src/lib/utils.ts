@@ -32,7 +32,6 @@ export async function get_doc(slug: string = 'index') {
 	let match: { path?: string; resolver?: DocResolver } = {};
 
 	for (const [path, resolver] of Object.entries(modules)) {
-		console.log(slug_from_path(path), slug);
 		if (slug_from_path(path) === slug) {
 			match = { path, resolver: resolver as unknown as DocResolver };
 			break;
@@ -40,7 +39,6 @@ export async function get_doc(slug: string = 'index') {
 	}
 	const doc = await match?.resolver?.();
 	const metadata = get_doc_metadata(slug);
-	console.log({ doc, metadata });
 	if (!doc || !metadata) {
 		error(404, 'Could not find the document.');
 	}

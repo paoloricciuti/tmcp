@@ -12,6 +12,12 @@ Tools are one of the main MCP primitive: each tool you add to your MCP server wi
 
 Once there the LLM will be able to invoke one of the available tool and the MCP client will, in turn, invoke a `tools/call` on the MCP server. This makes them a very powerful primitive that allows LLMs to get additional context but also to interact with the real world.
 
+<Callout type="tip">
+
+For illustration purpose we are not gonna use the [tool utilities](/docs/utils/tool) but you should definitely check them out as they would make the code much shorter.
+
+</Callout>
+
 ## Basic API
 
 You can register a tool invoking the `tool` method on the server instance. The first argument is a configuration object and the second a handler that will be invoked whenever that tool is invoked by the MCP client.
@@ -191,10 +197,77 @@ server.tool(
 			content: [
 				{
 					type: 'text',
-					text: "Halfway along our life's path...",
+					text: 'Midway along the journey of our life I woke to find myself in a dark wood, for I had wandered off from the straight path...',
 				},
 			],
 		};
+	},
+);
+```
+
+## Icons
+
+To allow the users to to understand what an MCP server is about at a glance the MCP spec allows you to include a set of icons for each tool. Obviously `tmcp` allows you to specify those too using the `icons` property of the configuration object.
+
+<Callout type="note">
+
+MCP clients are usually very strict about which icons they do or don't display. If your server is remote they'll only display remote icons served by the same domain or `data` images, if it's local they'll only display local files or `data` images. We suggest to include more icons and to properly test them with various clients.
+
+</Callout>
+
+```ts
+server.tool(
+	{
+		name: 'get-divine-comedy',
+		description: 'Get the whole Divine Comedy',
+		icons: [
+			{
+				src: 'https://dantemcp.com/date.png',
+			},
+			{
+				src: 'data:image/png;base64,...',
+			},
+		],
+	},
+	async () => {
+		return {
+			content: [
+				{
+					type: 'text',
+					text: 'Midway along the journey of our life I woke to find myself in a dark wood, for I had wandered off from the straight path...',
+				},
+			],
+		};
+	},
+);
+```
+
+## Hints
+
+The MCP spec also allows tool to specify additional hints and metadata that can be used by the LLM to determine how safe is it to call it. There are currently five possible annotations
+
+- **title**: A second way to specify a human readable title for the tool (it's in the spec, don't ask why)
+- **destructiveHint**: Wether the tool will destroy some resource or not, signaling to the LLM that the tool should be called with caution
+- **idempotentHint**: wether the result of the tool would always be the same given the same inputs, signaling the LLM that it doesn't need to call it again if it was already called previously with the same arguments
+- **openWorldHint**: wether it would change something in the open world, like doing an api call to order a pizza
+- **readOnlyHint**: if it's a read only tool that will never write to a resource of any kind, signaling to the LLM that can call with less caution
+
+You can specify those with the `annotations` property of the configuration object.
+
+```ts
+server.tool(
+	{
+		// rest of the tool
+		annotations: {
+			title: '',
+			destructiveHint: true,
+			idempotentHint: true,
+			openWorldHint: true,
+			readOnlyHint: true,
+		},
+	},
+	() => {
+		// handler
 	},
 );
 ```
