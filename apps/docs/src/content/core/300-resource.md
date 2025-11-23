@@ -10,7 +10,7 @@ section: Core
 
 Resources are an, often overlooked, primitive of the MCP spec. You can think of them more or less as files that your MCP server can expose (in fact most MCP clients allow you to add them to the context with the same user interaction).
 
-Differently from [tools](/docs/core/tool) the LLM is only involved as a recipient of resources and doesn't autonomously pick which them. Instead the user has to select the resources that it wish to include in the message which will then be sent as additional context for the LLM.
+Differently from [tools](/docs/core/tool) the LLM is only involved as a recipient of resources and doesn't autonomously pick them. Instead the user has to select the resources that it wish to include in the message which will then be sent as additional context for the LLM.
 
 <Callout type="tip">
 
@@ -46,7 +46,7 @@ server.resource(
 
 `uri`, `name` and `description` are the only required properties (you can also specify a `title` for a human readable title but that's optional) of the configuration object. The return value of the handler must be an object with a `contents` property which is an array of one or more contents (you can refer to the [MCP spec](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#resource-contents) to know the possible return values).
 
-The `uri` must conform to the [RFC3986](https://datatracker.ietf.org/doc/html/rfc3986) standard and it can be wither a common uri (like `https` or `git`) or it could be a custom one.
+The `uri` must conform to the [RFC3986](https://datatracker.ietf.org/doc/html/rfc3986) standard and it can be wether a common uri (like `https` or `git`) or it could be a custom one.
 
 ## `enabled` function
 
