@@ -44,6 +44,72 @@
     "slugFull": "/000-index"
   },
   {
+    "title": "OAuth",
+    "description": "Learn how to setup OAuth for your MCP server using the OAuth helper from `@tmcp/auth`",
+    "path": "auth/100-oauth",
+    "content": "<p>Puppa</p>",
+    "raw": "Puppa",
+    "toc": [],
+    "section": "Auth",
+    "slug": "auth/100-oauth",
+    "slugFull": "/auth/100-oauth"
+  },
+  {
+    "title": "SimpleProvider",
+    "description": "Learn how to setup OAuth for your MCP server using the SimpleProvider helper from `@tmcp/auth`",
+    "path": "auth/200-simple-provider",
+    "content": "<p>Puppa</p>",
+    "raw": "Puppa",
+    "toc": [],
+    "section": "Auth",
+    "slug": "auth/200-simple-provider",
+    "slugFull": "/auth/200-simple-provider"
+  },
+  {
+    "title": "Redis",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/100-redis",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/100-redis",
+    "slugFull": "/session-managers/100-redis"
+  },
+  {
+    "title": "Postgres",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/200-stdio",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/200-stdio",
+    "slugFull": "/session-managers/200-stdio"
+  },
+  {
+    "title": "Durable Objects",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/300-sse",
+    "content": "<p>HTTP</p>",
+    "raw": "HTTP",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/300-sse",
+    "slugFull": "/session-managers/300-sse"
+  },
+  {
+    "title": "Overview",
+    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
+    "path": "session-managers/50-overview",
+    "content": "",
+    "raw": "",
+    "toc": [],
+    "section": "Session Managers",
+    "slug": "session-managers/50-overview",
+    "slugFull": "/session-managers/50-overview"
+  },
+  {
     "title": "McpServer",
     "description": "The main McpServer class",
     "path": "core/100-mcp-server",
@@ -197,9 +263,30 @@
     "title": "resource",
     "description": "Learn how to register a new resource for your MCP server.",
     "path": "core/300-resource",
-    "content": "<p>resource</p>",
-    "raw": "resource",
-    "toc": [],
+    "content": "<script>\n\timport { Callout } from \"@svecodocs/kit\";\n</script>\n<p>Resources are an, often overlooked, primitive of the MCP spec. You can think of them more or less as files that your MCP server can expose (in fact most MCP clients allow you to add them to the context with the same user interaction).</p>\n<p>Differently from <a href=\"/docs/core/tool\">tools</a> the LLM is only involved as a recipient of resources and doesn't autonomously pick which them. Instead the user has to select the resources that it wish to include in the message which will then be sent as additional context for the LLM.</p>\n<callout type=\"tip\">\n<p>For illustration purpose we are not gonna use the <a href=\"/docs/utils/resource\">resource utilities</a> but you should definitely check them out as they would make the code much shorter.</p>\n</callout>\n<h2>Basic API</h2>\n<p>You can register a resource by invoking the <code>resource</code> method on the server instance. The first argument is a configuration object and the second a handler that will be invoked whenever that resource is read by the MCP client.</p>\n<pre><code class=\"language-ts\">server.resource(\n\t{\n\t\turi: 'mymcp://name-of-the-resource.json',\n\t\tname: 'your-resource',\n\t\tdescription: 'A description for the LLM',\n\t\ttitle: 'Your Resource',\n\t},\n\t(uri) => {\n\t\treturn {\n\t\t\tcontents: [\n\t\t\t\t{\n\t\t\t\t\turi,\n\t\t\t\t\ttext: 'Content of the resource',\n\t\t\t\t\tmimeType: 'text/plain', // this is optional\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n</code></pre>\n<p><code>uri</code>, <code>name</code> and <code>description</code> are the only required properties (you can also specify a <code>title</code> for a human readable title but that's optional) of the configuration object. The return value of the handler must be an object with a <code>contents</code> property which is an array of one or more contents (you can refer to the <a href=\"https://modelcontextprotocol.io/specification/2025-06-18/server/resources#resource-contents\">MCP spec</a> to know the possible return values).</p>\n<p>The <code>uri</code> must conform to the <a href=\"https://datatracker.ietf.org/doc/html/rfc3986\">RFC3986</a> standard and it can be wither a common uri (like <code>https</code> or <code>git</code>) or it could be a custom one.</p>\n<h2><code>enabled</code> function</h2>\n<p>One pattern that is quite common in every software is having a different feature-set based on some flag or the status of some user. You could technically create a new instance of the <code>McpServer</code> for each request and conditionally add a resource but to facilitate the process <code>tmcp</code> exposes an <code>enabled</code> property on the configuration object. The property is a function that returns a boolean and, as you might have guessed, allows you to include a specific resource in the list of resources conditionally. Within the function you have access to the <a href=\"/docs/core/ctx\">context</a> so you can make decisions based on the client capabilities, the client info or even just reading a feature flag in the db to do A/B testing or to allow your admin to turn on or off a resource without a re-deploy.</p>\n<pre><code class=\"language-ts\">server.resource(\n\t{\n\t\turi: 'mymcp://name-of-the-resource.json',\n\t\tname: 'your-resource',\n\t\tdescription: 'A description for the LLM',\n\t\ttitle: 'Your Resource',\n\t\tenabled() {\n\t\t\treturn server.ctx.sessionInfo?.clientInfo?.name !== 'codex';\n\t\t},\n\t},\n\t(uri) => {\n\t\treturn {\n\t\t\tcontents: [\n\t\t\t\t{\n\t\t\t\t\turi,\n\t\t\t\t\ttext: 'Content of the resource',\n\t\t\t\t\tmimeType: 'text/plain', // this is optional\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n</code></pre>\n<h2>Icons</h2>\n<p>To allow the users to to understand what an MCP server is about at a glance the MCP spec allows you to include a set of icons for each resource. Obviously <code>tmcp</code> allows you to specify those too using the <code>icons</code> property of the configuration object.</p>\n<callout type=\"note\">\n<p>MCP clients are usually very strict about which icons they do or don't display. If your server is remote they'll only display remote icons served by the same domain or <code>data</code> images, if it's local they'll only display local files or <code>data</code> images. We suggest to include more icons and to properly test them with various clients.</p>\n</callout>\n<pre><code class=\"language-ts\">server.resource(\n\t{\n\t\turi: 'mymcp://name-of-the-resource.json',\n\t\tname: 'your-resource',\n\t\tdescription: 'A description for the LLM',\n\t\ttitle: 'Your Resource',\n\t\ticons: [\n\t\t\t{\n\t\t\t\tsrc: 'https://dantemcp.com/date.png',\n\t\t\t},\n\t\t\t{\n\t\t\t\tsrc: 'data:image/png;base64,...',\n\t\t\t},\n\t\t],\n\t},\n\t(uri) => {\n\t\treturn {\n\t\t\tcontents: [\n\t\t\t\t{\n\t\t\t\t\turi,\n\t\t\t\t\ttext: 'Content of the resource',\n\t\t\t\t\tmimeType: 'text/plain', // this is optional\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n</code></pre>\n<h2>Dynamic Resources</h2>\n<p>The <code>resource</code> method is only used to add static resources to your MCP server, to learn how to add dynamic resources please check out the <a href=\"/docs/core/template\">template</a> documentation.</p>",
+    "raw": "<script>\n\timport { Callout } from \"@svecodocs/kit\";\n</script>\n\nResources are an, often overlooked, primitive of the MCP spec. You can think of them more or less as files that your MCP server can expose (in fact most MCP clients allow you to add them to the context with the same user interaction).\n\nDifferently from [tools](/docs/core/tool) the LLM is only involved as a recipient of resources and doesn't autonomously pick which them. Instead the user has to select the resources that it wish to include in the message which will then be sent as additional context for the LLM.\n\n<Callout type=\"tip\">\n\nFor illustration purpose we are not gonna use the [resource utilities](/docs/utils/resource) but you should definitely check them out as they would make the code much shorter.\n\n</Callout>\n\n## Basic API\n\nYou can register a resource by invoking the `resource` method on the server instance. The first argument is a configuration object and the second a handler that will be invoked whenever that resource is read by the MCP client.\n\n```ts\nserver.resource(\n\t{\n\t\turi: 'mymcp://name-of-the-resource.json',\n\t\tname: 'your-resource',\n\t\tdescription: 'A description for the LLM',\n\t\ttitle: 'Your Resource',\n\t},\n\t(uri) => {\n\t\treturn {\n\t\t\tcontents: [\n\t\t\t\t{\n\t\t\t\t\turi,\n\t\t\t\t\ttext: 'Content of the resource',\n\t\t\t\t\tmimeType: 'text/plain', // this is optional\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n```\n\n`uri`, `name` and `description` are the only required properties (you can also specify a `title` for a human readable title but that's optional) of the configuration object. The return value of the handler must be an object with a `contents` property which is an array of one or more contents (you can refer to the [MCP spec](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#resource-contents) to know the possible return values).\n\nThe `uri` must conform to the [RFC3986](https://datatracker.ietf.org/doc/html/rfc3986) standard and it can be wither a common uri (like `https` or `git`) or it could be a custom one.\n\n## `enabled` function\n\nOne pattern that is quite common in every software is having a different feature-set based on some flag or the status of some user. You could technically create a new instance of the `McpServer` for each request and conditionally add a resource but to facilitate the process `tmcp` exposes an `enabled` property on the configuration object. The property is a function that returns a boolean and, as you might have guessed, allows you to include a specific resource in the list of resources conditionally. Within the function you have access to the [context](/docs/core/ctx) so you can make decisions based on the client capabilities, the client info or even just reading a feature flag in the db to do A/B testing or to allow your admin to turn on or off a resource without a re-deploy.\n\n```ts\nserver.resource(\n\t{\n\t\turi: 'mymcp://name-of-the-resource.json',\n\t\tname: 'your-resource',\n\t\tdescription: 'A description for the LLM',\n\t\ttitle: 'Your Resource',\n\t\tenabled() {\n\t\t\treturn server.ctx.sessionInfo?.clientInfo?.name !== 'codex';\n\t\t},\n\t},\n\t(uri) => {\n\t\treturn {\n\t\t\tcontents: [\n\t\t\t\t{\n\t\t\t\t\turi,\n\t\t\t\t\ttext: 'Content of the resource',\n\t\t\t\t\tmimeType: 'text/plain', // this is optional\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n```\n\n## Icons\n\nTo allow the users to to understand what an MCP server is about at a glance the MCP spec allows you to include a set of icons for each resource. Obviously `tmcp` allows you to specify those too using the `icons` property of the configuration object.\n\n<Callout type=\"note\">\n\nMCP clients are usually very strict about which icons they do or don't display. If your server is remote they'll only display remote icons served by the same domain or `data` images, if it's local they'll only display local files or `data` images. We suggest to include more icons and to properly test them with various clients.\n\n</Callout>\n\n```ts\nserver.resource(\n\t{\n\t\turi: 'mymcp://name-of-the-resource.json',\n\t\tname: 'your-resource',\n\t\tdescription: 'A description for the LLM',\n\t\ttitle: 'Your Resource',\n\t\ticons: [\n\t\t\t{\n\t\t\t\tsrc: 'https://dantemcp.com/date.png',\n\t\t\t},\n\t\t\t{\n\t\t\t\tsrc: 'data:image/png;base64,...',\n\t\t\t},\n\t\t],\n\t},\n\t(uri) => {\n\t\treturn {\n\t\t\tcontents: [\n\t\t\t\t{\n\t\t\t\t\turi,\n\t\t\t\t\ttext: 'Content of the resource',\n\t\t\t\t\tmimeType: 'text/plain', // this is optional\n\t\t\t\t},\n\t\t\t],\n\t\t};\n\t},\n);\n```\n\n## Dynamic Resources\n\nThe `resource` method is only used to add static resources to your MCP server, to learn how to add dynamic resources please check out the [template](/docs/core/template) documentation.",
+    "toc": [
+      {
+        "title": "Basic API",
+        "url": "#basic-api",
+        "items": []
+      },
+      {
+        "title": "enabled function",
+        "url": "#enabled-function",
+        "items": []
+      },
+      {
+        "title": "Icons",
+        "url": "#icons",
+        "items": []
+      },
+      {
+        "title": "Dynamic Resources",
+        "url": "#dynamic-resources",
+        "items": []
+      }
+    ],
     "section": "Core",
     "slug": "core/300-resource",
     "slugFull": "/core/300-resource"
@@ -269,50 +356,6 @@
     "section": "Core",
     "slug": "core/900-message",
     "slugFull": "/core/900-message"
-  },
-  {
-    "title": "Redis",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/100-redis",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/100-redis",
-    "slugFull": "/session-managers/100-redis"
-  },
-  {
-    "title": "Postgres",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/200-stdio",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/200-stdio",
-    "slugFull": "/session-managers/200-stdio"
-  },
-  {
-    "title": "Durable Objects",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/300-sse",
-    "content": "<p>HTTP</p>",
-    "raw": "HTTP",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/300-sse",
-    "slugFull": "/session-managers/300-sse"
-  },
-  {
-    "title": "Overview",
-    "description": "Learn how to run and deploy your server remotely everywhere JS runs.",
-    "path": "session-managers/50-overview",
-    "content": "",
-    "raw": "",
-    "toc": [],
-    "section": "Session Managers",
-    "slug": "session-managers/50-overview",
-    "slugFull": "/session-managers/50-overview"
   },
   {
     "title": "HTTP",
@@ -390,27 +433,5 @@
     "section": "Utils",
     "slug": "utils/400-complete",
     "slugFull": "/utils/400-complete"
-  },
-  {
-    "title": "OAuth",
-    "description": "Learn how to setup OAuth for your MCP server using the OAuth helper from `@tmcp/auth`",
-    "path": "auth/100-oauth",
-    "content": "<p>Puppa</p>",
-    "raw": "Puppa",
-    "toc": [],
-    "section": "Auth",
-    "slug": "auth/100-oauth",
-    "slugFull": "/auth/100-oauth"
-  },
-  {
-    "title": "SimpleProvider",
-    "description": "Learn how to setup OAuth for your MCP server using the SimpleProvider helper from `@tmcp/auth`",
-    "path": "auth/200-simple-provider",
-    "content": "<p>Puppa</p>",
-    "raw": "Puppa",
-    "toc": [],
-    "section": "Auth",
-    "slug": "auth/200-simple-provider",
-    "slugFull": "/auth/200-simple-provider"
   }
 ]
