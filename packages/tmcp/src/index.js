@@ -32,6 +32,7 @@ import {
 } from './validation/version.js';
 import { should_version_negotiation_fail } from './validation/version.js';
 import { event } from './internal/utils.js';
+import { validate_and_warn_tool_name } from './validation/tool-name.js';
 
 /**
  * Information about a validated access token, provided to request handlers.
@@ -885,6 +886,7 @@ export class McpServer {
 		execute,
 	) {
 		this.#notify_tools_list_changed();
+		validate_and_warn_tool_name(name);
 		this.#tools.set(name, {
 			description,
 			title,
