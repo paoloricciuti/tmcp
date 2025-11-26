@@ -184,6 +184,7 @@ describe('HTTP Transport', () => {
 				{
 					description: 'A simple tool for testing',
 					inputSchema: {
+						$schema: 'http://json-schema.org/draft-07/schema#',
 						properties: {
 							input: {
 								type: 'string',
@@ -198,6 +199,7 @@ describe('HTTP Transport', () => {
 				{
 					description: 'Another simple tool for testing',
 					inputSchema: {
+						$schema: 'http://json-schema.org/draft-07/schema#',
 						properties: {
 							first: {
 								type: 'number',
@@ -349,6 +351,7 @@ describe('HTTP Transport', () => {
 			expect(response.tools).toContainEqual({
 				description: 'A new tool for testing',
 				inputSchema: {
+					$schema: 'http://json-schema.org/draft-07/schema#',
 					properties: {
 						param: {
 							type: 'string',
@@ -694,6 +697,7 @@ describe('HTTP Transport', () => {
 				expect(handler).toHaveBeenCalledWith({
 					method: 'notifications/resources/updated',
 					params: {
+						title: 'test-resource',
 						uri: 'test://resource',
 					},
 				});
@@ -723,6 +727,7 @@ describe('HTTP Transport', () => {
 				expect(handler).toHaveBeenCalledWith({
 					method: 'notifications/resources/updated',
 					params: {
+						title: 'test-resource',
 						uri: 'test://resource',
 					},
 				});
