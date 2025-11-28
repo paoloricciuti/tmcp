@@ -1764,6 +1764,7 @@ describe('InMemoryTransport', () => {
 				jsonrpc: '2.0',
 				method: 'elicitation/create',
 				params: {
+					mode: 'form',
 					message: 'send a response',
 					requestedSchema: {
 						$schema: 'http://json-schema.org/draft-07/schema#',
