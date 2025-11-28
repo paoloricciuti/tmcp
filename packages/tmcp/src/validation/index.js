@@ -253,12 +253,7 @@ export const ClientCapabilitiesSchema = v.object({
 	/**
 	 * Present if the client supports eliciting user input.
 	 */
-	elicitation: v.optional(
-		v.object({
-			form: v.optional(v.object({})),
-			url: v.optional(v.object({})),
-		}),
-	),
+	elicitation: v.optional(v.object({})),
 
 	/**
 	 * Present if the client supports listing roots.

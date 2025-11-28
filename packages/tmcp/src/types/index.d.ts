@@ -43,10 +43,7 @@ declare module 'tmcp' {
 		currentClientCapabilities(): {
 			experimental?: {} | undefined;
 			sampling?: {} | undefined;
-			elicitation?: {
-				form?: {} | undefined;
-				url?: {} | undefined;
-			} | undefined;
+			elicitation?: {} | undefined;
 			roots?: {
 				listChanged?: boolean | undefined;
 			} | undefined;
@@ -140,7 +137,7 @@ declare module 'tmcp' {
 		 * If the client doesn't support elicitation, it will throw an error.
 		 *
 		 * */
-		elicitation<TSchema extends StandardSchema extends undefined ? never : StandardSchema>(...args: [message: string, schema: TSchema] | [message: string, url: string, id: string]): Promise<ElicitResult & {
+		elicitation<TSchema extends StandardSchema extends undefined ? never : StandardSchema>(message: string, schema: TSchema): Promise<ElicitResult & {
 			content?: StandardSchemaV1.InferOutput<TSchema>;
 		}>;
 		/**
@@ -407,10 +404,7 @@ declare module 'tmcp' {
 		/**
 		 * Present if the client supports eliciting user input.
 		 */
-		readonly elicitation: v.OptionalSchema<v.ObjectSchema<{
-			readonly form: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
-			readonly url: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
-		}, undefined>, undefined>;
+		readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the client supports listing roots.
 		 */
@@ -438,10 +432,7 @@ declare module 'tmcp' {
 			/**
 			 * Present if the client supports eliciting user input.
 			 */
-			readonly elicitation: v.OptionalSchema<v.ObjectSchema<{
-				readonly form: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
-				readonly url: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
-			}, undefined>, undefined>;
+			readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			/**
 			 * Present if the client supports listing roots.
 			 */
