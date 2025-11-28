@@ -138,10 +138,11 @@ export class Session {
 
 	/**
 	 * Call a tool
+	 * @template {Record<string, unknown> | undefined} [TStructuredContent=undefined]
 	 * @param {string} name - Tool name
 	 * @param {Record<string, unknown>} [args] - Tool arguments
 	 * @param {TCustom} [ctx]
-	 * @returns {Promise<import("tmcp").CallToolResult<any>>}
+	 * @returns {Promise<import("tmcp").CallToolResult<TStructuredContent>>}
 	 */
 	async callTool(name, args = {}, ctx) {
 		return this.#adapter.request(

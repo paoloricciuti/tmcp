@@ -27,7 +27,7 @@ declare module '@tmcp/transport-in-memory' {
 		 * @param name - Tool name
 		 * @param args - Tool arguments
 		 * */
-		callTool(name: string, args?: Record<string, unknown>, ctx?: TCustom): Promise<import("tmcp").CallToolResult<any>>;
+		callTool<TStructuredContent extends Record<string, unknown> | undefined = undefined>(name: string, args?: Record<string, unknown>, ctx?: TCustom): Promise<import("tmcp").CallToolResult<TStructuredContent>>;
 		/**
 		 * List all available prompts
 		 * */
