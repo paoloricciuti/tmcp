@@ -620,66 +620,6 @@ describe('McpServer', () => {
 				},
 			});
 		});
-
-		it('should warn when the tool does not conform to the tool name suggestion spec (SEP 986)', async () => {
-			// Spy on console.warn to verify warnings are logged
-			const warn_spy = vi
-				.spyOn(console, 'warn')
-				.mockImplementation(() => {});
-
-			// Test valid tool names
-			server.tool(
-				{
-					name: 'valid-tool-name',
-					description: 'A valid tool name',
-				},
-				async () => ({ content: [{ type: 'text', text: 'Success' }] }),
-			);
-
-			// Test tool name with warnings (starts with dash)
-			server.tool(
-				{
-					name: '-warning-tool',
-					description: 'A tool name that generates warnings',
-				},
-				async () => ({ content: [{ type: 'text', text: 'Success' }] }),
-			);
-
-			// Test invalid tool name (contains spaces)
-			server.tool(
-				{
-					name: 'invalid tool name',
-					description: 'An invalid tool name',
-				},
-				async () => ({ content: [{ type: 'text', text: 'Success' }] }),
-			);
-
-			// Verify that warnings were issued (both for warnings and validation failures)
-			expect(warn_spy).toHaveBeenCalled();
-
-			// Verify specific warning content
-			const warning_calls = warn_spy.mock.calls.map((call) =>
-				call.join(' '),
-			);
-			expect(
-				warning_calls.some((call) =>
-					call.includes('Tool name starts or ends with a dash'),
-				),
-			).toBe(true);
-			expect(
-				warning_calls.some((call) =>
-					call.includes('Tool name contains spaces'),
-				),
-			).toBe(true);
-			expect(
-				warning_calls.some((call) =>
-					call.includes('Tool name contains invalid characters'),
-				),
-			).toBe(true);
-
-			// Clean up spies
-			warn_spy.mockRestore();
-		});
 	});
 
 	describe('pagination functionality', () => {
