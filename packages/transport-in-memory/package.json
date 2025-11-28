@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/transport-in-memory",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"description": "In memory transport for `tmcp` servers",
 	"main": "src/index.js",
 	"repository": {
@@ -34,7 +34,7 @@
 	"packageManager": "pnpm@10.24.0",
 	"type": "module",
 	"peerDependencies": {
-		"tmcp": "workspace:^1.17.0"
+		"tmcp": "workspace:^1.19.0"
 	},
 	"publishConfig": {
 		"access": "public"

@@ -1,5 +1,14 @@
 # @tmcp/transport-in-memory
 
+## 0.0.5
+
+### Patch Changes
+
+- 76294e3: fix: improve call tool result type
+- Updated dependencies [a2357a6]
+- Updated dependencies [34643e2]
+    - tmcp@1.19.0
+
 ## 0.0.4
 
 ### Patch Changes

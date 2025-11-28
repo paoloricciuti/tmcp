@@ -1,5 +1,12 @@
 # tmcp
 
+## 1.19.0
+
+### Minor Changes
+
+- a2357a6: feat: url mode elicitation
+- 34643e2: feat: implement tool name warnings (SEP 986)
+
 ## 1.18.1
 
 ### Patch Changes
