@@ -44,6 +44,17 @@ server.tool(
 
 `name` and `description` are the only required properties (you can also specify a `title` for a human readable title but that's optional) of the configuration object. The return value of the handler must be an object with a `content` property which is an array of one or more contents (you can refer to the [MCP spec](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-result) to know the possible return values)
 
+### Tool name requirements
+
+`tmcp` aligns with [SEP-986](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/986), which specifies a standard format for tool names. Whenever you call `server.tool` we automatically validate the `name` and log `console.warn` messages if the value may cause issues for clients. Validation does **not** stop registration, but it gives you actionable guidance so you can fix problems before shipping.
+
+Valid names:
+
+- consist only of ASCII letters, digits, underscores, dashes, and dots (`[A-Za-z0-9._-]`)
+- are between 1 and 128 characters (inclusive)
+
+Warnings are emitted if the name contains spaces or commas, starts/ends with a dash or dot, or uses any other character (for instance `/`, `@`, emojis, etc.). Stick to the allowed character set to ensure every MCP client can call your tool without surprises.
+
 ## Accepting inputs
 
 If you want more powerful tools however you can also accept some inputs. However to be able to accept an input you need to specify the schema of your expected input
