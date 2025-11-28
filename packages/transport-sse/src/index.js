@@ -168,7 +168,7 @@ export class SseTransport {
 			}
 			await this.#options.sessionManager.streams.send(
 				sessions,
-				'data: ' + JSON.stringify(request) + '\n\n',
+				'event: message\ndata: ' + JSON.stringify(request) + '\n\n',
 			);
 		});
 
@@ -178,7 +178,7 @@ export class SseTransport {
 			if (!session_id) return;
 			await this.#options.sessionManager.streams.send(
 				[session_id],
-				`data: ${JSON.stringify(request)}\n\n`,
+				`event: message\ndata: ${JSON.stringify(request)}\n\n`,
 			);
 		});
 	}
@@ -402,7 +402,7 @@ export class SseTransport {
 			if (response != null) {
 				await this.#options.sessionManager.streams.send(
 					[session_id],
-					`data: ${JSON.stringify(response)}\n\n`,
+					`event: message\ndata: ${JSON.stringify(response)}\n\n`,
 				);
 			}
 

@@ -161,7 +161,7 @@ export class HttpTransport {
 			}
 			await this.#options.sessionManager.streams.send(
 				sessions,
-				'data: ' + JSON.stringify(request) + '\n\n',
+				'event: message\ndata: ' + JSON.stringify(request) + '\n\n',
 			);
 		});
 
@@ -172,7 +172,7 @@ export class HttpTransport {
 
 			controller.enqueue(
 				this.#text_encoder.encode(
-					'data: ' + JSON.stringify(request) + '\n\n',
+					'event: message\ndata: ' + JSON.stringify(request) + '\n\n',
 				),
 			);
 		});
@@ -407,7 +407,9 @@ export class HttpTransport {
 
 				controller?.enqueue(
 					this.#text_encoder.encode(
-						'data: ' + JSON.stringify(response) + '\n\n',
+						'event: message\ndata: ' +
+							JSON.stringify(response) +
+							'\n\n',
 					),
 				);
 				controller?.close();
