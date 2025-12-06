@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.8.3
+
+### Patch Changes
+
+- 68e7422: fix: specify event message in SSE events
+
 ## 0.8.2
 
 ### Patch Changes
