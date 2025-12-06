@@ -410,10 +410,14 @@ export class McpServer {
 							(await safe_enabled(tool.enabled)) === false
 						)
 							return null;
+						const description =
+							typeof tool.description === 'function'
+								? await tool.description()
+								: tool.description;
 						return {
 							name,
-							title: tool.title || tool.description,
-							description: tool.description,
+							title: tool.title || description,
+							description,
 							icons: tool.icons,
 							_meta: tool._meta,
 							inputSchema:
@@ -867,7 +871,7 @@ export class McpServer {
 	 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
-	 * @param {{ name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & Icons} options
+	 * @param {{ name: string; _meta?: Record<string, any>; description: string | (() => string| Promise<string>); title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & Icons} options
 	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
 	 */
 	tool(
