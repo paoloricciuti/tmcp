@@ -93,7 +93,7 @@ importers:
         version: 24.10.1
       srvx:
         specifier: ^0.9.5
-        version: 0.9.6
+        version: 0.9.7
       tmcp:
         specifier: workspace:^
         version: link:../../packages/tmcp
@@ -3814,8 +3814,8 @@ packages:
   sqids@0.3.0:
     resolution: {integrity: sha512-lOQK1ucVg+W6n3FhRwwSeUijxe93b51Bfz5PMRMihVf1iVkl82ePQG7V5vwrhzB11v0NtsR25PSZRGiSomJaJw==}
 
-  srvx@0.9.6:
-    resolution: {integrity: sha512-5L4rT6qQqqb+xcoDoklUgCNdmzqJ6vbcDRwPVGRXewF55IJH0pqh0lQlrJ266ZWTKJ4mfeioqHQJeAYesS+RrQ==}
+  srvx@0.9.7:
+    resolution: {integrity: sha512-N2a2nx8YTq13+A8qucg4lHZREfWOVnlMHAvrA9C2jbY9/QnVEAPzjdmpFHrY6/9BxSwIbvywCj7zahuGrVzCiQ==}
     engines: {node: '>=20.16.0'}
     hasBin: true
 
@@ -8021,7 +8021,7 @@ snapshots:
 
   sqids@0.3.0: {}
 
-  srvx@0.9.6: {}
+  srvx@0.9.7: {}
 
   stackback@0.0.2: {}
 
