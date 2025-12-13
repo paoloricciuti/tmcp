@@ -15,7 +15,7 @@ import {
 } from '../validation/index.js';
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
-	description: string;
+	description: string | (() => string|Promise<string>);
 	schema: TSchema;
 	outputSchema?: TOutputSchema;
 	title?: string;
