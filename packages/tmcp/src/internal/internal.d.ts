@@ -73,6 +73,7 @@ export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	instructions?: string;
 	adapter: JsonSchemaAdapter<TSchema> | undefined;
 	pagination?: {
+		tools?: { size?: number };
 		resources?: { size?: number };
 		prompts?: { size?: number };
 	};
@@ -102,6 +103,6 @@ export type McpEvents = {
 		request: JSONRPCRequest;
 	}) => void;
 	initialize: (initialize_request: InitializeRequestParams) => void;
-	subscription: (subscriptions_request: { uri: string }) => void;
+	subscription: (subscriptions_request: { uri: string, action?: "add" | "remove" }) => void;
 	loglevelchange: (change: { level: LoggingLevel }) => void;
 };

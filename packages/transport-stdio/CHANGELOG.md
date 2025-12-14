@@ -1,5 +1,13 @@
 # @tmcp/transport-stdio
 
+## 0.4.1
+
+### Patch Changes
+
+- 5613d43: fix: handle `resources/unsubscribe`
+- Updated dependencies [5613d43]
+    - tmcp@1.16.3
+
 ## 0.4.0
 
 ### Minor Changes

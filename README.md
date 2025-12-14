@@ -199,6 +199,80 @@ server.resource(
 );
 ```
 
+### Reducing Return Boilerplate with `tmcp/utils`
+
+Most handlers end by returning some variant of `{ content: [...] }`, `{ messages: [...] }`, or `{ completion: { ... } }`. That shape is repetitive and easy to get wrong, especially when you also need to wire `isError` or `structuredContent`. The `tmcp/utils` entry point ships tiny factories that return the correct MCP payloads for you so handlers can stay focused on business logic.
+
+```ts
+import { tool, resource, prompt, complete } from 'tmcp/utils';
+
+server.tool({ name: 'health-check', description: 'Ping' }, async () =>
+	tool.text('ok'),
+);
+
+server.tool(
+	{ name: 'profile-picture', description: 'My Profile Picture' },
+	async () => tool.media('image', await loadPng(), 'image/png'),
+);
+
+server.resource(
+	{ name: 'readme', description: 'Project README', uri: 'file://README.md' },
+	async (uri) =>
+		resource.text(uri, await readFile(uri, 'utf8'), 'text/markdown'),
+);
+
+server.prompt(
+	{
+		name: 'explain',
+		description: '',
+		schema: v.object({ topic: v.string() }),
+	},
+	async ({ topic }) => prompt.message(`Explain ${topic} like I am five.`),
+);
+
+server.template(
+	{
+		name: 'users',
+		description: 'Template with completion',
+		uri: 'users/{id}',
+		complete: {
+			id: async (arg) => complete.values(await findMatchingIds(arg)),
+		},
+	},
+	async (uri) => resource.blob(uri, await fetchUserBlob(uri)),
+);
+```
+
+you can also compose different kind of tools with `tool.mix`
+
+```ts
+tool.mix([
+	tool.text('Indexed workspace'),
+	tool.media('image', png, 'image/png'),
+]);
+```
+
+however be aware that
+
+1. you can't pass `tool.structured` to `tool.mix` (but you can pass a second argument that will be the structured content)
+2. if you pass even one `tool.error` to the `tool.mix` the whole return value will be an error
+
+```ts
+const structuredContent = {
+	cool: true,
+};
+
+tool.mix(
+	[
+		tool.text(JSON.stringify(structuredContent)),
+		tool.media('image', png, 'image/png'),
+	],
+	structuredContent,
+);
+```
+
+Each helper is fully typed and returns the correct MCP structure (`CallToolResult`, `ReadResourceResult`, `GetPromptResult`, or `CompleteResult`). That means you can still provide `structuredContent`, embed resources, or merge multiple results via `mix` without having to copy/paste the surrounding boilerplate.
+
 ##### `template(definition, handler)`
 
 Register a URI template for dynamic resources.
@@ -239,6 +313,46 @@ const response = server.receive(jsonRpcRequest, {
 
 > [!TIP]
 > `sessionInfo` is automatically populated by the built-in transports. You can read it from handlers via `server.ctx.sessionInfo` to tailor behaviour to the connected client.
+
+##### `request({ method, params })`
+
+Send a raw JSON-RPC request to the connected client. This is useful for
+calling experimental MCP APIs or any custom client method that does not yet
+have a dedicated helper in `McpServer` or to send a request with a custom JSON-schema that is not expressible with your validation library.
+
+```javascript
+const result = await server.request({
+	method: 'elicitation/create',
+	params: {
+		message: 'Provide deployment metadata',
+		requestedSchema: {
+			type: 'object',
+			required: ['region', 'replicas', 'features'],
+			properties: {
+				region: {
+					type: 'string',
+					enum: ['us-east-1', 'us-west-2', 'eu-central-1'],
+				},
+				replicas: { type: 'integer', minimum: 1, maximum: 20 },
+				features: {
+					type: 'array',
+					items: {
+						type: 'string',
+						enum: ['canary', 'observability', 'autoscaling'],
+					},
+					minItems: 1,
+				},
+			},
+		},
+	},
+});
+```
+
+- `method`: Fully qualified MCP client method name
+- `params` (optional): JSON-RPC params object/array accepted by that method
+
+Handle the resolved payload like any other JSON-RPC response—cast or (better) validate
+as needed when using this escape hatch.
 
 ## Advanced Examples
 

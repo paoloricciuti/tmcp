@@ -2,6 +2,7 @@
  * @import { AuthInfo, McpServer } from "tmcp";
  * @import { OAuth  } from "@tmcp/auth";
  * @import { StreamSessionManager, InfoSessionManager } from "@tmcp/session-manager";
+ * @import { OptionalizeSessionManager } from "./type-utils.js"
  */
 
 /**
@@ -21,7 +22,7 @@
  * 	path?: string | null
  * 	oauth?: OAuth<"built">
  * 	cors?: CorsConfig | boolean,
- * 	sessionManager?: { streams?: StreamSessionManager, info?: InfoSessionManager }
+ * 	sessionManager?: { streams?: StreamSessionManager, info?: OptionalizeSessionManager<InfoSessionManager> }
  * }} HttpTransportOptions
  */
 
@@ -128,10 +129,20 @@ export class HttpTransport {
 			);
 		});
 
-		this.#server.on('subscription', async ({ uri }) => {
+		this.#server.on('subscription', async ({ uri, action }) => {
 			const sessionId = this.#session_id_storage.getStore();
 			if (!sessionId) return;
-			this.#options.sessionManager.info.addSubscription(sessionId, uri);
+			if (action === 'remove') {
+				this.#options.sessionManager.info.removeSubscription?.(
+					sessionId,
+					uri,
+				);
+			} else {
+				this.#options.sessionManager.info.addSubscription(
+					sessionId,
+					uri,
+				);
+			}
 		});
 
 		this.#server.on('loglevelchange', ({ level }) => {
@@ -150,29 +161,19 @@ export class HttpTransport {
 			}
 			await this.#options.sessionManager.streams.send(
 				sessions,
-				'data: ' + JSON.stringify(request) + '\n\n',
+				'event: message\ndata: ' + JSON.stringify(request) + '\n\n',
 			);
 		});
 
 		this.#server.on('send', async ({ request }) => {
 			// use the current controller if the request has an id (it means it's a request and not a notification)
-			if (request.id != null) {
-				const controller = this.#controller_storage.getStore();
-				if (!controller) return;
+			const controller = this.#controller_storage.getStore();
+			if (!controller) return;
 
-				controller.enqueue(
-					this.#text_encoder.encode(
-						'data: ' + JSON.stringify(request) + '\n\n',
-					),
-				);
-				return;
-			}
-			const session_id = this.#session_id_storage.getStore();
-			if (!session_id) return;
-
-			await this.#options.sessionManager.streams.send(
-				[session_id],
-				'data: ' + JSON.stringify(request) + '\n\n',
+			controller.enqueue(
+				this.#text_encoder.encode(
+					'event: message\ndata: ' + JSON.stringify(request) + '\n\n',
+				),
 			);
 		});
 	}
@@ -406,7 +407,9 @@ export class HttpTransport {
 
 				controller?.enqueue(
 					this.#text_encoder.encode(
-						'data: ' + JSON.stringify(response) + '\n\n',
+						'event: message\ndata: ' +
+							JSON.stringify(response) +
+							'\n\n',
 					),
 				);
 				controller?.close();

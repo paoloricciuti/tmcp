@@ -4,3 +4,5 @@ packages:
 
 patchedDependencies:
     dts-buddy: patches/dts-buddy.patch
+onlyBuiltDependencies:
+    - esbuild

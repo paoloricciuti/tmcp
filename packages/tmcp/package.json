@@ -1,6 +1,6 @@
 {
 	"name": "tmcp",
-	"version": "1.16.2",
+	"version": "1.18.1",
 	"description": "The main tmcp library",
 	"main": "src/index.js",
 	"type": "module",
@@ -46,6 +46,10 @@
 		"./adapter": {
 			"types": "./src/types/index.d.ts",
 			"default": "./src/adapter.js"
+		},
+		"./utils": {
+			"types": "./src/types/index.d.ts",
+			"default": "./src/utils/index.js"
 		},
 		"./package.json": "./package.json"
 	},

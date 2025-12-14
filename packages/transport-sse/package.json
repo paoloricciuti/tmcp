@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/transport-sse",
-	"version": "0.5.0",
+	"version": "0.5.3",
 	"description": "Transport for TMCP using Server-Sent Events",
 	"type": "module",
 	"main": "src/index.js",
@@ -17,8 +17,8 @@
 		"./package.json": "./package.json"
 	},
 	"peerDependencies": {
-		"tmcp": "workspace:^1.16.0",
-		"@tmcp/auth": "^0.3.3"
+		"tmcp": "workspace:^1.18.0",
+		"@tmcp/auth": "^0.3.3 || ^0.4.0"
 	},
 	"peerDependenciesMeta": {
 		"@tmcp/auth": {

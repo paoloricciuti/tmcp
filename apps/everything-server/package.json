@@ -1,0 +1,30 @@
+{
+	"name": "everything-server",
+	"version": "0.0.1",
+	"description": "",
+	"private": true,
+	"main": "index.js",
+	"scripts": {
+		"start": "node index.ts",
+		"dev": "node --watch index.ts",
+		"conformance": "conformance server --url http://localhost:3000/mcp",
+		"test": "start-server-and-test http://localhost:3000/ conformance"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"packageManager": "pnpm@10.25.0",
+	"type": "module",
+	"dependencies": {
+		"@tmcp/adapter-valibot": "workspace:^",
+		"@tmcp/transport-http": "workspace:^",
+		"@types/node": "^24.10.0",
+		"srvx": "^0.9.5",
+		"tmcp": "workspace:^",
+		"valibot": "^1.1.0"
+	},
+	"devDependencies": {
+		"@modelcontextprotocol/conformance": "^0.1.6",
+		"start-server-and-test": "^2.1.2"
+	}
+}

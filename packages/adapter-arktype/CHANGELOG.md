@@ -1,5 +1,13 @@
 # @tmcp/adapter-arktype
 
+## 0.2.2
+
+### Patch Changes
+
+- ccb2693: fix: add atrocious hack to satisfy enum type string required by official sdk
+- Updated dependencies [61d7c9e]
+    - tmcp@1.17.0
+
 ## 0.2.1
 
 ### Patch Changes

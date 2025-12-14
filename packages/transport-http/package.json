@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/transport-http",
-	"version": "0.8.0",
+	"version": "0.8.3",
 	"description": "Transport for TMCP using HTTP",
 	"type": "module",
 	"main": "src/index.js",
@@ -21,8 +21,8 @@
 		"src/**/*"
 	],
 	"peerDependencies": {
-		"tmcp": "workspace:^1.16.0",
-		"@tmcp/auth": "^0.3.3"
+		"tmcp": "workspace:^1.18.0",
+		"@tmcp/auth": "^0.3.3 || ^0.4.0"
 	},
 	"peerDependenciesMeta": {
 		"@tmcp/auth": {
@@ -45,7 +45,7 @@
 	},
 	"devDependencies": {
 		"@modelcontextprotocol/sdk": "^1.17.1",
-		"@remix-run/node-fetch-server": "^0.11.0",
+		"@remix-run/node-fetch-server": "^0.12.0",
 		"@tmcp/adapter-valibot": "workspace:^",
 		"@tmcp/auth": "workspace:^",
 		"@types/node": "^24.0.15",

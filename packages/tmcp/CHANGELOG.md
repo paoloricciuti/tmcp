@@ -1,5 +1,35 @@
 # tmcp
 
+## 1.18.1
+
+### Patch Changes
+
+- 743b531: fix: deprecate various and implement fine grained prompt methods
+
+## 1.18.0
+
+### Minor Changes
+
+- 1d72e60: feat: utils entrypoint
+
+## 1.17.0
+
+### Minor Changes
+
+- 61d7c9e: feat: expose low level `request` api
+
+## 1.16.4
+
+### Patch Changes
+
+- bc56fbc: fix: allow tools pagination
+
+## 1.16.3
+
+### Patch Changes
+
+- 5613d43: fix: handle `resources/unsubscribe`
+
 ## 1.16.2
 
 ### Patch Changes

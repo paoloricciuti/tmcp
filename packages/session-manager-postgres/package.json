@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/session-manager-postgres",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "",
 	"main": "src/index.js",
 	"repository": {
@@ -26,7 +26,7 @@
 			"import": "./src/index.js"
 		}
 	},
-	"packageManager": "pnpm@10.20.0",
+	"packageManager": "pnpm@10.25.0",
 	"type": "module",
 	"publishConfig": {
 		"access": "public"

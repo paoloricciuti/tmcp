@@ -98,6 +98,125 @@ server.tool(
 server.receive(request);
 ```
 
+## Return helpers to skip boilerplate
+
+Even the tiny calculator tool above ends with four near-identical `return { content: [{ type: 'text', text: ... }] }` blocks. Most MCP handlers have to build the same shapes: `CallToolResult`, `ReadResourceResult`, `GetPromptResult`, or `CompleteResult`. Writing them by hand is repetitive boilerplate. The `tmcp/utils` entry point ships a handful of factories that emit the correct shape for you.
+
+```ts
+import { tool, resource, prompt, complete } from 'tmcp/utils';
+
+// Without helpers – lots of envelope noise
+server.tool(
+	{ name: 'health-check', description: 'A health check tool' },
+	async () => ({
+		content: [{ type: 'text', text: 'ok' }],
+	}),
+);
+
+// With helpers – just describe the payload once
+server.tool(
+	{ name: 'health-check', description: 'A health check tool' },
+	async () => tool.text('ok'),
+);
+
+server.tool(
+	{ name: 'profile-picture', description: 'Your profile picture' },
+	async () => tool.media('image', await loadPng(), 'image/png'),
+);
+
+server.tool(
+	{
+		name: 'get-images',
+		description:
+			'Get the orders details and the images of all the products',
+		schema: v.object({
+			items: v.array(ItemsSchema),
+		}),
+	},
+	async () => {
+		const orders = await loadOrders();
+		const images = await loadImages(orders);
+
+		return tool.mix(
+			[
+				tool.text("Here's your images"),
+				...images.map((img) => tool.media('image', img)),
+			],
+			orders,
+		);
+	},
+);
+
+server.resource(
+	{
+		name: 'readme',
+		description: 'Top-level README',
+		uri: 'file://README.md',
+	},
+	async (uri) =>
+		resource.text(uri, await readFile(uri, 'utf8'), 'text/markdown'),
+);
+
+server.prompt(
+	{
+		name: 'explain',
+		description: '',
+		schema: v.object({ topic: v.string() }),
+	},
+	async ({ topic }) => prompt.message(`Explain ${topic} like I am five.`),
+);
+
+server.template(
+	{
+		name: 'users',
+		description: 'Supports completion',
+		uri: 'users/{id}',
+		complete: {
+			id: async (arg) =>
+				complete.values(await findMatchingIds(arg), false),
+		},
+	},
+	async (uri) => resource.blob(uri, await fetchUserBlob(uri)),
+);
+```
+
+you can also compose different kind of tools with `tool.mix`
+
+```ts
+tool.mix([
+	tool.text('Indexed workspace'),
+	tool.media('image', png, 'image/png'),
+]);
+```
+
+however be aware that
+
+1. you can't pass `tool.structured` to `tool.mix` (but you can pass a second argument that will be the structured content)
+2. if you pass even one `tool.error` to the `tool.mix` the whole return value will be an error
+
+```ts
+const structuredContent = {
+	cool: true,
+};
+
+tool.mix(
+	[
+		tool.text(JSON.stringify(structuredContent)),
+		tool.media('image', png, 'image/png'),
+	],
+	structuredContent,
+);
+```
+
+### Helper catalog
+
+- `tool` – build `CallToolResult` objects via `text`, `error`, `media`, `resource`, `resourceLink`, `structured`, and `mix` (merge multiple kind of tool response).
+- `resource` – return `ReadResourceResult` through `text`, `blob`, or `mix` (merge `resource.text` and `resource.blob`).
+- `prompt` – generate `GetPromptResult` using `message` (single string), `messages` (array of strings), `text`, `media`, `resource`, `resourceLink` and `mix` (merge multiple kind of tool response).
+- `complete` – create `CompleteResult` payloads with `values(list, hasMore?, total?)`.
+
+All helpers are typed, so TypeScript will prevent you from returning malformed payloads while cutting down the repetitive envelopes that used to appear in almost every handler.
+
 ## API Reference
 
 ### McpServer
@@ -292,6 +411,46 @@ const response = server.receive(jsonRpcRequest, {
 	custom: customContextData,
 });
 ```
+
+##### `request({ method, params })`
+
+Send a raw JSON-RPC request to the connected client. This lets you call
+experimental MCP APIs or proprietary extensions before they gain a dedicated
+method on `McpServer` or to send a request with a custom JSON-schema that is not expressible with your validation library.
+
+```javascript
+const response = await server.request({
+	method: 'elicitation/create',
+	params: {
+		message: 'Describe the deployment plan',
+		requestedSchema: {
+			type: 'object',
+			required: ['region', 'replicas', 'features'],
+			properties: {
+				region: {
+					type: 'string',
+					enum: ['us-east-1', 'us-west-2', 'eu-central-1'],
+				},
+				replicas: { type: 'integer', minimum: 1, maximum: 20 },
+				features: {
+					type: 'array',
+					items: {
+						type: 'string',
+						enum: ['canary', 'observability', 'autoscaling'],
+					},
+					minItems: 1,
+				},
+			},
+		},
+	},
+});
+```
+
+- `method`: Fully qualified MCP client method name
+- `params` (optional): JSON-RPC params object/array accepted by that method
+
+Handle the resolved payload like any other JSON-RPC response—cast or (better) validate
+as needed when using this escape hatch.
 
 ##### `elicitation(schema)`
 

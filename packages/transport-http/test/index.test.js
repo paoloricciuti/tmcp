@@ -639,18 +639,10 @@ describe('HTTP Transport', () => {
 
 		it('can unsubscribe from a resource', async () => {
 			await client.subscribeResource({ uri: 'test://resource' });
-			// Note: unsubscribeResource may not be implemented in the current version
-			try {
-				const response = await client.unsubscribeResource({
-					uri: 'test://resource',
-				});
-				expect(response).toEqual({});
-			} catch (error) {
-				// If unsubscribe is not implemented, that's expected for now
-				expect(/** @type {Error} */ (error).message).toContain(
-					'Method not found',
-				);
-			}
+			const response = await client.unsubscribeResource({
+				uri: 'test://resource',
+			});
+			expect(response).toEqual({});
 		});
 
 		it('receives notification when resources list changes', async () => {
@@ -705,11 +697,55 @@ describe('HTTP Transport', () => {
 				expect(handler).toHaveBeenCalledWith({
 					method: 'notifications/resources/updated',
 					params: {
-						uri: 'test://resource',
 						title: 'test-resource',
+						uri: 'test://resource',
 					},
 				});
 			});
+
+			client.removeNotificationHandler(
+				ResourceUpdatedNotificationSchema.shape.method.value,
+			);
+		});
+
+		it('stops receiving notifications after unsubscribing from resource', async () => {
+			await client.subscribeResource({ uri: 'test://resource' });
+
+			const handler = vi.fn();
+			client.setNotificationHandler(
+				ResourceUpdatedNotificationSchema,
+				handler,
+			);
+
+			// we need to wait for the SSE connection to be established
+			await sse_connected;
+
+			// Trigger first resource change while subscribed
+			mcp_server.changed('resource', 'test://resource');
+
+			await vi.waitFor(() => {
+				expect(handler).toHaveBeenCalledWith({
+					method: 'notifications/resources/updated',
+					params: {
+						title: 'test-resource',
+						uri: 'test://resource',
+					},
+				});
+			});
+
+			const call_count = handler.mock.calls.length;
+
+			// Unsubscribe from the resource
+			await client.unsubscribeResource({ uri: 'test://resource' });
+
+			// Trigger second resource change after unsubscribing
+			mcp_server.changed('resource', 'test://resource');
+
+			// Wait a bit to ensure no new notification arrives
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			// Handler should not have been called again
+			expect(handler).toHaveBeenCalledTimes(call_count);
 
 			client.removeNotificationHandler(
 				ResourceUpdatedNotificationSchema.shape.method.value,

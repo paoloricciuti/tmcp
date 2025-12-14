@@ -659,6 +659,235 @@ describe('McpServer', () => {
 		});
 	});
 
+	describe('pagination functionality', () => {
+		/**
+		 * @type {McpServer<MockSchema<any>, any>}
+		 */
+		let paginated_server;
+
+		beforeEach(async () => {
+			// Create a server with pagination enabled
+			paginated_server = new McpServer(server_info, {
+				adapter,
+				capabilities: {
+					tools: { listChanged: true },
+					prompts: { listChanged: true },
+					resources: { subscribe: true, listChanged: true },
+				},
+				pagination: {
+					tools: { size: 2 },
+					prompts: { size: 2 },
+					resources: { size: 2 },
+				},
+			});
+
+			const init = request({
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'initialize',
+				params: {
+					protocolVersion: '2025-06-18',
+					capabilities: {},
+					clientInfo: { name: 'test', version: '1.0.0' },
+				},
+			});
+			await paginated_server.receive(init, { sessionId: 'session-1' });
+		});
+
+		describe('tools pagination', () => {
+			it('should paginate tools list with first page', async () => {
+				// Add 5 tools
+				for (let i = 1; i <= 5; i++) {
+					paginated_server.tool(
+						{
+							name: `tool-${i}`,
+							description: `Tool ${i}`,
+						},
+						async () => ({
+							content: [
+								{ type: 'text', text: `Tool ${i} executed` },
+							],
+						}),
+					);
+				}
+
+				const list_request = request({
+					jsonrpc: '2.0',
+					id: 2,
+					method: 'tools/list',
+				});
+
+				const result = await paginated_server.receive(list_request, {
+					sessionId: 'session-1',
+				});
+
+				expect(result).toEqual({
+					jsonrpc: '2.0',
+					id: 2,
+					result: {
+						tools: [
+							{
+								name: 'tool-1',
+								title: 'Tool 1',
+								description: 'Tool 1',
+								inputSchema: { type: 'object', properties: {} },
+								icons: undefined,
+							},
+							{
+								name: 'tool-2',
+								title: 'Tool 2',
+								description: 'Tool 2',
+								inputSchema: { type: 'object', properties: {} },
+								icons: undefined,
+							},
+						],
+						nextCursor: expect.any(String),
+					},
+				});
+			});
+
+			it('should paginate tools list with cursor', async () => {
+				// Add 5 tools
+				for (let i = 1; i <= 5; i++) {
+					paginated_server.tool(
+						{
+							name: `tool-${i}`,
+							description: `Tool ${i}`,
+						},
+						async () => ({
+							content: [
+								{ type: 'text', text: `Tool ${i} executed` },
+							],
+						}),
+					);
+				}
+
+				// Get first page
+				const first_page = await paginated_server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'tools/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				const next_cursor = first_page.result.nextCursor;
+				expect(next_cursor).toBeDefined();
+
+				// Get second page
+				const second_page = await paginated_server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 3,
+						method: 'tools/list',
+						params: { cursor: next_cursor },
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(second_page.result.tools).toHaveLength(2);
+				expect(second_page.result.tools[0].name).toBe('tool-3');
+				expect(second_page.result.tools[1].name).toBe('tool-4');
+				expect(second_page.result.nextCursor).toBeDefined();
+			});
+
+			it('should not include nextCursor on last page', async () => {
+				// Add 3 tools (less than 2 pages)
+				for (let i = 1; i <= 3; i++) {
+					paginated_server.tool(
+						{
+							name: `tool-${i}`,
+							description: `Tool ${i}`,
+						},
+						async () => ({
+							content: [
+								{ type: 'text', text: `Tool ${i} executed` },
+							],
+						}),
+					);
+				}
+
+				// Get first page
+				const first_page = await paginated_server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'tools/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				const next_cursor = first_page.result.nextCursor;
+
+				// Get second (last) page
+				const last_page = await paginated_server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 3,
+						method: 'tools/list',
+						params: { cursor: next_cursor },
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(last_page.result.tools).toHaveLength(1);
+				expect(last_page.result.tools[0].name).toBe('tool-3');
+				expect(last_page.result.nextCursor).toBeUndefined();
+			});
+
+			it('should return all tools when pagination is not configured', async () => {
+				const unpaginated_server = new McpServer(server_info, {
+					adapter,
+					capabilities: {
+						tools: { listChanged: true },
+					},
+				});
+
+				await unpaginated_server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'initialize',
+						params: {
+							protocolVersion: '2025-06-18',
+							capabilities: {},
+							clientInfo: { name: 'test', version: '1.0.0' },
+						},
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				// Add 5 tools
+				for (let i = 1; i <= 5; i++) {
+					unpaginated_server.tool(
+						{
+							name: `tool-${i}`,
+							description: `Tool ${i}`,
+						},
+						async () => ({
+							content: [
+								{ type: 'text', text: `Tool ${i} executed` },
+							],
+						}),
+					);
+				}
+
+				const result = await unpaginated_server.receive(
+					request({
+						jsonrpc: '2.0',
+						id: 2,
+						method: 'tools/list',
+					}),
+					{ sessionId: 'session-1' },
+				);
+
+				expect(result.result.tools).toHaveLength(5);
+				expect(result.result.nextCursor).toBeUndefined();
+			});
+		});
+	});
+
 	describe('prompts functionality', () => {
 		beforeEach(async () => {
 			const init = request({
