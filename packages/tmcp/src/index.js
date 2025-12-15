@@ -889,7 +889,7 @@ export class McpServer {
 	}
 
 	/**
-	 * Use the `defineTool` utility to create a reusable tool and pass it to this method to add it to the server.
+	 * Use the `definePrompt` utility to create a reusable tool and pass it to this method to add it to the server.
 	 * @template {Array<CreatedPrompt<any>>} T
 	 * @template {T extends Array<CreatedPrompt<infer TSchema>> ? AllSame<TSchema, StandardSchema | undefined> extends true ?  T : never : never} U
 	 * @param {T & NoInfer<U>} prompts
@@ -914,7 +914,7 @@ export class McpServer {
 	}
 
 	/**
-	 * Use the defineResource function to create a reusable resource and pass it to this method to add it to the server.
+	 * Use the `defineResource` utility to create a reusable resource and pass it to this method to add it to the server.
 	 *
 	 * @param {CreatedResource[]} resources
 	 */
@@ -937,7 +937,7 @@ export class McpServer {
 	}
 
 	/**
-	 * Use the Template class to create a reusable template and pass it to this method to add it to the server.
+	 * Use the `defineTemplate` utility to create a reusable template and pass it to this method to add it to the server.
 	 *
 	 * @param {CreatedTemplate<any>[]} templates
 	 */

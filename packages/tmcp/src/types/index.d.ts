@@ -59,16 +59,16 @@ declare module 'tmcp' {
 		 * */
 		tools<T extends Array<CreatedTool<any, any>>, U extends T extends Array<CreatedTool<infer TSchema, infer TOutputSchema>> ? AllSame<TSchema, StandardSchema | undefined> extends true ? AllSame<TOutputSchema, StandardSchema | undefined> extends true ? T : never : never : never>(tools: T & NoInfer<U>): void;
 		/**
-		 * Use the `defineTool` utility to create a reusable tool and pass it to this method to add it to the server.
+		 * Use the `definePrompt` utility to create a reusable tool and pass it to this method to add it to the server.
 		 * */
 		prompts<T extends Array<CreatedPrompt<any>>, U extends T extends Array<CreatedPrompt<infer TSchema>> ? AllSame<TSchema, StandardSchema | undefined> extends true ? T : never : never>(prompts: T & NoInfer<U>): void;
 		/**
-		 * Use the defineResource function to create a reusable resource and pass it to this method to add it to the server.
+		 * Use the `defineResource` utility to create a reusable resource and pass it to this method to add it to the server.
 		 *
 		 * */
 		resources(resources: CreatedResource[]): void;
 		/**
-		 * Use the Template class to create a reusable template and pass it to this method to add it to the server.
+		 * Use the `defineTemplate` utility to create a reusable template and pass it to this method to add it to the server.
 		 *
 		 * */
 		templates(templates: CreatedTemplate<any>[]): void;
