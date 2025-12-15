@@ -1,5 +1,7 @@
 const created_tool: unique symbol;
 const created_prompt: unique symbol;
+const created_resource: unique symbol;
+const created_template: unique symbol;
 declare module 'tmcp' {
 	import type { StandardSchemaV1 } from '@standard-schema/spec';
 	import type { JSONRPCServer, JSONRPCClient, JSONRPCParams, JSONRPCRequest } from 'json-rpc-2.0';
@@ -61,34 +63,55 @@ declare module 'tmcp' {
 		 * */
 		prompts<T extends Array<CreatedPrompt<any>>, U extends T extends Array<CreatedPrompt<infer TSchema>> ? AllSame<TSchema, StandardSchema | undefined> extends true ? T : never : never>(prompts: T & NoInfer<U>): void;
 		/**
-		 * Use the Resource class to create a reusable resource and pass it to this method to add it to the server.
+		 * Use the defineResource function to create a reusable resource and pass it to this method to add it to the server.
 		 *
 		 * */
-		resources(resources: Resource_1[]): void;
+		resources(resources: CreatedResource[]): void;
 		/**
 		 * Use the Template class to create a reusable template and pass it to this method to add it to the server.
 		 *
 		 * */
-		templates(templates: Template<any, any>[]): void;
-		
+		templates(templates: CreatedTemplate<any>[]): void;
+		/**
+		 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+		 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+		 *
+		 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
+		 * */
 		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: CreatedTool<TSchema, TOutputSchema>): void;
-		
+		/**
+		 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+		 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+		 *
+		 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
+		 * */
 		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: ToolOptions<TSchema, TOutputSchema>, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
-		
+		/**
+		 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
+		 * Use the description and title to help the user to understand what the prompt does and when to use it.
+		 *
+		 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
+		 * for each input that will be used to provide completions for the user.
+		 * */
 		prompt<TSchema extends StandardSchema | undefined = undefined>(prompt_or_options: CreatedPrompt<TSchema>): void;
-		
+		/**
+		 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
+		 * Use the description and title to help the user to understand what the prompt does and when to use it.
+		 *
+		 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
+		 * for each input that will be used to provide completions for the user.
+		 * */
 		prompt<TSchema extends StandardSchema | undefined = undefined>(prompt_or_options: PromptOptions<TSchema>, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): void;
 		/**
 		 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 		 * Use the description and title to help the user to understand what the resource is.
 		 * */
-		resource({ name, description, title, uri, enabled, icons }: {
-			name: string;
-			description: string;
-			title?: string;
-			uri: string;
-			enabled?: () => boolean | Promise<boolean>;
-		} & Icons, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): void;
+		resource(resource_or_options: CreatedResource): void;
+		/**
+		 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+		 * Use the description and title to help the user to understand what the resource is.
+		 * */
+		resource(resource_or_options: ResourceOptions, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): void;
 		/**
 		 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 		 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
@@ -96,15 +119,15 @@ declare module 'tmcp' {
 		 * be invoked to provide completions for the template variables to the user.
 		 * Use the description and title to help the user to understand what the resource is.
 		 * */
-		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, title, uri, complete, list: list_resources, enabled, icons, }: {
-			name: string;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			uri: TUri;
-			complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
-			list?: () => Promise<Array<Resource>> | Array<Resource>;
-		} & Icons, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
+		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>(template_or_options: CreatedTemplate<TUri>): void;
+		/**
+		 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+		 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
+		 * Resource templates can have a list method that returns a list of resources that match the template and a complete method that returns a list of resources given one of the template variables, this method will
+		 * be invoked to provide completions for the template variables to the user.
+		 * Use the description and title to help the user to understand what the resource is.
+		 * */
+		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>(template_or_options: TemplateOptions<TUri>, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
 		/**
 		 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 		 *
@@ -207,7 +230,7 @@ declare module 'tmcp' {
 	export type ServerInfo = ServerInfo_1;
 	export type CreateMessageRequestParams = CreateMessageRequestParams_1;
 	export type CreateMessageResult = CreateMessageResult_1;
-	export type Resource = Resource_1_2;
+	export type Resource = Resource_1;
 	export type LoggingLevel = LoggingLevel_1;
 	export type ClientInfo = ClientInfo_1;
 	export type ElicitResult = ElicitResult_1;
@@ -217,85 +240,7 @@ declare module 'tmcp' {
 	export type ListResourceTemplatesResult = ListResourceTemplatesResult_1;
 	export type ListResourcesResult = ListResourcesResult_1;
 	export type CompleteResult = CompleteResult_1;
-	/**
-	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
-	 * Use the description and title to help the user to understand what the resource is.
-	 */
-	class Resource_1 {
-		
-		constructor({ name, description, title, uri, enabled, icons }: {
-			name: string;
-			description: string;
-			title?: string;
-			uri: string;
-			enabled?: () => boolean | Promise<boolean>;
-		} & Icons, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult);
-		
-		readonly name: string;
-		
-		readonly description: string;
-		
-		readonly title: string | undefined;
-		
-		readonly uri: string;
-		
-		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
-		
-		readonly icons: {
-			src: string;
-			mimeType?: string | undefined;
-			sizes?: string[] | undefined;
-		}[] | undefined;
-		
-		readonly execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult;
-	}
-	/**
-	 * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
-	 * @import { Completion } from "./internal/internal.js";
-	 */
-	/**
-	 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
-	 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
-	 * Resource templates can have a list method that returns a list of resources that match the template and a complete method that returns a list of resources given one of the template variables, this method will
-	 * be invoked to provide completions for the template variables to the user.
-	 * Use the description and title to help the user to understand what the resource is.
-	 *
-	 * */
-	class Template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>> {
-		
-		constructor({ name, description, title, uri, complete, list, enabled, icons }: {
-			name: string;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			uri: TUri;
-			complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
-			list?: () => Promise<Array<Resource>> | Array<Resource>;
-		} & Icons, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult);
-		
-		readonly name: string;
-		
-		readonly description: string;
-		
-		readonly title: string | undefined;
-		
-		readonly uri: TUri;
-		
-		readonly complete: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>> | undefined;
-		
-		readonly list: (() => Promise<Array<Resource>> | Array<Resource>) | undefined;
-		
-		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
-		
-		readonly icons: {
-			src: string;
-			mimeType?: string | undefined;
-			sizes?: string[] | undefined;
-		}[] | undefined;
-		
-		readonly execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult;
-	}
-		
+				
 	type AllSame<T, U> = [T] extends [U] ? true : false;
 
 	type PromptOptions<TSchema extends StandardSchemaV1 | undefined = undefined> = { 
@@ -318,8 +263,28 @@ declare module 'tmcp' {
 		annotations?: ToolAnnotations;
 	} & Icons_1;
 
+	type ResourceOptions = { 
+		name: string;
+		description: string; 
+		title?: string; 
+		uri: string, 
+		enabled?: ()=>boolean | Promise<boolean>; 
+	} & Icons_1
+
+	type TemplateOptions<TUri extends string = string, TVariables extends ExtractURITemplateVariables<TUri> = ExtractURITemplateVariables<TUri>> = { 
+		name: string;
+		description: string;
+		title?: string;
+		enabled?: ()=>boolean | Promise<boolean>;
+		uri: TUri;
+		complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
+		list?: () => Promise<Array<Resource_1>> | Array<Resource_1> 
+	} & Icons_1
+
 	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
 	type CreatedPrompt<TSchema extends StandardSchemaV1 | undefined = undefined> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
+	type CreatedResource = ResourceOptions & { [created_resource]: created_resource };
+	type CreatedTemplate<TUri extends string = string> = TemplateOptions<TUri> & { [created_template]: created_template };
 
 	type Completion = (
 		query: string,
@@ -1883,7 +1848,7 @@ declare module 'tmcp' {
 	type CompleteResult_1 = v.InferInput<typeof CompleteResultSchema>;
 	type CreateMessageRequestParams_1 = v.InferInput<typeof CreateMessageRequestParamsSchema>;
 	type CreateMessageResult_1 = v.InferInput<typeof CreateMessageResultSchema>;
-	type Resource_1_2 = v.InferInput<typeof ResourceSchema>;
+	type Resource_1 = v.InferInput<typeof ResourceSchema>;
 	type JSONRPCMessage = v.InferInput<typeof JSONRPCMessageSchema>;
 	type LoggingLevel_1 = v.InferInput<typeof LoggingLevelSchema>;
 	type ToolAnnotations = v.InferInput<typeof ToolAnnotationsSchema>;
@@ -2467,39 +2432,24 @@ declare module 'tmcp/prompt' {
 declare module 'tmcp/resource' {
 	import * as v from 'valibot';
 	/**
+	 * @import { ResourceOptions, CreatedResource } from "./internal/internal.js";
+	 * @import { ReadResourceResult } from "./validation/index.js";
+	 */
+	/**
 	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 	 * Use the description and title to help the user to understand what the resource is.
-	 */
-	export class Resource {
-		
-		constructor({ name, description, title, uri, enabled, icons }: {
-			name: string;
-			description: string;
-			title?: string;
-			uri: string;
-			enabled?: () => boolean | Promise<boolean>;
-		} & Icons, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult);
-		
-		readonly name: string;
-		
-		readonly description: string;
-		
-		readonly title: string | undefined;
-		
-		readonly uri: string;
-		
-		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
-		
-		readonly icons: {
-			src: string;
-			mimeType?: string | undefined;
-			sizes?: string[] | undefined;
-		}[] | undefined;
-		
-		readonly execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult;
-	}
-	type Icons = Icons_1;
-	type ReadResourceResult = ReadResourceResult_1;
+	 *
+	 * */
+	export function defineResource(options: ResourceOptions, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): CreatedResource;
+	
+	type ResourceOptions = { 
+		name: string;
+		description: string; 
+		title?: string; 
+		uri: string, 
+		enabled?: ()=>boolean | Promise<boolean>; 
+	} & Icons
+	type CreatedResource = ResourceOptions & { [created_resource]: created_resource };
 	const IconsSchema: v.ObjectSchema<{
 		/**
 		 * Optional set of sized icons that the client can display in a user interface.
@@ -2577,8 +2527,8 @@ declare module 'tmcp/resource' {
 		 */
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
-	type Icons_1 = v.InferInput<typeof IconsSchema>;
-	type ReadResourceResult_1 = v.InferInput<typeof ReadResourceResultSchema>;
+	type Icons = v.InferInput<typeof IconsSchema>;
+	type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
 
 	export {};
 }
@@ -2587,7 +2537,8 @@ declare module 'tmcp/template' {
 	import * as v from 'valibot';
 	/**
 	 * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
-	 * @import { Completion } from "./internal/internal.js";
+	 * @import { TemplateOptions, CreatedTemplate } from "./internal/internal.js";
+	 * @import { ReadResourceResult } from "./validation/index.js";
 	 */
 	/**
 	 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
@@ -2597,43 +2548,7 @@ declare module 'tmcp/template' {
 	 * Use the description and title to help the user to understand what the resource is.
 	 *
 	 * */
-	export class Template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>> {
-		
-		constructor({ name, description, title, uri, complete, list, enabled, icons }: {
-			name: string;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			uri: TUri;
-			complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
-			list?: () => Promise<Array<Resource>> | Array<Resource>;
-		} & Icons, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult);
-		
-		readonly name: string;
-		
-		readonly description: string;
-		
-		readonly title: string | undefined;
-		
-		readonly uri: TUri;
-		
-		readonly complete: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>> | undefined;
-		
-		readonly list: (() => Promise<Array<Resource>> | Array<Resource>) | undefined;
-		
-		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
-		
-		readonly icons: {
-			src: string;
-			mimeType?: string | undefined;
-			sizes?: string[] | undefined;
-		}[] | undefined;
-		
-		readonly execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult;
-	}
-	type Icons = Icons_1;
-	type ReadResourceResult = ReadResourceResult_1;
-	type Resource = Resource_1;
+	export function defineTemplate<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>(options: TemplateOptions<TUri>, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): CreatedTemplate<TUri>;
 	// Helper type to remove whitespace
 	type Trim<S extends string> = S extends ` ${infer R}`
 		? Trim<R>
@@ -2679,6 +2594,18 @@ declare module 'tmcp/template' {
 	// Main exported type
 	type ExtractURITemplateVariables<T extends string> =
 		ExtractVariablesFromTemplate<T>;
+	
+	type TemplateOptions<TUri extends string = string, TVariables extends ExtractURITemplateVariables<TUri> = ExtractURITemplateVariables<TUri>> = { 
+		name: string;
+		description: string;
+		title?: string;
+		enabled?: ()=>boolean | Promise<boolean>;
+		uri: TUri;
+		complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
+		list?: () => Promise<Array<Resource>> | Array<Resource> 
+	} & Icons
+	type CreatedTemplate<TUri extends string = string> = TemplateOptions<TUri> & { [created_template]: created_template };
+
 	type Completion = (
 		query: string,
 		context: { arguments: Record<string, string> },
@@ -2847,10 +2774,10 @@ declare module 'tmcp/template' {
 		 */
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
-	type Icons_1 = v.InferInput<typeof IconsSchema>;
-	type ReadResourceResult_1 = v.InferInput<typeof ReadResourceResultSchema>;
+	type Icons = v.InferInput<typeof IconsSchema>;
+	type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
 	type CompleteResult = v.InferInput<typeof CompleteResultSchema>;
-	type Resource_1 = v.InferInput<typeof ResourceSchema>;
+	type Resource = v.InferInput<typeof ResourceSchema>;
 
 	export {};
 }

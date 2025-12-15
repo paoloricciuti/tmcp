@@ -5,8 +5,8 @@
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType } from "./validation/index.js";
- * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents, AllSame } from "./internal/internal.js";
- * @import { CreatedTool, ToolOptions, CreatedPrompt, PromptOptions } from "./internal/internal.js";
+ * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents, AllSame, TemplateOptions } from "./internal/internal.js";
+ * @import { CreatedTool, ToolOptions, CreatedPrompt, PromptOptions, CreatedResource, CreatedTemplate, ResourceOptions } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -914,9 +914,9 @@ export class McpServer {
 	}
 
 	/**
-	 * Use the Resource class to create a reusable resource and pass it to this method to add it to the server.
+	 * Use the defineResource function to create a reusable resource and pass it to this method to add it to the server.
 	 *
-	 * @param {import("./resource.js").Resource[]} resources
+	 * @param {CreatedResource[]} resources
 	 */
 	resources(resources) {
 		for (const resource of resources) {
@@ -929,6 +929,8 @@ export class McpServer {
 					enabled: resource.enabled,
 					icons: resource.icons,
 				},
+				// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
+				// from showing in intellisense when declaring a tool inline
 				resource.execute,
 			);
 		}
@@ -937,7 +939,7 @@ export class McpServer {
 	/**
 	 * Use the Template class to create a reusable template and pass it to this method to add it to the server.
 	 *
-	 * @param {import("./template.js").Template<any, any>[]} templates
+	 * @param {CreatedTemplate<any>[]} templates
 	 */
 	templates(templates) {
 		for (const template of templates) {
@@ -952,12 +954,18 @@ export class McpServer {
 					enabled: template.enabled,
 					icons: template.icons,
 				},
+				// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
+				// from showing in intellisense when declaring a tool inline
 				template.execute,
 			);
 		}
 	}
 
 	/**
+	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+	 *
+	 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
 	 * @overload
@@ -965,6 +973,10 @@ export class McpServer {
 	 * @returns {void}
 	 */
 	/**
+	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+	 *
+	 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
 	 * @overload
@@ -1017,12 +1029,22 @@ export class McpServer {
 	}
 
 	/**
+	 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
+	 * Use the description and title to help the user to understand what the prompt does and when to use it.
+	 *
+	 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
+	 * for each input that will be used to provide completions for the user.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @overload
 	 * @param {CreatedPrompt<TSchema>} prompt_or_options
 	 * @returns {void}
 	 */
 	/**
+	 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
+	 * Use the description and title to help the user to understand what the prompt does and when to use it.
+	 *
+	 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
+	 * for each input that will be used to provide completions for the user.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @overload
 	 * @param {PromptOptions<TSchema>} prompt_or_options
@@ -1087,16 +1109,47 @@ export class McpServer {
 	/**
 	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 	 * Use the description and title to help the user to understand what the resource is.
-	 * @param {{ name: string; description: string; title?: string; uri: string, enabled?: ()=>boolean | Promise<boolean>; } & Icons} options
-	 * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} execute
+	 * @overload
+	 * @param {CreatedResource} resource_or_options
+	 * @returns {void}
 	 */
-	resource({ name, description, title, uri, enabled, icons }, execute) {
+	/**
+	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+	 * Use the description and title to help the user to understand what the resource is.
+	 * @overload
+	 * @param {ResourceOptions} resource_or_options
+	 * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} execute
+	 * @returns {void}
+	 */
+	/**
+	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+	 * Use the description and title to help the user to understand what the resource is.
+	 * @param {CreatedResource | ResourceOptions} resource_or_options
+	 * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} [execute]
+	 */
+	resource(
+		{
+			name,
+			description,
+			title,
+			uri,
+			enabled,
+			icons,
+			...resource_or_options
+		},
+		execute,
+	) {
+		if ('execute' in resource_or_options) {
+			// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
+			// from showing in intellisense when declaring a tool inline
+			execute = resource_or_options.execute;
+		}
 		this.#resource({
 			name,
 			description,
 			title,
 			uri,
-			execute,
+			execute: /** @type {NonNullable<typeof execute>} */ (execute),
 			enabled,
 			icons,
 			template: false,
@@ -1110,8 +1163,33 @@ export class McpServer {
 	 * Use the description and title to help the user to understand what the resource is.
 	 * @template {string} TUri
 	 * @template {ExtractURITemplateVariables<TUri>} TVariables
-	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<Resource>> | Array<Resource> } & Icons} options
+	 * @overload
+	 * @param {CreatedTemplate<TUri>} template_or_options
+	 * @returns {void}
+	 */
+	/**
+	 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+	 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
+	 * Resource templates can have a list method that returns a list of resources that match the template and a complete method that returns a list of resources given one of the template variables, this method will
+	 * be invoked to provide completions for the template variables to the user.
+	 * Use the description and title to help the user to understand what the resource is.
+	 * @template {string} TUri
+	 * @template {ExtractURITemplateVariables<TUri>} TVariables
+	 * @overload
+	 * @param {TemplateOptions<TUri>} template_or_options
 	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} execute
+	 * @returns {void}
+	 */
+	/**
+	 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+	 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
+	 * Resource templates can have a list method that returns a list of resources that match the template and a complete method that returns a list of resources given one of the template variables, this method will
+	 * be invoked to provide completions for the template variables to the user.
+	 * Use the description and title to help the user to understand what the resource is.
+	 * @template {string} TUri
+	 * @template {ExtractURITemplateVariables<TUri>} TVariables
+	 * @param {CreatedTemplate<TUri> | TemplateOptions<TUri>} template_or_options
+	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} [execute]
 	 */
 	template(
 		{
@@ -1123,16 +1201,22 @@ export class McpServer {
 			list: list_resources,
 			enabled,
 			icons,
+			...template_or_options
 		},
 		execute,
 	) {
+		if ('execute' in template_or_options) {
+			// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
+			// from showing in intellisense when declaring a tool inline
+			execute = template_or_options.execute;
+		}
 		this.#resource({
 			name,
 			enabled,
 			description,
 			title,
 			uri,
-			execute,
+			execute: /** @type {NonNullable<typeof execute>} */ (execute),
 			complete,
 			icons,
 			list_resources,

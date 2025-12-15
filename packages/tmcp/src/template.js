@@ -1,7 +1,8 @@
 /* eslint-disable jsdoc/no-undefined-types */
 /**
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { Completion } from "./internal/internal.js";
+ * @import { TemplateOptions, CreatedTemplate } from "./internal/internal.js";
+ * @import { ReadResourceResult } from "./validation/index.js";
  */
 
 /**
@@ -13,61 +14,14 @@
  *
  * @template {string} TUri
  * @template {ExtractURITemplateVariables<TUri>} TVariables
+ * @param {TemplateOptions<TUri>} options
+ * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} execute
  */
-export class Template {
-	/**
-	 * @readonly
-	 */
-	name;
-	/**
-	 * @readonly
-	 */
-	description;
-	/**
-	 * @readonly
-	 */
-	title;
-	/**
-	 * @readonly
-	 */
-	uri;
-	/**
-	 * @readonly
-	 */
-	complete;
-	/**
-	 * @readonly
-	 */
-	list;
-	/**
-	 * @readonly
-	 */
-	enabled;
-	/**
-	 * @readonly
-	 */
-	icons;
-	/**
-	 * @readonly
-	 */
-	execute;
-
-	/**
-	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; uri: TUri; complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>; list?: () => Promise<Array<import("./index.js").Resource>> | Array<import("./index.js").Resource> } & import("./index.js").Icons} options
-	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<import("./index.js").ReadResourceResult> | import("./index.js").ReadResourceResult} execute
-	 */
-	constructor(
-		{ name, description, title, uri, complete, list, enabled, icons },
-		execute,
-	) {
-		this.name = name;
-		this.description = description;
-		this.title = title;
-		this.uri = uri;
-		this.complete = complete;
-		this.list = list;
-		this.enabled = enabled;
-		this.icons = icons;
-		this.execute = execute;
-	}
+export function defineTemplate(options, execute) {
+	return /** @type {CreatedTemplate<TUri>} */ (
+		/** @type {unknown} */ ({
+			...options,
+			execute,
+		})
+	);
 }

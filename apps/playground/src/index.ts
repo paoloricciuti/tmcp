@@ -3,11 +3,13 @@
 import { McpServer } from 'tmcp';
 import { defineTool } from 'tmcp/tool';
 import { definePrompt } from 'tmcp/prompt';
+import { defineTemplate } from 'tmcp/template';
 import { StdioTransport } from '@tmcp/transport-stdio';
 import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import fs from 'node:fs/promises';
 import * as v from 'valibot';
 import * as z from 'zod';
+import { defineResource } from 'tmcp/resource';
 
 const server = new McpServer(
 	{
@@ -108,8 +110,38 @@ const prompt_create2 = definePrompt(
 	},
 );
 
+const template_create = defineTemplate(
+	{
+		name: '',
+		description: '',
+		uri: 'test://with/{param}',
+	},
+	(uri, { param }) => {
+		return {
+			contents: [],
+		};
+	},
+);
+
+const resource_create = defineResource(
+	{
+		name: '',
+		description: '',
+		uri: 'test://with',
+	},
+	(uri) => {
+		return {
+			contents: [],
+		};
+	},
+);
+
 server.prompts([prompt_create, prompt_create2]);
 server.prompt(prompt_create);
+server.template(template_create);
+server.templates([template_create]);
+server.resources([resource_create]);
+server.resource(resource_create);
 
 server.tools([create, create2]);
 server.tool(create);
