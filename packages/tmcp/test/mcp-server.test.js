@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JsonSchemaAdapter } from '../src/adapter.js';
 import { McpServer } from '../src/index.js';
-import { Tool } from '../src/tool.js';
+import { defineTool as define_tool } from '../src/tool.js';
 import { Prompt } from '../src/prompt.js';
 
 /**
@@ -241,7 +241,7 @@ describe('McpServer', () => {
 			});
 			const tool_icons = create_icons('list-tool');
 
-			const tool_one = new Tool(
+			const tool_one = define_tool(
 				{
 					name: 'list-test-tool',
 					description: 'A tool for list testing',
@@ -251,7 +251,7 @@ describe('McpServer', () => {
 				tool,
 			);
 
-			const tool_two = new Tool(
+			const tool_two = define_tool(
 				{
 					name: 'list-test-tool-class-schemas',
 					description: 'A tool for list testing',

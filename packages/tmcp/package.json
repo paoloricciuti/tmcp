@@ -8,7 +8,7 @@
 	"scripts": {
 		"test": "vitest",
 		"typecheck": "tsc --noEmit",
-		"generate:types": "dts-buddy && publint",
+		"generate:types": "dts-buddy && node ./scripts/fix-unique-symbol.ts && publint",
 		"prepublish": "pnpm generate:types"
 	},
 	"keywords": [],

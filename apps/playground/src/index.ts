@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { McpServer } from 'tmcp';
+import { defineTool as tool } from 'tmcp/tool';
 import { StdioTransport } from '@tmcp/transport-stdio';
 import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import fs from 'node:fs/promises';
@@ -39,6 +40,61 @@ const AddNumbersSchema = v.object({
 	a: v.pipe(v.number(), v.description('First number to add')),
 	b: v.pipe(v.number(), v.description('Second number to add')),
 });
+
+const create = tool(
+	{
+		name: 'created',
+		description: 'A tool that indicates it was created',
+		schema: AddNumbersSchema,
+		outputSchema: v.object({
+			result: v.number(),
+		}),
+	},
+	async () => {
+		return {
+			content: [
+				{
+					type: 'text',
+					text: 'This tool was created successfully!',
+				},
+			],
+			structuredContent: {
+				result: 42,
+			},
+		};
+	},
+);
+
+const create2 = tool(
+	{
+		name: 'created',
+		description: 'A tool that indicates it was created',
+	},
+	async () => {
+		return {
+			content: [
+				{
+					type: 'text',
+					text: 'This tool was created successfully!',
+				},
+			],
+		};
+	},
+);
+
+server.tools([create, create2]);
+server.tool(create);
+server.tool(create2);
+
+server.tool(
+	{
+		name: 'add_numbers',
+		description: 'Add two numbers together',
+	},
+	() => {
+		return {};
+	},
+);
 
 server.tool(
 	{

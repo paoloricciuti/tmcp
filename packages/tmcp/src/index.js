@@ -6,9 +6,9 @@
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType } from "./validation/index.js";
- * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents } from "./internal/internal.js";
+ * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents, AllSame } from "./internal/internal.js";
+ * @import { CreatedTool } from "./internal/internal.js";
  */
-import { Tool as ToolClass } from './tool.js';
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { UriTemplateMatcher } from 'uri-template-matcher';
@@ -863,8 +863,10 @@ export class McpServer {
 	}
 
 	/**
-	 * Use the Tool class to create a reusable tool and pass it to this method to add it to the server.
-	 * @param {Array<ToolClass<StandardSchema | undefined, StandardSchema | undefined>>} tools
+	 * Use the `defineTool` utility to create a reusable tool and pass it to this method to add it to the server.
+	 * @template {Array<CreatedTool<any, any>>} T
+	 * @template {T extends Array<CreatedTool<infer TSchema, infer TOutputSchema>> ? AllSame<TSchema, StandardSchema> extends true ? AllSame<TOutputSchema, StandardSchema> extends true ? T : never : never : never} U
+	 * @param {T & NoInfer<U>} tools
 	 */
 	tools(tools) {
 		for (const tool of tools) {
@@ -880,7 +882,8 @@ export class McpServer {
 					icons: tool.icons,
 					_meta: tool._meta,
 				},
-				// @ts-expect-error execute is marked as private to prevent the intellisense to show it when declaring a tool inline
+				// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
+				// from showing in intellisense when declaring a tool inline
 				tool.execute,
 			);
 		}
@@ -956,7 +959,7 @@ export class McpServer {
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
 	 * @overload
-	 * @param {ToolClass<TSchema, TOutputSchema>} tool_or_options
+	 * @param {CreatedTool<TSchema, TOutputSchema>} tool_or_options
 	 * @returns {void}
 	 */
 	/**
@@ -974,12 +977,13 @@ export class McpServer {
 	 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
-	 * @param {ToolClass<TSchema, TOutputSchema> | { name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & Icons} tool_or_options
+	 * @param {CreatedTool<TSchema, TOutputSchema> | { name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & Icons} tool_or_options
 	 * @param {undefined | TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} [execute]
 	 */
 	tool(tool_or_options, execute) {
-		if (tool_or_options instanceof ToolClass) {
-			// @ts-expect-error execute is marked as private to prevent the intellisense to show it when declaring a tool inline
+		if ('execute' in tool_or_options) {
+			// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
+			// from showing in intellisense when declaring a tool inline
 			execute = tool_or_options.execute;
 		}
 

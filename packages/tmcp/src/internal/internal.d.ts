@@ -14,6 +14,23 @@ import {
 	Icons
 } from '../validation/index.js';
 
+declare const created_tool: unique symbol;
+
+export type AllSame<T, U> = [T] extends [U] ? true : false;
+
+export type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
+	name: string;
+	_meta?: Record<string, any>;
+	description: string;
+	title?: string;
+	enabled?: () => boolean | Promise<boolean>;
+	schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+	outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
+	annotations?: ToolAnnotations;
+} & Icons;
+
+export type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created };
+
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;
 	schema: TSchema;

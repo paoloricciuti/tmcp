@@ -1,3 +1,4 @@
+const created_tool: unique symbol;
 declare module 'tmcp' {
 	import type { StandardSchemaV1 } from '@standard-schema/spec';
 	import type { JSONRPCServer, JSONRPCClient, JSONRPCParams, JSONRPCRequest } from 'json-rpc-2.0';
@@ -51,9 +52,9 @@ declare module 'tmcp' {
 		
 		on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): () => void;
 		/**
-		 * Use the Tool class to create a reusable tool and pass it to this method to add it to the server.
+		 * Use the `defineTool` utility to create a reusable tool and pass it to this method to add it to the server.
 		 * */
-		tools(tools: Array<Tool<StandardSchema | undefined, StandardSchema | undefined>>): void;
+		tools<T extends Array<CreatedTool<any, any>>, U extends T extends Array<CreatedTool<infer TSchema, infer TOutputSchema>> ? AllSame<TSchema, StandardSchema> extends true ? AllSame<TOutputSchema, StandardSchema> extends true ? T : never : never : never>(tools: T & NoInfer<U>): void;
 		/**
 		 * Use the Prompt class to create a reusable prompt and pass it to this method to add it to the server.
 		 *
@@ -70,7 +71,7 @@ declare module 'tmcp' {
 		 * */
 		templates(templates: Template<any, any>[]): void;
 		
-		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: Tool<TSchema, TOutputSchema>): void;
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: CreatedTool<TSchema, TOutputSchema>): void;
 		
 		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: {
 			name: string;
@@ -314,6 +315,22 @@ declare module 'tmcp' {
 		
 		readonly execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult;
 	}
+	
+	type AllSame<T, U> = [T] extends [U] ? true : false;
+
+	type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
+		name: string;
+		_meta?: Record<string, any>;
+		description: string;
+		title?: string;
+		enabled?: () => boolean | Promise<boolean>;
+		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+		outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
+		annotations?: ToolAnnotations;
+	} & Icons_1;
+
+	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created };
+
 	type Completion = (
 		query: string,
 		context: { arguments: Record<string, string> },
@@ -357,62 +374,6 @@ declare module 'tmcp' {
 		subscription: (subscriptions_request: { uri: string, action?: "add" | "remove" }) => void;
 		loglevelchange: (change: { level: LoggingLevel_1 }) => void;
 	};
-	/**
-	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
-	 * @import { ToolAnnotations } from "./validation/index.js";
-	 */
-	/**
-	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
-	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
-	 *
-	 * 
-	 */
-	class Tool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> {
-		
-		constructor({ name, description, title, schema, outputSchema, annotations, enabled, icons, _meta, }: {
-			name: string;
-			_meta?: Record<string, any>;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
-			annotations?: ToolAnnotations;
-		} & Icons, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>));
-		
-		readonly name: string;
-		
-		readonly description: string;
-		
-		readonly title: string | undefined;
-		
-		readonly schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
-		
-		readonly outputSchema: (StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never) | undefined;
-		
-		readonly annotations: {
-			title?: string | undefined;
-			readOnlyHint?: boolean | undefined;
-			destructiveHint?: boolean | undefined;
-			idempotentHint?: boolean | undefined;
-			openWorldHint?: boolean | undefined;
-		} | undefined;
-		
-		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
-		
-		readonly icons: {
-			src: string;
-			mimeType?: string | undefined;
-			sizes?: string[] | undefined;
-		}[] | undefined;
-		
-		readonly _meta: Record<string, any> | undefined;
-		/**
-		 * This is only available in the Tool class. Pass the execute function as the second argument.
-		 * @deprecated
-		 * */
-		private readonly execute;
-	}
 	/**
 	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
 	 * @import { Completion } from "./internal/internal.js";
@@ -2004,62 +1965,28 @@ declare module 'tmcp/tool' {
 	import * as v from 'valibot';
 	/**
 	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
-	 * @import { ToolAnnotations } from "./validation/index.js";
+	 * @import { ToolOptions, CreatedTool } from "./internal/internal.js";
 	 */
 	/**
 	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
 	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
 	 *
-	 * 
-	 */
-	export class Tool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> {
-		
-		constructor({ name, description, title, schema, outputSchema, annotations, enabled, icons, _meta, }: {
-			name: string;
-			_meta?: Record<string, any>;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
-			annotations?: ToolAnnotations;
-		} & Icons, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>));
-		
-		readonly name: string;
-		
-		readonly description: string;
-		
-		readonly title: string | undefined;
-		
-		readonly schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
-		
-		readonly outputSchema: (StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never) | undefined;
-		
-		readonly annotations: {
-			title?: string | undefined;
-			readOnlyHint?: boolean | undefined;
-			destructiveHint?: boolean | undefined;
-			idempotentHint?: boolean | undefined;
-			openWorldHint?: boolean | undefined;
-		} | undefined;
-		
-		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
-		
-		readonly icons: {
-			src: string;
-			mimeType?: string | undefined;
-			sizes?: string[] | undefined;
-		}[] | undefined;
-		
-		readonly _meta: Record<string, any> | undefined;
-		/**
-		 * This is only available in the Tool class. Pass the execute function as the second argument.
-		 * @deprecated
-		 * */
-		private readonly execute;
-	}
-	type Icons = Icons_1;
+	 * */
+	export function defineTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined>(options: ToolOptions<TSchema, TOutputSchema>, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): CreatedTool<TSchema, TOutputSchema>;
 	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = CallToolResult_1<TStructuredContent>;
+	
+	type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
+		name: string;
+		_meta?: Record<string, any>;
+		description: string;
+		title?: string;
+		enabled?: () => boolean | Promise<boolean>;
+		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+		outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
+		annotations?: ToolAnnotations;
+	} & Icons;
+
+	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created };
 	const IconsSchema: v.ObjectSchema<{
 		/**
 		 * Optional set of sized icons that the client can display in a user interface.
@@ -2322,7 +2249,7 @@ declare module 'tmcp/tool' {
 		 */
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
-	type Icons_1 = v.InferInput<typeof IconsSchema>;
+	type Icons = v.InferInput<typeof IconsSchema>;
 	type CallToolResult_1<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;
 		isError?: boolean;

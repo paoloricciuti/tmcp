@@ -1,6 +1,6 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
- * @import { ToolAnnotations } from "./validation/index.js";
+ * @import { ToolOptions, CreatedTool } from "./internal/internal.js";
  */
 
 /**
@@ -9,81 +9,15 @@
  *
  * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
  * @template {StandardSchemaV1 | undefined} [TOutputSchema=undefined]
+ * @param {ToolOptions<TSchema, TOutputSchema>} options
+ * @param {TSchema extends undefined ? (()=>Promise<import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
  */
-export class Tool {
-	/**
-	 * @readonly
-	 */
-	name;
-	/**
-	 * @readonly
-	 */
-	description;
-	/**
-	 * @readonly
-	 */
-	title;
-	/**
-	 * @readonly
-	 * @type {(StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined}
-	 */
-	schema;
-	/**
-	 * @readonly
-	 * @type {(StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never) | undefined}
-	 */
-	outputSchema;
-	/**
-	 * @readonly
-	 */
-	annotations;
-	/**
-	 * @readonly
-	 */
-	enabled;
-	/**
-	 * @readonly
-	 */
-	icons;
-	/**
-	 * @readonly
-	 */
-	_meta;
-	/**
-	 * This is only available in the Tool class. Pass the execute function as the second argument.
-	 * @readonly
-	 * @private
-	 * @deprecated
-	 * @type {*}
-	 */
-	execute;
-	/**
-	 * @param {{ name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & import("./index.js").Icons} options
-	 * @param {TSchema extends undefined ? (()=>Promise<import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
-	 */
-	constructor(
-		{
-			name,
-			description,
-			title,
-			schema,
-			outputSchema,
-			annotations,
-			enabled,
-			icons,
-			_meta,
-		},
-		execute,
-	) {
-		this.name = name;
-		this.description = description;
-		this.title = title;
-		this.schema = schema;
-		this.outputSchema = outputSchema;
-		this.annotations = annotations;
-		this.enabled = enabled;
-		this.icons = icons;
-		this._meta = _meta;
-		this.execute = execute;
-	}
+export function defineTool(options, execute) {
+	// eslint-disable-next-line jsdoc/no-undefined-types
+	return /** @type {CreatedTool<TSchema, TOutputSchema>} */ (
+		/** @type {unknown} */ ({
+			...options,
+			execute,
+		})
+	);
 }
