@@ -31,7 +31,7 @@
 			"import": "./src/index.js"
 		}
 	},
-	"packageManager": "pnpm@10.25.0",
+	"packageManager": "pnpm@10.26.0",
 	"type": "module",
 	"peerDependencies": {
 		"tmcp": "workspace:^1.17.0"
