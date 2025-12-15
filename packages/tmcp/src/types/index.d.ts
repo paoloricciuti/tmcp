@@ -1,3 +1,7 @@
+const created_tool: unique symbol;
+const created_prompt: unique symbol;
+const created_resource: unique symbol;
+const created_template: unique symbol;
 declare module 'tmcp' {
 	import type { StandardSchemaV1 } from '@standard-schema/spec';
 	import type { JSONRPCServer, JSONRPCClient, JSONRPCParams, JSONRPCRequest } from 'json-rpc-2.0';
@@ -51,21 +55,37 @@ declare module 'tmcp' {
 		
 		on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): () => void;
 		/**
+		 * Use the `defineTool` utility to create a reusable tool and pass it to this method to add it to the server.
+		 * */
+		tools<T extends Array<CreatedTool<any, any>>, U extends T extends Array<CreatedTool<infer TSchema, infer TOutputSchema>> ? AllSame<TSchema, StandardSchema | undefined> extends true ? AllSame<TOutputSchema, StandardSchema | undefined> extends true ? T : never : never : never>(tools: T & NoInfer<U>): void;
+		/**
+		 * Use the `definePrompt` utility to create a reusable tool and pass it to this method to add it to the server.
+		 * */
+		prompts<T extends Array<CreatedPrompt<any>>, U extends T extends Array<CreatedPrompt<infer TSchema>> ? AllSame<TSchema, StandardSchema | undefined> extends true ? T : never : never>(prompts: T & NoInfer<U>): void;
+		/**
+		 * Use the `defineResource` utility to create a reusable resource and pass it to this method to add it to the server.
+		 *
+		 * */
+		resources(resources: CreatedResource[]): void;
+		/**
+		 * Use the `defineTemplate` utility to create a reusable template and pass it to this method to add it to the server.
+		 *
+		 * */
+		templates(templates: CreatedTemplate<any>[]): void;
+		/**
 		 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
 		 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
 		 *
 		 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 		 * */
-		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, outputSchema, annotations, enabled, icons, _meta, }: {
-			name: string;
-			_meta?: Record<string, any>;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
-			annotations?: ToolAnnotations;
-		} & Icons, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: CreatedTool<TSchema, TOutputSchema>): void;
+		/**
+		 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+		 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+		 *
+		 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
+		 * */
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: ToolOptions<TSchema, TOutputSchema>, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
 		/**
 		 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
 		 * Use the description and title to help the user to understand what the prompt does and when to use it.
@@ -73,25 +93,25 @@ declare module 'tmcp' {
 		 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
 		 * for each input that will be used to provide completions for the user.
 		 * */
-		prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete, enabled, icons }: {
-			name: string;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-			complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>>;
-		} & Icons, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): void;
+		prompt<TSchema extends StandardSchema | undefined = undefined>(prompt_or_options: CreatedPrompt<TSchema>): void;
+		/**
+		 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
+		 * Use the description and title to help the user to understand what the prompt does and when to use it.
+		 *
+		 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
+		 * for each input that will be used to provide completions for the user.
+		 * */
+		prompt<TSchema extends StandardSchema | undefined = undefined>(prompt_or_options: PromptOptions<TSchema>, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): void;
 		/**
 		 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 		 * Use the description and title to help the user to understand what the resource is.
 		 * */
-		resource({ name, description, title, uri, enabled, icons }: {
-			name: string;
-			description: string;
-			title?: string;
-			uri: string;
-			enabled?: () => boolean | Promise<boolean>;
-		} & Icons, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): void;
+		resource(resource_or_options: CreatedResource): void;
+		/**
+		 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+		 * Use the description and title to help the user to understand what the resource is.
+		 * */
+		resource(resource_or_options: ResourceOptions, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): void;
 		/**
 		 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 		 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
@@ -99,15 +119,15 @@ declare module 'tmcp' {
 		 * be invoked to provide completions for the template variables to the user.
 		 * Use the description and title to help the user to understand what the resource is.
 		 * */
-		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>({ name, description, title, uri, complete, list: list_resources, enabled, icons, }: {
-			name: string;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			uri: TUri;
-			complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
-			list?: () => Promise<Array<Resource>> | Array<Resource>;
-		} & Icons, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
+		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>(template_or_options: CreatedTemplate<TUri>): void;
+		/**
+		 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+		 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
+		 * Resource templates can have a list method that returns a list of resources that match the template and a complete method that returns a list of resources given one of the template variables, this method will
+		 * be invoked to provide completions for the template variables to the user.
+		 * Use the description and title to help the user to understand what the resource is.
+		 * */
+		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>(template_or_options: TemplateOptions<TUri>, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
 		/**
 		 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 		 *
@@ -220,6 +240,52 @@ declare module 'tmcp' {
 	export type ListResourceTemplatesResult = ListResourceTemplatesResult_1;
 	export type ListResourcesResult = ListResourcesResult_1;
 	export type CompleteResult = CompleteResult_1;
+				
+	type AllSame<T, U> = [T] extends [U] ? true : false;
+
+	type PromptOptions<TSchema extends StandardSchemaV1 | undefined = undefined> = { 
+		name: string; 
+		description: string; 
+		title?: string; 
+		enabled?: ()=>boolean | Promise<boolean>; 
+		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+		complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> 
+	} & Icons_1
+
+	type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
+		name: string;
+		_meta?: Record<string, any>;
+		description: string;
+		title?: string;
+		enabled?: () => boolean | Promise<boolean>;
+		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+		outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
+		annotations?: ToolAnnotations;
+	} & Icons_1;
+
+	type ResourceOptions = { 
+		name: string;
+		description: string; 
+		title?: string; 
+		uri: string, 
+		enabled?: ()=>boolean | Promise<boolean>; 
+	} & Icons_1
+
+	type TemplateOptions<TUri extends string = string, TVariables extends ExtractURITemplateVariables<TUri> = ExtractURITemplateVariables<TUri>> = { 
+		name: string;
+		description: string;
+		title?: string;
+		enabled?: ()=>boolean | Promise<boolean>;
+		uri: TUri;
+		complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
+		list?: () => Promise<Array<Resource_1>> | Array<Resource_1> 
+	} & Icons_1
+
+	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
+	type CreatedPrompt<TSchema extends StandardSchemaV1 | undefined = undefined> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
+	type CreatedResource = ResourceOptions & { [created_resource]: created_resource };
+	type CreatedTemplate<TUri extends string = string> = TemplateOptions<TUri> & { [created_template]: created_template };
+
 	type Completion = (
 		query: string,
 		context: { arguments: Record<string, string> },
@@ -263,6 +329,51 @@ declare module 'tmcp' {
 		subscription: (subscriptions_request: { uri: string, action?: "add" | "remove" }) => void;
 		loglevelchange: (change: { level: LoggingLevel_1 }) => void;
 	};
+	// Helper type to remove whitespace
+	type Trim<S extends string> = S extends ` ${infer R}`
+		? Trim<R>
+		: S extends `${infer L} `
+			? Trim<L>
+			: S;
+
+	// Helper type to extract variable name, removing modifiers
+	type ExtractVarName<S extends string> = S extends `${infer Name}:${string}`
+		? Trim<Name> // Remove prefix modifier
+		: S extends `${infer Name}*`
+			? Trim<Name> // Remove explode modifier
+			: Trim<S>;
+
+	// Helper type to split comma-separated variables
+	type SplitVariables<S extends string> = S extends `${infer First},${infer Rest}`
+		? ExtractVarName<First> | SplitVariables<Rest>
+		: ExtractVarName<S>;
+
+	// Helper type to extract content from braces and handle operators
+	type ExtractFromExpression<S extends string> = S extends `+${infer Vars}`
+		? SplitVariables<Vars> // Reserved {+var}
+		: S extends `#${infer Vars}`
+			? SplitVariables<Vars> // Fragment {#var}
+			: S extends `.${infer Vars}`
+				? SplitVariables<Vars> // Label {.var}
+				: S extends `/${infer Vars}`
+					? SplitVariables<Vars> // Path {/var}
+					: S extends `;${infer Vars}`
+						? SplitVariables<Vars> // Path-style {;var}
+						: S extends `?${infer Vars}`
+							? SplitVariables<Vars> // Query {?var}
+							: S extends `&${infer Vars}`
+								? SplitVariables<Vars> // Query continuation {&var}
+								: SplitVariables<S>; // Simple {var}
+
+	// Main recursive type to extract all variables from URI template
+	type ExtractVariablesFromTemplate<S extends string> =
+		S extends `${string}{${infer Expression}}${infer Rest}`
+			? ExtractFromExpression<Expression> | ExtractVariablesFromTemplate<Rest>
+			: never;
+
+	// Main exported type
+	type ExtractURITemplateVariables<T extends string> =
+		ExtractVariablesFromTemplate<T>;
 	const JSONRPCMessageSchema: v.UnionSchema<[v.ObjectSchema<{
 		readonly method: v.StringSchema<undefined>;
 		readonly params: v.OptionalSchema<v.LooseObjectSchema<{
@@ -1747,6 +1858,697 @@ declare module 'tmcp' {
 	type ListPromptsResult_1 = v.InferInput<typeof ListPromptsResultSchema>;
 	type ListResourcesResult_1 = v.InferInput<typeof ListResourcesResultSchema>;
 	type ListResourceTemplatesResult_1 = v.InferInput<typeof ListResourceTemplatesResultSchema>;
+	/**
+	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
+	 * @import { JSONSchema7 } from "json-schema";
+	 */
+
+	class JsonSchemaAdapter<TSchema extends StandardSchemaV1> {
+		
+		toJsonSchema(schema: TSchema): Promise<JSONSchema7>;
+	}
+
+	export {};
+}
+
+declare module 'tmcp/tool' {
+	import type { StandardSchemaV1 } from '@standard-schema/spec';
+	import * as v from 'valibot';
+	/**
+	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
+	 * @import { ToolOptions, CreatedTool } from "./internal/internal.js";
+	 */
+	/**
+	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+	 *
+	 * */
+	export function defineTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined>(options: ToolOptions<TSchema, TOutputSchema>, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): CreatedTool<TSchema, TOutputSchema>;
+	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = CallToolResult_1<TStructuredContent>;
+	
+	type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
+		name: string;
+		_meta?: Record<string, any>;
+		description: string;
+		title?: string;
+		enabled?: () => boolean | Promise<boolean>;
+		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+		outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
+		annotations?: ToolAnnotations;
+	} & Icons;
+
+	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
+	const IconsSchema: v.ObjectSchema<{
+		/**
+		 * Optional set of sized icons that the client can display in a user interface.
+		 *
+		 * Clients that support rendering icons MUST support at least the following MIME types:
+		 * - `image/png` - PNG images (safe, universal compatibility)
+		 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+		 *
+		 * Clients that support rendering icons SHOULD also support:
+		 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+		 * - `image/webp` - WebP images (modern, efficient format)
+		 */
+		readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+			/**
+			 * URL or data URI for the icon.
+			 */
+			readonly src: v.StringSchema<undefined>;
+			/**
+			 * Optional MIME type for the icon.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * Optional array of strings that specify sizes at which the icon can be used.
+			 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+			 *
+			 * If not provided, the client should assume that the icon can be used at any size.
+			 */
+			readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+		}, undefined>, undefined>, undefined>;
+	}, undefined>;
+	/**
+	 * Additional properties describing a Tool to clients.
+	 *
+	 * NOTE: all properties in ToolAnnotations are **hints**.
+	 * They are not guaranteed to provide a faithful description of
+	 * tool behavior (including descriptive properties like `title`).
+	 *
+	 * Clients should never make tool use decisions based on ToolAnnotations
+	 * received from untrusted servers.
+	 */
+	const ToolAnnotationsSchema: v.ObjectSchema<{
+		/**
+		 * A human-readable title for the tool.
+		 */
+		readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+		/**
+		 * If true, the tool does not modify its environment.
+		 *
+		 * Default: false
+		 */
+		readonly readOnlyHint: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+		/**
+		 * If true, the tool may perform destructive updates to its environment.
+		 * If false, the tool performs only additive updates.
+		 *
+		 * (This property is meaningful only when `readOnlyHint == false`)
+		 *
+		 * Default: true
+		 */
+		readonly destructiveHint: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+		/**
+		 * If true, calling the tool repeatedly with the same arguments
+		 * will have no additional effect on the its environment.
+		 *
+		 * (This property is meaningful only when `readOnlyHint == false`)
+		 *
+		 * Default: false
+		 */
+		readonly idempotentHint: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+		/**
+		 * If true, this tool may interact with an "open world" of external
+		 * entities. If false, the tool's domain of interaction is closed.
+		 * For example, the world of a web search tool is open, whereas that
+		 * of a memory tool is not.
+		 *
+		 * Default: true
+		 */
+		readonly openWorldHint: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+	}, undefined>;
+	/**
+	 * The server's response to a tool call.
+	 */
+	const CallToolResultSchema: v.ObjectSchema<{
+		/**
+		 * A list of content objects that represent the result of the tool call.
+		 *
+		 * If the Tool does not define an outputSchema, this field MUST be present in the result.
+		 * For backwards compatibility, this field is always present, but it may be empty.
+		 */
+		readonly content: v.OptionalSchema<v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"text", undefined>;
+			/**
+			 * The text content of the message.
+			 */
+			readonly text: v.StringSchema<undefined>;
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"image", undefined>;
+			/**
+			 * The base64-encoded image data.
+			 */
+			readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+			/**
+			 * The MIME type of the image. Different providers may support different image types.
+			 */
+			readonly mimeType: v.StringSchema<undefined>;
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"audio", undefined>;
+			/**
+			 * The base64-encoded audio data.
+			 */
+			readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+			/**
+			 * The MIME type of the audio. Different providers may support different audio types.
+			 */
+			readonly mimeType: v.StringSchema<undefined>;
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"resource_link", undefined>;
+			/**
+			 * Optional set of sized icons that the client can display in a user interface.
+			 *
+			 * Clients that support rendering icons MUST support at least the following MIME types:
+			 * - `image/png` - PNG images (safe, universal compatibility)
+			 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+			 *
+			 * Clients that support rendering icons SHOULD also support:
+			 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+			 * - `image/webp` - WebP images (modern, efficient format)
+			 */
+			readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+				/**
+				 * URL or data URI for the icon.
+				 */
+				readonly src: v.StringSchema<undefined>;
+				/**
+				 * Optional MIME type for the icon.
+				 */
+				readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+				/**
+				 * Optional array of strings that specify sizes at which the icon can be used.
+				 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+				 *
+				 * If not provided, the client should assume that the icon can be used at any size.
+				 */
+				readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+			}, undefined>, undefined>, undefined>;
+			/**
+			 * The URI of this resource.
+			 */
+			readonly uri: v.StringSchema<undefined>;
+			/**
+			 * A description of what this resource represents.
+			 *
+			 * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
+			 */
+			readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * The MIME type of this resource, if known.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+			readonly name: v.StringSchema<undefined>;
+			/**
+			 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+			 * even by those unfamiliar with domain-specific terminology.
+			 *
+			 * If not provided, the name should be used for display (except for Tool,
+			 * where `annotations.title` should be given precedence over using `name`,
+			 * if present).
+			 */
+			readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			readonly type: v.LiteralSchema<"resource", undefined>;
+			readonly resource: v.UnionSchema<[v.ObjectSchema<{
+				/**
+				 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
+				 */
+				readonly text: v.StringSchema<undefined>;
+				/**
+				 * The URI of this resource.
+				 */
+				readonly uri: v.StringSchema<undefined>;
+				/**
+				 * The MIME type of this resource, if known.
+				 */
+				readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+				/**
+				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+				 * for notes on _meta usage.
+				 */
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				/**
+				 * A base64-encoded string representing the binary data of the item.
+				 */
+				readonly blob: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+				/**
+				 * The URI of this resource.
+				 */
+				readonly uri: v.StringSchema<undefined>;
+				/**
+				 * The MIME type of this resource, if known.
+				 */
+				readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+				/**
+				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+				 * for notes on _meta usage.
+				 */
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			}, undefined>], undefined>;
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>], undefined>, undefined>, readonly []>;
+		/**
+		 * An object containing structured tool output.
+		 *
+		 * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
+		 */
+		readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		/**
+		 * Whether the tool call ended in an error.
+		 *
+		 * If not set, this is assumed to be false (the call was successful).
+		 *
+		 * Any errors that originate from the tool SHOULD be reported inside the result
+		 * object, with `isError` set to true, _not_ as an MCP protocol-level error
+		 * response. Otherwise, the LLM would not be able to see that an error occurred
+		 * and self-correct.
+		 *
+		 * However, any errors in _finding_ the tool, an error indicating that the
+		 * server does not support tool calls, or any other exceptional conditions,
+		 * should be reported as an MCP error response.
+		 */
+		readonly isError: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+		/**
+		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+		 * for notes on _meta usage.
+		 */
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+	}, undefined>;
+	type Icons = v.InferInput<typeof IconsSchema>;
+	type CallToolResult_1<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
+		structuredContent?: undefined;
+		isError?: boolean;
+	} : ({
+		structuredContent: TStructuredContent;
+		isError?: false;
+	} | {
+		isError: true;
+		structuredContent?: TStructuredContent;
+	}));
+	type ToolAnnotations = v.InferInput<typeof ToolAnnotationsSchema>;
+
+	export {};
+}
+
+declare module 'tmcp/prompt' {
+	import type { StandardSchemaV1 } from '@standard-schema/spec';
+	import * as v from 'valibot';
+	/**
+	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
+	 * @import { PromptOptions, CreatedPrompt } from "./internal/internal.js";
+	 * 
+	 */
+	/**
+	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+	 *
+	 * */
+	export function definePrompt<TSchema extends StandardSchemaV1 | undefined = undefined>(options: PromptOptions<TSchema>, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): CreatedPrompt<TSchema>;
+	
+	type PromptOptions<TSchema extends StandardSchemaV1 | undefined = undefined> = { 
+		name: string; 
+		description: string; 
+		title?: string; 
+		enabled?: ()=>boolean | Promise<boolean>; 
+		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+		complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> 
+	} & Icons
+	type CreatedPrompt<TSchema extends StandardSchemaV1 | undefined = undefined> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
+
+	type Completion = (
+		query: string,
+		context: { arguments: Record<string, string> },
+	) => CompleteResult | Promise<CompleteResult>;
+	const IconsSchema: v.ObjectSchema<{
+		/**
+		 * Optional set of sized icons that the client can display in a user interface.
+		 *
+		 * Clients that support rendering icons MUST support at least the following MIME types:
+		 * - `image/png` - PNG images (safe, universal compatibility)
+		 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+		 *
+		 * Clients that support rendering icons SHOULD also support:
+		 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+		 * - `image/webp` - WebP images (modern, efficient format)
+		 */
+		readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+			/**
+			 * URL or data URI for the icon.
+			 */
+			readonly src: v.StringSchema<undefined>;
+			/**
+			 * Optional MIME type for the icon.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * Optional array of strings that specify sizes at which the icon can be used.
+			 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+			 *
+			 * If not provided, the client should assume that the icon can be used at any size.
+			 */
+			readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+		}, undefined>, undefined>, undefined>;
+	}, undefined>;
+	/**
+	 * The server's response to a prompts/get request from the client.
+	 */
+	const GetPromptResultSchema: v.ObjectSchema<{
+		/**
+		 * An optional description for the prompt.
+		 */
+		readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+		readonly messages: v.ArraySchema<v.ObjectSchema<{
+			readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
+			readonly content: v.UnionSchema<[v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"text", undefined>;
+				/**
+				 * The text content of the message.
+				 */
+				readonly text: v.StringSchema<undefined>;
+				/**
+				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+				 * for notes on _meta usage.
+				 */
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"image", undefined>;
+				/**
+				 * The base64-encoded image data.
+				 */
+				readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+				/**
+				 * The MIME type of the image. Different providers may support different image types.
+				 */
+				readonly mimeType: v.StringSchema<undefined>;
+				/**
+				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+				 * for notes on _meta usage.
+				 */
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"audio", undefined>;
+				/**
+				 * The base64-encoded audio data.
+				 */
+				readonly data: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+				/**
+				 * The MIME type of the audio. Different providers may support different audio types.
+				 */
+				readonly mimeType: v.StringSchema<undefined>;
+				/**
+				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+				 * for notes on _meta usage.
+				 */
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"resource_link", undefined>;
+				/**
+				 * Optional set of sized icons that the client can display in a user interface.
+				 *
+				 * Clients that support rendering icons MUST support at least the following MIME types:
+				 * - `image/png` - PNG images (safe, universal compatibility)
+				 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+				 *
+				 * Clients that support rendering icons SHOULD also support:
+				 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+				 * - `image/webp` - WebP images (modern, efficient format)
+				 */
+				readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+					/**
+					 * URL or data URI for the icon.
+					 */
+					readonly src: v.StringSchema<undefined>;
+					/**
+					 * Optional MIME type for the icon.
+					 */
+					readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+					/**
+					 * Optional array of strings that specify sizes at which the icon can be used.
+					 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+					 *
+					 * If not provided, the client should assume that the icon can be used at any size.
+					 */
+					readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+				}, undefined>, undefined>, undefined>;
+				/**
+				 * The URI of this resource.
+				 */
+				readonly uri: v.StringSchema<undefined>;
+				/**
+				 * A description of what this resource represents.
+				 *
+				 * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
+				 */
+				readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+				/**
+				 * The MIME type of this resource, if known.
+				 */
+				readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+				/**
+				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+				 * for notes on _meta usage.
+				 */
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+				readonly name: v.StringSchema<undefined>;
+				/**
+				 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+				 * even by those unfamiliar with domain-specific terminology.
+				 *
+				 * If not provided, the name should be used for display (except for Tool,
+				 * where `annotations.title` should be given precedence over using `name`,
+				 * if present).
+				 */
+				readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			}, undefined>, v.ObjectSchema<{
+				readonly type: v.LiteralSchema<"resource", undefined>;
+				readonly resource: v.UnionSchema<[v.ObjectSchema<{
+					/**
+					 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
+					 */
+					readonly text: v.StringSchema<undefined>;
+					/**
+					 * The URI of this resource.
+					 */
+					readonly uri: v.StringSchema<undefined>;
+					/**
+					 * The MIME type of this resource, if known.
+					 */
+					readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+					/**
+					 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+					 * for notes on _meta usage.
+					 */
+					readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				}, undefined>, v.ObjectSchema<{
+					/**
+					 * A base64-encoded string representing the binary data of the item.
+					 */
+					readonly blob: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+					/**
+					 * The URI of this resource.
+					 */
+					readonly uri: v.StringSchema<undefined>;
+					/**
+					 * The MIME type of this resource, if known.
+					 */
+					readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+					/**
+					 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+					 * for notes on _meta usage.
+					 */
+					readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				}, undefined>], undefined>;
+				/**
+				 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+				 * for notes on _meta usage.
+				 */
+				readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			}, undefined>], undefined>;
+		}, undefined>, undefined>;
+		/**
+		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+		 * for notes on _meta usage.
+		 */
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+	}, undefined>;
+	/**
+	 * The server's response to a completion/complete request
+	 */
+	const CompleteResultSchema: v.ObjectSchema<{
+		readonly completion: v.ObjectSchema<{
+			/**
+			 * An array of completion values. Must not exceed 100 items.
+			 */
+			readonly values: v.SchemaWithPipe<readonly [v.ArraySchema<v.StringSchema<undefined>, undefined>, v.MaxLengthAction<string[], 100, undefined>]>;
+			/**
+			 * The total number of completion options available. This can exceed the number of values actually sent in the response.
+			 */
+			readonly total: v.OptionalSchema<v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>, undefined>;
+			/**
+			 * Indicates whether there are additional completion options beyond those provided in the current response, even if the exact total is unknown.
+			 */
+			readonly hasMore: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+		}, undefined>;
+		/**
+		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+		 * for notes on _meta usage.
+		 */
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+	}, undefined>;
+	type Icons = v.InferInput<typeof IconsSchema>;
+	type GetPromptResult = v.InferInput<typeof GetPromptResultSchema>;
+	type CompleteResult = v.InferInput<typeof CompleteResultSchema>;
+
+	export {};
+}
+
+declare module 'tmcp/resource' {
+	import * as v from 'valibot';
+	/**
+	 * @import { ResourceOptions, CreatedResource } from "./internal/internal.js";
+	 * @import { ReadResourceResult } from "./validation/index.js";
+	 */
+	/**
+	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+	 * Use the description and title to help the user to understand what the resource is.
+	 *
+	 * */
+	export function defineResource(options: ResourceOptions, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): CreatedResource;
+	
+	type ResourceOptions = { 
+		name: string;
+		description: string; 
+		title?: string; 
+		uri: string, 
+		enabled?: ()=>boolean | Promise<boolean>; 
+	} & Icons
+	type CreatedResource = ResourceOptions & { [created_resource]: created_resource };
+	const IconsSchema: v.ObjectSchema<{
+		/**
+		 * Optional set of sized icons that the client can display in a user interface.
+		 *
+		 * Clients that support rendering icons MUST support at least the following MIME types:
+		 * - `image/png` - PNG images (safe, universal compatibility)
+		 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+		 *
+		 * Clients that support rendering icons SHOULD also support:
+		 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+		 * - `image/webp` - WebP images (modern, efficient format)
+		 */
+		readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+			/**
+			 * URL or data URI for the icon.
+			 */
+			readonly src: v.StringSchema<undefined>;
+			/**
+			 * Optional MIME type for the icon.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * Optional array of strings that specify sizes at which the icon can be used.
+			 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+			 *
+			 * If not provided, the client should assume that the icon can be used at any size.
+			 */
+			readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+		}, undefined>, undefined>, undefined>;
+	}, undefined>;
+	/**
+	 * The server's response to a resources/read request from the client.
+	 */
+	const ReadResourceResultSchema: v.ObjectSchema<{
+		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
+			/**
+			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
+			 */
+			readonly text: v.StringSchema<undefined>;
+			/**
+			 * The URI of this resource.
+			 */
+			readonly uri: v.StringSchema<undefined>;
+			/**
+			 * The MIME type of this resource, if known.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			/**
+			 * A base64-encoded string representing the binary data of the item.
+			 */
+			readonly blob: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+			/**
+			 * The URI of this resource.
+			 */
+			readonly uri: v.StringSchema<undefined>;
+			/**
+			 * The MIME type of this resource, if known.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>], undefined>, undefined>;
+		/**
+		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+		 * for notes on _meta usage.
+		 */
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+	}, undefined>;
+	type Icons = v.InferInput<typeof IconsSchema>;
+	type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
+
+	export {};
+}
+
+declare module 'tmcp/template' {
+	import * as v from 'valibot';
+	/**
+	 * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
+	 * @import { TemplateOptions, CreatedTemplate } from "./internal/internal.js";
+	 * @import { ReadResourceResult } from "./validation/index.js";
+	 */
+	/**
+	 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
+	 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
+	 * Resource templates can have a list method that returns a list of resources that match the template and a complete method that returns a list of resources given one of the template variables, this method will
+	 * be invoked to provide completions for the template variables to the user.
+	 * Use the description and title to help the user to understand what the resource is.
+	 *
+	 * */
+	export function defineTemplate<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>(options: TemplateOptions<TUri>, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): CreatedTemplate<TUri>;
 	// Helper type to remove whitespace
 	type Trim<S extends string> = S extends ` ${infer R}`
 		? Trim<R>
@@ -1792,15 +2594,190 @@ declare module 'tmcp' {
 	// Main exported type
 	type ExtractURITemplateVariables<T extends string> =
 		ExtractVariablesFromTemplate<T>;
-	/**
-	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
-	 * @import { JSONSchema7 } from "json-schema";
-	 */
+	
+	type TemplateOptions<TUri extends string = string, TVariables extends ExtractURITemplateVariables<TUri> = ExtractURITemplateVariables<TUri>> = { 
+		name: string;
+		description: string;
+		title?: string;
+		enabled?: ()=>boolean | Promise<boolean>;
+		uri: TUri;
+		complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
+		list?: () => Promise<Array<Resource>> | Array<Resource> 
+	} & Icons
+	type CreatedTemplate<TUri extends string = string> = TemplateOptions<TUri> & { [created_template]: created_template };
 
-	class JsonSchemaAdapter<TSchema extends StandardSchemaV1> {
-		
-		toJsonSchema(schema: TSchema): Promise<JSONSchema7>;
-	}
+	type Completion = (
+		query: string,
+		context: { arguments: Record<string, string> },
+	) => CompleteResult | Promise<CompleteResult>;
+	const IconsSchema: v.ObjectSchema<{
+		/**
+		 * Optional set of sized icons that the client can display in a user interface.
+		 *
+		 * Clients that support rendering icons MUST support at least the following MIME types:
+		 * - `image/png` - PNG images (safe, universal compatibility)
+		 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+		 *
+		 * Clients that support rendering icons SHOULD also support:
+		 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+		 * - `image/webp` - WebP images (modern, efficient format)
+		 */
+		readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+			/**
+			 * URL or data URI for the icon.
+			 */
+			readonly src: v.StringSchema<undefined>;
+			/**
+			 * Optional MIME type for the icon.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * Optional array of strings that specify sizes at which the icon can be used.
+			 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+			 *
+			 * If not provided, the client should assume that the icon can be used at any size.
+			 */
+			readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+		}, undefined>, undefined>, undefined>;
+	}, undefined>;
+	/**
+	 * A known resource that the server is capable of reading.
+	 */
+	const ResourceSchema: v.ObjectSchema<{
+		/**
+		 * Optional set of sized icons that the client can display in a user interface.
+		 *
+		 * Clients that support rendering icons MUST support at least the following MIME types:
+		 * - `image/png` - PNG images (safe, universal compatibility)
+		 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+		 *
+		 * Clients that support rendering icons SHOULD also support:
+		 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+		 * - `image/webp` - WebP images (modern, efficient format)
+		 */
+		readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+			/**
+			 * URL or data URI for the icon.
+			 */
+			readonly src: v.StringSchema<undefined>;
+			/**
+			 * Optional MIME type for the icon.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * Optional array of strings that specify sizes at which the icon can be used.
+			 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+			 *
+			 * If not provided, the client should assume that the icon can be used at any size.
+			 */
+			readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+		}, undefined>, undefined>, undefined>;
+		/**
+		 * The URI of this resource.
+		 */
+		readonly uri: v.StringSchema<undefined>;
+		/**
+		 * A description of what this resource represents.
+		 *
+		 * This can be used by clients to improve the LLM's understanding of available resources. It can be thought of like a "hint" to the model.
+		 */
+		readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+		/**
+		 * The MIME type of this resource, if known.
+		 */
+		readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+		/**
+		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+		 * for notes on _meta usage.
+		 */
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+		readonly name: v.StringSchema<undefined>;
+		/**
+		 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+		 * even by those unfamiliar with domain-specific terminology.
+		 *
+		 * If not provided, the name should be used for display (except for Tool,
+		 * where `annotations.title` should be given precedence over using `name`,
+		 * if present).
+		 */
+		readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+	}, undefined>;
+	/**
+	 * The server's response to a resources/read request from the client.
+	 */
+	const ReadResourceResultSchema: v.ObjectSchema<{
+		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
+			/**
+			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
+			 */
+			readonly text: v.StringSchema<undefined>;
+			/**
+			 * The URI of this resource.
+			 */
+			readonly uri: v.StringSchema<undefined>;
+			/**
+			 * The MIME type of this resource, if known.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, v.ObjectSchema<{
+			/**
+			 * A base64-encoded string representing the binary data of the item.
+			 */
+			readonly blob: v.SchemaWithPipe<readonly [v.StringSchema<undefined>, v.Base64Action<string, undefined>]>;
+			/**
+			 * The URI of this resource.
+			 */
+			readonly uri: v.StringSchema<undefined>;
+			/**
+			 * The MIME type of this resource, if known.
+			 */
+			readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>], undefined>, undefined>;
+		/**
+		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+		 * for notes on _meta usage.
+		 */
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+	}, undefined>;
+	/**
+	 * The server's response to a completion/complete request
+	 */
+	const CompleteResultSchema: v.ObjectSchema<{
+		readonly completion: v.ObjectSchema<{
+			/**
+			 * An array of completion values. Must not exceed 100 items.
+			 */
+			readonly values: v.SchemaWithPipe<readonly [v.ArraySchema<v.StringSchema<undefined>, undefined>, v.MaxLengthAction<string[], 100, undefined>]>;
+			/**
+			 * The total number of completion options available. This can exceed the number of values actually sent in the response.
+			 */
+			readonly total: v.OptionalSchema<v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>, undefined>;
+			/**
+			 * Indicates whether there are additional completion options beyond those provided in the current response, even if the exact total is unknown.
+			 */
+			readonly hasMore: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+		}, undefined>;
+		/**
+		 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+		 * for notes on _meta usage.
+		 */
+		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+	}, undefined>;
+	type Icons = v.InferInput<typeof IconsSchema>;
+	type ReadResourceResult = v.InferInput<typeof ReadResourceResultSchema>;
+	type CompleteResult = v.InferInput<typeof CompleteResultSchema>;
+	type Resource = v.InferInput<typeof ResourceSchema>;
 
 	export {};
 }

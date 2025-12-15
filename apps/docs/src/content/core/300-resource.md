@@ -48,6 +48,12 @@ server.resource(
 
 The `uri` must conform to the [RFC3986](https://datatracker.ietf.org/doc/html/rfc3986) standard and it can be wether a common uri (like `https` or `git`) or it could be a custom one.
 
+<Callout type="tip">
+
+You can also create a resource in a separate module and add it with `server.resource(yourResource)`. Learn more in the [defineResource](/docs/core/defineResource) documentation page.
+	
+</Callout>
+
 ## `enabled` function
 
 One pattern that is quite common in every software is having a different feature-set based on some flag or the status of some user. You could technically create a new instance of the `McpServer` for each request and conditionally add a resource but to facilitate the process `tmcp` exposes an `enabled` property on the configuration object. The property is a function that returns a boolean and, as you might have guessed, allows you to include a specific resource in the list of resources conditionally. Within the function you have access to the [context](/docs/core/ctx) so you can make decisions based on the client capabilities, the client info or even just reading a feature flag in the db to do A/B testing or to allow your admin to turn on or off a resource without a re-deploy.

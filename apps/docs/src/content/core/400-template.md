@@ -48,6 +48,12 @@ server.template(
 
 The `uri` must conform to the [RFC3986](https://datatracker.ietf.org/doc/html/rfc3986) standard and it can be wether a common uri (like `https` or `git`) or it could be a custom one. The dynamic part must adhere to the [RFC6570](https://www.rfc-editor.org/rfc/rfc6570.html) standard.
 
+<Callout type="tip">
+
+You can also create a template in a separate module and add it with `server.template(yourTemplate)`. Learn more in the [defineTemplate](/docs/core/defineTemplate) documentation page.
+	
+</Callout>
+
 ## Read the dynamic parameters
 
 ## `enabled` function

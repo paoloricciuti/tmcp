@@ -21,6 +21,7 @@ npx @tmcp/create-tmcp my-project
 The CLI will guide you through setting up a complete TMCP project with:
 
 ### Schema Adapters
+
 - **Valibot** (Recommended) - Lightweight, modern validation
 - **Zod v4** - Latest Zod version with enhanced features
 - **Zod v3** - Legacy Zod version for compatibility
@@ -29,11 +30,13 @@ The CLI will guide you through setting up a complete TMCP project with:
 - **No adapter** - Manual schema handling
 
 ### Transport Layers
+
 - **STDIO** - Standard input/output (most common for MCP)
 - **HTTP** - HTTP server transport for web integration
 - **Server-Sent Events** - SSE transport for real-time web apps
 
 ### Additional Features
+
 - **OAuth 2.1 Authentication** - Optional authentication support
 - **Example Server** - Complete working example with schema validation
 - **TypeScript Support** - Full type definitions included
@@ -69,7 +72,7 @@ npx @tmcp/create-tmcp my-mcp-server
 
 # Follow interactive prompts:
 # ✓ Select Valibot adapter
-# ✓ Choose STDIO + HTTP transports  
+# ✓ Choose STDIO + HTTP transports
 # ✓ Include OAuth authentication
 # ✓ Generate example server
 
@@ -82,46 +85,53 @@ pnpm run dev
 ## Schema Adapter Examples
 
 ### Valibot (Recommended)
+
 ```javascript
 import * as v from 'valibot';
 
 const UserSchema = v.object({
-    name: v.pipe(v.string(), v.description('User name')),
-    age: v.pipe(v.number(), v.description('User age')),
+	name: v.pipe(v.string(), v.description('User name')),
+	age: v.pipe(v.number(), v.description('User age')),
 });
 ```
 
 ### Zod
+
 ```javascript
 import { z } from 'zod';
 
 const UserSchema = z.object({
-    name: z.string().describe('User name'),
-    age: z.number().describe('User age'),
+	name: z.string().describe('User name'),
+	age: z.number().describe('User age'),
 });
 ```
 
 ### ArkType
+
 ```javascript
 import { type } from 'arktype';
 
 const UserSchema = type({
-    name: 'string',
-    age: 'number',
+	name: 'string',
+	age: 'number',
 });
 ```
 
 ## Advanced Usage
 
 ### Custom Project Structure
+
 The CLI adapts to your preferences:
+
 - Custom example server location
 - Multiple transport combinations
 - Optional authentication integration
 - Flexible dependency management
 
 ### Development Ready
+
 Generated projects include:
+
 - Hot reloading with `--watch` flag
 - TypeScript definitions
 - ESLint configuration inheritance

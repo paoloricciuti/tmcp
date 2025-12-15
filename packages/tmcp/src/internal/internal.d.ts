@@ -13,6 +13,57 @@ import {
 	ToolAnnotations,
 	Icons
 } from '../validation/index.js';
+import { ExtractURITemplateVariables } from './uri-template.js';
+
+declare const created_tool: unique symbol;
+declare const created_prompt: unique symbol;
+declare const created_resource: unique symbol;
+declare const created_template: unique symbol;
+
+export type AllSame<T, U> = [T] extends [U] ? true : false;
+
+export type PromptOptions<TSchema extends StandardSchemaV1 | undefined = undefined> = { 
+	name: string; 
+	description: string; 
+	title?: string; 
+	enabled?: ()=>boolean | Promise<boolean>; 
+	schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+	complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> 
+} & Icons
+
+export type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
+	name: string;
+	_meta?: Record<string, any>;
+	description: string;
+	title?: string;
+	enabled?: () => boolean | Promise<boolean>;
+	schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+	outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
+	annotations?: ToolAnnotations;
+} & Icons;
+
+export type ResourceOptions = { 
+	name: string;
+	description: string; 
+	title?: string; 
+	uri: string, 
+	enabled?: ()=>boolean | Promise<boolean>; 
+} & Icons
+
+export type TemplateOptions<TUri extends string = string, TVariables extends ExtractURITemplateVariables<TUri> = ExtractURITemplateVariables<TUri>> = { 
+	name: string;
+	description: string;
+	title?: string;
+	enabled?: ()=>boolean | Promise<boolean>;
+	uri: TUri;
+	complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
+	list?: () => Promise<Array<Resource>> | Array<Resource> 
+} & Icons
+
+export type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
+export type CreatedPrompt<TSchema extends StandardSchemaV1 | undefined = undefined> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
+export type CreatedResource = ResourceOptions & { [created_resource]: created_resource };
+export type CreatedTemplate<TUri extends string = string> = TemplateOptions<TUri> & { [created_template]: created_template };
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;

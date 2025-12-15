@@ -8,7 +8,7 @@
 	"scripts": {
 		"test": "vitest",
 		"typecheck": "tsc --noEmit",
-		"generate:types": "dts-buddy && publint",
+		"generate:types": "dts-buddy && node ./scripts/fix-unique-symbol.ts && publint",
 		"prepublish": "pnpm generate:types"
 	},
 	"keywords": [],
@@ -26,6 +26,22 @@
 		".": {
 			"types": "./src/types/index.d.ts",
 			"default": "./src/index.js"
+		},
+		"./tool": {
+			"types": "./src/types/index.d.ts",
+			"default": "./src/tool.js"
+		},
+		"./prompt": {
+			"types": "./src/types/index.d.ts",
+			"default": "./src/prompt.js"
+		},
+		"./resource": {
+			"types": "./src/types/index.d.ts",
+			"default": "./src/resource.js"
+		},
+		"./template": {
+			"types": "./src/types/index.d.ts",
+			"default": "./src/template.js"
 		},
 		"./adapter": {
 			"types": "./src/types/index.d.ts",

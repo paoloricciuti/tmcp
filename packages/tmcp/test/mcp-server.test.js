@@ -5,10 +5,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JsonSchemaAdapter } from '../src/adapter.js';
 import { McpServer } from '../src/index.js';
+import { defineTool as define_tool } from '../src/tool.js';
+import { definePrompt as define_prompt } from '../src/prompt.js';
 
 /**
  * @template T
- * @typedef {StandardSchemaV1<T>} MockSchema
+ * @typedef {{ '~standard': { validate: (input: unknown) => Promise<{ value: T }>, vendor: 'mock', version: 1, types?: { input: T, output: T } }}} MockSchema
  */
 
 /**
@@ -33,7 +35,7 @@ class MockAdapter extends JsonSchemaAdapter {
 
 /**
  * Mock schema for testing
- * @type {MockSchema<any>}
+ * @type {MockSchema<{ test: string }>}
  */
 const mock_schema = {
 	'~standard': {
@@ -239,7 +241,7 @@ describe('McpServer', () => {
 			});
 			const tool_icons = create_icons('list-tool');
 
-			server.tool(
+			const tool_one = define_tool(
 				{
 					name: 'list-test-tool',
 					description: 'A tool for list testing',
@@ -248,6 +250,20 @@ describe('McpServer', () => {
 				},
 				tool,
 			);
+
+			const tool_two = define_tool(
+				{
+					name: 'list-test-tool-class-schemas',
+					description: 'A tool for list testing',
+					title: 'List Test Tool',
+					icons: tool_icons,
+					schema: mock_schema,
+					outputSchema: output_mock_schema,
+				},
+				tool,
+			);
+
+			server.tools([tool_one, tool_two]);
 
 			server.tool(
 				{
@@ -291,6 +307,30 @@ describe('McpServer', () => {
 							description: 'A tool for list testing',
 							icons: tool_icons,
 							inputSchema: { type: 'object', properties: {} },
+						},
+						{
+							name: 'list-test-tool-class-schemas',
+							description: 'A tool for list testing',
+							title: 'List Test Tool',
+							icons: tool_icons,
+							inputSchema: {
+								properties: {
+									test: {
+										type: 'string',
+									},
+								},
+								required: ['test'],
+								type: 'object',
+							},
+							outputSchema: {
+								type: 'object',
+								properties: {
+									test: {
+										type: 'string',
+									},
+								},
+								required: ['test'],
+							},
 						},
 						{
 							description: 'A tool for list testing 2',
@@ -493,16 +533,15 @@ describe('McpServer', () => {
 		});
 
 		it('should return error result when tool arguments validation fails', async () => {
-			const validation_error_schema =
-				/** @type {StandardSchemaV1<any>} */ ({
-					'~standard': {
-						validate: vi.fn().mockResolvedValue({
-							issues: [{ message: 'Invalid input' }],
-						}),
-						vendor: 'mock',
-						version: 1,
-					},
-				});
+			const validation_error_schema = /** @type {MockSchema<any>} */ ({
+				'~standard': {
+					validate: vi.fn().mockResolvedValue({
+						issues: [{ message: 'Invalid input' }],
+					}),
+					vendor: 'mock',
+					version: 1,
+				},
+			});
 			const tool = vi.fn();
 
 			server.tool(
@@ -545,26 +584,24 @@ describe('McpServer', () => {
 		});
 
 		it('should return error result when structured content validation fails', async () => {
-			const validation_error_schema =
-				/** @type {StandardSchemaV1<any>} */ ({
-					'~standard': {
-						validate: vi.fn().mockResolvedValue({
-							value: { test: 'value' },
-						}),
-						vendor: 'mock',
-						version: 1,
-					},
-				});
-			const failing_output_schema =
-				/** @type {StandardSchemaV1<any>} */ ({
-					'~standard': {
-						validate: vi.fn().mockResolvedValue({
-							issues: [{ message: 'Invalid output' }],
-						}),
-						vendor: 'mock',
-						version: 1,
-					},
-				});
+			const validation_error_schema = /** @type {MockSchema<any>} */ ({
+				'~standard': {
+					validate: vi.fn().mockResolvedValue({
+						value: { test: 'value' },
+					}),
+					vendor: 'mock',
+					version: 1,
+				},
+			});
+			const failing_output_schema = /** @type {MockSchema<any>} */ ({
+				'~standard': {
+					validate: vi.fn().mockResolvedValue({
+						issues: [{ message: 'Invalid output' }],
+					}),
+					vendor: 'mock',
+					version: 1,
+				},
+			});
 			const tool = vi.fn().mockResolvedValue({
 				content: [
 					{
@@ -887,6 +924,34 @@ describe('McpServer', () => {
 				prompt,
 			);
 
+			const prompt_one = define_prompt(
+				{
+					name: 'list-test-prompt-class',
+					description: 'A prompt for list testing class',
+				},
+				async () => {
+					return {
+						messages: [],
+					};
+				},
+			);
+
+			const prompt_two = define_prompt(
+				{
+					name: 'list-test-prompt-class-two',
+					description: 'A prompt for list testing class',
+					schema: mock_schema,
+					complete: {},
+				},
+				async () => {
+					return {
+						messages: [],
+					};
+				},
+			);
+
+			server.prompts([prompt_one, prompt_two]);
+
 			const list = request({
 				jsonrpc: '2.0',
 				id: 2,
@@ -908,6 +973,26 @@ describe('McpServer', () => {
 							description: 'A prompt for list testing',
 							icons: prompt_icons,
 							arguments: [],
+						},
+						{
+							arguments: [],
+							description: 'A prompt for list testing class',
+							icons: undefined,
+							name: 'list-test-prompt-class',
+							title: 'A prompt for list testing class',
+						},
+						{
+							arguments: [
+								{
+									description: undefined,
+									name: 'test',
+									required: true,
+								},
+							],
+							description: 'A prompt for list testing class',
+							icons: undefined,
+							name: 'list-test-prompt-class-two',
+							title: 'A prompt for list testing class',
 						},
 					],
 				},
