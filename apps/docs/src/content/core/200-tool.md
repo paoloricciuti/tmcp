@@ -44,6 +44,13 @@ server.tool(
 
 `name` and `description` are the only required properties (you can also specify a `title` for a human readable title but that's optional) of the configuration object. The return value of the handler must be an object with a `content` property which is an array of one or more contents (you can refer to the [MCP spec](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-result) to know the possible return values)
 
+<Callout type="tip">
+
+You can also create a tool in a separate module and add it with `server.tool(yourTool)`. Learn more in the [defineTool](/docs/core/defineTool) documentation page.
+	
+</Callout>
+
+
 ### Tool name requirements
 
 `tmcp` aligns with [SEP-986](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/986), which specifies a standard format for tool names. Whenever you call `server.tool` we automatically validate the `name` and log `console.warn` messages if the value may cause issues for clients. Validation does **not** stop registration, but it gives you actionable guidance so you can fix problems before shipping.

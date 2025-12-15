@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 
 import { McpServer } from 'tmcp';
+import { defineTool } from 'tmcp/tool';
+import { definePrompt } from 'tmcp/prompt';
+import { defineTemplate } from 'tmcp/template';
 import { StdioTransport } from '@tmcp/transport-stdio';
 import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import fs from 'node:fs/promises';
 import * as v from 'valibot';
+import * as z from 'zod';
+import { defineResource } from 'tmcp/resource';
 
 const server = new McpServer(
 	{
@@ -39,6 +44,119 @@ const AddNumbersSchema = v.object({
 	a: v.pipe(v.number(), v.description('First number to add')),
 	b: v.pipe(v.number(), v.description('Second number to add')),
 });
+
+const create = defineTool(
+	{
+		name: 'created',
+		description: 'A tool that indicates it was created',
+		schema: AddNumbersSchema,
+		outputSchema: v.object({
+			result: v.number(),
+		}),
+	},
+	async () => {
+		return {
+			content: [
+				{
+					type: 'text',
+					text: 'This tool was created successfully!',
+				},
+			],
+			structuredContent: {
+				result: 42,
+			},
+		};
+	},
+);
+
+const create2 = defineTool(
+	{
+		name: 'created',
+		description: 'A tool that indicates it was created',
+	},
+	async () => {
+		return {
+			content: [
+				{
+					type: 'text',
+					text: 'This tool was created successfully!',
+				},
+			],
+		};
+	},
+);
+
+const prompt_create = definePrompt(
+	{
+		name: '',
+		description: '',
+	},
+	() => {
+		return {
+			messages: [],
+		};
+	},
+);
+
+const prompt_create2 = definePrompt(
+	{
+		name: '',
+		description: '',
+	},
+	() => {
+		return {
+			messages: [],
+		};
+	},
+);
+
+const template_create = defineTemplate(
+	{
+		name: '',
+		description: '',
+		uri: 'test://with/{param}',
+	},
+	(uri, { param }) => {
+		return {
+			contents: [],
+		};
+	},
+);
+
+const resource_create = defineResource(
+	{
+		name: '',
+		description: '',
+		uri: 'test://with',
+	},
+	(uri) => {
+		return {
+			contents: [],
+		};
+	},
+);
+
+server.prompts([prompt_create, prompt_create2]);
+server.prompt(prompt_create);
+server.template(template_create);
+server.templates([template_create]);
+server.resources([resource_create]);
+server.resource(resource_create);
+
+server.tools([create, create2]);
+server.tool(create);
+server.tool(create2);
+
+server.tool(
+	{
+		name: 'add_numbers',
+		description: 'Add two numbers together',
+		schema: AddNumbersSchema,
+	},
+	({ a }) => {
+		return {};
+	},
+);
 
 server.tool(
 	{

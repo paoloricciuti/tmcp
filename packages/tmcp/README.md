@@ -217,6 +217,164 @@ tool.mix(
 
 All helpers are typed, so TypeScript will prevent you from returning malformed payloads while cutting down the repetitive envelopes that used to appear in almost every handler.
 
+## Defining Tools, Prompts, Resources, and Templates in Separate Files
+
+For better code organization and reusability, you can define your tools, prompts, resources, and templates in separate files using the `defineTool`, `definePrompt`, `defineResource`, and `defineTemplate` utilities. This approach allows you to:
+
+- **Organize by feature**: Group related tools in feature-specific modules
+- **Reuse across servers**: Share common tools between different MCP servers
+
+### Example Structure
+
+```javascript
+// tools/calculator.js
+import { defineTool } from 'tmcp/tool';
+import { z } from 'zod';
+
+export const addTool = defineTool(
+	{
+		name: 'add',
+		description: 'Add two numbers',
+		schema: z.object({
+			a: z.number(),
+			b: z.number(),
+		}),
+	},
+	async ({ a, b }) => ({
+		content: [{ type: 'text', text: `${a} + ${b} = ${a + b}` }],
+	}),
+);
+
+export const multiplyTool = defineTool(
+	{
+		name: 'multiply',
+		description: 'Multiply two numbers',
+		schema: z.object({
+			a: z.number(),
+			b: z.number(),
+		}),
+	},
+	async ({ a, b }) => ({
+		content: [{ type: 'text', text: `${a} × ${b} = ${a * b}` }],
+	}),
+);
+```
+
+```javascript
+// prompts/code-review.js
+import { definePrompt } from 'tmcp/prompt';
+import { z } from 'zod';
+
+export const codeReviewPrompt = definePrompt(
+	{
+		name: 'code-review',
+		description: 'Generate code review prompt',
+		schema: z.object({
+			code: z.string(),
+			language: z.string(),
+		}),
+	},
+	async ({ code, language }) => ({
+		messages: [
+			{
+				role: 'user',
+				content: {
+					type: 'text',
+					text: `Review this ${language} code:\n\n${code}`,
+				},
+			},
+		],
+	}),
+);
+```
+
+```javascript
+// resources/files.js
+import { defineResource } from 'tmcp/resource';
+import { readFile } from 'node:fs/promises';
+
+export const readmeResource = defineResource(
+	{
+		name: 'readme',
+		description: 'Project README file',
+		uri: 'file://README.md',
+	},
+	async (uri) => ({
+		contents: [
+			{
+				uri,
+				mimeType: 'text/markdown',
+				text: await readFile(uri.replace('file://', ''), 'utf8'),
+			},
+		],
+	}),
+);
+```
+
+```javascript
+// templates/user-files.js
+import { defineTemplate } from 'tmcp/template';
+import { getUserFile } from '../api/users.js';
+
+export const userFileTemplate = defineTemplate(
+	{
+		name: 'user-files',
+		description: 'Access user files by ID',
+		uri: 'users/{userId}/files/{filename}',
+		complete: {
+			userId: async (arg) => ({
+				completion: {
+					values: await searchUserIds(arg),
+					hasMore: false,
+				},
+			}),
+		},
+	},
+	async (uri, { userId, filename }) => ({
+		contents: [
+			{
+				uri,
+				mimeType: 'text/plain',
+				text: await getUserFile(userId, filename),
+			},
+		],
+	}),
+);
+```
+
+```javascript
+// server.js
+import { McpServer } from 'tmcp';
+import { ZodJsonSchemaAdapter } from '@tmcp/adapter-zod';
+import { addTool, multiplyTool } from './tools/calculator.js';
+import { codeReviewPrompt } from './prompts/code-review.js';
+import { readmeResource } from './resources/files.js';
+import { userFileTemplate } from './templates/user-files.js';
+
+const server = new McpServer(
+	{
+		name: 'my-server',
+		version: '1.0.0',
+	},
+	{
+		adapter: new ZodJsonSchemaAdapter(),
+	},
+);
+
+// Register multiple tools at once
+server.tools([addTool, multiplyTool]);
+
+// Or register individually
+server.tool(addTool);
+
+// Same for prompts, resources, and templates
+server.prompts([codeReviewPrompt]);
+server.resources([readmeResource]);
+server.templates([userFileTemplate]);
+```
+
+Adding the primitive to the server will error if the tool uses a different validation library than the one expressed in the adapter.
+
 ## API Reference
 
 ### McpServer
@@ -237,11 +395,12 @@ new McpServer(serverInfo, options);
 
 #### Methods
 
-##### `tool(definition, handler)`
+##### `tool(definition, handler)` / `tools(definitions)`
 
-Register a tool with optional schema validation.
+Register one or more tools with optional schema validation.
 
 ```javascript
+// Register a single tool inline
 server.tool(
 	{
 		name: 'tool-name',
@@ -250,83 +409,146 @@ server.tool(
 	},
 	async (input) => {
 		// Tool implementation
-		return { content: [{ type: 'text', text: 'Tool result' }] };
+		return result;
 	},
 );
+
+// Register a tool created with defineTool
+import { defineTool } from 'tmcp/tool';
+
+const myTool = defineTool(
+	{
+		name: 'tool-name',
+		description: 'Tool description',
+		schema: yourSchema,
+	},
+	async (input) => {
+		return result;
+	},
+);
+
+server.tool(myTool);
+
+// Register multiple tools at once
+server.tools([tool1, tool2, tool3]);
 ```
 
 `sessionInfo` contains the latest `clientCapabilities`, `clientInfo`, and `logLevel` reported by the connected client. Built-in transports populate it automatically, so every handler can branch on client features without additional bookkeeping.
 
-##### `prompt(definition, handler)`
+##### `prompt(definition, handler)` / `prompts(definitions)`
 
-Register a prompt template with optional schema validation.
+Register one or more prompt templates with optional schema validation.
 
 ```javascript
+// Register a single prompt inline
 server.prompt(
   {
-    name: 'prompt-name',
-    description: 'Prompt description',
-    schema: yourSchema, // optional
-    complete: {
-      paramName: (arg, context) => ({
-        completion: {
-          values: ['completion1', 'completion2'],
-          total: 2,
-          hasMore: false
-        }
-      })
-    } // optional
+	name: 'prompt-name',
+	description: 'Prompt description',
+	schema: yourSchema, // optional
+	complete: (arg, context) => ['completion1', 'completion2'] // optional
   },
   async (input) => {
-    // Prompt implementation
-    return { messages: [...] };
+	// Prompt implementation
+	return { messages: [...] };
   }
 );
+
+// Register a prompt created with definePrompt
+import { definePrompt } from 'tmcp/prompt';
+
+const myPrompt = definePrompt(
+  {
+	name: 'prompt-name',
+	description: 'Prompt description',
+	schema: yourSchema,
+  },
+  async (input) => {
+	return { messages: [...] };
+  }
+);
+
+server.prompt(myPrompt);
+
+// Register multiple prompts at once
+server.prompts([prompt1, prompt2, prompt3]);
 ```
 
-##### `resource(definition, handler)`
+##### `resource(definition, handler)` / `resources(definitions)`
 
-Register a static resource.
+Register one or more static resources.
 
 ```javascript
+// Register a single resource inline
 server.resource(
   {
-    name: 'resource-name',
-    description: 'Resource description',
-    uri: 'file://path/to/resource'
+	name: 'resource-name',
+	description: 'Resource description',
+	uri: 'file://path/to/resource'
   },
   async (uri, params) => {
-    // Resource implementation
-    return { contents: [...] };
+	// Resource implementation
+	return { contents: [...] };
   }
 );
+
+// Register a resource created with defineResource
+import { defineResource } from 'tmcp/resource';
+
+const myResource = defineResource(
+  {
+	name: 'resource-name',
+	description: 'Resource description',
+	uri: 'file://path/to/resource'
+  },
+  async (uri) => {
+	return { contents: [...] };
+  }
+);
+
+server.resource(myResource);
+
+// Register multiple resources at once
+server.resources([resource1, resource2, resource3]);
 ```
 
-##### `template(definition, handler)`
+##### `template(definition, handler)` / `templates(definitions)`
 
-Register a URI template for dynamic resources.
+Register one or more URI templates for dynamic resources.
 
 ```javascript
+// Register a single template inline
 server.template(
   {
-    name: 'template-name',
-    description: 'Template description',
-    uri: 'file://path/{id}/resource',
-    complete: {
-      id: (arg, context) => ({
-        completion: {
-          values: ['id1', 'id2', 'id3'],
-          total: 3,
-          hasMore: false
-        }
-      })
-    } // optional
+	name: 'template-name',
+	description: 'Template description',
+	uri: 'file://path/{id}/resource',
+	complete: (arg, context) => ['id1', 'id2'] // optional
   },
   async (uri, params) => {
-    // Template implementation using params.id
-    return { contents: [...] };
+	// Template implementation using params.id
+	return { contents: [...] };
   }
 );
+
+// Register a template created with defineTemplate
+import { defineTemplate } from 'tmcp/template';
+
+const myTemplate = defineTemplate(
+  {
+	name: 'template-name',
+	description: 'Template description',
+	uri: 'file://path/{id}/resource',
+  },
+  async (uri, params) => {
+	return { contents: [...] };
+  }
+);
+
+server.template(myTemplate);
+
+// Register multiple templates at once
+server.templates([template1, template2, template3]);
 ```
 
 ##### `withContext<T>()`

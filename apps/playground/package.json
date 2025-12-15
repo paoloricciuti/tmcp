@@ -16,7 +16,8 @@
 		"@tmcp/adapter-valibot": "workspace:^",
 		"@tmcp/transport-stdio": "workspace:^",
 		"tmcp": "workspace:^",
-		"valibot": "^1.1.0"
+		"valibot": "^1.1.0",
+		"zod": "^4.2.0"
 	},
 	"devDependencies": {
 		"@modelcontextprotocol/inspector": "^0.17.1",

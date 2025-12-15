@@ -1,5 +1,11 @@
 # @tmcp/transport-sse
 
+## 0.5.3
+
+### Patch Changes
+
+- 68e7422: fix: specify event message in SSE events
+
 ## 0.5.2
 
 ### Patch Changes
