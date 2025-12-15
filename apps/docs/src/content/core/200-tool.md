@@ -44,6 +44,13 @@ server.tool(
 
 `name` and `description` are the only required properties (you can also specify a `title` for a human readable title but that's optional) of the configuration object. The return value of the handler must be an object with a `content` property which is an array of one or more contents (you can refer to the [MCP spec](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-result) to know the possible return values)
 
+<Callout type="tip">
+
+You can also create a tool in a separate module and add it with `server.tool(yourTool)`. Learn more in the [defineTool](/docs/core/defineTool) documentation page.
+	
+</Callout>
+
+
 ## Accepting inputs
 
 If you want more powerful tools however you can also accept some inputs. However to be able to accept an input you need to specify the schema of your expected input
