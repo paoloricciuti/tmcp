@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JsonSchemaAdapter } from '../src/adapter.js';
 import { McpServer } from '../src/index.js';
 import { defineTool as define_tool } from '../src/tool.js';
-import { Prompt } from '../src/prompt.js';
+import { definePrompt as define_prompt } from '../src/prompt.js';
 
 /**
  * @template T
@@ -924,7 +924,7 @@ describe('McpServer', () => {
 				prompt,
 			);
 
-			const prompt_one = new Prompt(
+			const prompt_one = define_prompt(
 				{
 					name: 'list-test-prompt-class',
 					description: 'A prompt for list testing class',
@@ -936,7 +936,7 @@ describe('McpServer', () => {
 				},
 			);
 
-			const prompt_two = new Prompt(
+			const prompt_two = define_prompt(
 				{
 					name: 'list-test-prompt-class-two',
 					description: 'A prompt for list testing class',

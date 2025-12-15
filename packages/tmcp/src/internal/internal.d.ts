@@ -15,8 +15,18 @@ import {
 } from '../validation/index.js';
 
 declare const created_tool: unique symbol;
+declare const created_prompt: unique symbol;
 
 export type AllSame<T, U> = [T] extends [U] ? true : false;
+
+export type PromptOptions<TSchema extends StandardSchemaV1 | undefined = undefined> = { 
+	name: string; 
+	description: string; 
+	title?: string; 
+	enabled?: ()=>boolean | Promise<boolean>; 
+	schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+	complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> 
+} & Icons
 
 export type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
 	name: string;
@@ -29,7 +39,8 @@ export type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined
 	annotations?: ToolAnnotations;
 } & Icons;
 
-export type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created };
+export type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
+export type CreatedPrompt<TSchema extends StandardSchemaV1 | undefined = undefined> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
 
 export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
 	description: string;

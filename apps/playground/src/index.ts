@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
 import { McpServer } from 'tmcp';
-import { defineTool as tool } from 'tmcp/tool';
+import { defineTool } from 'tmcp/tool';
+import { definePrompt } from 'tmcp/prompt';
 import { StdioTransport } from '@tmcp/transport-stdio';
 import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import fs from 'node:fs/promises';
 import * as v from 'valibot';
+import * as z from 'zod';
 
 const server = new McpServer(
 	{
@@ -41,7 +43,7 @@ const AddNumbersSchema = v.object({
 	b: v.pipe(v.number(), v.description('Second number to add')),
 });
 
-const create = tool(
+const create = defineTool(
 	{
 		name: 'created',
 		description: 'A tool that indicates it was created',
@@ -65,7 +67,7 @@ const create = tool(
 	},
 );
 
-const create2 = tool(
+const create2 = defineTool(
 	{
 		name: 'created',
 		description: 'A tool that indicates it was created',
@@ -82,6 +84,33 @@ const create2 = tool(
 	},
 );
 
+const prompt_create = definePrompt(
+	{
+		name: '',
+		description: '',
+	},
+	() => {
+		return {
+			messages: [],
+		};
+	},
+);
+
+const prompt_create2 = definePrompt(
+	{
+		name: '',
+		description: '',
+	},
+	() => {
+		return {
+			messages: [],
+		};
+	},
+);
+
+server.prompts([prompt_create, prompt_create2]);
+server.prompt(prompt_create);
+
 server.tools([create, create2]);
 server.tool(create);
 server.tool(create2);
@@ -90,8 +119,9 @@ server.tool(
 	{
 		name: 'add_numbers',
 		description: 'Add two numbers together',
+		schema: AddNumbersSchema,
 	},
-	() => {
+	({ a }) => {
 		return {};
 	},
 );

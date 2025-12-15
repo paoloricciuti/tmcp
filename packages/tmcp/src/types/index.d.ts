@@ -1,4 +1,5 @@
 const created_tool: unique symbol;
+const created_prompt: unique symbol;
 declare module 'tmcp' {
 	import type { StandardSchemaV1 } from '@standard-schema/spec';
 	import type { JSONRPCServer, JSONRPCClient, JSONRPCParams, JSONRPCRequest } from 'json-rpc-2.0';
@@ -54,12 +55,11 @@ declare module 'tmcp' {
 		/**
 		 * Use the `defineTool` utility to create a reusable tool and pass it to this method to add it to the server.
 		 * */
-		tools<T extends Array<CreatedTool<any, any>>, U extends T extends Array<CreatedTool<infer TSchema, infer TOutputSchema>> ? AllSame<TSchema, StandardSchema> extends true ? AllSame<TOutputSchema, StandardSchema> extends true ? T : never : never : never>(tools: T & NoInfer<U>): void;
+		tools<T extends Array<CreatedTool<any, any>>, U extends T extends Array<CreatedTool<infer TSchema, infer TOutputSchema>> ? AllSame<TSchema, StandardSchema | undefined> extends true ? AllSame<TOutputSchema, StandardSchema | undefined> extends true ? T : never : never : never>(tools: T & NoInfer<U>): void;
 		/**
-		 * Use the Prompt class to create a reusable prompt and pass it to this method to add it to the server.
-		 *
+		 * Use the `defineTool` utility to create a reusable tool and pass it to this method to add it to the server.
 		 * */
-		prompts(prompts: Array<Prompt<StandardSchema | undefined>>): void;
+		prompts<T extends Array<CreatedPrompt<any>>, U extends T extends Array<CreatedPrompt<infer TSchema>> ? AllSame<TSchema, StandardSchema | undefined> extends true ? T : never : never>(prompts: T & NoInfer<U>): void;
 		/**
 		 * Use the Resource class to create a reusable resource and pass it to this method to add it to the server.
 		 *
@@ -73,31 +73,11 @@ declare module 'tmcp' {
 		
 		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: CreatedTool<TSchema, TOutputSchema>): void;
 		
-		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: {
-			name: string;
-			_meta?: Record<string, any>;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-			outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
-			annotations?: ToolAnnotations;
-		} & Icons, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
-		/**
-		 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
-		 * Use the description and title to help the user to understand what the prompt does and when to use it.
-		 *
-		 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
-		 * for each input that will be used to provide completions for the user.
-		 * */
-		prompt<TSchema extends StandardSchema | undefined = undefined>({ name, description, title, schema, complete, enabled, icons }: {
-			name: string;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-			complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>>;
-		} & Icons, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): void;
+		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: ToolOptions<TSchema, TOutputSchema>, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
+		
+		prompt<TSchema extends StandardSchema | undefined = undefined>(prompt_or_options: CreatedPrompt<TSchema>): void;
+		
+		prompt<TSchema extends StandardSchema | undefined = undefined>(prompt_or_options: PromptOptions<TSchema>, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): void;
 		/**
 		 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
 		 * Use the description and title to help the user to understand what the resource is.
@@ -315,8 +295,17 @@ declare module 'tmcp' {
 		
 		readonly execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult;
 	}
-	
+		
 	type AllSame<T, U> = [T] extends [U] ? true : false;
+
+	type PromptOptions<TSchema extends StandardSchemaV1 | undefined = undefined> = { 
+		name: string; 
+		description: string; 
+		title?: string; 
+		enabled?: ()=>boolean | Promise<boolean>; 
+		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+		complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> 
+	} & Icons_1
 
 	type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
 		name: string;
@@ -329,7 +318,8 @@ declare module 'tmcp' {
 		annotations?: ToolAnnotations;
 	} & Icons_1;
 
-	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created };
+	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
+	type CreatedPrompt<TSchema extends StandardSchemaV1 | undefined = undefined> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
 
 	type Completion = (
 		query: string,
@@ -374,50 +364,51 @@ declare module 'tmcp' {
 		subscription: (subscriptions_request: { uri: string, action?: "add" | "remove" }) => void;
 		loglevelchange: (change: { level: LoggingLevel_1 }) => void;
 	};
-	/**
-	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
-	 * @import { Completion } from "./internal/internal.js";
-	 */
-	/**
-	 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
-	 * Use the description and title to help the user to understand what the prompt does and when to use it.
-	 *
-	 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
-	 * for each input that will be used to provide completions for the user.
-	 *
-	 * 
-	 */
-	class Prompt<TSchema extends StandardSchemaV1 | undefined = undefined> {
-		
-		constructor({ name, description, title, schema, complete, enabled, icons }: {
-			name: string;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-			complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>>;
-		} & Icons, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult);
-		
-		readonly name: string;
-		
-		readonly description: string;
-		
-		readonly title: string | undefined;
-		
-		readonly schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
-		
-		readonly complete: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>> | undefined;
-		
-		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
-		
-		readonly icons: {
-			src: string;
-			mimeType?: string | undefined;
-			sizes?: string[] | undefined;
-		}[] | undefined;
-		
-		readonly execute: any;
-	}
+	// Helper type to remove whitespace
+	type Trim<S extends string> = S extends ` ${infer R}`
+		? Trim<R>
+		: S extends `${infer L} `
+			? Trim<L>
+			: S;
+
+	// Helper type to extract variable name, removing modifiers
+	type ExtractVarName<S extends string> = S extends `${infer Name}:${string}`
+		? Trim<Name> // Remove prefix modifier
+		: S extends `${infer Name}*`
+			? Trim<Name> // Remove explode modifier
+			: Trim<S>;
+
+	// Helper type to split comma-separated variables
+	type SplitVariables<S extends string> = S extends `${infer First},${infer Rest}`
+		? ExtractVarName<First> | SplitVariables<Rest>
+		: ExtractVarName<S>;
+
+	// Helper type to extract content from braces and handle operators
+	type ExtractFromExpression<S extends string> = S extends `+${infer Vars}`
+		? SplitVariables<Vars> // Reserved {+var}
+		: S extends `#${infer Vars}`
+			? SplitVariables<Vars> // Fragment {#var}
+			: S extends `.${infer Vars}`
+				? SplitVariables<Vars> // Label {.var}
+				: S extends `/${infer Vars}`
+					? SplitVariables<Vars> // Path {/var}
+					: S extends `;${infer Vars}`
+						? SplitVariables<Vars> // Path-style {;var}
+						: S extends `?${infer Vars}`
+							? SplitVariables<Vars> // Query {?var}
+							: S extends `&${infer Vars}`
+								? SplitVariables<Vars> // Query continuation {&var}
+								: SplitVariables<S>; // Simple {var}
+
+	// Main recursive type to extract all variables from URI template
+	type ExtractVariablesFromTemplate<S extends string> =
+		S extends `${string}{${infer Expression}}${infer Rest}`
+			? ExtractFromExpression<Expression> | ExtractVariablesFromTemplate<Rest>
+			: never;
+
+	// Main exported type
+	type ExtractURITemplateVariables<T extends string> =
+		ExtractVariablesFromTemplate<T>;
 	const JSONRPCMessageSchema: v.UnionSchema<[v.ObjectSchema<{
 		readonly method: v.StringSchema<undefined>;
 		readonly params: v.OptionalSchema<v.LooseObjectSchema<{
@@ -1902,51 +1893,6 @@ declare module 'tmcp' {
 	type ListPromptsResult_1 = v.InferInput<typeof ListPromptsResultSchema>;
 	type ListResourcesResult_1 = v.InferInput<typeof ListResourcesResultSchema>;
 	type ListResourceTemplatesResult_1 = v.InferInput<typeof ListResourceTemplatesResultSchema>;
-	// Helper type to remove whitespace
-	type Trim<S extends string> = S extends ` ${infer R}`
-		? Trim<R>
-		: S extends `${infer L} `
-			? Trim<L>
-			: S;
-
-	// Helper type to extract variable name, removing modifiers
-	type ExtractVarName<S extends string> = S extends `${infer Name}:${string}`
-		? Trim<Name> // Remove prefix modifier
-		: S extends `${infer Name}*`
-			? Trim<Name> // Remove explode modifier
-			: Trim<S>;
-
-	// Helper type to split comma-separated variables
-	type SplitVariables<S extends string> = S extends `${infer First},${infer Rest}`
-		? ExtractVarName<First> | SplitVariables<Rest>
-		: ExtractVarName<S>;
-
-	// Helper type to extract content from braces and handle operators
-	type ExtractFromExpression<S extends string> = S extends `+${infer Vars}`
-		? SplitVariables<Vars> // Reserved {+var}
-		: S extends `#${infer Vars}`
-			? SplitVariables<Vars> // Fragment {#var}
-			: S extends `.${infer Vars}`
-				? SplitVariables<Vars> // Label {.var}
-				: S extends `/${infer Vars}`
-					? SplitVariables<Vars> // Path {/var}
-					: S extends `;${infer Vars}`
-						? SplitVariables<Vars> // Path-style {;var}
-						: S extends `?${infer Vars}`
-							? SplitVariables<Vars> // Query {?var}
-							: S extends `&${infer Vars}`
-								? SplitVariables<Vars> // Query continuation {&var}
-								: SplitVariables<S>; // Simple {var}
-
-	// Main recursive type to extract all variables from URI template
-	type ExtractVariablesFromTemplate<S extends string> =
-		S extends `${string}{${infer Expression}}${infer Rest}`
-			? ExtractFromExpression<Expression> | ExtractVariablesFromTemplate<Rest>
-			: never;
-
-	// Main exported type
-	type ExtractURITemplateVariables<T extends string> =
-		ExtractVariablesFromTemplate<T>;
 	/**
 	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
 	 * @import { JSONSchema7 } from "json-schema";
@@ -1986,7 +1932,7 @@ declare module 'tmcp/tool' {
 		annotations?: ToolAnnotations;
 	} & Icons;
 
-	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created };
+	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
 	const IconsSchema: v.ObjectSchema<{
 		/**
 		 * Optional set of sized icons that the client can display in a user interface.
@@ -2270,50 +2216,26 @@ declare module 'tmcp/prompt' {
 	import * as v from 'valibot';
 	/**
 	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
-	 * @import { Completion } from "./internal/internal.js";
-	 */
-	/**
-	 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
-	 * Use the description and title to help the user to understand what the prompt does and when to use it.
-	 *
-	 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
-	 * for each input that will be used to provide completions for the user.
-	 *
+	 * @import { PromptOptions, CreatedPrompt } from "./internal/internal.js";
 	 * 
 	 */
-	export class Prompt<TSchema extends StandardSchemaV1 | undefined = undefined> {
-		
-		constructor({ name, description, title, schema, complete, enabled, icons }: {
-			name: string;
-			description: string;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
-			schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-			complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>>;
-		} & Icons, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult);
-		
-		readonly name: string;
-		
-		readonly description: string;
-		
-		readonly title: string | undefined;
-		
-		readonly schema: (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined;
-		
-		readonly complete: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>, Completion>>> | undefined;
-		
-		readonly enabled: (() => boolean | Promise<boolean>) | undefined;
-		
-		readonly icons: {
-			src: string;
-			mimeType?: string | undefined;
-			sizes?: string[] | undefined;
-		}[] | undefined;
-		
-		readonly execute: any;
-	}
-	type Icons = Icons_1;
-	type GetPromptResult = GetPromptResult_1;
+	/**
+	 * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+	 * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
+	 *
+	 * */
+	export function definePrompt<TSchema extends StandardSchemaV1 | undefined = undefined>(options: PromptOptions<TSchema>, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): CreatedPrompt<TSchema>;
+	
+	type PromptOptions<TSchema extends StandardSchemaV1 | undefined = undefined> = { 
+		name: string; 
+		description: string; 
+		title?: string; 
+		enabled?: ()=>boolean | Promise<boolean>; 
+		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
+		complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> 
+	} & Icons
+	type CreatedPrompt<TSchema extends StandardSchemaV1 | undefined = undefined> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
+
 	type Completion = (
 		query: string,
 		context: { arguments: Record<string, string> },
@@ -2535,8 +2457,8 @@ declare module 'tmcp/prompt' {
 		 */
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
-	type Icons_1 = v.InferInput<typeof IconsSchema>;
-	type GetPromptResult_1 = v.InferInput<typeof GetPromptResultSchema>;
+	type Icons = v.InferInput<typeof IconsSchema>;
+	type GetPromptResult = v.InferInput<typeof GetPromptResultSchema>;
 	type CompleteResult = v.InferInput<typeof CompleteResultSchema>;
 
 	export {};

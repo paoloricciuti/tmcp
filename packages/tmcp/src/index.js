@@ -2,12 +2,11 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import SqidsType from "sqids";
- * @import { Prompt as PromptClass } from "./prompt.js";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents, AllSame } from "./internal/internal.js";
- * @import { CreatedTool } from "./internal/internal.js";
+ * @import { CreatedTool, ToolOptions, CreatedPrompt, PromptOptions } from "./internal/internal.js";
  */
 import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -865,7 +864,7 @@ export class McpServer {
 	/**
 	 * Use the `defineTool` utility to create a reusable tool and pass it to this method to add it to the server.
 	 * @template {Array<CreatedTool<any, any>>} T
-	 * @template {T extends Array<CreatedTool<infer TSchema, infer TOutputSchema>> ? AllSame<TSchema, StandardSchema> extends true ? AllSame<TOutputSchema, StandardSchema> extends true ? T : never : never : never} U
+	 * @template {T extends Array<CreatedTool<infer TSchema, infer TOutputSchema>> ? AllSame<TSchema, StandardSchema | undefined> extends true ? AllSame<TOutputSchema, StandardSchema | undefined> extends true ? T : never : never : never} U
 	 * @param {T & NoInfer<U>} tools
 	 */
 	tools(tools) {
@@ -890,9 +889,10 @@ export class McpServer {
 	}
 
 	/**
-	 * Use the Prompt class to create a reusable prompt and pass it to this method to add it to the server.
-	 *
-	 * @param {Array<PromptClass<StandardSchema | undefined>>} prompts
+	 * Use the `defineTool` utility to create a reusable tool and pass it to this method to add it to the server.
+	 * @template {Array<CreatedPrompt<any>>} T
+	 * @template {T extends Array<CreatedPrompt<infer TSchema>> ? AllSame<TSchema, StandardSchema | undefined> extends true ?  T : never : never} U
+	 * @param {T & NoInfer<U>} prompts
 	 */
 	prompts(prompts) {
 		for (const prompt of prompts) {
@@ -906,6 +906,8 @@ export class McpServer {
 					enabled: prompt.enabled,
 					icons: prompt.icons,
 				},
+				// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
+				// from showing in intellisense when declaring a tool inline
 				prompt.execute,
 			);
 		}
@@ -966,7 +968,7 @@ export class McpServer {
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
 	 * @overload
-	 * @param {{ name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & Icons} tool_or_options
+	 * @param {ToolOptions<TSchema, TOutputSchema>} tool_or_options
 	 * @param {TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} execute
 	 * @returns {void}
 	 * */
@@ -977,17 +979,11 @@ export class McpServer {
 	 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
 	 * @template {StandardSchema | undefined} [TOutputSchema=undefined]
-	 * @param {CreatedTool<TSchema, TOutputSchema> | { name: string; _meta?: Record<string, any>; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never; annotations?: ToolAnnotations } & Icons} tool_or_options
+	 * @param {CreatedTool<TSchema, TOutputSchema> | ToolOptions<TSchema, TOutputSchema>} tool_or_options
 	 * @param {undefined | TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} [execute]
 	 */
-	tool(tool_or_options, execute) {
-		if ('execute' in tool_or_options) {
-			// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
-			// from showing in intellisense when declaring a tool inline
-			execute = tool_or_options.execute;
-		}
-
-		const {
+	tool(
+		{
 			name,
 			description,
 			title,
@@ -997,7 +993,15 @@ export class McpServer {
 			enabled,
 			icons,
 			_meta,
-		} = tool_or_options;
+			...tool_or_options
+		},
+		execute,
+	) {
+		if ('execute' in tool_or_options) {
+			// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
+			// from showing in intellisense when declaring a tool inline
+			execute = tool_or_options.execute;
+		}
 		this.#notify_tools_list_changed();
 		this.#tools.set(name, {
 			description,
@@ -1011,6 +1015,20 @@ export class McpServer {
 			_meta,
 		});
 	}
+
+	/**
+	 * @template {StandardSchema | undefined} [TSchema=undefined]
+	 * @overload
+	 * @param {CreatedPrompt<TSchema>} prompt_or_options
+	 * @returns {void}
+	 */
+	/**
+	 * @template {StandardSchema | undefined} [TSchema=undefined]
+	 * @overload
+	 * @param {PromptOptions<TSchema>} prompt_or_options
+	 * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} execute
+	 * @returns {void}
+	 * */
 	/**
 	 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
 	 * Use the description and title to help the user to understand what the prompt does and when to use it.
@@ -1018,13 +1036,27 @@ export class McpServer {
 	 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
 	 * for each input that will be used to provide completions for the user.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> } & Icons} options
-	 * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} execute
+	 * @param {CreatedPrompt<TSchema> | PromptOptions<TSchema>} options
+	 * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} [execute]
 	 */
 	prompt(
-		{ name, description, title, schema, complete, enabled, icons },
+		{
+			name,
+			description,
+			title,
+			schema,
+			complete,
+			enabled,
+			icons,
+			...prompt_or_options
+		},
 		execute,
 	) {
+		if ('execute' in prompt_or_options) {
+			// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
+			// from showing in intellisense when declaring a tool inline
+			execute = prompt_or_options.execute;
+		}
 		if (complete) {
 			this.#completions['ref/prompt'].set(name, complete);
 		}
@@ -1033,7 +1065,7 @@ export class McpServer {
 			description,
 			title,
 			schema,
-			execute,
+			execute: /** @type {NonNullable<typeof execute>} */ (execute),
 			enabled,
 			icons,
 		});

@@ -1,69 +1,23 @@
-/* eslint-disable jsdoc/no-undefined-types */
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
- * @import { Completion } from "./internal/internal.js";
+ * @import { PromptOptions, CreatedPrompt } from "./internal/internal.js";
+ * @import { GetPromptResult } from "./validation/index.js"
  */
 
 /**
- * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
- * Use the description and title to help the user to understand what the prompt does and when to use it.
- *
- * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
- * for each input that will be used to provide completions for the user.
+ * Add a tool to the server. If you want to receive any input you need to provide a schema. The schema needs to be a valid Standard Schema V1 schema and needs to be an Object with the properties you need,
+ * Use the description and title to help the LLM to understand what the tool does and when to use it. If you provide an outputSchema, you need to return a structuredContent that matches the schema.
  *
  * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
+ * @param {PromptOptions<TSchema>} options
+ * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} execute
  */
-export class Prompt {
-	/**
-	 * @readonly
-	 */
-	name;
-	/**
-	 * @readonly
-	 */
-	description;
-	/**
-	 * @readonly
-	 */
-	title;
-	/**
-	 * @readonly
-	 * @type {(StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never) | undefined}
-	 */
-	schema;
-	/**
-	 * @readonly
-	 */
-	complete;
-	/**
-	 * @readonly
-	 */
-	enabled;
-	/**
-	 * @readonly
-	 */
-	icons;
-	/**
-	 * @readonly
-	 * @type {*}
-	 */
-	execute;
-
-	/**
-	 * @param {{ name: string; description: string; title?: string; enabled?: ()=>boolean | Promise<boolean>; schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never; complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> } & import("./index.js").Icons} options
-	 * @param {TSchema extends undefined ? (()=>Promise<import("./index.js").GetPromptResult> | import("./index.js").GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<import("./index.js").GetPromptResult> | import("./index.js").GetPromptResult} execute
-	 */
-	constructor(
-		{ name, description, title, schema, complete, enabled, icons },
-		execute,
-	) {
-		this.name = name;
-		this.description = description;
-		this.title = title;
-		this.schema = schema;
-		this.complete = complete;
-		this.enabled = enabled;
-		this.icons = icons;
-		this.execute = execute;
-	}
+export function definePrompt(options, execute) {
+	// eslint-disable-next-line jsdoc/no-undefined-types
+	return /** @type {CreatedPrompt<TSchema>} */ (
+		/** @type {unknown} */ ({
+			...options,
+			execute,
+		})
+	);
 }
