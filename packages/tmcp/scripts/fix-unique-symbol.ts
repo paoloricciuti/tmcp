@@ -1,3 +1,10 @@
+/**
+ * This script is needed because `dts-buddy` creates a new symbol for each "module"
+ * which means that for what typescript is concerned the two are different symbols.
+ *
+ * This remove all of them and move them on top so they are shared between modules.
+ */
+
 import fs from 'node:fs/promises';
 const FILE_PATH = './src/types/index.d.ts';
 
