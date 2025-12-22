@@ -657,6 +657,66 @@ describe('McpServer', () => {
 				},
 			});
 		});
+
+		it('should warn when the tool does not conform to the tool name suggestion spec (SEP 986)', async () => {
+			// Spy on console.warn to verify warnings are logged
+			const warn_spy = vi
+				.spyOn(console, 'warn')
+				.mockImplementation(() => {});
+
+			// Test valid tool names
+			server.tool(
+				{
+					name: 'valid-tool-name',
+					description: 'A valid tool name',
+				},
+				async () => ({ content: [{ type: 'text', text: 'Success' }] }),
+			);
+
+			// Test tool name with warnings (starts with dash)
+			server.tool(
+				{
+					name: '-warning-tool',
+					description: 'A tool name that generates warnings',
+				},
+				async () => ({ content: [{ type: 'text', text: 'Success' }] }),
+			);
+
+			// Test invalid tool name (contains spaces)
+			server.tool(
+				{
+					name: 'invalid tool name',
+					description: 'An invalid tool name',
+				},
+				async () => ({ content: [{ type: 'text', text: 'Success' }] }),
+			);
+
+			// Verify that warnings were issued (both for warnings and validation failures)
+			expect(warn_spy).toHaveBeenCalled();
+
+			// Verify specific warning content
+			const warning_calls = warn_spy.mock.calls.map((call) =>
+				call.join(' '),
+			);
+			expect(
+				warning_calls.some((call) =>
+					call.includes('Tool name starts or ends with a dash'),
+				),
+			).toBe(true);
+			expect(
+				warning_calls.some((call) =>
+					call.includes('Tool name contains spaces'),
+				),
+			).toBe(true);
+			expect(
+				warning_calls.some((call) =>
+					call.includes('Tool name contains invalid characters'),
+				),
+			).toBe(true);
+
+			// Clean up spies
+			warn_spy.mockRestore();
+		});
 	});
 
 	describe('pagination functionality', () => {
@@ -1611,6 +1671,7 @@ describe('McpServer', () => {
 					jsonrpc: '2.0',
 					method: 'elicitation/create',
 					params: {
+						mode: 'form',
 						message: 'Message',
 						requestedSchema: {
 							properties: {
@@ -3281,6 +3342,7 @@ describe('McpServer', () => {
 					jsonrpc: '2.0',
 					method: 'elicitation/create',
 					params: {
+						mode: 'form',
 						message: 'Please provide input',
 						requestedSchema: {
 							type: 'object',
@@ -3410,6 +3472,610 @@ describe('McpServer', () => {
 					}),
 				}),
 			);
+
+			send_off();
+		});
+
+		it('should send URL-based elicitation request and return response', async () => {
+			const send_listener = vi.fn();
+			const send_off = server.on('send', send_listener);
+
+			// Re-initialize with URL elicitation capability
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 100,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-11-25',
+						capabilities: {
+							elicitation: {
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				}),
+				{ sessionId: 'session-url' },
+			);
+
+			let elicitation_result;
+			server.tool(
+				{
+					name: 'url-elicitation-tool',
+					description: 'A tool that requests URL-based elicitation',
+				},
+				async () => {
+					elicitation_result = await server.elicitation(
+						'Please fill out the form',
+						'https://example.com/form',
+						'elicit-123',
+					);
+					return {
+						content: [
+							{
+								type: 'text',
+								text: JSON.stringify(elicitation_result),
+							},
+						],
+					};
+				},
+			);
+
+			// Start the tool call (this will send the elicitation request)
+			const tool_promise = server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 101,
+					method: 'tools/call',
+					params: {
+						name: 'url-elicitation-tool',
+					},
+				}),
+				{
+					sessionId: 'session-url',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			await vi.waitFor(() => {
+				expect(send_listener).toHaveBeenCalled();
+			});
+
+			// Verify the URL elicitation request was sent
+			expect(send_listener).toHaveBeenCalledWith({
+				request: {
+					id: expect.any(Number),
+					jsonrpc: '2.0',
+					method: 'elicitation/create',
+					params: {
+						mode: 'url',
+						message: 'Please fill out the form',
+						url: 'https://example.com/form',
+						elicitationId: 'elicit-123',
+					},
+				},
+			});
+
+			// Get the request ID that was sent
+			const elicitation_request_id =
+				send_listener.mock.calls[0][0].request.id;
+
+			// Simulate client response to elicitation
+			await server.receive(
+				{
+					jsonrpc: '2.0',
+					id: elicitation_request_id,
+					result: {
+						action: 'accept',
+					},
+				},
+				{
+					sessionId: 'session-url',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			// Wait for the tool to complete
+			const tool_result = await tool_promise;
+
+			// Verify the elicitation result was correctly returned (no content validation for URL mode)
+			expect(elicitation_result).toEqual({
+				action: 'accept',
+			});
+
+			expect(tool_result).toEqual({
+				id: 101,
+				jsonrpc: '2.0',
+				result: {
+					content: [
+						{
+							type: 'text',
+							text: JSON.stringify(elicitation_result),
+						},
+					],
+				},
+			});
+
+			send_off();
+		});
+
+		it('should throw error when client lacks URL elicitation capability', async () => {
+			// Re-initialize with only form elicitation capability
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 200,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-11-25',
+						capabilities: {
+							elicitation: {
+								form: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				}),
+				{ sessionId: 'session-form-only' },
+			);
+
+			server.tool(
+				{
+					name: 'url-elicitation-fail-tool',
+					description:
+						'A tool that requests URL elicitation without capability',
+				},
+				async () => {
+					try {
+						await server.elicitation(
+							'Please fill out the form',
+							'https://example.com/form',
+							'elicit-456',
+						);
+						return {
+							content: [
+								{ type: 'text', text: 'Should not reach here' },
+							],
+						};
+					} catch (error) {
+						return {
+							content: [
+								{
+									type: 'text',
+									text: `Error: ${/** @type {Error} */ (error).message}`,
+								},
+							],
+							isError: true,
+						};
+					}
+				},
+			);
+
+			const result = await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 201,
+					method: 'tools/call',
+					params: {
+						name: 'url-elicitation-fail-tool',
+					},
+				}),
+				{
+					sessionId: 'session-form-only',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {
+								form: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			expect(result.result.content[0].text).toContain(
+				"Client doesn't support url mode elicitation",
+			);
+		});
+
+		it('should throw error when client lacks form elicitation capability', async () => {
+			// Re-initialize with only URL elicitation capability
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 300,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-11-25',
+						capabilities: {
+							elicitation: {
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				}),
+				{ sessionId: 'session-url-only' },
+			);
+
+			server.tool(
+				{
+					name: 'form-elicitation-fail-tool',
+					description:
+						'A tool that requests form elicitation without capability',
+				},
+				async () => {
+					try {
+						await server.elicitation(
+							'Please provide input',
+							mock_schema,
+						);
+						return {
+							content: [
+								{ type: 'text', text: 'Should not reach here' },
+							],
+						};
+					} catch (error) {
+						return {
+							content: [
+								{
+									type: 'text',
+									text: `Error: ${/** @type {Error} */ (error).message}`,
+								},
+							],
+							isError: true,
+						};
+					}
+				},
+			);
+
+			const result = await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 301,
+					method: 'tools/call',
+					params: {
+						name: 'form-elicitation-fail-tool',
+					},
+				}),
+				{
+					sessionId: 'session-url-only',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			expect(result.result.content[0].text).toContain(
+				"Client doesn't support form mode elicitation",
+			);
+		});
+
+		it('should throw error when URL is invalid', async () => {
+			// Re-initialize with URL elicitation capability
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 400,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-11-25',
+						capabilities: {
+							elicitation: {
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				}),
+				{ sessionId: 'session-invalid-url' },
+			);
+
+			server.tool(
+				{
+					name: 'invalid-url-tool',
+					description:
+						'A tool that requests elicitation with invalid URL',
+				},
+				async () => {
+					try {
+						await server.elicitation(
+							'Please fill out the form',
+							'not-a-valid-url',
+							'elicit-789',
+						);
+						return {
+							content: [
+								{ type: 'text', text: 'Should not reach here' },
+							],
+						};
+					} catch (error) {
+						return {
+							content: [
+								{
+									type: 'text',
+									text: `Error: ${/** @type {Error} */ (error).message}`,
+								},
+							],
+							isError: true,
+						};
+					}
+				},
+			);
+
+			const result = await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 401,
+					method: 'tools/call',
+					params: {
+						name: 'invalid-url-tool',
+					},
+				}),
+				{
+					sessionId: 'session-invalid-url',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			expect(result.result.content[0].text).toContain(
+				'is not a valid URL',
+			);
+		});
+
+		it('should work with both form and URL capabilities', async () => {
+			const send_listener = vi.fn();
+			const send_off = server.on('send', send_listener);
+
+			// Re-initialize with both capabilities
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 500,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-11-25',
+						capabilities: {
+							elicitation: {
+								form: {},
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				}),
+				{ sessionId: 'session-both' },
+			);
+
+			// Test form mode
+			let form_result;
+			server.tool(
+				{
+					name: 'both-form-tool',
+					description: 'A tool that uses form elicitation',
+				},
+				async () => {
+					form_result = await server.elicitation(
+						'Please provide input',
+						mock_schema,
+					);
+					return {
+						content: [
+							{
+								type: 'text',
+								text: JSON.stringify(form_result),
+							},
+						],
+					};
+				},
+			);
+
+			const form_promise = server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 501,
+					method: 'tools/call',
+					params: {
+						name: 'both-form-tool',
+					},
+				}),
+				{
+					sessionId: 'session-both',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {
+								form: {},
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			await vi.waitFor(() => {
+				expect(send_listener).toHaveBeenCalled();
+			});
+
+			// Verify form mode request
+			expect(send_listener).toHaveBeenCalledWith({
+				request: {
+					id: expect.any(Number),
+					jsonrpc: '2.0',
+					method: 'elicitation/create',
+					params: {
+						mode: 'form',
+						message: 'Please provide input',
+						requestedSchema: {
+							type: 'object',
+							properties: {
+								test: {
+									type: 'string',
+								},
+							},
+							required: ['test'],
+						},
+					},
+				},
+			});
+
+			const form_request_id = send_listener.mock.calls[0][0].request.id;
+
+			await server.receive(
+				{
+					jsonrpc: '2.0',
+					id: form_request_id,
+					result: {
+						action: 'accept',
+						content: { test: 'form value' },
+					},
+				},
+				{
+					sessionId: 'session-both',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {
+								form: {},
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			await form_promise;
+
+			expect(form_result).toEqual({
+				action: 'accept',
+				content: { test: 'form value' },
+			});
+
+			// Reset send listener
+			send_listener.mockClear();
+
+			// Test URL mode
+			let url_result;
+			server.tool(
+				{
+					name: 'both-url-tool',
+					description: 'A tool that uses URL elicitation',
+				},
+				async () => {
+					url_result = await server.elicitation(
+						'Please fill out the form',
+						'https://example.com/form',
+						'elicit-both',
+					);
+					return {
+						content: [
+							{
+								type: 'text',
+								text: JSON.stringify(url_result),
+							},
+						],
+					};
+				},
+			);
+
+			const url_promise = server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 502,
+					method: 'tools/call',
+					params: {
+						name: 'both-url-tool',
+					},
+				}),
+				{
+					sessionId: 'session-both',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {
+								form: {},
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			await vi.waitFor(() => {
+				expect(send_listener).toHaveBeenCalled();
+			});
+
+			// Verify URL mode request
+			expect(send_listener).toHaveBeenCalledWith({
+				request: {
+					id: expect.any(Number),
+					jsonrpc: '2.0',
+					method: 'elicitation/create',
+					params: {
+						mode: 'url',
+						message: 'Please fill out the form',
+						url: 'https://example.com/form',
+						elicitationId: 'elicit-both',
+					},
+				},
+			});
+
+			const url_request_id = send_listener.mock.calls[0][0].request.id;
+
+			await server.receive(
+				{
+					jsonrpc: '2.0',
+					id: url_request_id,
+					result: {
+						action: 'accept',
+					},
+				},
+				{
+					sessionId: 'session-both',
+					sessionInfo: {
+						clientCapabilities: {
+							elicitation: {
+								form: {},
+								url: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			await url_promise;
+
+			expect(url_result).toEqual({
+				action: 'accept',
+			});
 
 			send_off();
 		});

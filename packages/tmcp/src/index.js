@@ -33,6 +33,7 @@ import {
 } from './validation/version.js';
 import { should_version_negotiation_fail } from './validation/version.js';
 import { event } from './internal/utils.js';
+import { validate_and_warn_tool_name } from './validation/tool-name.js';
 
 /**
  * Information about a validated access token, provided to request handlers.
@@ -1015,6 +1016,7 @@ export class McpServer {
 			execute = tool_or_options.execute;
 		}
 		this.#notify_tools_list_changed();
+		validate_and_warn_tool_name(name);
 		this.#tools.set(name, {
 			description,
 			title,
@@ -1312,37 +1314,76 @@ export class McpServer {
 	 * If the client doesn't support elicitation, it will throw an error.
 	 *
 	 * @template {StandardSchema extends undefined ? never : StandardSchema} TSchema
-	 * @param {string} message
-	 * @param {TSchema} schema
+	 * @param {[message: string, schema: TSchema] | [message: string, url: string, id: string]} args
 	 * @returns {Promise<ElicitResult & { content?: StandardSchemaV1.InferOutput<TSchema> }>}
 	 */
-	async elicitation(message, schema) {
+	async elicitation(...args) {
+		const [message, schema_or_url, id] = args;
 		if (!this.#client_capabilities?.elicitation)
 			throw new McpError(-32601, "Client doesn't support elicitation");
 
+		const schema = typeof schema_or_url === 'string' ? null : schema_or_url;
+
+		const mode = schema ? 'form' : 'url';
+
+		if (
+			(mode === 'url' && !this.#client_capabilities.elicitation.url) ||
+			(mode === 'form' &&
+				'url' in this.#client_capabilities.elicitation &&
+				!this.#client_capabilities.elicitation.form)
+		) {
+			throw new McpError(
+				-32602,
+				`Client doesn't support ${mode} mode elicitation`,
+			);
+		}
+
+		if (
+			typeof schema_or_url === 'string' &&
+			!v.safeParse(v.pipe(v.string(), v.url()), schema_or_url).success
+		) {
+			throw new McpError(
+				-32602,
+				`URL ${schema_or_url} is not a valid URL`,
+			);
+		}
+
 		this.#lazyily_create_client();
+		const request =
+			schema === null
+				? {
+						mode,
+						message,
+						url: schema_or_url,
+						elicitationId: id,
+					}
+				: {
+						mode,
+						message,
+						requestedSchema:
+							await this.#options.adapter?.toJsonSchema(schema),
+					};
 		const result = await this.#client?.request(
 			'elicitation/create',
-			{
-				message,
-				requestedSchema:
-					await this.#options.adapter?.toJsonSchema(schema),
-			},
+			request,
 			'standalone',
 		);
 		const elicit_result = v.parse(ElicitResultSchema, result);
-		let validated_result = schema['~standard'].validate(
-			elicit_result.content,
-		);
-		if (validated_result instanceof Promise)
-			validated_result = await validated_result;
-		if (validated_result.issues) {
-			throw new McpError(
-				-32603,
-				`Invalid elicitation result: ${JSON.stringify(validated_result.issues)}`,
+		if (schema !== null) {
+			let validated_result = schema['~standard'].validate(
+				elicit_result.content,
 			);
+			if (validated_result instanceof Promise)
+				validated_result = await validated_result;
+			if (validated_result.issues) {
+				throw new McpError(
+					-32603,
+					`Invalid elicitation result: ${JSON.stringify(validated_result.issues)}`,
+				);
+			}
+			return { ...elicit_result, content: validated_result.value };
 		}
-		return { ...elicit_result, content: validated_result.value };
+		return elicit_result;
 	}
 
 	/**
