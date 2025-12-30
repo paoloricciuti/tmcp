@@ -19,7 +19,7 @@
 		"@tmcp/adapter-valibot": "workspace:^",
 		"@tmcp/transport-http": "workspace:^",
 		"@types/node": "^24.10.0",
-		"srvx": "^0.9.5",
+		"srvx": "^0.10.0",
 		"tmcp": "workspace:^",
 		"valibot": "^1.1.0"
 	},
