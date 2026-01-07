@@ -93,6 +93,29 @@ The schema **MUST** be an object and you'll get a type error if it's not.
 
 </Callout>
 
+## Requesting User Input
+
+If your tool needs additional information from the user that wasn't provided in the initial call, you can use [elicitation](/docs/core/elicitation) to request structured input interactively. This allows your tool to pause execution, ask the user for specific data through a UI presented by the client, and then continue with that information.
+
+```ts
+const confirmation = await server.elicitation(
+	'Are you sure you want to continue?',
+	v.object({
+		confirmed: v.boolean(),
+	}),
+);
+
+if (confirmation.action === 'accept' && confirmation.content!.confirmed) {
+	// Proceed with operation
+}
+```
+
+<Callout type="note">
+
+Learn more about requesting user input in the [elicitation documentation](/docs/core/elicitation).
+
+</Callout>
+
 ## Structured output
 
 Some MCP clients are also able to ingest structured output from a tool call to use the return value of a tool call programmatically (eg. code mode from [Cloudflare](https://blog.cloudflare.com/code-mode/) or [Anthropic](https://www.anthropic.com/engineering/code-execution-with-mcp)).
