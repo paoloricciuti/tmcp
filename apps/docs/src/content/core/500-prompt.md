@@ -306,7 +306,7 @@ Each completion function receives the current query string and a context object 
 
 <Callout type="tip">
 
-You can use the [completion utilities](/docs/utils/completion) to make returning completion results easier and more concise.
+You can use the [completion utilities](/docs/utils/complete) to make returning completion results easier and more concise.
 
 </Callout>
 
