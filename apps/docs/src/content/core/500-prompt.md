@@ -214,11 +214,33 @@ server.prompt(
 );
 ```
 
-<Callout type="note">
+### Audio Content
 
-The MCP spec also supports audio content (`type: 'audio'`) with base64-encoded audio data and a MIME type. All content types can include optional annotations for metadata about audience, priority, and modification times.
+Include audio context in prompts:
 
-</Callout>
+```ts
+server.prompt(
+	{
+		name: 'transcribe-audio',
+		description: 'Transcribe and analyze audio content',
+		title: 'Audio Transcription',
+	},
+	() => {
+		return {
+			messages: [
+				{
+					role: 'user',
+					content: {
+						type: 'audio',
+						data: 'base64-encoded-audio-data',
+						mimeType: 'audio/wav',
+					},
+				},
+			],
+		};
+	},
+);
+```
 
 ## Completions
 
