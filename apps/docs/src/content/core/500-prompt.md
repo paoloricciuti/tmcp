@@ -301,7 +301,14 @@ server.prompt(
 );
 ```
 
+
 Each completion function receives the current query string and a context object containing the other arguments that have been filled in, allowing you to provide context-aware suggestions.
+
+<Callout type="tip">
+
+You can use the [completion utilities](/docs/utils/completion) to make returning completion results easier and more concise.
+
+</Callout>
 
 ## `enabled` function
 
