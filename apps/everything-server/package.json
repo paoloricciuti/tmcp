@@ -13,13 +13,13 @@
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
-	"packageManager": "pnpm@10.26.0",
+	"packageManager": "pnpm@10.27.0",
 	"type": "module",
 	"dependencies": {
 		"@tmcp/adapter-valibot": "workspace:^",
 		"@tmcp/transport-http": "workspace:^",
 		"@types/node": "^24.10.0",
-		"srvx": "^0.9.5",
+		"srvx": "^0.10.0",
 		"tmcp": "workspace:^",
 		"valibot": "^1.1.0"
 	},
