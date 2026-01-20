@@ -21,3 +21,17 @@ export function defineTool(options, execute) {
 		})
 	);
 }
+
+/**
+ * Execute a tool created with `defineTool`.
+ *
+ * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
+ * @template {StandardSchemaV1 | undefined} [TOutputSchema=undefined]
+ * @param {CreatedTool<TSchema, TOutputSchema>} tool - The tool to execute
+ * @param {TSchema extends undefined ? [] : [input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>]} args - The arguments to pass to the tool
+ * @returns {Promise<import("./index.js").CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>>}
+ */
+export async function executeTool(tool, ...args) {
+	// @ts-expect-error - execute is hidden in CreatedTool but exists at runtime
+	return tool.execute(...args);
+}

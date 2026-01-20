@@ -4220,6 +4220,177 @@ describe('McpServer', () => {
 			send_off();
 		});
 
+		it('should send sampling with tools request and return model response', async () => {
+			const send_listener = vi.fn();
+			const send_off = server.on('send', send_listener);
+
+			let sampling_result;
+			server.tool(
+				{
+					name: 'sampling-tool',
+					description: 'A tool that requests sampling',
+				},
+				async () => {
+					sampling_result = await server.message({
+						maxTokens: 500,
+						tools: [
+							define_tool(
+								{
+									name: 'test',
+									description: 'A test tool',
+								},
+								() => {
+									return {};
+								},
+							),
+						],
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Test message',
+								},
+							},
+						],
+					});
+
+					return {
+						content: [
+							{
+								type: 'text',
+								text: JSON.stringify(sampling_result),
+							},
+						],
+					};
+				},
+			);
+
+			// Start the tool call (this will send the sampling request)
+			const tool_promise = server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 3,
+					method: 'tools/call',
+					params: {
+						name: 'sampling-tool',
+					},
+				}),
+				{
+					sessionId: 'session-1',
+					sessionInfo: {
+						clientCapabilities: {
+							sampling: {
+								tools: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			await vi.waitFor(() => {
+				expect(send_listener).toHaveBeenCalled();
+			});
+
+			// Verify the sampling request was sent
+			expect(send_listener).toHaveBeenCalledWith({
+				request: {
+					id: expect.any(Number),
+					jsonrpc: '2.0',
+					method: 'sampling/createMessage',
+					params: {
+						maxTokens: 500,
+						tools: [
+							{
+								name: 'test',
+								description: 'A test tool',
+								inputSchema: { type: 'object', properties: {} },
+							},
+						],
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									text: 'Test message',
+								},
+							},
+						],
+					},
+				},
+			});
+
+			// Get the request ID that was sent
+			const sampling_request_id =
+				send_listener.mock.calls[0][0].request.id;
+
+			// Simulate client response to sampling
+			await server.receive(
+				{
+					jsonrpc: '2.0',
+					id: sampling_request_id,
+					result: {
+						role: 'assistant',
+						content: [
+							{
+								type: 'tool_use',
+								id: 'call_abc123',
+								name: 'test',
+								input: {},
+							},
+						],
+						model: 'test-model',
+						stopReason: 'toolUse',
+					},
+				},
+				{
+					sessionId: 'session-1',
+					sessionInfo: {
+						clientCapabilities: {
+							sampling: {
+								tools: {},
+							},
+						},
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			// Wait for the tool to complete
+			const tool_result = await tool_promise;
+
+			// Verify the sampling result was correctly returned
+			expect(sampling_result).toEqual({
+				role: 'assistant',
+				content: [
+					{
+						type: 'tool_use',
+						id: 'call_abc123',
+						name: 'test',
+						input: {},
+					},
+				],
+				model: 'test-model',
+				stopReason: 'toolUse',
+			});
+
+			expect(tool_result).toEqual({
+				id: 3,
+				jsonrpc: '2.0',
+				result: {
+					content: [
+						{
+							type: 'text',
+							text: JSON.stringify(sampling_result),
+						},
+					],
+				},
+			});
+
+			send_off();
+		});
+
 		it('should not send sampling when client lacks capability', async () => {
 			const send_listener = vi.fn();
 			const send_off = server.on('send', send_listener);
