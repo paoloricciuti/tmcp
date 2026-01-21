@@ -61,10 +61,14 @@
 		"valibot": "^1.1.0"
 	},
 	"devDependencies": {
+		"@sveltejs/acorn-typescript": "^1.0.8",
+		"@types/estree": "^1.0.8",
 		"@types/json-schema": "^7.0.15",
 		"@types/node": "^24.0.13",
+		"acorn": "^8.15.0",
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
-		"vitest": "^4.0.0"
+		"vitest": "^4.0.0",
+		"zimmerframe": "^1.1.4"
 	}
 }

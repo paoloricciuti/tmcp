@@ -17,6 +17,7 @@ import {
 	CompleteResultSchema,
 	CreateMessageRequestParamsSchema,
 	CreateMessageResultSchema,
+	CreateMessageResultWithToolsSchema,
 	GetPromptResultSchema,
 	InitializeRequestParamsSchema,
 	JSONRPCNotificationSchema,
@@ -87,11 +88,13 @@ import { validate_and_warn_tool_name } from './validation/tool-name.js';
  */
 
 /**
- * @typedef {CreateMessageRequestParamsType} CreateMessageRequestParams
+ * @template {StandardSchemaV1} TSchema
+ * @typedef {CreateMessageRequestParamsType<TSchema>} CreateMessageRequestParams
  */
 
 /**
- * @typedef {CreateMessageResultType} CreateMessageResult
+ * @template {boolean} TWithTools
+ * @typedef {CreateMessageResultType<TWithTools>} CreateMessageResult
  */
 
 /**
@@ -1387,15 +1390,133 @@ export class McpServer {
 	}
 
 	/**
+	 * @template {TTools extends Array<CreatedTool<infer TSchema, any>> ? TTools["length"] extends 0 ? TTools : AllSame<TSchema, StandardSchema | undefined> extends true  ? TTools : never : never} U
+	 * @template {CreateMessageRequestParams<any>["tools"]} [const TTools=undefined]
+	 * @template {CreateMessageRequestParams<any>["toolChoice"]} [TToolChoice=undefined]
 	 * Request language model sampling from the client
-	 * @param {CreateMessageRequestParams} request
-	 * @returns {Promise<CreateMessageResult>}
+	 * @param {Omit<CreateMessageRequestParams<any>, "tools" | "toolChoice"> & { tools?: TTools & NoInfer<U>, toolChoice?: TToolChoice }} request
+	 * @returns {Promise<CreateMessageResult<undefined extends TTools ? undefined extends TToolChoice ? false : true : true>>}
 	 */
 	async message(request) {
 		if (!this.#client_capabilities?.sampling)
 			throw new McpError(-32601, "Client doesn't support sampling");
+		if (
+			(request.tools != null || request.toolChoice != null) &&
+			this.#client_capabilities?.sampling.tools == null
+		) {
+			throw new McpError(
+				-32602,
+				"Client doesn't support sampling with tools",
+			);
+		}
+
+		// Message structure validation - always validate tool_use/tool_result pairs.
+		// These may appear even without tools/toolChoice in the current request when
+		// a previous sampling request returned tool_use and this is a follow-up with results.
+
+		// copied almost verbatim from official typescript SDK implementation
+		if (request.messages.length > 0) {
+			const last_message = request.messages[request.messages.length - 1];
+			const last_content = Array.isArray(last_message.content)
+				? last_message.content
+				: [last_message.content];
+			const has_tool_results = last_content.some(
+				(c) => c.type === 'tool_result',
+			);
+
+			const previous_message =
+				request.messages[request.messages.length - 2];
+			const previous_content = previous_message
+				? Array.isArray(previous_message.content)
+					? previous_message.content
+					: [previous_message.content]
+				: [];
+			const has_previous_tool_use = previous_content.some(
+				(c) => c.type === 'tool_use',
+			);
+
+			if (has_tool_results) {
+				if (last_content.some((c) => c.type !== 'tool_result')) {
+					throw new Error(
+						'The last message must contain only tool_result content if any is present',
+					);
+				}
+				if (!has_previous_tool_use) {
+					throw new Error(
+						'tool_result blocks are not matching any tool_use from the previous message',
+					);
+				}
+			}
+			if (has_previous_tool_use) {
+				const tool_use_ids = new Set(
+					previous_content
+						.filter((c) => c.type === 'tool_use')
+						.map((c) => c.id),
+				);
+				const tool_result_ids = new Set(
+					last_content
+						.filter((c) => c.type === 'tool_result')
+						.map((c) => c.toolUseId),
+				);
+				if (
+					tool_use_ids.size !== tool_result_ids.size ||
+					![...tool_use_ids].every((id) => tool_result_ids.has(id))
+				) {
+					throw new Error(
+						'ids of tool_result blocks and tool_use blocks from previous message do not match',
+					);
+				}
+			}
+		}
 
 		this.#lazyily_create_client();
+		const all_tools =
+			request.tools == null
+				? undefined
+				: (
+						await Promise.all(
+							request.tools.map(async (whole_tool) => {
+								if (
+									whole_tool.enabled != null &&
+									(await safe_enabled(whole_tool.enabled)) ===
+										false
+								)
+									return null;
+								// eslint-disable-next-line no-unused-vars
+								const { execute, ...tool } = /** @type {*} */ (
+									whole_tool
+								);
+								return {
+									...tool,
+									inputSchema:
+										tool.schema && this.#options.adapter
+											? await this.#options.adapter.toJsonSchema(
+													tool.schema,
+												)
+											: {
+													type: 'object',
+													properties: {},
+												},
+									...(tool.outputSchema &&
+									this.#options.adapter
+										? {
+												outputSchema:
+													await this.#options.adapter.toJsonSchema(
+														tool.outputSchema,
+													),
+											}
+										: {}),
+									...(tool.annotations
+										? {
+												annotations: tool.annotations,
+											}
+										: {}),
+								};
+							}),
+						)
+					).filter((tool) => tool !== null);
+
+		request.tools = /** @type {*} */ (all_tools);
 
 		// Validate the request
 		const validated_request = v.parse(
@@ -1411,7 +1532,15 @@ export class McpServer {
 		);
 
 		// Validate and return the response
-		return v.parse(CreateMessageResultSchema, response);
+		return /**@type {*} */ (
+			v.parse(
+				v.union([
+					CreateMessageResultWithToolsSchema,
+					CreateMessageResultSchema,
+				]),
+				response,
+			)
+		);
 	}
 
 	/**
