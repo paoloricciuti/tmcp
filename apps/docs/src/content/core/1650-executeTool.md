@@ -129,7 +129,7 @@ async function runToolSequence(tools, inputs) {
 }
 ```
 
-<Callout type="info">
+<Callout type="note">
 
 The `sampling.loop` utility uses `executeTool` internally to execute tools when the LLM requests them.
 

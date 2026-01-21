@@ -158,7 +158,7 @@ const result = await sampling.loop({
 });
 ```
 
-<Callout type="info">
+<Callout type="note">
 
 On the last iteration, the loop automatically sets `toolChoice` to `"none"` to force the LLM to provide a final answer instead of calling more tools.
 

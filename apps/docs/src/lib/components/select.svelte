@@ -9,7 +9,7 @@
 	}: { options: string[]; children: Snippet<[string]>; title: string } =
 		$props();
 
-	let value = $state(options[0]);
+	let value = $derived(options[0]);
 </script>
 
 <Label class="mt-8 inline-block">
