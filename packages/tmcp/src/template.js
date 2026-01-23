@@ -10,7 +10,7 @@
  * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
  * Resource templates can have a list method that returns a list of resources that match the template and a complete method that returns a list of resources given one of the template variables, this method will
  * be invoked to provide completions for the template variables to the user.
- * Use the description and title to help the user to understand what the resource is.
+ * Use the description and title to help the user to understand what the resource is. The mimeType can be used to indicate the type of content.
  *
  * @template {string} TUri
  * @template {ExtractURITemplateVariables<TUri>} TVariables
