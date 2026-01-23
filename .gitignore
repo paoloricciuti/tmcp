@@ -2,3 +2,4 @@ node_modules
 .claude
 .DS_Store
 mcp-docs
+.opencode
