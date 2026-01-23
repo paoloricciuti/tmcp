@@ -1,5 +1,11 @@
 # @tmcp/transport-http
 
+## 0.8.4
+
+### Patch Changes
+
+- f3c2b18: feat: add `disableSse` option
+
 ## 0.8.3
 
 ### Patch Changes
