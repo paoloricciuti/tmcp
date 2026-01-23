@@ -26,6 +26,7 @@ declare module '@tmcp/transport-http' {
 			streams?: StreamSessionManager;
 			info?: OptionalizeSessionManager<InfoSessionManager>;
 		};
+		disableSse?: boolean;
 	};
 	type ToOmit = 'removeSubscription';
 

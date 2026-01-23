@@ -16,6 +16,10 @@ import { HttpTransport } from '../src/index.js';
 import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 
 /**
+ * @import { HttpTransportOptions } from '../src/index.js';
+ */
+
+/**
  * @typedef {ConstructorParameters<typeof McpServer>[1]} ServerOptions
  */
 
@@ -58,8 +62,9 @@ let sse_connected_resolve;
 
 /**
  * @param {Omit<ServerOptions, "adapter">} [options]
+ * @param {Omit<HttpTransportOptions, "path">} [transportOptions]
  */
-export function new_server(options = DEFAULT_OPTIONS) {
+export function new_server(options = DEFAULT_OPTIONS, transportOptions) {
 	mcp_server = new McpServer(
 		{
 			name: 'simple-server',
@@ -78,7 +83,10 @@ export function new_server(options = DEFAULT_OPTIONS) {
 		 */
 		setup(cb) {
 			cb(mcp_server);
-			transport = new HttpTransport(mcp_server, { path: '/mcp' });
+			transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				...transportOptions,
+			});
 			/**
 			 * @type {Promise<void>}
 			 */
