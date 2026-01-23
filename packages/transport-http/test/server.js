@@ -62,9 +62,9 @@ let sse_connected_resolve;
 
 /**
  * @param {Omit<ServerOptions, "adapter">} [options]
- * @param {Omit<HttpTransportOptions, "path">} [transportOptions]
+ * @param {Omit<HttpTransportOptions, "path">} [transport_options]
  */
-export function new_server(options = DEFAULT_OPTIONS, transportOptions) {
+export function new_server(options = DEFAULT_OPTIONS, transport_options) {
 	mcp_server = new McpServer(
 		{
 			name: 'simple-server',
@@ -85,7 +85,7 @@ export function new_server(options = DEFAULT_OPTIONS, transportOptions) {
 			cb(mcp_server);
 			transport = new HttpTransport(mcp_server, {
 				path: '/mcp',
-				...transportOptions,
+				...transport_options,
 			});
 			/**
 			 * @type {Promise<void>}
