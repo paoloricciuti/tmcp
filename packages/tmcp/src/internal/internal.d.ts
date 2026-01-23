@@ -46,7 +46,8 @@ export type ResourceOptions = {
 	name: string;
 	description: string; 
 	title?: string; 
-	uri: string, 
+	uri: string;
+	mimeType?: string;
 	enabled?: ()=>boolean | Promise<boolean>; 
 } & Icons
 
@@ -54,6 +55,7 @@ export type TemplateOptions<TUri extends string = string, TVariables extends Ext
 	name: string;
 	description: string;
 	title?: string;
+	mimeType?: string;
 	enabled?: ()=>boolean | Promise<boolean>;
 	uri: TUri;
 	complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
@@ -99,6 +101,7 @@ export type StoredResource =
 			name: string;
 			template: true;
 			title?: string;
+			mimeType?: string;
 			enabled?: () => boolean | Promise<boolean>;
 			list_resources?: () =>
 				| Promise<Array<Resource>>
@@ -113,6 +116,7 @@ export type StoredResource =
 			name: string;
 			template: false;
 			title?: string;
+			mimeType?: string;
 			enabled?: () => boolean | Promise<boolean>;
 			execute: (
 				uri: string,

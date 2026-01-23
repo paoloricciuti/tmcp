@@ -668,7 +668,7 @@ export class McpServer {
 			// Add static resources
 			for (const [
 				uri,
-				{ description, name, title, icons, ...resource },
+				{ description, name, title, icons, mimeType, ...resource },
 			] of this.#resources) {
 				if (!resource.template) {
 					if (
@@ -681,6 +681,7 @@ export class McpServer {
 						title: title || description,
 						description,
 						uri,
+						mimeType,
 						icons,
 					});
 				} else if (resource.list_resources) {
@@ -727,6 +728,7 @@ export class McpServer {
 									name,
 									title,
 									template,
+									mimeType,
 									icons,
 									enabled,
 								},
@@ -742,6 +744,7 @@ export class McpServer {
 									icons,
 									title: title || description,
 									description,
+									mimeType,
 									uriTemplate: uri,
 								};
 							},
@@ -926,6 +929,7 @@ export class McpServer {
 					description: resource.description,
 					title: resource.title,
 					uri: resource.uri,
+					mimeType: resource.mimeType,
 					enabled: resource.enabled,
 					icons: resource.icons,
 				},
@@ -949,6 +953,7 @@ export class McpServer {
 					description: template.description,
 					title: template.title,
 					uri: template.uri,
+					mimeType: template.mimeType,
 					complete: template.complete,
 					list: template.list,
 					enabled: template.enabled,
@@ -1133,6 +1138,7 @@ export class McpServer {
 			description,
 			title,
 			uri,
+			mimeType,
 			enabled,
 			icons,
 			...resource_or_options
@@ -1149,6 +1155,7 @@ export class McpServer {
 			description,
 			title,
 			uri,
+			mimeType,
 			execute: /** @type {NonNullable<typeof execute>} */ (execute),
 			enabled,
 			icons,
@@ -1197,6 +1204,7 @@ export class McpServer {
 			description,
 			title,
 			uri,
+			mimeType,
 			complete,
 			list: list_resources,
 			enabled,
@@ -1216,6 +1224,7 @@ export class McpServer {
 			description,
 			title,
 			uri,
+			mimeType,
 			execute: /** @type {NonNullable<typeof execute>} */ (execute),
 			complete,
 			icons,
