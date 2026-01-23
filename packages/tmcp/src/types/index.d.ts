@@ -6234,7 +6234,8 @@ declare module 'tmcp/utils' {
 		name: string;
 		description: string; 
 		title?: string; 
-		uri: string, 
+		uri: string;
+		mimeType?: string;
 		enabled?: ()=>boolean | Promise<boolean>; 
 	} & Icons
 
@@ -6242,6 +6243,7 @@ declare module 'tmcp/utils' {
 		name: string;
 		description: string;
 		title?: string;
+		mimeType?: string;
 		enabled?: ()=>boolean | Promise<boolean>;
 		uri: TUri;
 		complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
