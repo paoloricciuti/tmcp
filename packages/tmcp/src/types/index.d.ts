@@ -277,7 +277,8 @@ declare module 'tmcp' {
 		name: string;
 		description: string; 
 		title?: string; 
-		uri: string, 
+		uri: string;
+		mimeType?: string;
 		enabled?: ()=>boolean | Promise<boolean>; 
 	} & Icons_1
 
@@ -285,6 +286,7 @@ declare module 'tmcp' {
 		name: string;
 		description: string;
 		title?: string;
+		mimeType?: string;
 		enabled?: ()=>boolean | Promise<boolean>;
 		uri: TUri;
 		complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
@@ -3361,7 +3363,7 @@ declare module 'tmcp/resource' {
 	 */
 	/**
 	 * Add a resource to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
-	 * Use the description and title to help the user to understand what the resource is.
+	 * Use the description and title to help the user to understand what the resource is. The mimeType can be used to indicate the type of content.
 	 *
 	 * */
 	export function defineResource(options: ResourceOptions, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): CreatedResource;
@@ -3370,7 +3372,8 @@ declare module 'tmcp/resource' {
 		name: string;
 		description: string; 
 		title?: string; 
-		uri: string, 
+		uri: string;
+		mimeType?: string;
 		enabled?: ()=>boolean | Promise<boolean>; 
 	} & Icons
 	type CreatedResource = ResourceOptions & { [created_resource]: created_resource };
@@ -3469,7 +3472,7 @@ declare module 'tmcp/template' {
 	 * Resource templates are used to create resources dynamically based on a URI template. The URI template should be a valid URI template as defined in RFC 6570.
 	 * Resource templates can have a list method that returns a list of resources that match the template and a complete method that returns a list of resources given one of the template variables, this method will
 	 * be invoked to provide completions for the template variables to the user.
-	 * Use the description and title to help the user to understand what the resource is.
+	 * Use the description and title to help the user to understand what the resource is. The mimeType can be used to indicate the type of content.
 	 *
 	 * */
 	export function defineTemplate<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>(options: TemplateOptions<TUri>, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): CreatedTemplate<TUri>;
@@ -3523,6 +3526,7 @@ declare module 'tmcp/template' {
 		name: string;
 		description: string;
 		title?: string;
+		mimeType?: string;
 		enabled?: ()=>boolean | Promise<boolean>;
 		uri: TUri;
 		complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;

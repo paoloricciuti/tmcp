@@ -46,7 +46,8 @@ export type ResourceOptions = {
 	name: string;
 	description: string; 
 	title?: string; 
-	uri: string, 
+	uri: string;
+	mimeType?: string;
 	enabled?: ()=>boolean | Promise<boolean>; 
 } & Icons
 
@@ -54,6 +55,7 @@ export type TemplateOptions<TUri extends string = string, TVariables extends Ext
 	name: string;
 	description: string;
 	title?: string;
+	mimeType?: string;
 	enabled?: ()=>boolean | Promise<boolean>;
 	uri: TUri;
 	complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
@@ -65,41 +67,26 @@ export type CreatedPrompt<TSchema extends StandardSchemaV1 | undefined = undefin
 export type CreatedResource = ResourceOptions & { [created_resource]: created_resource };
 export type CreatedTemplate<TUri extends string = string> = TemplateOptions<TUri> & { [created_template]: created_template };
 
-export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
-	description: string;
-	schema: TSchema;
-	outputSchema?: TOutputSchema;
-	title?: string;
-	annotations?: ToolAnnotations;
-	_meta?: Record<string, unknown>;
-	enabled?: () => boolean | Promise<boolean>;
+export type Tool<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>, TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = ToolOptions<TSchema, TOutputSchema> & {
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<CallToolResult> | CallToolResult;
-} & Icons;
+};
 
 export type Completion = (
 	query: string,
 	context: { arguments: Record<string, string> },
 ) => CompleteResult | Promise<CompleteResult>;
 
-export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = {
-	description: string;
-	schema: TSchema;
-	title?: string;
-	enabled?: () => boolean | Promise<boolean>;
+export type Prompt<TSchema extends StandardSchemaV1 = StandardSchemaV1<any>> = PromptOptions<TSchema> & {
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
 	) => Promise<GetPromptResult> | GetPromptResult;
-} & Icons;
+};
 
 export type StoredResource =
-	| {
-			description: string;
-			name: string;
+	| TemplateOptions<string, string> & {
 			template: true;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
 			list_resources?: () =>
 				| Promise<Array<Resource>>
 				| Array<Resource>;
@@ -107,17 +94,13 @@ export type StoredResource =
 				uri: string,
 				params: Record<string, string | string[]>,
 			) => Promise<ReadResourceResult> | ReadResourceResult;
-	  } & Icons
-	| {
-			description: string;
-			name: string;
+	  }
+	| ResourceOptions & {
 			template: false;
-			title?: string;
-			enabled?: () => boolean | Promise<boolean>;
 			execute: (
 				uri: string,
 			) => Promise<ReadResourceResult> | ReadResourceResult;
-	  } & Icons;
+	  };
 
 export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	capabilities?: ServerCapabilities;

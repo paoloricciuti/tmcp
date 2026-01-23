@@ -47,9 +47,8 @@ server.tool(
 <Callout type="tip">
 
 You can also create a tool in a separate module and add it with `server.tool(yourTool)`. Learn more in the [defineTool](/docs/core/defineTool) documentation page.
-	
-</Callout>
 
+</Callout>
 
 ### Tool name requirements
 
@@ -259,6 +258,42 @@ server.tool(
 	},
 );
 ```
+
+## Dynamic Properties with Getters
+
+Sometimes you need properties that are computed dynamically at list-time rather than registration-time. For example, you might want to serve different descriptions based on which client is connected.
+
+`tmcp` preserves JavaScript getters on the configuration object, so properties are evaluated lazily each time `tools/list` is called:
+
+```ts
+server.tool(
+	{
+		name: 'search',
+		get description() {
+			const client = server.ctx.sessionInfo?.clientInfo?.name;
+			if (client === 'claude-code') {
+				return 'Search the codebase for files, symbols, or text patterns';
+			}
+			return 'Search for information';
+		},
+		get title() {
+			const client = server.ctx.sessionInfo?.clientInfo?.name;
+			return client === 'claude-code' ? 'Code Search' : 'Search';
+		},
+	},
+	() => {
+		return {
+			content: [{ type: 'text', text: 'Search results...' }],
+		};
+	},
+);
+```
+
+<Callout type="note">
+
+Getters are called synchronously during list operations. Keep them lightweight to avoid performance issues. For async data, consider caching the result and updating it periodically.
+
+</Callout>
 
 ## Hints
 

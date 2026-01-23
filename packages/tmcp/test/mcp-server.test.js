@@ -7,6 +7,8 @@ import { JsonSchemaAdapter } from '../src/adapter.js';
 import { McpServer } from '../src/index.js';
 import { defineTool as define_tool } from '../src/tool.js';
 import { definePrompt as define_prompt } from '../src/prompt.js';
+import { defineResource as define_resource } from '../src/resource.js';
+import { defineTemplate as define_template } from '../src/template.js';
 
 /**
  * @template T
@@ -717,6 +719,62 @@ describe('McpServer', () => {
 			// Clean up spies
 			warn_spy.mockRestore();
 		});
+
+		it('should support getters for dynamic properties', async () => {
+			let list_request_count = 0;
+			const tool = vi.fn().mockResolvedValue({
+				content: [{ type: 'text', text: 'result' }],
+			});
+
+			server.tool(
+				{
+					name: 'getter-test-tool',
+					get description() {
+						// Return value based on list request count (set before each request)
+						return `Dynamic description (request ${list_request_count})`;
+					},
+				},
+				tool,
+			);
+
+			// First list request - should invoke the getter
+			list_request_count = 1;
+			const list_request_1 = request({
+				jsonrpc: '2.0',
+				id: 100,
+				method: 'tools/list',
+			});
+
+			const result_1 = await server.receive(list_request_1, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_1.result.tools).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-tool',
+					description: 'Dynamic description (request 1)',
+				}),
+			);
+
+			// Second list request - getter should be called again with new value
+			list_request_count = 2;
+			const list_request_2 = request({
+				jsonrpc: '2.0',
+				id: 101,
+				method: 'tools/list',
+			});
+
+			const result_2 = await server.receive(list_request_2, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_2.result.tools).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-tool',
+					description: 'Dynamic description (request 2)',
+				}),
+			);
+		});
 	});
 
 	describe('pagination functionality', () => {
@@ -1130,6 +1188,67 @@ describe('McpServer', () => {
 				}),
 			});
 		});
+
+		it('should support getters for dynamic properties', async () => {
+			let list_request_count = 0;
+			const prompt = vi.fn().mockResolvedValue({
+				messages: [
+					{
+						role: 'user',
+						content: { type: 'text', text: 'prompt result' },
+					},
+				],
+			});
+
+			server.prompt(
+				{
+					name: 'getter-test-prompt',
+					get description() {
+						// Return value based on list request count (set before each request)
+						return `Dynamic prompt description (request ${list_request_count})`;
+					},
+				},
+				prompt,
+			);
+
+			// First list request - should invoke the getter
+			list_request_count = 1;
+			const list_request_1 = request({
+				jsonrpc: '2.0',
+				id: 200,
+				method: 'prompts/list',
+			});
+
+			const result_1 = await server.receive(list_request_1, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_1.result.prompts).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-prompt',
+					description: 'Dynamic prompt description (request 1)',
+				}),
+			);
+
+			// Second list request - getter should be called again with new value
+			list_request_count = 2;
+			const list_request_2 = request({
+				jsonrpc: '2.0',
+				id: 201,
+				method: 'prompts/list',
+			});
+
+			const result_2 = await server.receive(list_request_2, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_2.result.prompts).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-prompt',
+					description: 'Dynamic prompt description (request 2)',
+				}),
+			);
+		});
 	});
 
 	describe('resources functionality', () => {
@@ -1386,6 +1505,380 @@ describe('McpServer', () => {
 					),
 				}),
 			});
+		});
+
+		it('should list resources with mimeType', async () => {
+			const resource = vi.fn().mockResolvedValue({
+				contents: [{ uri: 'test://json-resource', text: '{}' }],
+			});
+
+			server.resource(
+				{
+					name: 'json-resource',
+					description: 'A JSON resource',
+					uri: 'test://json-resource',
+					mimeType: 'application/json',
+				},
+				resource,
+			);
+
+			const list = request({
+				jsonrpc: '2.0',
+				id: 6,
+				method: 'resources/list',
+			});
+
+			const result = await server.receive(list, {
+				sessionId: 'session-1',
+			});
+
+			expect(result).toEqual({
+				jsonrpc: '2.0',
+				id: 6,
+				result: {
+					resources: [
+						{
+							name: 'json-resource',
+							title: 'A JSON resource',
+							description: 'A JSON resource',
+							uri: 'test://json-resource',
+							mimeType: 'application/json',
+							icons: undefined,
+						},
+					],
+				},
+			});
+		});
+
+		it('should list resources with mimeType using defineResource and resources()', async () => {
+			const resource_one = define_resource(
+				{
+					name: 'markdown-resource',
+					description: 'A markdown resource',
+					uri: 'test://markdown-resource',
+					mimeType: 'text/markdown',
+				},
+				() => ({
+					contents: [
+						{ uri: 'test://markdown-resource', text: '# Hello' },
+					],
+				}),
+			);
+
+			const resource_two = define_resource(
+				{
+					name: 'html-resource',
+					description: 'An HTML resource',
+					uri: 'test://html-resource',
+					mimeType: 'text/html',
+				},
+				() => ({
+					contents: [
+						{
+							uri: 'test://html-resource',
+							text: '<h1>Hello</h1>',
+						},
+					],
+				}),
+			);
+
+			server.resources([resource_one, resource_two]);
+
+			const list = request({
+				jsonrpc: '2.0',
+				id: 8,
+				method: 'resources/list',
+			});
+
+			const result = await server.receive(list, {
+				sessionId: 'session-1',
+			});
+
+			expect(result).toEqual({
+				jsonrpc: '2.0',
+				id: 8,
+				result: {
+					resources: [
+						{
+							name: 'markdown-resource',
+							title: 'A markdown resource',
+							description: 'A markdown resource',
+							uri: 'test://markdown-resource',
+							mimeType: 'text/markdown',
+							icons: undefined,
+						},
+						{
+							name: 'html-resource',
+							title: 'An HTML resource',
+							description: 'An HTML resource',
+							uri: 'test://html-resource',
+							mimeType: 'text/html',
+							icons: undefined,
+						},
+					],
+				},
+			});
+		});
+
+		it('should include mimeType when listing resource templates', async () => {
+			server.template(
+				{
+					name: 'json-template',
+					description: 'A JSON template',
+					title: 'JSON Template',
+					uri: 'test://json-template/{id}',
+					mimeType: 'application/json',
+				},
+				async (uri) => ({
+					contents: [{ uri, text: '{}' }],
+				}),
+			);
+
+			const list_templates = request({
+				jsonrpc: '2.0',
+				id: 9,
+				method: 'resources/templates/list',
+			});
+
+			const result = await server.receive(list_templates, {
+				sessionId: 'session-1',
+			});
+
+			expect(result).toEqual({
+				jsonrpc: '2.0',
+				id: 9,
+				result: {
+					resourceTemplates: [
+						{
+							name: 'json-template',
+							title: 'JSON Template',
+							description: 'A JSON template',
+							uriTemplate: 'test://json-template/{id}',
+							mimeType: 'application/json',
+							icons: undefined,
+						},
+					],
+				},
+			});
+		});
+
+		it('should include mimeType when listing resource templates without mimeType specified', async () => {
+			server.template(
+				{
+					name: 'plain-template',
+					description: 'A plain template',
+					title: 'Plain Template',
+					uri: 'test://plain-template/{id}',
+				},
+				async (uri) => ({
+					contents: [{ uri, text: 'plain' }],
+				}),
+			);
+
+			const list_templates = request({
+				jsonrpc: '2.0',
+				id: 10,
+				method: 'resources/templates/list',
+			});
+
+			const result = await server.receive(list_templates, {
+				sessionId: 'session-1',
+			});
+
+			expect(result).toEqual({
+				jsonrpc: '2.0',
+				id: 10,
+				result: {
+					resourceTemplates: [
+						{
+							name: 'plain-template',
+							title: 'Plain Template',
+							description: 'A plain template',
+							uriTemplate: 'test://plain-template/{id}',
+							mimeType: undefined,
+							icons: undefined,
+						},
+					],
+				},
+			});
+		});
+
+		it('should include mimeType when using defineTemplate and templates()', async () => {
+			const template_one = define_template(
+				{
+					name: 'xml-template',
+					description: 'An XML template',
+					title: 'XML Template',
+					uri: 'test://xml-template/{id}',
+					mimeType: 'application/xml',
+				},
+				async (uri) => ({
+					contents: [{ uri, text: '<root></root>' }],
+				}),
+			);
+
+			const template_two = define_template(
+				{
+					name: 'yaml-template',
+					description: 'A YAML template',
+					title: 'YAML Template',
+					uri: 'test://yaml-template/{id}',
+					mimeType: 'application/yaml',
+				},
+				async (uri) => ({
+					contents: [{ uri, text: 'key: value' }],
+				}),
+			);
+
+			server.templates([template_one, template_two]);
+
+			const list_templates = request({
+				jsonrpc: '2.0',
+				id: 11,
+				method: 'resources/templates/list',
+			});
+
+			const result = await server.receive(list_templates, {
+				sessionId: 'session-1',
+			});
+
+			expect(result).toEqual({
+				jsonrpc: '2.0',
+				id: 11,
+				result: {
+					resourceTemplates: [
+						{
+							name: 'xml-template',
+							title: 'XML Template',
+							description: 'An XML template',
+							uriTemplate: 'test://xml-template/{id}',
+							mimeType: 'application/xml',
+							icons: undefined,
+						},
+						{
+							name: 'yaml-template',
+							title: 'YAML Template',
+							description: 'A YAML template',
+							uriTemplate: 'test://yaml-template/{id}',
+							mimeType: 'application/yaml',
+							icons: undefined,
+						},
+					],
+				},
+			});
+		});
+
+		it('should support getters for dynamic properties on resources', async () => {
+			let list_request_count = 0;
+			const resource = vi.fn().mockResolvedValue({
+				contents: [{ uri: 'test://getter-resource', text: 'content' }],
+			});
+
+			server.resource(
+				{
+					name: 'getter-test-resource',
+					uri: 'test://getter-resource',
+					get description() {
+						// Return value based on list request count (set before each request)
+						return `Dynamic resource description (request ${list_request_count})`;
+					},
+				},
+				resource,
+			);
+
+			// First list request - should invoke the getter
+			list_request_count = 1;
+			const list_request_1 = request({
+				jsonrpc: '2.0',
+				id: 300,
+				method: 'resources/list',
+			});
+
+			const result_1 = await server.receive(list_request_1, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_1.result.resources).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-resource',
+					description: 'Dynamic resource description (request 1)',
+				}),
+			);
+
+			// Second list request - getter should be called again with new value
+			list_request_count = 2;
+			const list_request_2 = request({
+				jsonrpc: '2.0',
+				id: 301,
+				method: 'resources/list',
+			});
+
+			const result_2 = await server.receive(list_request_2, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_2.result.resources).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-resource',
+					description: 'Dynamic resource description (request 2)',
+				}),
+			);
+		});
+
+		it('should support getters for dynamic properties on templates', async () => {
+			let list_request_count = 0;
+
+			server.template(
+				{
+					name: 'getter-test-template',
+					uri: 'test://getter-template/{id}',
+					get description() {
+						// Return value based on list request count (set before each request)
+						return `Dynamic template description (request ${list_request_count})`;
+					},
+				},
+				async (uri) => ({
+					contents: [{ uri, text: 'template content' }],
+				}),
+			);
+
+			// First list request - should invoke the getter
+			list_request_count = 1;
+			const list_request_1 = request({
+				jsonrpc: '2.0',
+				id: 400,
+				method: 'resources/templates/list',
+			});
+
+			const result_1 = await server.receive(list_request_1, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_1.result.resourceTemplates).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-template',
+					description: 'Dynamic template description (request 1)',
+				}),
+			);
+
+			// Second list request - getter should be called again with new value
+			list_request_count = 2;
+			const list_request_2 = request({
+				jsonrpc: '2.0',
+				id: 401,
+				method: 'resources/templates/list',
+			});
+
+			const result_2 = await server.receive(list_request_2, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_2.result.resourceTemplates).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-template',
+					description: 'Dynamic template description (request 2)',
+				}),
+			);
 		});
 	});
 

@@ -1582,6 +1582,32 @@ Common scenarios where `enabled` functions are useful:
 5. **Time-based access**: Enable tools only during specific hours
 6. **License restrictions**: Limit features based on subscription level
 
+## Dynamic Properties with Getters
+
+Sometimes you need properties that are computed dynamically at list-time rather than registration-time. For example, you might want to serve different descriptions based on which client is connected.
+
+`tmcp` preserves JavaScript getters on the configuration object, allowing you to define properties that are evaluated each time the capability is listed:
+
+```javascript
+server.tool(
+	{
+		name: 'search',
+		get description() {
+			const client = server.ctx.sessionInfo?.clientInfo?.name;
+			if (client === 'claude-code') {
+				return 'Search the codebase for files, symbols, or text patterns';
+			}
+			return 'Search for information';
+		},
+	},
+	() => {
+		return { content: [{ type: 'text', text: 'Search results...' }] };
+	},
+);
+```
+
+The same pattern works for resources, templates, and prompts.
+
 ## Contributing
 
 Contributions are welcome! Please see our [contributing guidelines](../../CONTRIBUTING.md) for details.

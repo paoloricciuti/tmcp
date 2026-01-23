@@ -888,4 +888,126 @@ describe('HTTP Transport', () => {
 			}
 		});
 	});
+
+	describe('disableSse option', () => {
+		beforeEach(() => {
+			({ mcp_server, sse_connected } = new_server({
+				capabilities: {
+					tools: { listChanged: true },
+				},
+			}).setup(() => {}));
+		});
+
+		it('returns 405 for GET requests when disableSse is true', async () => {
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				disableSse: true,
+				getSessionId: () => 'test-session-id',
+			});
+
+			const response = await transport.respond(
+				new Request('http://localhost/mcp', {
+					method: 'GET',
+					headers: {
+						'mcp-session-id': 'test-session-id',
+					},
+				}),
+			);
+
+			expect(response).not.toBeNull();
+			expect(response?.status).toBe(405);
+			expect(response?.headers.get('Allow')).toBe(
+				'POST, DELETE, OPTIONS',
+			);
+		});
+
+		it('allows GET requests when disableSse is false', async () => {
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				disableSse: false,
+				getSessionId: () => 'test-session-id',
+			});
+
+			const response = await transport.respond(
+				new Request('http://localhost/mcp', {
+					method: 'GET',
+					headers: {
+						'mcp-session-id': 'test-session-id',
+					},
+				}),
+			);
+
+			expect(response).not.toBeNull();
+			expect(response?.status).toBe(200);
+			expect(response?.headers.get('Content-Type')).toBe(
+				'text/event-stream',
+			);
+			await response?.body?.cancel();
+		});
+
+		it('allows GET requests when disableSse is undefined', async () => {
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				getSessionId: () => 'test-session-id',
+			});
+
+			const response = await transport.respond(
+				new Request('http://localhost/mcp', {
+					method: 'GET',
+					headers: {
+						'mcp-session-id': 'test-session-id',
+					},
+				}),
+			);
+
+			expect(response).not.toBeNull();
+			expect(response?.status).toBe(200);
+			expect(response?.headers.get('Content-Type')).toBe(
+				'text/event-stream',
+			);
+			await response?.body?.cancel();
+		});
+	});
+
+	describe('disableSse with server', () => {
+		beforeEach(() => {
+			({ mcp_server, sse_connected } = new_server(
+				{
+					capabilities: {
+						tools: { listChanged: true },
+					},
+				},
+				{ disableSse: true },
+			).setup(() => {}));
+		});
+
+		it('returns 405 for GET requests when disableSse is true', async () => {
+			const response = await fetch('http://localhost:3000/mcp', {
+				method: 'GET',
+				headers: {
+					'mcp-session-id': 'test-session',
+				},
+			});
+
+			expect(response.status).toBe(405);
+			expect(response.headers.get('Allow')).toBe('POST, DELETE, OPTIONS');
+		});
+
+		it('still allows POST requests when disableSse is true', async () => {
+			const local_transport = new StreamableHTTPClientTransport(
+				new URL('http://localhost:3000/mcp'),
+			);
+			const local_client = new Client({
+				name: 'test-client',
+				version: '1.0.0',
+			});
+
+			await local_client.connect(local_transport);
+			const response = await local_client.ping();
+			expect(response).toStrictEqual({});
+
+			await local_client.close();
+			await local_transport.close();
+		});
+	});
 });

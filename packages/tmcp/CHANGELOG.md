@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.19.1
+
+### Patch Changes
+
+- 8dd3152: fix: allow `mimeType` for `resource` and `template`
+
 ## 1.19.0
 
 ### Minor Changes
