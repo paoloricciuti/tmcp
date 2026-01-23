@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.19.2
+
+### Patch Changes
+
+- 5d3b51d: fix: refactor to allow for getters to be passed in as options
+
 ## 1.19.1
 
 ### Patch Changes
