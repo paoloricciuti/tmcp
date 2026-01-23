@@ -50,6 +50,7 @@ server.prompt(
 <Callout type="tip">
 
 You can also create a prompt in a separate module and add it with `server.prompt(yourPrompt)`. Learn more in the [definePrompt](/docs/core/definePrompt) documentation page.
+
 </Callout>
 
 ## Accepting arguments
@@ -373,6 +374,12 @@ server.prompt(
 	},
 );
 ```
+
+<Callout type="note">
+
+Getters are called synchronously during list operations. Keep them lightweight to avoid performance issues. For async data, consider caching the result and updating it periodically.
+
+</Callout>
 
 ## Icons
 

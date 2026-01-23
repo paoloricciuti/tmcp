@@ -47,6 +47,7 @@ server.tool(
 <Callout type="tip">
 
 You can also create a tool in a separate module and add it with `server.tool(yourTool)`. Learn more in the [defineTool](/docs/core/defineTool) documentation page.
+
 </Callout>
 
 ## Accepting inputs

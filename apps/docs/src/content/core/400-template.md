@@ -51,6 +51,7 @@ The `uri` must conform to the [RFC3986](https://datatracker.ietf.org/doc/html/rf
 <Callout type="tip">
 
 You can also create a template in a separate module and add it with `server.template(yourTemplate)`. Learn more in the [defineTemplate](/docs/core/defineTemplate) documentation page.
+
 </Callout>
 
 ## Read the dynamic parameters
@@ -116,6 +117,12 @@ server.template(
 	},
 );
 ```
+
+<Callout type="note">
+
+Getters are called synchronously during list operations. Keep them lightweight to avoid performance issues. For async data, consider caching the result and updating it periodically.
+
+</Callout>
 
 ## Icons
 
