@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { McpServer } from 'tmcp';
-import { defineTool } from 'tmcp/tool';
+import { sampling } from 'tmcp/utils';
+import { defineTool, executeTool } from 'tmcp/tool';
 import { definePrompt } from 'tmcp/prompt';
 import { defineTemplate } from 'tmcp/template';
 import { StdioTransport } from '@tmcp/transport-stdio';
@@ -86,6 +87,33 @@ const create2 = defineTool(
 	},
 );
 
+const create3 = defineTool(
+	{
+		name: 'created',
+		description: 'A tool that indicates it was created',
+		schema: z.object({
+			a: z.number().describe('First number to add'),
+			b: z.number().describe('Second number to add'),
+		}),
+	},
+	async () => {
+		return {
+			content: [
+				{
+					type: 'text',
+					text: 'This tool was created successfully!',
+				},
+			],
+		};
+	},
+);
+
+sampling.loop({
+	server,
+	tools: [create3],
+	initialMessages: [],
+});
+
 const prompt_create = definePrompt(
 	{
 		name: '',
@@ -142,6 +170,18 @@ server.template(template_create);
 server.templates([template_create]);
 server.resources([resource_create]);
 server.resource(resource_create);
+
+const x = await server.message({
+	maxTokens: 100,
+	messages: [],
+	tools: [create, create2],
+});
+
+if (Array.isArray(x.content)) {
+	x.content[0].type;
+} else {
+	x.content.type;
+}
 
 server.tools([create, create2]);
 server.tool(create);

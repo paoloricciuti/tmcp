@@ -390,12 +390,21 @@ importers:
         specifier: ^1.1.0
         version: 1.2.0(typescript@5.9.3)
     devDependencies:
+      '@sveltejs/acorn-typescript':
+        specifier: ^1.0.8
+        version: 1.0.8(acorn@8.15.0)
+      '@types/estree':
+        specifier: ^1.0.8
+        version: 1.0.8
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
       '@types/node':
         specifier: ^24.0.13
         version: 24.10.4
+      acorn:
+        specifier: ^8.15.0
+        version: 8.15.0
       dts-buddy:
         specifier: ^0.6.2
         version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
@@ -405,6 +414,9 @@ importers:
       vitest:
         specifier: ^4.0.0
         version: 4.0.15(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1)
+      zimmerframe:
+        specifier: ^1.1.4
+        version: 1.1.4
 
   packages/transport-http:
     dependencies:

@@ -3,7 +3,12 @@ import * as v from 'valibot';
 /**
  * Supported MCP protocol versions in order of preference (newest first)
  */
-const SUPPORTED_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
+const SUPPORTED_VERSIONS = [
+	'2025-11-25',
+	'2025-06-18',
+	'2025-03-26',
+	'2024-11-05',
+];
 
 /**
  * Latest stable protocol version

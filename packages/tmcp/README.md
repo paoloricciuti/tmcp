@@ -919,6 +919,104 @@ await server.refreshRoots();
 console.log('Available roots:', server.roots);
 ```
 
+### Agentic Loops with sampling.loop
+
+The `sampling` utility provides a higher-level abstraction for running agentic loops that combine LLM sampling with tool execution. This is useful when you want to let the LLM autonomously call tools to accomplish a task.
+
+```javascript
+import { sampling, tool } from 'tmcp/utils';
+import { defineTool } from 'tmcp/tool';
+
+const calculator = defineTool(
+	{
+		name: 'calculator',
+		description: 'Perform mathematical calculations',
+		schema: z.object({
+			expression: z.string(),
+		}),
+	},
+	async ({ expression }) => {
+		const result = eval(expression); // Note: use a safe math parser in production
+		return tool.text(`${expression} = ${result}`);
+	},
+);
+
+const result = await sampling.loop({
+	server,
+	initialMessages: [
+		{
+			role: 'user',
+			content: { type: 'text', text: 'What is 6 * 7?' },
+		},
+	],
+	tools: [calculator],
+	maxIterations: 10, // Optional: limit iterations
+	systemPrompt: 'You are a helpful assistant.', // Optional
+});
+
+console.log(result.response.content); // The LLM's final answer
+console.log(result.transcript); // Full conversation history
+```
+
+#### Loop Options
+
+| Parameter           | Required | Description                                                      |
+| ------------------- | -------- | ---------------------------------------------------------------- |
+| `server`            | Yes      | The MCP server instance to use for messaging                     |
+| `initialMessages`   | Yes      | Array of messages to start the conversation                      |
+| `tools`             | Yes      | Array of tools available for the LLM (created with `defineTool`) |
+| `systemPrompt`      | No       | System prompt to guide the LLM                                   |
+| `maxIterations`     | No       | Maximum iterations (defaults to `Infinity`)                      |
+| `maxTokens`         | No       | Max tokens per request (defaults to `4000`)                      |
+| `defaultToolChoice` | No       | `"auto"`, `"required"`, or `"none"` (defaults to `"auto"`)       |
+
+#### Breaking Out Early
+
+Throw `BreakLoopError` from a tool to exit the loop early:
+
+```javascript
+import { BreakLoopError } from 'tmcp/utils';
+
+const confirmTool = defineTool(
+	{ name: 'confirm', description: 'Confirm with user' },
+	async () => {
+		const confirmed = await askUser();
+		if (!confirmed) {
+			throw new BreakLoopError('User cancelled');
+		}
+		return tool.text('Confirmed');
+	},
+);
+```
+
+### Executing Tools Programmatically
+
+The `executeTool` function lets you execute tools created with `defineTool` directly, outside of MCP requests. This is useful for testing or composing tools:
+
+```javascript
+import { defineTool, executeTool } from 'tmcp/tool';
+
+const addTool = defineTool(
+	{
+		name: 'add',
+		description: 'Add two numbers',
+		schema: z.object({ a: z.number(), b: z.number() }),
+	},
+	async ({ a, b }) => tool.text(`${a + b}`),
+);
+
+// Execute the tool directly with full type safety
+const result = await executeTool(addTool, { a: 5, b: 3 });
+console.log(result.content); // [{ type: 'text', text: '8' }]
+
+// For tools without input schema, no arguments needed
+const noInputTool = defineTool(
+	{ name: 'ping', description: 'Ping' },
+	async () => tool.text('pong'),
+);
+const pingResult = await executeTool(noInputTool);
+```
+
 ### Event Handling
 
 ```javascript

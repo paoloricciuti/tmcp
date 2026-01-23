@@ -248,12 +248,22 @@ export const ClientCapabilitiesSchema = v.object({
 	/**
 	 * Present if the client supports sampling from an LLM.
 	 */
-	sampling: v.optional(v.object({})),
+	sampling: v.optional(
+		v.object({
+			tools: v.optional(v.object({})),
+			context: v.optional(v.object({})),
+		}),
+	),
 
 	/**
 	 * Present if the client supports eliciting user input.
 	 */
-	elicitation: v.optional(v.object({})),
+	elicitation: v.optional(
+		v.object({
+			form: v.optional(v.object({})),
+			url: v.optional(v.object({})),
+		}),
+	),
 
 	/**
 	 * Present if the client supports listing roots.
@@ -1148,15 +1158,127 @@ export const ModelPreferencesSchema = v.object({
 });
 
 /**
+ * A tool call request from an assistant (LLM).
+ * Represents the assistant's request to use a tool.
+ */
+export const ToolUseContentSchema = v.looseObject({
+	type: v.literal('tool_use'),
+	/**
+	 * The name of the tool to invoke.
+	 * Must match a tool name from the request's tools array.
+	 */
+	name: v.string(),
+	/**
+	 * Unique identifier for this tool call.
+	 * Used to correlate with ToolResultContent in subsequent messages.
+	 */
+	id: v.string(),
+	/**
+	 * Arguments to pass to the tool.
+	 * Must conform to the tool's inputSchema.
+	 */
+	input: v.looseObject({}),
+	/**
+	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+	 * for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
+});
+
+/**
+ * The result of a tool execution, provided by the user (server).
+ * Represents the outcome of invoking a tool requested via ToolUseContent.
+ */
+export const ToolResultContentSchema = v.looseObject({
+	type: v.literal('tool_result'),
+	toolUseId: v.pipe(
+		v.string(),
+		v.description('The unique identifier for the corresponding tool call.'),
+	),
+	content: v.optional(v.array(ContentBlockSchema), []),
+	structuredContent: v.optional(v.looseObject({})),
+	isError: v.optional(v.boolean()),
+
+	/**
+	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+	 * for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
+});
+
+/**
+ * Controls tool usage behavior in sampling requests.
+ */
+export const ToolChoiceSchema = v.object({
+	/**
+	 * Controls when tools are used:
+	 * - "auto": Model decides whether to use tools (default)
+	 * - "required": Model MUST use at least one tool before completing
+	 * - "none": Model MUST NOT use any tools
+	 */
+	mode: v.optional(v.picklist(['auto', 'required', 'none'])),
+});
+
+/**
+ * Basic content types for sampling responses (without tool use).
+ * Used for backwards-compatible CreateMessageResult when tools are not used.
+ */
+export const SamplingContentSchema = v.variant('type', [
+	TextContentSchema,
+	ImageContentSchema,
+	AudioContentSchema,
+]);
+
+/**
+ * The client's response to a sampling/create_message request from the server. The client should inform the user before returning the sampled message, to allow them to inspect the response (human in the loop) and decide whether to allow the server to see it.
+ */
+export const CreateMessageResultSchema = v.object({
+	...ResultSchema.entries,
+
+	/**
+	 * The name of the model that generated the message.
+	 */
+	model: v.string(),
+
+	/**
+	 * The reason why sampling stopped.
+	 */
+	stopReason: v.optional(
+		v.union([
+			v.picklist(['endTurn', 'stopSequence', 'maxTokens']),
+			v.string(),
+		]),
+	),
+	role: v.picklist(['user', 'assistant']),
+	content: SamplingContentSchema,
+});
+
+/**
+ * Content block types allowed in sampling messages.
+ * This includes text, image, audio, tool use requests, and tool results.
+ */
+export const SamplingMessageContentBlockSchema = v.variant('type', [
+	TextContentSchema,
+	ImageContentSchema,
+	AudioContentSchema,
+	ToolUseContentSchema,
+	ToolResultContentSchema,
+]);
+
+/**
  * Describes a message issued to or received from an LLM API.
  */
-export const SamplingMessageSchema = v.object({
+export const SamplingMessageSchema = v.looseObject({
 	role: v.picklist(['user', 'assistant']),
 	content: v.union([
-		TextContentSchema,
-		ImageContentSchema,
-		AudioContentSchema,
+		SamplingMessageContentBlockSchema,
+		v.array(SamplingMessageContentBlockSchema),
 	]),
+	/**
+	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+	 * for notes on _meta usage.
+	 */
+	_meta: v.optional(v.looseObject({})),
 });
 
 export const CreateMessageRequestParamsSchema = v.object({
@@ -1191,6 +1313,17 @@ export const CreateMessageRequestParamsSchema = v.object({
 	 * The server's preferences for which model to select.
 	 */
 	modelPreferences: v.optional(ModelPreferencesSchema),
+	/**
+	 * Tools that the model may use during generation.
+	 * The client MUST return an error if this field is provided but ClientCapabilities.sampling.tools is not declared.
+	 */
+	tools: v.optional(v.any()),
+	/**
+	 * Controls how the model uses tools.
+	 * The client MUST return an error if this field is provided but ClientCapabilities.sampling.tools is not declared.
+	 * Default is `{ mode: "auto" }`.
+	 */
+	toolChoice: v.optional(ToolChoiceSchema),
 });
 
 /**
@@ -1203,32 +1336,42 @@ export const CreateMessageRequestSchema = v.object({
 });
 
 /**
- * The client's response to a sampling/create_message request from the server. The client should inform the user before returning the sampled message, to allow them to inspect the response (human in the loop) and decide whether to allow the server to see it.
+ * The client's response to a sampling/create_message request when tools were provided.
+ * This version supports array content for tool use flows.
  */
-export const CreateMessageResultSchema = v.object({
+export const CreateMessageResultWithToolsSchema = v.object({
 	...ResultSchema.entries,
-
 	/**
 	 * The name of the model that generated the message.
 	 */
 	model: v.string(),
-
 	/**
-	 * The reason why sampling stopped.
+	 * The reason why sampling stopped, if known.
+	 *
+	 * Standard values:
+	 * - "endTurn": Natural end of the assistant's turn
+	 * - "stopSequence": A stop sequence was encountered
+	 * - "maxTokens": Maximum token limit was reached
+	 * - "toolUse": The model wants to use one or more tools
+	 *
+	 * This field is an open string to allow for provider-specific stop reasons.
 	 */
 	stopReason: v.optional(
 		v.union([
-			v.picklist(['endTurn', 'stopSequence', 'maxTokens']),
+			v.picklist(['endTurn', 'stopSequence', 'maxTokens', 'toolUse']),
 			v.string(),
 		]),
 	),
 	role: v.picklist(['user', 'assistant']),
-	content: v.variant('type', [
-		TextContentSchema,
-		ImageContentSchema,
-		AudioContentSchema,
+	/**
+	 * Response content. May be a single block or array. May include ToolUseContent if stopReason is "toolUse".
+	 */
+	content: v.union([
+		SamplingMessageContentBlockSchema,
+		v.array(SamplingMessageContentBlockSchema),
 	]),
 });
+
 /* Elicitation */
 
 /**
@@ -1486,6 +1629,7 @@ export const ClientNotificationSchema = v.union([
 export const ClientResultSchema = v.union([
 	EmptyResultSchema,
 	CreateMessageResultSchema,
+	CreateMessageResultWithToolsSchema,
 	ElicitResultSchema,
 	ListRootsResultSchema,
 ]);
@@ -1551,10 +1695,21 @@ export const ServerResultSchema = v.union([
  * @typedef {v.InferInput<typeof CompleteResultSchema>} CompleteResult
  */
 /**
- * @typedef {v.InferInput<typeof CreateMessageRequestParamsSchema>} CreateMessageRequestParams
+ * @template {import('@standard-schema/spec').StandardSchemaV1} TSchema
+ * @typedef {Omit<v.InferInput<typeof CreateMessageRequestParamsSchema>, "tools"> & { tools?: Array<import('../internal/internal.js').CreatedTool<TSchema, any>> }} CreateMessageRequestParams
  */
 /**
- * @typedef {v.InferInput<typeof CreateMessageResultSchema>} CreateMessageResult
+ * @typedef {v.InferInput<typeof CreateMessageResultSchema>} CreateMessageResultWithoutTools
+ */
+/**
+ * @typedef {v.InferInput<typeof CreateMessageResultWithToolsSchema>} CreateMessageResultWithTools
+ */
+/**
+ * @template {boolean} TWithTools
+ * @typedef {TWithTools extends true ? CreateMessageResultWithTools : CreateMessageResultWithoutTools} CreateMessageResult
+ */
+/**
+ * @typedef {v.InferInput<typeof SamplingContentSchema>} SamplingContent
  */
 /**
  * @typedef {v.InferInput<typeof ModelPreferencesSchema>} ModelPreferences
