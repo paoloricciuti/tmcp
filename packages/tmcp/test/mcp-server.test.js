@@ -659,6 +659,62 @@ describe('McpServer', () => {
 				},
 			});
 		});
+
+		it('should support getters for dynamic properties', async () => {
+			let list_request_count = 0;
+			const tool = vi.fn().mockResolvedValue({
+				content: [{ type: 'text', text: 'result' }],
+			});
+
+			server.tool(
+				{
+					name: 'getter-test-tool',
+					get description() {
+						// Return value based on list request count (set before each request)
+						return `Dynamic description (request ${list_request_count})`;
+					},
+				},
+				tool,
+			);
+
+			// First list request - should invoke the getter
+			list_request_count = 1;
+			const list_request_1 = request({
+				jsonrpc: '2.0',
+				id: 100,
+				method: 'tools/list',
+			});
+
+			const result_1 = await server.receive(list_request_1, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_1.result.tools).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-tool',
+					description: 'Dynamic description (request 1)',
+				}),
+			);
+
+			// Second list request - getter should be called again with new value
+			list_request_count = 2;
+			const list_request_2 = request({
+				jsonrpc: '2.0',
+				id: 101,
+				method: 'tools/list',
+			});
+
+			const result_2 = await server.receive(list_request_2, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_2.result.tools).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-tool',
+					description: 'Dynamic description (request 2)',
+				}),
+			);
+		});
 	});
 
 	describe('pagination functionality', () => {
@@ -1071,6 +1127,67 @@ describe('McpServer', () => {
 					),
 				}),
 			});
+		});
+
+		it('should support getters for dynamic properties', async () => {
+			let list_request_count = 0;
+			const prompt = vi.fn().mockResolvedValue({
+				messages: [
+					{
+						role: 'user',
+						content: { type: 'text', text: 'prompt result' },
+					},
+				],
+			});
+
+			server.prompt(
+				{
+					name: 'getter-test-prompt',
+					get description() {
+						// Return value based on list request count (set before each request)
+						return `Dynamic prompt description (request ${list_request_count})`;
+					},
+				},
+				prompt,
+			);
+
+			// First list request - should invoke the getter
+			list_request_count = 1;
+			const list_request_1 = request({
+				jsonrpc: '2.0',
+				id: 200,
+				method: 'prompts/list',
+			});
+
+			const result_1 = await server.receive(list_request_1, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_1.result.prompts).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-prompt',
+					description: 'Dynamic prompt description (request 1)',
+				}),
+			);
+
+			// Second list request - getter should be called again with new value
+			list_request_count = 2;
+			const list_request_2 = request({
+				jsonrpc: '2.0',
+				id: 201,
+				method: 'prompts/list',
+			});
+
+			const result_2 = await server.receive(list_request_2, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_2.result.prompts).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-prompt',
+					description: 'Dynamic prompt description (request 2)',
+				}),
+			);
 		});
 	});
 
@@ -1589,6 +1706,119 @@ describe('McpServer', () => {
 					],
 				},
 			});
+		});
+
+		it('should support getters for dynamic properties on resources', async () => {
+			let list_request_count = 0;
+			const resource = vi.fn().mockResolvedValue({
+				contents: [{ uri: 'test://getter-resource', text: 'content' }],
+			});
+
+			server.resource(
+				{
+					name: 'getter-test-resource',
+					uri: 'test://getter-resource',
+					get description() {
+						// Return value based on list request count (set before each request)
+						return `Dynamic resource description (request ${list_request_count})`;
+					},
+				},
+				resource,
+			);
+
+			// First list request - should invoke the getter
+			list_request_count = 1;
+			const list_request_1 = request({
+				jsonrpc: '2.0',
+				id: 300,
+				method: 'resources/list',
+			});
+
+			const result_1 = await server.receive(list_request_1, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_1.result.resources).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-resource',
+					description: 'Dynamic resource description (request 1)',
+				}),
+			);
+
+			// Second list request - getter should be called again with new value
+			list_request_count = 2;
+			const list_request_2 = request({
+				jsonrpc: '2.0',
+				id: 301,
+				method: 'resources/list',
+			});
+
+			const result_2 = await server.receive(list_request_2, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_2.result.resources).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-resource',
+					description: 'Dynamic resource description (request 2)',
+				}),
+			);
+		});
+
+		it('should support getters for dynamic properties on templates', async () => {
+			let list_request_count = 0;
+
+			server.template(
+				{
+					name: 'getter-test-template',
+					uri: 'test://getter-template/{id}',
+					get description() {
+						// Return value based on list request count (set before each request)
+						return `Dynamic template description (request ${list_request_count})`;
+					},
+				},
+				async (uri) => ({
+					contents: [{ uri, text: 'template content' }],
+				}),
+			);
+
+			// First list request - should invoke the getter
+			list_request_count = 1;
+			const list_request_1 = request({
+				jsonrpc: '2.0',
+				id: 400,
+				method: 'resources/templates/list',
+			});
+
+			const result_1 = await server.receive(list_request_1, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_1.result.resourceTemplates).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-template',
+					description: 'Dynamic template description (request 1)',
+				}),
+			);
+
+			// Second list request - getter should be called again with new value
+			list_request_count = 2;
+			const list_request_2 = request({
+				jsonrpc: '2.0',
+				id: 401,
+				method: 'resources/templates/list',
+			});
+
+			const result_2 = await server.receive(list_request_2, {
+				sessionId: 'session-1',
+			});
+
+			expect(result_2.result.resourceTemplates).toContainEqual(
+				expect.objectContaining({
+					name: 'getter-test-template',
+					description: 'Dynamic template description (request 2)',
+				}),
+			);
 		});
 	});
 

@@ -50,7 +50,6 @@ server.prompt(
 <Callout type="tip">
 
 You can also create a prompt in a separate module and add it with `server.prompt(yourPrompt)`. Learn more in the [definePrompt](/docs/core/definePrompt) documentation page.
-	
 </Callout>
 
 ## Accepting arguments
@@ -77,7 +76,9 @@ server.prompt(
 		}),
 	},
 	({ filePath, focusArea }) => {
-		const focusText = focusArea ? ` with special attention to ${focusArea}` : '';
+		const focusText = focusArea
+			? ` with special attention to ${focusArea}`
+			: '';
 		return {
 			messages: [
 				{
@@ -301,7 +302,6 @@ server.prompt(
 );
 ```
 
-
 Each completion function receives the current query string and a context object containing the other arguments that have been filled in, allowing you to provide context-aware suggestions.
 
 <Callout type="tip">
@@ -332,6 +332,40 @@ server.prompt(
 					content: {
 						type: 'text',
 						text: 'Analyze the selected code and suggest advanced refactoring techniques',
+					},
+				},
+			],
+		};
+	},
+);
+```
+
+## Dynamic Properties with Getters
+
+Sometimes you need properties that are computed dynamically at list-time rather than registration-time. For example, you might want to serve different descriptions based on which client is connected.
+
+`tmcp` preserves JavaScript getters on the configuration object, allowing you to define properties that are evaluated each time the prompt is listed:
+
+```ts
+server.prompt(
+	{
+		name: 'code-review',
+		get description() {
+			const client = server.ctx.sessionInfo?.clientInfo?.name;
+			if (client === 'claude-code') {
+				return 'Review code for bugs, security issues, and style - optimized for IDE integration';
+			}
+			return 'Review code for quality and best practices';
+		},
+	},
+	() => {
+		return {
+			messages: [
+				{
+					role: 'user',
+					content: {
+						type: 'text',
+						text: 'Please review this code for quality and best practices',
 					},
 				},
 			],

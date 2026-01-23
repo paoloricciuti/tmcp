@@ -51,7 +51,6 @@ The `uri` must conform to the [RFC3986](https://datatracker.ietf.org/doc/html/rf
 <Callout type="tip">
 
 You can also create a resource in a separate module and add it with `server.resource(yourResource)`. Learn more in the [defineResource](/docs/core/defineResource) documentation page.
-	
 </Callout>
 
 ## `enabled` function
@@ -76,6 +75,39 @@ server.resource(
 					uri,
 					text: 'Content of the resource',
 					mimeType: 'text/plain', // this is optional
+				},
+			],
+		};
+	},
+);
+```
+
+## Dynamic Properties with Getters
+
+Sometimes you need properties that are computed dynamically at list-time rather than registration-time. For example, you might want to serve different descriptions based on which client is connected.
+
+`tmcp` preserves JavaScript getters on the configuration object, allowing you to define properties that are evaluated each time the resource is listed:
+
+```ts
+server.resource(
+	{
+		uri: 'mymcp://config.json',
+		name: 'app-config',
+		get description() {
+			const client = server.ctx.sessionInfo?.clientInfo?.name;
+			if (client === 'claude-code') {
+				return 'Application configuration including editor settings and workspace preferences';
+			}
+			return 'Application configuration file';
+		},
+	},
+	(uri) => {
+		return {
+			contents: [
+				{
+					uri,
+					text: JSON.stringify({ theme: 'dark', language: 'en' }),
+					mimeType: 'application/json',
 				},
 			],
 		};

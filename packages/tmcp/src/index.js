@@ -666,10 +666,7 @@ export class McpServer {
 			const all_resources = [];
 
 			// Add static resources
-			for (const [
-				uri,
-				{ description, name, title, icons, mimeType, ...resource },
-			] of this.#resources) {
+			for (const [uri, resource] of this.#resources) {
 				if (!resource.template) {
 					if (
 						resource.enabled != null &&
@@ -677,12 +674,12 @@ export class McpServer {
 					)
 						continue;
 					all_resources.push({
-						name,
-						title: title || description,
-						description,
+						name: resource.name,
+						title: resource.title || resource.description,
+						description: resource.description,
 						uri,
-						mimeType,
-						icons,
+						mimeType: resource.mimeType,
+						icons: resource.icons,
 					});
 				} else if (resource.list_resources) {
 					if (
@@ -720,35 +717,22 @@ export class McpServer {
 			return {
 				resourceTemplates: (
 					await Promise.all(
-						[...this.#resources].map(
-							async ([
-								uri,
-								{
-									description,
-									name,
-									title,
-									template,
-									mimeType,
-									icons,
-									enabled,
-								},
-							]) => {
-								if (!template) return null;
-								if (
-									enabled != null &&
-									(await safe_enabled(enabled)) === false
-								)
-									return null;
-								return {
-									name,
-									icons,
-									title: title || description,
-									description,
-									mimeType,
-									uriTemplate: uri,
-								};
-							},
-						),
+						[...this.#resources].map(async ([uri, resource]) => {
+							if (!resource.template) return null;
+							if (
+								resource.enabled != null &&
+								(await safe_enabled(resource.enabled)) === false
+							)
+								return null;
+							return {
+								name: resource.name,
+								icons: resource.icons,
+								title: resource.title || resource.description,
+								description: resource.description,
+								mimeType: resource.mimeType,
+								uriTemplate: uri,
+							};
+						}),
 					)
 				).filter((resource) => resource != null),
 			};
@@ -872,22 +856,7 @@ export class McpServer {
 	 */
 	tools(tools) {
 		for (const tool of tools) {
-			this.tool(
-				{
-					name: tool.name,
-					description: tool.description,
-					title: tool.title,
-					schema: tool.schema,
-					outputSchema: tool.outputSchema,
-					annotations: tool.annotations,
-					enabled: tool.enabled,
-					icons: tool.icons,
-					_meta: tool._meta,
-				},
-				// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
-				// from showing in intellisense when declaring a tool inline
-				tool.execute,
-			);
+			this.tool(tool);
 		}
 	}
 
@@ -899,20 +868,7 @@ export class McpServer {
 	 */
 	prompts(prompts) {
 		for (const prompt of prompts) {
-			this.prompt(
-				{
-					name: prompt.name,
-					description: prompt.description,
-					title: prompt.title,
-					schema: prompt.schema,
-					complete: prompt.complete,
-					enabled: prompt.enabled,
-					icons: prompt.icons,
-				},
-				// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
-				// from showing in intellisense when declaring a tool inline
-				prompt.execute,
-			);
+			this.prompt(prompt);
 		}
 	}
 
@@ -923,20 +879,7 @@ export class McpServer {
 	 */
 	resources(resources) {
 		for (const resource of resources) {
-			this.resource(
-				{
-					name: resource.name,
-					description: resource.description,
-					title: resource.title,
-					uri: resource.uri,
-					mimeType: resource.mimeType,
-					enabled: resource.enabled,
-					icons: resource.icons,
-				},
-				// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
-				// from showing in intellisense when declaring a tool inline
-				resource.execute,
-			);
+			this.resource(resource);
 		}
 	}
 
@@ -947,22 +890,7 @@ export class McpServer {
 	 */
 	templates(templates) {
 		for (const template of templates) {
-			this.template(
-				{
-					name: template.name,
-					description: template.description,
-					title: template.title,
-					uri: template.uri,
-					mimeType: template.mimeType,
-					complete: template.complete,
-					list: template.list,
-					enabled: template.enabled,
-					icons: template.icons,
-				},
-				// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
-				// from showing in intellisense when declaring a tool inline
-				template.execute,
-			);
+			this.template(template);
 		}
 	}
 
@@ -999,38 +927,18 @@ export class McpServer {
 	 * @param {CreatedTool<TSchema, TOutputSchema> | ToolOptions<TSchema, TOutputSchema>} tool_or_options
 	 * @param {undefined | TSchema extends undefined ? (()=>Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)} [execute]
 	 */
-	tool(
-		{
-			name,
-			description,
-			title,
-			schema,
-			outputSchema,
-			annotations,
-			enabled,
-			icons,
-			_meta,
-			...tool_or_options
-		},
-		execute,
-	) {
+	tool(tool_or_options, execute) {
 		if ('execute' in tool_or_options) {
 			// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
 			// from showing in intellisense when declaring a tool inline
 			execute = tool_or_options.execute;
 		}
 		this.#notify_tools_list_changed();
-		this.#tools.set(name, {
-			description,
-			title,
-			enabled,
-			schema,
-			outputSchema,
-			execute: /** @type {NonNullable<typeof execute>} */ (execute),
-			annotations,
-			icons,
-			_meta,
-		});
+		const stored_tool = /** @type {Tool<any, any>} */ (tool_or_options);
+		stored_tool.execute = /** @type {NonNullable<typeof execute>} */ (
+			execute
+		);
+		this.#tools.set(tool_or_options.name, stored_tool);
 	}
 
 	/**
@@ -1063,52 +971,43 @@ export class McpServer {
 	 * A prompt can also have a schema that defines the input it expects, the user will be prompted to enter the inputs you request. It can also have a complete function
 	 * for each input that will be used to provide completions for the user.
 	 * @template {StandardSchema | undefined} [TSchema=undefined]
-	 * @param {CreatedPrompt<TSchema> | PromptOptions<TSchema>} options
+	 * @param {CreatedPrompt<TSchema> | PromptOptions<TSchema>} prompt_or_options
 	 * @param {TSchema extends undefined ? (()=>Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult} [execute]
 	 */
-	prompt(
-		{
-			name,
-			description,
-			title,
-			schema,
-			complete,
-			enabled,
-			icons,
-			...prompt_or_options
-		},
-		execute,
-	) {
+	prompt(prompt_or_options, execute) {
 		if ('execute' in prompt_or_options) {
-			// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
-			// from showing in intellisense when declaring a tool inline
-			execute = prompt_or_options.execute;
+			execute = /** @type {NonNullable<typeof execute>} */ (
+				prompt_or_options.execute
+			);
 		}
-		if (complete) {
-			this.#completions['ref/prompt'].set(name, complete);
+		if (prompt_or_options.complete) {
+			this.#completions['ref/prompt'].set(
+				prompt_or_options.name,
+				prompt_or_options.complete,
+			);
 		}
 		this.#notify_prompts_list_changed();
-		this.#prompts.set(name, {
-			description,
-			title,
-			schema,
-			execute: /** @type {NonNullable<typeof execute>} */ (execute),
-			enabled,
-			icons,
-		});
+		const stored_prompt = /** @type {Prompt<any>} */ (prompt_or_options);
+		stored_prompt.execute = /** @type {NonNullable<typeof execute>} */ (
+			execute
+		);
+		this.#prompts.set(prompt_or_options.name, stored_prompt);
 	}
 	/**
-	 * @type {(resource: StoredResource & {complete?: Partial<Record<string,Completion>>, uri: string})=> void}
+	 * @type {(resource: StoredResource & { uri: string })=> void}
 	 */
-	#resource({ uri, complete, ...resource }) {
-		if (complete) {
-			this.#completions['ref/resource'].set(uri, complete);
+	#resource(resource) {
+		if (resource.template && resource.complete) {
+			this.#completions['ref/resource'].set(
+				resource.uri,
+				resource.complete,
+			);
 		}
 		if (resource.template) {
-			this.#templates.add(uri);
+			this.#templates.add(resource.uri);
 		}
 		this.#notify_resources_list_changed();
-		this.#resources.set(uri, resource);
+		this.#resources.set(resource.uri, resource);
 	}
 
 	/**
@@ -1132,35 +1031,21 @@ export class McpServer {
 	 * @param {CreatedResource | ResourceOptions} resource_or_options
 	 * @param {(uri: string) => Promise<ReadResourceResult> | ReadResourceResult} [execute]
 	 */
-	resource(
-		{
-			name,
-			description,
-			title,
-			uri,
-			mimeType,
-			enabled,
-			icons,
-			...resource_or_options
-		},
-		execute,
-	) {
+	resource(resource_or_options, execute) {
 		if ('execute' in resource_or_options) {
 			// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
 			// from showing in intellisense when declaring a tool inline
 			execute = resource_or_options.execute;
 		}
-		this.#resource({
-			name,
-			description,
-			title,
-			uri,
-			mimeType,
-			execute: /** @type {NonNullable<typeof execute>} */ (execute),
-			enabled,
-			icons,
-			template: false,
-		});
+		const stored_resource =
+			/** @type {StoredResource & { uri: string }} */ (
+				resource_or_options
+			);
+		stored_resource.execute = /** @type {NonNullable<typeof execute>} */ (
+			execute
+		);
+		stored_resource.template = false;
+		this.#resource(stored_resource);
 	}
 	/**
 	 * Add a resource template to the server. Resources are added manually to the context by the user to provide the LLM with additional context.
@@ -1198,39 +1083,23 @@ export class McpServer {
 	 * @param {CreatedTemplate<TUri> | TemplateOptions<TUri>} template_or_options
 	 * @param {(uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult} [execute]
 	 */
-	template(
-		{
-			name,
-			description,
-			title,
-			uri,
-			mimeType,
-			complete,
-			list: list_resources,
-			enabled,
-			icons,
-			...template_or_options
-		},
-		execute,
-	) {
+	template(template_or_options, execute) {
 		if ('execute' in template_or_options) {
 			// @ts-expect-error typescript doesn't know about execute because of an egregious hack to prevent it
 			// from showing in intellisense when declaring a tool inline
 			execute = template_or_options.execute;
 		}
-		this.#resource({
-			name,
-			enabled,
-			description,
-			title,
-			uri,
-			mimeType,
-			execute: /** @type {NonNullable<typeof execute>} */ (execute),
-			complete,
-			icons,
-			list_resources,
-			template: true,
-		});
+		const stored_template =
+			/** @type {StoredResource & { uri: string }} */ (
+				/** @type {unknown} */ (template_or_options)
+			);
+		stored_template.execute = /** @type {NonNullable<typeof execute>} */ (
+			execute
+		);
+		// @ts-expect-error list_resources only exists on template resources
+		stored_template.list_resources = template_or_options.list;
+		stored_template.template = true;
+		this.#resource(stored_template);
 	}
 	/**
 	 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.

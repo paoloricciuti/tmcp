@@ -51,7 +51,6 @@ The `uri` must conform to the [RFC3986](https://datatracker.ietf.org/doc/html/rf
 <Callout type="tip">
 
 You can also create a template in a separate module and add it with `server.template(yourTemplate)`. Learn more in the [defineTemplate](/docs/core/defineTemplate) documentation page.
-	
 </Callout>
 
 ## Read the dynamic parameters
@@ -78,6 +77,39 @@ server.resource(
 					uri,
 					text: 'Content of the resource',
 					mimeType: 'text/plain', // this is optional
+				},
+			],
+		};
+	},
+);
+```
+
+## Dynamic Properties with Getters
+
+Sometimes you need properties that are computed dynamically at list-time rather than registration-time. For example, you might want to serve different descriptions based on which client is connected.
+
+`tmcp` preserves JavaScript getters on the configuration object, allowing you to define properties that are evaluated each time the template is listed:
+
+```ts
+server.template(
+	{
+		uri: 'mymcp://files/{path}',
+		name: 'project-files',
+		get description() {
+			const client = server.ctx.sessionInfo?.clientInfo?.name;
+			if (client === 'claude-code') {
+				return 'Access project files by path - supports glob patterns and relative paths from workspace root';
+			}
+			return 'Access project files by path';
+		},
+	},
+	(uri, params) => {
+		return {
+			contents: [
+				{
+					uri,
+					text: `Contents of ${params.path}`,
+					mimeType: 'text/plain',
 				},
 			],
 		};
