@@ -212,10 +212,23 @@ interface HttpTransportOptions {
 		streams?: StreamSessionManager;
 		info?: InfoSessionManager;
 	}; // Provide custom managers; defaults to in-memory implementations
+	disableSse?: boolean; // Disable SSE stream endpoint (GET returns 405)
 }
 ```
 
 If you omit `sessionManager` the transport creates `InMemoryStreamSessionManager` and `InMemoryInfoSessionManager` instances for you. You can override either field independently (for example, Redis streams with in-memory metadata during development).
+
+### Disabling SSE Streams
+
+If your deployment doesn't support long-lived SSE connections (e.g., some serverless environments), you can disable the GET endpoint:
+
+```javascript
+const transport = new HttpTransport(server, {
+	disableSse: true,
+});
+```
+
+When `disableSse` is `true`, GET requests to the MCP endpoint will return a `405 Method Not Allowed` response. Clients can still communicate via POST requests, but won't receive server-initiated notifications.
 
 #### Methods
 

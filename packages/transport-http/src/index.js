@@ -23,6 +23,7 @@
  * 	oauth?: OAuth<"built">
  * 	cors?: CorsConfig | boolean,
  * 	sessionManager?: { streams?: StreamSessionManager, info?: OptionalizeSessionManager<InfoSessionManager> }
+ * 	disableSse?: boolean
  * }} HttpTransportOptions
  */
 
@@ -47,7 +48,7 @@ export class HttpTransport {
 	#server;
 
 	/**
-	 * @type {Required<Omit<HttpTransportOptions, 'oauth' | 'cors' | 'sessionManager'>> & { cors?: CorsConfig | boolean, sessionManager: SessionManager }}
+	 * @type {Required<Omit<HttpTransportOptions, 'oauth' | 'cors' | 'sessionManager' | 'disableSse'>> & { cors?: CorsConfig | boolean, sessionManager: SessionManager, disableSse?: boolean }}
 	 */
 	#options;
 
@@ -85,6 +86,7 @@ export class HttpTransport {
 			path = '/mcp',
 			oauth,
 			cors,
+			disableSse,
 			sessionManager: _sessionManager = {
 				streams: new InMemoryStreamSessionManager(),
 				info: new InMemoryInfoSessionManager(),
@@ -113,7 +115,13 @@ export class HttpTransport {
 			this.#oauth = oauth;
 		}
 
-		this.#options = { getSessionId, path, cors, sessionManager };
+		this.#options = {
+			getSessionId,
+			path,
+			cors,
+			sessionManager,
+			disableSse,
+		};
 		this.#path = path;
 
 		this.#server.on('initialize', ({ capabilities, clientInfo }) => {
@@ -281,6 +289,15 @@ export class HttpTransport {
 	 * @returns
 	 */
 	async #handle_get(session_id) {
+		if (this.#options.disableSse) {
+			return new Response(null, {
+				status: 405,
+				headers: {
+					Allow: 'POST, DELETE, OPTIONS',
+				},
+			});
+		}
+
 		const sessions = this.#options.sessionManager;
 		const text_encoder = this.#text_encoder;
 		// If session already exists, return error
