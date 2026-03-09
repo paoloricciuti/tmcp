@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.19.3
+
+### Patch Changes
+
+- 2cf40fc: fix: use `looseObject` for client capabilities
+
 ## 1.19.2
 
 ### Patch Changes
