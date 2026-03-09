@@ -393,17 +393,28 @@ export class HttpTransport {
 
 			const session_id_storage = this.#session_id_storage;
 
+			const messages = Array.isArray(body) ? body : [body];
+
 			const handle = async () => {
-				const client_capabilities =
-					await this.#options.sessionManager.info
-						.getClientCapabilities(session_id)
-						.catch(() => undefined);
-				const client_info = await this.#options.sessionManager.info
-					.getClientInfo(session_id)
-					.catch(() => undefined);
-				const log_level = await this.#options.sessionManager.info
-					.getLogLevel(session_id)
-					.catch(() => undefined);
+				const init_message = messages.find(
+					(/** @type {any} */ m) => m.method === 'initialize',
+				);
+
+				const client_capabilities = init_message
+					? init_message.params?.capabilities
+					: await this.#options.sessionManager.info
+							.getClientCapabilities(session_id)
+							.catch(() => undefined);
+				const client_info = init_message
+					? init_message.params?.clientInfo
+					: await this.#options.sessionManager.info
+							.getClientInfo(session_id)
+							.catch(() => undefined);
+				const log_level = init_message
+					? undefined
+					: await this.#options.sessionManager.info
+							.getLogLevel(session_id)
+							.catch(() => undefined);
 
 				const response = await this.#controller_storage.run(
 					controller,
@@ -433,8 +444,6 @@ export class HttpTransport {
 			};
 
 			handle();
-
-			const messages = Array.isArray(body) ? body : [body];
 
 			const has_request = messages.some((message) => message.id != null);
 

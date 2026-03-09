@@ -498,7 +498,13 @@ export class InMemoryTransport {
 
 		if (session) {
 			request_id = session.nextId();
-			session_info = session.sessionInfo;
+			session_info =
+				method === 'initialize'
+					? /** @type {Context["sessionInfo"]} */ ({
+							clientCapabilities: params?.capabilities,
+							clientInfo: params?.clientInfo,
+						})
+					: session.sessionInfo;
 		}
 
 		const response = await this.#session_id_storage.run(sessionId, () =>

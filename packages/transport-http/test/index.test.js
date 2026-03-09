@@ -849,6 +849,45 @@ describe('HTTP Transport', () => {
 		});
 	});
 
+	describe('sessionInfo during initialize', () => {
+		it('has sessionInfo available in server.ctx during the initialize request', async () => {
+			/**
+			 * @type {any}
+			 */
+			let captured_session_info;
+
+			new_server({
+				capabilities: {
+					tools: { listChanged: true },
+				},
+			}).setup((server) => {
+				server.on('initialize', () => {
+					captured_session_info = server.ctx.sessionInfo;
+				});
+			});
+
+			const local_transport = new StreamableHTTPClientTransport(
+				new URL('http://localhost:3000/mcp'),
+			);
+			const local_client = new Client({
+				name: 'test-init-client',
+				version: '2.0.0',
+			});
+
+			await local_client.connect(local_transport);
+
+			expect(captured_session_info).toBeDefined();
+			expect(captured_session_info.clientInfo).toStrictEqual({
+				name: 'test-init-client',
+				version: '2.0.0',
+			});
+			expect(captured_session_info.clientCapabilities).toBeDefined();
+
+			await local_client.close();
+			await local_transport.close();
+		});
+	});
+
 	describe('configuration', () => {
 		it('responds on any path when configured with a null path', async () => {
 			const transport = new HttpTransport(mcp_server, {

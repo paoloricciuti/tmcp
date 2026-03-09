@@ -109,10 +109,20 @@ export class StdioTransport {
 				if (line.trim()) {
 					try {
 						const message = JSON.parse(line);
+
+						const is_init = message.method === 'initialize';
+						const session_info = is_init
+							? {
+									clientCapabilities:
+										message.params?.capabilities,
+									clientInfo: message.params?.clientInfo,
+								}
+							: this.#session_info;
+
 						const response = await this.#server.receive(message, {
 							custom: ctx,
 							sessionInfo: /** @type {Context["sessionInfo"]} */ (
-								this.#session_info
+								session_info
 							),
 						});
 						if (response) {
