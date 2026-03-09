@@ -1,5 +1,11 @@
 # @tmcp/transport-sse
 
+## 0.5.4
+
+### Patch Changes
+
+- 475a408: fix: initialize ctx.sessionInfo with info from request on initialize
+
 ## 0.5.3
 
 ### Patch Changes

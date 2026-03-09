@@ -1,5 +1,11 @@
 # @tmcp/transport-in-memory
 
+## 0.0.6
+
+### Patch Changes
+
+- 475a408: fix: initialize ctx.sessionInfo with info from request on initialize
+
 ## 0.0.5
 
 ### Patch Changes
