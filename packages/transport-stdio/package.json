@@ -17,7 +17,7 @@
 		"./package.json": "./package.json"
 	},
 	"peerDependencies": {
-		"tmcp": "workspace:^1.16.3"
+		"tmcp": "^1.16.3"
 	},
 	"keywords": [
 		"tmcp",

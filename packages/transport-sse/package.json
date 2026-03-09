@@ -17,7 +17,7 @@
 		"./package.json": "./package.json"
 	},
 	"peerDependencies": {
-		"tmcp": "workspace:^1.18.0",
+		"tmcp": "^1.18.0",
 		"@tmcp/auth": "^0.3.3 || ^0.4.0"
 	},
 	"peerDependenciesMeta": {

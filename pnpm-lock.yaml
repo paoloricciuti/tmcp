@@ -306,10 +306,6 @@ importers:
         version: 5.9.3
 
   packages/session-manager:
-    dependencies:
-      tmcp:
-        specifier: workspace:^1.16.3
-        version: link:../tmcp
     devDependencies:
       '@tmcp/internal-ts-helpers':
         specifier: workspace:^
@@ -320,6 +316,9 @@ importers:
       publint:
         specifier: ^0.3.12
         version: 0.3.16
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
 
   packages/session-manager-durable-objects:
     dependencies:
