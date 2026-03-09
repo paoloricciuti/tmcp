@@ -44,14 +44,16 @@ declare module 'tmcp' {
 		 * Get the client capabilities of the client that initiated the current request, you can use this to verify the client support something before invoking the respective method.
 		 * @deprecated Use `server.ctx.sessionInfo.clientCapabilities` instead.
 		 */
-		currentClientCapabilities(): {
+		currentClientCapabilities(): ({
 			experimental?: {} | undefined;
 			sampling?: {} | undefined;
 			elicitation?: {} | undefined;
 			roots?: {
 				listChanged?: boolean | undefined;
 			} | undefined;
-		} | undefined;
+		} & {
+			[key: string]: unknown;
+		}) | undefined;
 		
 		on<TEvent extends keyof McpEvents>(event: TEvent, callback: McpEvents[TEvent], options?: AddEventListenerOptions): () => void;
 		/**
@@ -505,7 +507,7 @@ declare module 'tmcp' {
 	/**
 	 * Capabilities a client may support. Known capabilities are defined here, in this schema, but this is not a closed set: any client can define its own, additional capabilities.
 	 */
-	const ClientCapabilitiesSchema: v.ObjectSchema<{
+	const ClientCapabilitiesSchema: v.LooseObjectSchema<{
 		/**
 		 * Experimental, non-standard capabilities that the client supports.
 		 */
@@ -533,7 +535,7 @@ declare module 'tmcp' {
 		 * The latest version of the Model Context Protocol that the client supports. The client MAY decide to support older versions as well.
 		 */
 		readonly protocolVersion: v.StringSchema<undefined>;
-		readonly capabilities: v.ObjectSchema<{
+		readonly capabilities: v.LooseObjectSchema<{
 			/**
 			 * Experimental, non-standard capabilities that the client supports.
 			 */
@@ -2823,7 +2825,7 @@ declare module 'tmcp/utils' {
 		
 		function media(type: "audio" | "image", data: string, mime_type: string): {
 			content: {
-				type: "audio" | "image";
+				type: "image" | "audio";
 				data: string;
 				mimeType: string;
 			}[];
@@ -2856,15 +2858,15 @@ declare module 'tmcp/utils' {
 				description?: string | undefined;
 				title?: string | undefined;
 				uri: string;
-				_meta?: ({} & {
-					[key: string]: unknown;
-				}) | undefined;
-				mimeType?: string | undefined;
 				icons?: {
 					src: string;
 					mimeType?: string | undefined;
 					sizes?: string[] | undefined;
 				}[] | undefined;
+				mimeType?: string | undefined;
+				_meta?: ({} & {
+					[key: string]: unknown;
+				}) | undefined;
 				type: "resource_link";
 			}[];
 		};
@@ -2943,7 +2945,7 @@ declare module 'tmcp/utils' {
 			messages: {
 				role: "user";
 				content: {
-					type: "audio" | "image";
+					type: "image" | "audio";
 					data: string;
 					mimeType: string;
 				};
@@ -2982,15 +2984,15 @@ declare module 'tmcp/utils' {
 					description?: string | undefined;
 					title?: string | undefined;
 					uri: string;
-					_meta?: ({} & {
-						[key: string]: unknown;
-					}) | undefined;
-					mimeType?: string | undefined;
 					icons?: {
 						src: string;
 						mimeType?: string | undefined;
 						sizes?: string[] | undefined;
 					}[] | undefined;
+					mimeType?: string | undefined;
+					_meta?: ({} & {
+						[key: string]: unknown;
+					}) | undefined;
 					type: "resource_link";
 				};
 			}[];

@@ -239,7 +239,7 @@ export const ImplementationSchema = v.object({
 /**
  * Capabilities a client may support. Known capabilities are defined here, in this schema, but this is not a closed set: any client can define its own, additional capabilities.
  */
-export const ClientCapabilitiesSchema = v.object({
+export const ClientCapabilitiesSchema = v.looseObject({
 	/**
 	 * Experimental, non-standard capabilities that the client supports.
 	 */
