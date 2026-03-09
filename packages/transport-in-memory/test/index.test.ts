@@ -1635,6 +1635,32 @@ describe('InMemoryTransport', () => {
 		});
 	});
 
+	describe('sessionInfo during initialize', () => {
+		it('has sessionInfo available in server.ctx during the initialize request', async () => {
+			let captured_session_info: any;
+
+			let server = new McpServer(server_config, {
+				adapter,
+				capabilities: {
+					tools: { listChanged: true },
+				},
+			});
+
+			server.on('initialize', () => {
+				captured_session_info = server.ctx.sessionInfo;
+			});
+
+			const transport = new InMemoryTransport(server);
+			const session = transport.session();
+
+			await session.initialize('2025-06-18', {}, client_info);
+
+			expect(captured_session_info).toBeDefined();
+			expect(captured_session_info.clientInfo).toStrictEqual(client_info);
+			expect(captured_session_info.clientCapabilities).toBeDefined();
+		});
+	});
+
 	describe('sessionInfo and subscriptions getters', () => {
 		it('should return a copy of sessionInfo', async () => {
 			// initialize server
