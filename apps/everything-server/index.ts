@@ -442,8 +442,18 @@ const transport = new HttpTransport(server, {
 	path: '/mcp',
 });
 
+const ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', '::1'];
+
+function is_allowed_host(request: Request): boolean {
+	const host_header = new URL(request.url).hostname;
+	return ALLOWED_HOSTS.includes(host_header);
+}
+
 serve({
 	async fetch(request) {
+		if (!is_allowed_host(request)) {
+			return new Response('Forbidden', { status: 403 });
+		}
 		return (
 			(await transport.respond(request)) ??
 			new Response('', { status: 200 })
