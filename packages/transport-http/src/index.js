@@ -393,8 +393,9 @@ export class HttpTransport {
 
 			const session_id_storage = this.#session_id_storage;
 
+			const messages = Array.isArray(body) ? body : [body];
+
 			const handle = async () => {
-				const messages = Array.isArray(body) ? body : [body];
 				const init_message = messages.find(
 					(/** @type {any} */ m) => m.method === 'initialize',
 				);
@@ -443,8 +444,6 @@ export class HttpTransport {
 			};
 
 			handle();
-
-			const messages = Array.isArray(body) ? body : [body];
 
 			const has_request = messages.some((message) => message.id != null);
 
