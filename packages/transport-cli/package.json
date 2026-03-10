@@ -10,6 +10,9 @@
 		"prepublish": "pnpm generate:types",
 		"test": "vitest"
 	},
+	"files": [
+		"src"
+	],
 	"exports": {
 		".": {
 			"types": "./src/types/index.d.ts",
