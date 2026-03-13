@@ -1,7 +1,7 @@
 {
 	"name": "@tmcp/transport-cli",
-	"version": "0.0.1",
-	"description": "CLI transport for TMCP - exposes MCP tools as CLI commands via sade",
+	"version": "0.0.2",
+	"description": "CLI transport for TMCP with static JSON-first tool commands",
 	"type": "module",
 	"main": "src/index.js",
 	"types": "src/types/index.d.ts",
@@ -30,7 +30,8 @@
 		"tmcp",
 		"cli",
 		"transport",
-		"sade"
+		"mcp",
+		"json"
 	],
 	"repository": {
 		"type": "git",

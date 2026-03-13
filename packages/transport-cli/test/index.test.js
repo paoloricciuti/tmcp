@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { McpServer } from 'tmcp';
 import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import * as v from 'valibot';
@@ -12,6 +12,24 @@ const server_config = {
 	description: 'A test CLI server',
 };
 
+/**
+ * @param {Partial<ConstructorParameters<typeof McpServer>[0]>} [config]
+ * @param {Partial<ConstructorParameters<typeof McpServer>[1]>} [options]
+ */
+function create_server(config = {}, options = {}) {
+	return new McpServer(
+		{
+			...server_config,
+			...config,
+		},
+		{
+			adapter,
+			capabilities: { tools: {} },
+			...options,
+		},
+	);
+}
+
 describe('CliTransport', () => {
 	/** @type {string[]} */
 	let stdout_chunks;
@@ -19,9 +37,14 @@ describe('CliTransport', () => {
 	/** @type {string[]} */
 	let stderr_chunks;
 
+	/** @type {string | number | null | undefined} */
+	let original_exit_code;
+
 	beforeEach(() => {
 		stdout_chunks = [];
 		stderr_chunks = [];
+		original_exit_code = process.exitCode;
+		process.exitCode = undefined;
 
 		vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
 			stdout_chunks.push(String(chunk));
@@ -34,40 +57,116 @@ describe('CliTransport', () => {
 		});
 	});
 
-	describe('tool without arguments', () => {
-		it('should execute a tool with no input schema and print JSON result', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
+	afterEach(() => {
+		vi.restoreAllMocks();
+		process.exitCode = original_exit_code;
+	});
+
+	function stdout_text() {
+		return stdout_chunks.join('');
+	}
+
+	function stderr_text() {
+		return stderr_chunks.join('');
+	}
+
+	function stdout_json() {
+		return JSON.parse(stdout_text());
+	}
+
+	describe('tools command', () => {
+		it('lists tools across paginated responses and sends initialized first', async () => {
+			const server = create_server(undefined, {
+				pagination: {
+					tools: {
+						size: 1,
+					},
+				},
 			});
 
-			server.tool(
-				{
-					name: 'ping',
-					description: 'Ping the server',
-				},
-				() => {
-					return {
-						content: [{ type: 'text', text: 'pong' }],
-					};
-				},
-			);
+			server.tool({ name: 'first', description: 'first tool' }, () => ({
+				content: [{ type: 'text', text: 'one' }],
+			}));
+			server.tool({ name: 'second', description: 'second tool' }, () => ({
+				content: [{ type: 'text', text: 'two' }],
+			}));
+			server.tool({ name: 'third', description: 'third tool' }, () => ({
+				content: [{ type: 'text', text: 'three' }],
+			}));
 
+			const receive_spy = vi.spyOn(server, 'receive');
 			const cli = new CliTransport(server);
-			await cli.run(undefined, ['ping']);
 
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([{ type: 'text', text: 'pong' }]);
+			await cli.run(undefined, ['tools']);
+
+			const listed_tools = /** @type {Array<{ name: string }>} */ (
+				stdout_json()
+			);
+			expect(listed_tools.map((tool) => tool.name)).toEqual([
+				'first',
+				'second',
+				'third',
+			]);
+
+			const methods = receive_spy.mock.calls.map(
+				([request]) =>
+					/** @type {{ method?: string }} */ (request).method,
+			);
+			expect(methods[0]).toBe('initialize');
+			expect(methods[1]).toBe('notifications/initialized');
+			expect(methods.slice(2)).toEqual([
+				'tools/list',
+				'tools/list',
+				'tools/list',
+			]);
 		});
 	});
 
-	describe('tool with string arguments', () => {
-		it('should pass string arguments to the tool', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
+	describe('schema command', () => {
+		it('prints tool metadata, input schema, and output schema', async () => {
+			const server = create_server();
+
+			server.tool(
+				{
+					name: 'greet',
+					description: 'Greet someone',
+					schema: v.object({
+						name: v.string(),
+					}),
+					outputSchema: v.object({
+						message: v.string(),
+					}),
+				},
+				(input) => ({
+					content: [{ type: 'text', text: `Hello, ${input.name}!` }],
+					structuredContent: { message: `Hello, ${input.name}!` },
+				}),
+			);
+
+			const cli = new CliTransport(server);
+			await cli.run(undefined, ['schema', 'greet']);
+
+			const schema = stdout_json();
+			expect(schema.name).toBe('greet');
+			expect(schema.inputSchema.type).toBe('object');
+			expect(schema.outputSchema.type).toBe('object');
+			expect(schema.outputSchema.properties.message.type).toBe('string');
+		});
+
+		it('errors on unknown tools', async () => {
+			const server = create_server();
+			const cli = new CliTransport(server);
+
+			await cli.run(undefined, ['schema', 'missing']);
+
+			expect(stderr_text()).toContain('Unknown tool: missing');
+			expect(process.exitCode).toBe(1);
+		});
+	});
+
+	describe('tool invocation', () => {
+		it('calls tools through the static call command', async () => {
+			const server = create_server();
 
 			server.tool(
 				{
@@ -77,516 +176,52 @@ describe('CliTransport', () => {
 						name: v.string(),
 					}),
 				},
-				(params) => {
-					return {
-						content: [
-							{ type: 'text', text: `Hello, ${params.name}!` },
-						],
-					};
-				},
+				(input) => ({
+					content: [{ type: 'text', text: `Hello, ${input.name}!` }],
+				}),
 			);
 
 			const cli = new CliTransport(server);
-			await cli.run(undefined, ['greet', '--name', 'Alice']);
+			await cli.run(undefined, ['call', 'greet', '{"name":"Alice"}']);
 
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([
+			expect(stdout_json().content).toEqual([
 				{ type: 'text', text: 'Hello, Alice!' },
 			]);
 		});
-	});
 
-	describe('tool with number arguments', () => {
-		it('should parse and pass number arguments', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
+		it('calls tools through the bare tool alias', async () => {
+			const server = create_server();
 
 			server.tool(
 				{
-					name: 'add',
+					name: 'sum',
 					description: 'Add two numbers',
 					schema: v.object({
 						a: v.number(),
 						b: v.number(),
 					}),
 				},
-				(params) => {
-					return {
+				(input) =>
+					/** @type {any} */ ({
 						content: [
-							{
-								type: 'text',
-								text: `${params.a + params.b}`,
-							},
+							{ type: 'text', text: `${input.a + input.b}` },
 						],
-					};
-				},
-			);
-
-			const cli = new CliTransport(server);
-			await cli.run(undefined, ['add', '--a', '3', '--b', '4']);
-
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([{ type: 'text', text: '7' }]);
-		});
-	});
-
-	describe('tool with boolean arguments', () => {
-		it('should parse and pass boolean arguments', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'toggle',
-					description: 'Toggle a flag',
-					schema: v.object({
-						verbose: v.boolean(),
+						structuredContent: { total: input.a + input.b },
 					}),
-				},
-				(params) => {
-					return {
-						content: [
-							{
-								type: 'text',
-								text: params.verbose ? 'verbose' : 'quiet',
-							},
-						],
-					};
-				},
 			);
 
 			const cli = new CliTransport(server);
-			await cli.run(undefined, ['toggle', '--verbose']);
+			await cli.run(undefined, ['sum', '{"a":3,"b":4}']);
 
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([{ type: 'text', text: 'verbose' }]);
+			expect(stdout_json().structuredContent).toEqual({ total: 7 });
 		});
 
-		it('should handle --no- prefix for boolean false', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'toggle',
-					description: 'Toggle a flag',
-					schema: v.object({
-						verbose: v.boolean(),
-					}),
-				},
-				(params) => {
-					return {
-						content: [
-							{
-								type: 'text',
-								text: params.verbose ? 'verbose' : 'quiet',
-							},
-						],
-					};
-				},
-			);
-
-			const cli = new CliTransport(server);
-			await cli.run(undefined, ['toggle', '--no-verbose']);
-
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([{ type: 'text', text: 'quiet' }]);
-		});
-
-		it('should handle kebab-case arguments', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'toggle',
-					description: 'Toggle a flag',
-					schema: v.object({
-						'kebab-case': v.boolean(),
-					}),
-				},
-				(params) => {
-					return {
-						content: [
-							{
-								type: 'text',
-								text: params['kebab-case']
-									? 'kebab-case'
-									: 'camelCase',
-							},
-						],
-					};
-				},
-			);
-
-			const cli = new CliTransport(server);
-			await cli.run(undefined, ['toggle', '--kebab-case']);
-
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([
-				{ type: 'text', text: 'kebab-case' },
-			]);
-		});
-	});
-
-	describe('tool with optional arguments', () => {
-		it('should handle optional arguments that are not provided', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'greet',
-					description: 'Greet someone',
-					schema: v.object({
-						name: v.string(),
-						greeting: v.optional(v.string()),
-					}),
-				},
-				(params) => {
-					const greeting = params.greeting ?? 'Hello';
-					return {
-						content: [
-							{
-								type: 'text',
-								text: `${greeting}, ${params.name}!`,
-							},
-						],
-					};
-				},
-			);
-
-			const cli = new CliTransport(server);
-			await cli.run(undefined, ['greet', '--name', 'Bob']);
-
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([
-				{ type: 'text', text: 'Hello, Bob!' },
-			]);
-		});
-
-		it('should pass optional arguments when provided', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'greet',
-					description: 'Greet someone',
-					schema: v.object({
-						name: v.string(),
-						greeting: v.optional(v.string()),
-					}),
-				},
-				(params) => {
-					const greeting = params.greeting ?? 'Hello';
-					return {
-						content: [
-							{
-								type: 'text',
-								text: `${greeting}, ${params.name}!`,
-							},
-						],
-					};
-				},
-			);
-
-			const cli = new CliTransport(server);
-			await cli.run(undefined, [
-				'greet',
-				'--name',
-				'Bob',
-				'--greeting',
-				'Hi',
-			]);
-
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([
-				{ type: 'text', text: 'Hi, Bob!' },
-			]);
-		});
-	});
-
-	describe('tool with enum arguments', () => {
-		it('should accept valid enum values', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'set_level',
-					description: 'Set log level',
-					schema: v.object({
-						level: v.picklist(['debug', 'info', 'warn', 'error']),
-					}),
-				},
-				(params) => {
-					return {
-						content: [
-							{
-								type: 'text',
-								text: `Level set to ${params.level}`,
-							},
-						],
-					};
-				},
-			);
-
-			const cli = new CliTransport(server);
-			await cli.run(undefined, ['set_level', '--level', 'debug']);
-
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([
-				{ type: 'text', text: 'Level set to debug' },
-			]);
-		});
-	});
-
-	describe('multiple tools', () => {
-		it('should register all tools as commands', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'tool_a',
-					description: 'Tool A',
-				},
-				() => ({
-					content: [{ type: 'text', text: 'A' }],
-				}),
-			);
-
-			server.tool(
-				{
-					name: 'tool_b',
-					description: 'Tool B',
-				},
-				() => ({
-					content: [{ type: 'text', text: 'B' }],
-				}),
-			);
-
-			// Call tool_a
-			const cli_a = new CliTransport(server);
-			await cli_a.run(undefined, ['tool_a']);
-
-			expect(stdout_chunks.length).toBe(1);
-			let result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([{ type: 'text', text: 'A' }]);
-
-			// Reset output
-			stdout_chunks = [];
-
-			// Call tool_b
-			const cli_b = new CliTransport(server);
-			await cli_b.run(undefined, ['tool_b']);
-
-			expect(stdout_chunks.length).toBe(1);
-			result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([{ type: 'text', text: 'B' }]);
-		});
-	});
-
-	describe('tool with mixed argument types', () => {
-		it('should handle a tool with string, number, and boolean arguments', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'create_user',
-					description: 'Create a user',
-					schema: v.object({
-						name: v.string(),
-						age: v.number(),
-						admin: v.optional(v.boolean()),
-					}),
-				},
-				(params) => {
-					return {
-						content: [
-							{
-								type: 'text',
-								text: JSON.stringify({
-									name: params.name,
-									age: params.age,
-									admin: params.admin ?? false,
-								}),
-							},
-						],
-					};
-				},
-			);
-
-			const cli = new CliTransport(server);
-			await cli.run(undefined, [
-				'create_user',
-				'--name',
-				'Charlie',
-				'--age',
-				'30',
-				'--admin',
-			]);
-
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			const parsed = JSON.parse(result.content[0].text);
-			expect(parsed).toEqual({
-				name: 'Charlie',
-				age: 30,
-				admin: true,
-			});
-		});
-	});
-
-	describe('tool execution error', () => {
-		it('should write errors to stderr and set exit code', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'failing_tool',
-					description: 'A tool that throws',
-				},
-				() => {
-					throw new Error('Something went wrong');
-				},
-			);
-
-			const cli = new CliTransport(server);
-
-			// Save and restore process.exitCode
-			const original_exit_code = process.exitCode;
-
-			await cli.run(undefined, ['failing_tool']);
-
-			// When a tool throws, the MCP server returns a JSON-RPC error,
-			// which the transport catches and writes to stderr
-			expect(stderr_chunks.length).toBeGreaterThan(0);
-			expect(stderr_chunks.join('')).toContain('Error:');
-			expect(process.exitCode).toBe(1);
-
-			process.exitCode = original_exit_code;
-		});
-	});
-
-	describe('output format', () => {
-		it('should output pretty-printed JSON', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'format_test',
-					description: 'Test output format',
-				},
-				() => ({
-					content: [{ type: 'text', text: 'test' }],
-				}),
-			);
-
-			const cli = new CliTransport(server);
-			await cli.run(undefined, ['format_test']);
-
-			expect(stdout_chunks.length).toBe(1);
-			// Verify it's pretty-printed (contains newlines and indentation)
-			expect(stdout_chunks[0]).toContain('\n');
-			expect(stdout_chunks[0]).toContain('  ');
-			// Verify it ends with a newline
-			expect(stdout_chunks[0].endsWith('\n')).toBe(true);
-			// Verify it's valid JSON
-			expect(() => JSON.parse(stdout_chunks[0])).not.toThrow();
-		});
-	});
-
-	describe('tool with array arguments', () => {
-		it('should parse array arguments', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
-			server.tool(
-				{
-					name: 'list_items',
-					description: 'List items',
-					schema: v.object({
-						items: v.array(v.string()),
-					}),
-				},
-				(params) => {
-					return {
-						content: [
-							{
-								type: 'text',
-								text: params.items.join(', '),
-							},
-						],
-					};
-				},
-			);
-
-			const cli = new CliTransport(server);
-			await cli.run(undefined, [
-				'list_items',
-				'--items',
-				'foo',
-				'--items',
-				'bar',
-				'--items',
-				'baz',
-			]);
-
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([
-				{ type: 'text', text: 'foo, bar, baz' },
-			]);
-		});
-	});
-
-	describe('custom context', () => {
-		it('should pass custom context to the server', async () => {
+		it('passes custom context to the server', async () => {
 			/** @type {{ userId: string } | undefined} */
 			let captured_ctx;
 
 			const server = /** @type {McpServer<any, { userId: string }>} */ (
-				new McpServer(server_config, {
-					adapter,
-					capabilities: { tools: {} },
-				})
+				/** @type {unknown} */ (create_server())
 			);
 
 			server.tool(
@@ -600,7 +235,7 @@ describe('CliTransport', () => {
 						content: [
 							{
 								type: 'text',
-								text: `user: ${server.ctx.custom?.userId}`,
+								text: server.ctx.custom?.userId ?? '',
 							},
 						],
 					};
@@ -611,75 +246,20 @@ describe('CliTransport', () => {
 				new CliTransport(server)
 			);
 
-			// Note: custom context is not passed through run() in this transport
-			// because the CLI doesn't have a way to inject it from argv.
-			// But we test that the run() method accepts it.
 			await cli.run({ userId: 'test-user' }, ['ctx_tool']);
 
-			expect(stdout_chunks.length).toBe(1);
 			expect(captured_ctx).toEqual({ userId: 'test-user' });
 		});
-	});
 
-	describe('tool with description in schema properties', () => {
-		it('should use property descriptions from schema', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
+		it('errors on invalid positional JSON', async () => {
+			const server = create_server();
 			server.tool(
 				{
-					name: 'described_tool',
-					description: 'Tool with described args',
+					name: 'greet',
+					description: 'Greet someone',
 					schema: v.object({
-						query: v.pipe(
-							v.string(),
-							v.description('The search query'),
-						),
+						name: v.string(),
 					}),
-				},
-				(params) => {
-					return {
-						content: [
-							{
-								type: 'text',
-								text: `Searching: ${params.query}`,
-							},
-						],
-					};
-				},
-			);
-
-			const cli = new CliTransport(server);
-			await cli.run(undefined, ['described_tool', '--query', 'hello']);
-
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([
-				{ type: 'text', text: 'Searching: hello' },
-			]);
-		});
-	});
-
-	describe('script name', () => {
-		it('should use the server name as the CLI script name', async () => {
-			const server = new McpServer(
-				{
-					name: 'my-custom-cli',
-					version: '1.0.0',
-					description: 'A custom CLI server',
-				},
-				{
-					adapter,
-					capabilities: { tools: {} },
-				},
-			);
-
-			server.tool(
-				{
-					name: 'noop',
-					description: 'Does nothing',
 				},
 				() => ({
 					content: [{ type: 'text', text: 'ok' }],
@@ -687,80 +267,261 @@ describe('CliTransport', () => {
 			);
 
 			const cli = new CliTransport(server);
+			await cli.run(undefined, ['greet', '{bad json']);
 
-			/** @type {string[]} */
-			const log_chunks = [];
-
-			const exit_spy = vi
-				.spyOn(process, 'exit')
-				// @ts-expect-error -- mock needs to not actually exit
-				.mockImplementation(() => {});
-
-			const log_spy = vi
-				.spyOn(console, 'log')
-				.mockImplementation((...args) => {
-					log_chunks.push(args.join(' '));
-				});
-
-			const error_spy = vi
-				.spyOn(console, 'error')
-				.mockImplementation((...args) => {
-					log_chunks.push(args.join(' '));
-				});
-
-			try {
-				await cli.run(undefined, ['--help']);
-			} catch {
-				// yargs may throw after calling process.exit
-			}
-
-			const all_output =
-				log_chunks.join('\n') +
-				stdout_chunks.join('') +
-				stderr_chunks.join('');
-			expect(all_output).toContain('my-custom-cli');
-
-			exit_spy.mockRestore();
-			log_spy.mockRestore();
-			error_spy.mockRestore();
+			expect(stderr_text()).toContain('Invalid JSON in positional input');
+			expect(process.exitCode).toBe(1);
 		});
-	});
 
-	describe('tool with integer arguments', () => {
-		it('should handle integer schema types', async () => {
-			const server = new McpServer(server_config, {
-				adapter,
-				capabilities: { tools: {} },
-			});
-
+		it('errors when the input JSON is not an object', async () => {
+			const server = create_server();
 			server.tool(
 				{
-					name: 'count',
-					description: 'Count items',
+					name: 'greet',
+					description: 'Greet someone',
 					schema: v.object({
-						n: v.pipe(v.number(), v.integer()),
+						name: v.string(),
 					}),
 				},
-				(params) => {
-					return {
-						content: [
-							{
-								type: 'text',
-								text: `Count: ${params.n}`,
-							},
-						],
-					};
+				() => ({
+					content: [{ type: 'text', text: 'ok' }],
+				}),
+			);
+
+			const cli = new CliTransport(server);
+			await cli.run(undefined, ['greet', '[]']);
+
+			expect(stderr_text()).toContain(
+				'Input from positional input must be a JSON object',
+			);
+			expect(process.exitCode).toBe(1);
+		});
+
+		it('writes tool execution errors to stderr', async () => {
+			const server = create_server();
+			server.tool(
+				{
+					name: 'failing_tool',
+					description: 'A tool that throws',
+				},
+				() => {
+					throw new Error('Something went wrong');
 				},
 			);
 
 			const cli = new CliTransport(server);
-			await cli.run(undefined, ['count', '--n', '42']);
+			await cli.run(undefined, ['failing_tool']);
 
-			expect(stdout_chunks.length).toBe(1);
-			const result = JSON.parse(stdout_chunks[0]);
-			expect(result.content).toEqual([
-				{ type: 'text', text: 'Count: 42' },
+			expect(stderr_text()).toContain('Error:');
+			expect(process.exitCode).toBe(1);
+		});
+	});
+
+	describe('output controls', () => {
+		it('supports structured output', async () => {
+			const server = create_server();
+			server.tool(
+				{
+					name: 'get_user',
+					description: 'Get a user',
+					schema: v.object({
+						id: v.string(),
+					}),
+				},
+				(input) =>
+					/** @type {any} */ ({
+						content: [{ type: 'text', text: `User ${input.id}` }],
+						structuredContent: {
+							user: {
+								id: input.id,
+								name: 'Alice',
+							},
+						},
+					}),
+			);
+
+			const cli = new CliTransport(server);
+			await cli.run(undefined, [
+				'get_user',
+				'{"id":"1"}',
+				'--output',
+				'structured',
 			]);
+
+			expect(stdout_json()).toEqual({
+				user: { id: '1', name: 'Alice' },
+			});
+		});
+
+		it('supports text output', async () => {
+			const server = create_server();
+			server.tool(
+				{
+					name: 'get_lines',
+					description: 'Get text lines',
+				},
+				() => ({
+					content: [
+						{ type: 'text', text: 'alpha' },
+						{ type: 'text', text: 'beta' },
+					],
+				}),
+			);
+
+			const cli = new CliTransport(server);
+			await cli.run(undefined, ['get_lines', '--output', 'text']);
+
+			expect(stdout_text()).toBe('alpha\nbeta\n');
+		});
+
+		it('supports field filtering on the selected output', async () => {
+			const server = create_server();
+			server.tool(
+				{
+					name: 'get_user',
+					description: 'Get a user',
+					schema: v.object({
+						id: v.string(),
+					}),
+				},
+				(input) =>
+					/** @type {any} */ ({
+						content: [{ type: 'text', text: `User ${input.id}` }],
+						structuredContent: {
+							user: {
+								id: input.id,
+								name: 'Alice',
+								email: 'alice@example.com',
+							},
+						},
+					}),
+			);
+
+			const cli = new CliTransport(server);
+			await cli.run(undefined, [
+				'get_user',
+				'{"id":"1"}',
+				'--output',
+				'structured',
+				'--fields',
+				'user.name',
+			]);
+
+			expect(stdout_json()).toEqual({
+				user: { name: 'Alice' },
+			});
+		});
+
+		it('errors when text output contains non-text blocks', async () => {
+			const server = create_server();
+			server.tool(
+				{
+					name: 'mixed_content',
+					description: 'Return mixed content',
+				},
+				() => ({
+					content: [
+						{ type: 'text', text: 'alpha' },
+						{ type: 'image', data: 'YWJj', mimeType: 'image/png' },
+					],
+				}),
+			);
+
+			const cli = new CliTransport(server);
+			await cli.run(undefined, ['mixed_content', '--output', 'text']);
+
+			expect(stderr_text()).toContain(
+				'`--output text` only supports text content blocks',
+			);
+			expect(process.exitCode).toBe(1);
+		});
+
+		it('errors when fields are requested for text output', async () => {
+			const server = create_server();
+			server.tool(
+				{
+					name: 'get_lines',
+					description: 'Get text lines',
+				},
+				() => ({
+					content: [{ type: 'text', text: 'alpha' }],
+				}),
+			);
+
+			const cli = new CliTransport(server);
+			await cli.run(undefined, [
+				'get_lines',
+				'--output',
+				'text',
+				'--fields',
+				'content.0.text',
+			]);
+
+			expect(stderr_text()).toContain(
+				'`--fields` cannot be used with `--output text`',
+			);
+			expect(process.exitCode).toBe(1);
+		});
+
+		it('errors on unknown field paths', async () => {
+			const server = create_server();
+			server.tool(
+				{
+					name: 'get_user',
+					description: 'Get a user',
+				},
+				() =>
+					/** @type {any} */ ({
+						structuredContent: {
+							user: { name: 'Alice' },
+						},
+					}),
+			);
+
+			const cli = new CliTransport(server);
+			await cli.run(undefined, [
+				'get_user',
+				'--output',
+				'structured',
+				'--fields',
+				'user.email',
+			]);
+
+			expect(stderr_text()).toContain('Unknown field path: user.email');
+			expect(process.exitCode).toBe(1);
+		});
+	});
+
+	describe('help output', () => {
+		it('uses the server name in help output', async () => {
+			const server = create_server({ name: 'my-custom-cli' });
+			server.tool({ name: 'noop', description: 'Does nothing' }, () => ({
+				content: [{ type: 'text', text: 'ok' }],
+			}));
+
+			const cli = new CliTransport(server);
+			const exit_spy = vi
+				.spyOn(process, 'exit')
+				// @ts-expect-error test helper
+				.mockImplementation(() => {});
+			const log_spy = vi
+				.spyOn(console, 'log')
+				.mockImplementation(() => {});
+
+			try {
+				await cli.run(undefined, ['--help']);
+			} catch {
+				// sade may throw after trying to exit.
+			}
+
+			expect(
+				stdout_text() +
+					stderr_text() +
+					log_spy.mock.calls.flat().join(' '),
+			).toContain('my-custom-cli');
+
+			exit_spy.mockRestore();
+			log_spy.mockRestore();
 		});
 	});
 });

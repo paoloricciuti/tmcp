@@ -1,6 +1,6 @@
 # @tmcp/transport-cli
 
-A CLI transport for TMCP that turns your MCP server's tools into command-line commands. Each registered tool becomes a subcommand with flags derived from its JSON Schema input, powered by [yargs](https://yargs.js.org/).
+A CLI transport for TMCP that exposes your MCP tools as static, JSON-first commands. It is designed for agent-driven usage: tools are invoked with JSON input, schemas can be inspected directly, and output can be narrowed before it leaves stdout.
 
 ## Installation
 
@@ -33,16 +33,24 @@ server.tool(
 		name: 'greet',
 		description: 'Greet someone by name',
 		schema: z.object({
-			name: z.string().describe('Name of the person to greet'),
-			loud: z.boolean().optional().describe('Shout the greeting'),
+			name: z.string(),
+			loud: z.boolean().optional(),
+		}),
+		outputSchema: z.object({
+			message: z.string(),
 		}),
 	},
 	async (input) => {
-		const text = `Hello, ${input.name}!`;
+		const message = `Hello, ${input.name}!`;
+
 		return {
 			content: [
-				{ type: 'text', text: input.loud ? text.toUpperCase() : text },
+				{
+					type: 'text',
+					text: input.loud ? message.toUpperCase() : message,
+				},
 			],
+			structuredContent: { message },
 		};
 	},
 );
@@ -51,44 +59,83 @@ const cli = new CliTransport(server);
 await cli.run(undefined, process.argv.slice(2));
 ```
 
-Running the above:
+## Commands
+
+### `tools`
+
+Prints the available tools as pretty JSON.
 
 ```bash
-node my-cli.js greet --name Alice
-# {"content":[{"type":"text","text":"Hello, Alice!"}]}
-
-node my-cli.js greet --name Alice --loud
-# {"content":[{"type":"text","text":"HELLO, ALICE!"}]}
+node my-cli.js tools
 ```
 
-Output is pretty-printed JSON written to stdout. Errors go to stderr and set `process.exitCode` to 1.
+### `schema <tool>`
 
-The help output uses the server's `name` (from the `McpServer` config) as the CLI program name. In the example above, `--help` would show `my-cli` as the command name.
+Prints the tool metadata plus its input and output schemas.
 
-## Argument types
+```bash
+node my-cli.js schema greet
+```
 
-The transport maps JSON Schema types from your tool's input schema to yargs option types:
+### `call <tool> [input]`
 
-| JSON Schema type | yargs type | Example                      |
-| ---------------- | ---------- | ---------------------------- |
-| `string`         | `string`   | `--name Alice`               |
-| `number`         | `number`   | `--count 5`                  |
-| `integer`        | `number`   | `--port 8080`                |
-| `boolean`        | `boolean`  | `--verbose` / `--no-verbose` |
-| `array`          | `array`    | `--items foo --items bar`    |
+Calls a tool with a JSON object. The first positional argument is the primary input source.
 
-Properties marked as required in the schema are enforced by yargs (`demandOption`). Optional properties can be omitted. Enum values (e.g. from `z.enum()` or `v.picklist()`) are passed through as `choices`.
+```bash
+node my-cli.js call greet '{"name":"Alice"}'
+```
+
+### `<tool> [input]`
+
+Each tool name is also registered directly as an alias for `call <tool>`, unless the tool name would collide with a reserved command (`tools`, `schema`, or `call`).
+
+```bash
+node my-cli.js greet '{"name":"Alice","loud":true}'
+```
+
+## Input sources
+
+Tool calls accept exactly one input source:
+
+- Positional JSON: `greet '{"name":"Alice"}'`
+
+All inputs must parse to a JSON object. If no input is provided, the transport sends `{}`.
+
+## Output controls
+
+Tool calls support two static output flags:
+
+- `--output full|structured|content|text`
+- `--fields path1,path2`
+
+Examples:
+
+```bash
+node my-cli.js greet '{"name":"Alice"}' --output text
+
+node my-cli.js get-user '{"id":"1"}' --output structured --fields user.name,user.email
+```
+
+`--fields` uses comma-separated dot paths and is applied after the output mode is selected. It is not available with `--output text`.
+
+## Behavior
+
+- Output is written to stdout.
+- JSON outputs are pretty-printed.
+- Errors are written to stderr and set `process.exitCode` to `1`.
+- The CLI initializes an MCP session, sends `notifications/initialized`, and paginates through `tools/list` automatically.
+- The program name shown in help output comes from `McpServer`'s `name`.
 
 ## Custom context
 
-If your server uses custom context, you can pass it as the first argument to `run()`:
+If your server uses custom context, pass it as the first argument to `run()`:
 
 ```javascript
 const cli = new CliTransport(server);
 await cli.run({ userId: 'cli-user' }, process.argv.slice(2));
 ```
 
-The context is forwarded to the server on every request, so your tool handlers can read it from `server.ctx.custom`.
+The context is forwarded on every request, so handlers can read it from `server.ctx.custom`.
 
 ## API
 
@@ -100,24 +147,13 @@ The context is forwarded to the server on every request, so your tool handlers c
 new CliTransport(server: McpServer)
 ```
 
-Creates a new CLI transport. The `server` parameter is the TMCP server instance whose tools will be exposed as commands.
-
 #### Methods
 
-##### `run(ctx?: TCustom, argv?: string[]): Promise<void>`
+```typescript
+run(ctx?: TCustom, argv?: string[]): Promise<void>
+```
 
-Initializes an MCP session, fetches the tool list from the server, builds yargs commands from the tool definitions, and parses the given argv (or `process.argv.slice(2)` if omitted).
-
-- `ctx` - Optional custom context passed to the server for this invocation.
-- `argv` - Optional array of CLI arguments. Defaults to `process.argv.slice(2)`.
-
-## How it works
-
-1. The transport sends an `initialize` JSON-RPC request to the server to start a session.
-2. It calls `tools/list` to get all registered tools and their input schemas.
-3. For each tool, it registers a yargs command using the tool name and converts the tool's `inputSchema` properties into yargs options.
-4. When the user invokes a command, the parsed arguments are coerced back to their schema types and sent as a `tools/call` request.
-5. The result is written to stdout as pretty-printed JSON.
+Starts the CLI, initializes a session, discovers tools, and executes the requested static command or tool alias.
 
 ## Related Packages
 
