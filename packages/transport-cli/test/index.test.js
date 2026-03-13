@@ -165,6 +165,30 @@ describe('CliTransport', () => {
 	});
 
 	describe('tool invocation', () => {
+		it('prints initialization failures through stderr instead of throwing', async () => {
+			const server = create_server();
+			const receive_spy = vi.spyOn(server, 'receive');
+
+			receive_spy.mockResolvedValueOnce(
+				/** @type {any} */ ({
+					jsonrpc: '2.0',
+					id: 0,
+					error: {
+						code: -32600,
+						message: 'Initialization failed',
+					},
+				}),
+			);
+
+			const cli = new CliTransport(server);
+			await expect(
+				cli.run(undefined, ['tools']),
+			).resolves.toBeUndefined();
+
+			expect(stderr_text()).toContain('Error: Initialization failed');
+			expect(process.exitCode).toBe(1);
+		});
+
 		it('calls tools through the static call command', async () => {
 			const server = create_server();
 
@@ -214,6 +238,41 @@ describe('CliTransport', () => {
 			await cli.run(undefined, ['sum', '{"a":3,"b":4}']);
 
 			expect(stdout_json().structuredContent).toEqual({ total: 7 });
+		});
+
+		it('skips unsafe aliases without breaking other commands', async () => {
+			const server = create_server();
+
+			server.tool(
+				{ name: 'safe_tool', description: 'Safe tool' },
+				() => ({
+					content: [{ type: 'text', text: 'safe' }],
+				}),
+			);
+
+			server.tool(
+				{ name: 'get<resource>', description: 'Unsafe alias tool' },
+				() => ({
+					content: [{ type: 'text', text: 'unsafe' }],
+				}),
+			);
+
+			const safe_cli = new CliTransport(server);
+			await safe_cli.run(undefined, ['safe_tool']);
+			expect(stdout_json().content[0].text).toBe('safe');
+			expect(stderr_text()).toContain(
+				'Warning: skipping bare alias for tool "get<resource>"',
+			);
+
+			stdout_chunks = [];
+			stderr_chunks = [];
+
+			const unsafe_cli = new CliTransport(server);
+			await unsafe_cli.run(undefined, ['call', 'get<resource>']);
+			expect(stdout_json().content[0].text).toBe('unsafe');
+			expect(stderr_text()).toContain(
+				'Use `call get<resource>` instead.',
+			);
 		});
 
 		it('passes custom context to the server', async () => {

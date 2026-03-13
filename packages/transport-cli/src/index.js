@@ -20,6 +20,7 @@ const CLIENT_INFO = {
 };
 
 const RESERVED_COMMANDS = new Set(['call', 'schema', 'tools']);
+const UNSAFE_ALIAS_NAME = /[<>[\]]/;
 
 /**
  * @param {unknown} value
@@ -481,39 +482,25 @@ export class CliTransport {
 	 * @param {Array<string>} [argv]
 	 */
 	async run(ctx, argv) {
-		const init_result = await this.#initialize(ctx);
-		const tools = await this.#list_tools(ctx);
-		const script_name = init_result?.serverInfo?.name ?? 'tmcp';
-		const prog = sade(script_name);
+		try {
+			const init_result = await this.#initialize(ctx);
+			const tools = await this.#list_tools(ctx);
+			const script_name = init_result?.serverInfo?.name ?? 'tmcp';
+			const prog = sade(script_name);
 
-		/** @type {Map<string, Tool>} */
-		const tool_map = new Map();
+			/** @type {Map<string, Tool>} */
+			const tool_map = new Map();
 
-		for (const tool of tools) {
-			tool_map.set(tool.name, tool);
-		}
+			for (const tool of tools) {
+				tool_map.set(tool.name, tool);
+			}
 
-		prog.command('tools', 'List available tools').action(() => {});
-		prog.command('schema <tool>', 'Print a tool schema').action(() => {});
-
-		const call_command = prog
-			.command('call <tool> [input]', 'Call a tool with JSON input')
-			.option(
-				'--output',
-				'Select full, structured, content, or text output',
-				'full',
-			)
-			.option(
-				'--fields',
-				'Select comma-separated dot paths from the chosen output',
+			prog.command('tools', 'List available tools').action(() => {});
+			prog.command('schema <tool>', 'Print a tool schema').action(
+				() => {},
 			);
 
-		call_command.action(() => {});
-
-		for (const tool of tools) {
-			if (RESERVED_COMMANDS.has(tool.name)) continue;
-
-			prog.command(`${tool.name} [input]`, tool.description ?? '')
+			prog.command('call <tool> [input]', 'Call a tool with JSON input')
 				.option(
 					'--output',
 					'Select full, structured, content, or text output',
@@ -524,17 +511,40 @@ export class CliTransport {
 					'Select comma-separated dot paths from the chosen output',
 				)
 				.action(() => {});
-		}
 
-		const args = argv ? ['node', script_name, ...argv] : process.argv;
-		const parsed = prog.parse(args, { lazy: true });
+			for (const tool of tools) {
+				if (RESERVED_COMMANDS.has(tool.name)) {
+					continue;
+				}
 
-		if (!parsed) return;
+				if (UNSAFE_ALIAS_NAME.test(tool.name)) {
+					process.stderr.write(
+						`Warning: skipping bare alias for tool "${tool.name}" because its name contains CLI syntax characters. Use \`call ${tool.name}\` instead.\n`,
+					);
+					continue;
+				}
 
-		const { name, args: handler_args } = parsed;
-		const { positionals, options } = extract_command_args(handler_args);
+				prog.command(`${tool.name} [input]`, tool.description ?? '')
+					.option(
+						'--output',
+						'Select full, structured, content, or text output',
+						'full',
+					)
+					.option(
+						'--fields',
+						'Select comma-separated dot paths from the chosen output',
+					)
+					.action(() => {});
+			}
 
-		try {
+			const args = argv ? ['node', script_name, ...argv] : process.argv;
+			const parsed = prog.parse(args, { lazy: true });
+
+			if (!parsed) return;
+
+			const { name, args: handler_args } = parsed;
+			const { positionals, options } = extract_command_args(handler_args);
+
 			if (name === 'tools') {
 				process.stdout.write(format_json(tools));
 				return;
