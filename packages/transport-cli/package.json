@@ -1,7 +1,7 @@
 {
 	"name": "@tmcp/transport-cli",
 	"version": "0.0.1",
-	"description": "CLI transport for TMCP - exposes MCP tools as CLI commands via yargs",
+	"description": "CLI transport for TMCP - exposes MCP tools as CLI commands via sade",
 	"type": "module",
 	"main": "src/index.js",
 	"types": "src/types/index.d.ts",
@@ -24,13 +24,13 @@
 		"tmcp": "^1.16.3"
 	},
 	"dependencies": {
-		"yargs": "^17.7.2"
+		"sade": "^1.8.1"
 	},
 	"keywords": [
 		"tmcp",
 		"cli",
 		"transport",
-		"yargs"
+		"sade"
 	],
 	"repository": {
 		"type": "git",
@@ -40,7 +40,6 @@
 	"devDependencies": {
 		"@tmcp/adapter-valibot": "workspace:^",
 		"@types/node": "^24.0.13",
-		"@types/yargs": "^17.0.33",
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^",

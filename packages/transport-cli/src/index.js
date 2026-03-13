@@ -1,76 +1,48 @@
 /**
  * @import { McpServer } from "tmcp";
- * @import { Options } from "yargs";
  * @import { InputSchema, Tool } from "./internal.js";
  */
 import process from 'node:process';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import Yargs from 'yargs/yargs';
+import sade from 'sade';
 
 /**
- * Maps a JSON Schema type string to a yargs option type.
- * @param {string | undefined} json_schema_type
- * @returns {Options["type"]}
+ * @typedef {number | string | boolean | null} SadeValue
  */
-function json_schema_type_to_yargs(json_schema_type) {
-	switch (json_schema_type) {
-		case 'string':
-			return 'string';
-		case 'number':
-		case 'integer':
-			return 'number';
-		case 'boolean':
-			return 'boolean';
-		case 'array':
-			return 'array';
-		default:
-			return 'string';
+
+/**
+ * Builds sade option flags from a JSON Schema property name and schema.
+ * @param {string} name
+ * @param {{ type?: string; description?: string; enum?: Array<unknown>; default?: unknown }} schema
+ * @param {boolean} required
+ * @returns {{ flags: string; description: string; default_value: SadeValue | undefined }}
+ */
+function build_option(name, schema, required) {
+	const flags = `--${name}`;
+
+	let description = schema.description ?? '';
+
+	if (schema.enum) {
+		const choices = schema.enum.join(', ');
+		description += description
+			? ` (choices: ${choices})`
+			: `choices: ${choices}`;
 	}
+
+	if (required) {
+		description += description ? ' (required)' : 'required';
+	}
+
+	return {
+		flags,
+		description,
+		default_value: /** @type {SadeValue | undefined} */ (schema.default),
+	};
 }
 
 /**
- * Converts a JSON Schema inputSchema into a yargs options object.
- * @param {InputSchema} input_schema
- * @returns {Record<string, Options>}
- */
-function json_schema_to_yargs_options(input_schema) {
-	/** @type {Record<string, Options>} */
-	const options = {};
-
-	const properties = input_schema.properties ?? {};
-	const required = new Set(input_schema.required ?? []);
-
-	for (const [name, schema] of Object.entries(properties)) {
-		/** @type {Options} */
-		const option = {};
-
-		option.type = json_schema_type_to_yargs(schema.type);
-		option.demandOption = required.has(name);
-
-		if (schema.description) {
-			option.describe = schema.description;
-		}
-
-		if (schema.enum) {
-			option.choices =
-				/** @type {Array<string | number | true | undefined>} */ (
-					schema.enum
-				);
-		}
-
-		if (schema.default !== undefined) {
-			option.default = schema.default;
-		}
-
-		options[name] = option;
-	}
-
-	return options;
-}
-
-/**
- * Coerces parsed yargs arguments back to their JSON Schema types.
- * Yargs parses everything from argv as strings by default for some types,
+ * Coerces parsed arguments back to their JSON Schema types.
+ * sade parses everything from argv as strings by default,
  * so we need to coerce values based on the schema.
  * @param {Record<string, unknown>} args
  * @param {InputSchema} input_schema
@@ -90,11 +62,19 @@ function coerce_args(args, input_schema) {
 			result[key] = parseInt(value, 10);
 		} else if (schema?.type === 'number' && typeof value === 'string') {
 			result[key] = parseFloat(value);
+		} else if (schema?.type === 'boolean' && typeof value === 'string') {
+			result[key] = value === 'true';
 		} else if (schema?.type === 'object' && typeof value === 'string') {
 			try {
 				result[key] = JSON.parse(value);
 			} catch {
 				result[key] = value;
+			}
+		} else if (schema?.type === 'array' && typeof value === 'string') {
+			try {
+				result[key] = JSON.parse(value);
+			} catch {
+				result[key] = value.split(',');
 			}
 		} else {
 			result[key] = value;
@@ -102,6 +82,39 @@ function coerce_args(args, input_schema) {
 	}
 
 	return result;
+}
+
+/**
+ * Validates that all required options are present.
+ * @param {Record<string, unknown>} opts
+ * @param {InputSchema} input_schema
+ * @returns {string | undefined} error message if validation fails
+ */
+function validate_required(opts, input_schema) {
+	const required = input_schema.required ?? [];
+	const missing = required.filter((name) => opts[name] === undefined);
+
+	if (missing.length > 0) {
+		return `Missing required option(s): ${missing.map((n) => `--${n}`).join(', ')}`;
+	}
+}
+
+/**
+ * Validates enum constraints on options.
+ * @param {Record<string, unknown>} opts
+ * @param {InputSchema} input_schema
+ * @returns {string | undefined} error message if validation fails
+ */
+function validate_enums(opts, input_schema) {
+	const properties = input_schema.properties ?? {};
+
+	for (const [name, schema] of Object.entries(properties)) {
+		if (schema.enum && opts[name] !== undefined) {
+			if (!schema.enum.includes(opts[name])) {
+				return `Invalid value for --${name}: "${opts[name]}". Must be one of: ${schema.enum.join(', ')}`;
+			}
+		}
+	}
 }
 
 /**
@@ -219,7 +232,7 @@ export class CliTransport {
 
 	/**
 	 * Starts the CLI. Initializes the MCP session, lists tools,
-	 * builds yargs commands from the tool definitions, and parses argv.
+	 * builds sade commands from the tool definitions, and parses argv.
 	 * @param {TCustom} [ctx]
 	 * @param {Array<string>} [argv]
 	 */
@@ -230,48 +243,75 @@ export class CliTransport {
 
 		const script_name = init_result?.serverInfo?.name ?? 'tmcp';
 
-		const cli = Yargs(argv ?? process.argv.slice(2))
-			.scriptName(script_name)
-			.strict()
-			.demandCommand(
-				1,
-				'You need to specify a tool command to run. Use --help to see available tools.',
-			)
-			.help();
+		const prog = sade(script_name);
+
+		/** @type {Map<string, Tool>} */
+		const tool_map = new Map();
 
 		for (const tool of tools) {
-			const options = json_schema_to_yargs_options(tool.inputSchema);
+			const properties = tool.inputSchema.properties ?? {};
+			const required = new Set(tool.inputSchema.required ?? []);
 
-			cli.command(
-				tool.name,
-				tool.description ?? '',
-				(yargs) => yargs.options(options),
-				async (args) => {
-					try {
-						const coerced = coerce_args(
-							/** @type {Record<string, unknown>} */ (args),
-							tool.inputSchema,
-						);
+			tool_map.set(tool.name, tool);
 
-						const result = await this.#call_tool(
-							tool.name,
-							coerced,
-							ctx,
-						);
+			const cmd = prog.command(tool.name, tool.description ?? '');
 
-						process.stdout.write(
-							JSON.stringify(result, null, 2) + '\n',
-						);
-					} catch (err) {
-						process.stderr.write(
-							`Error: ${err instanceof Error ? err.message : String(err)}\n`,
-						);
-						process.exitCode = 1;
-					}
-				},
-			);
+			for (const [name, schema] of Object.entries(properties)) {
+				const opt = build_option(name, schema, required.has(name));
+				cmd.option(opt.flags, opt.description, opt.default_value);
+			}
+
+			// Use a no-op action so sade registers the command.
+			// We'll use lazy parsing to handle async execution ourselves.
+			cmd.action(() => {});
 		}
 
-		await cli.parseAsync();
+		// sade expects full process.argv (it slices internally),
+		// but our public API accepts pre-sliced argv for convenience.
+		// Prepend dummy entries when custom argv is provided.
+		const args = argv ? ['node', script_name, ...argv] : process.argv;
+
+		const parsed = prog.parse(args, { lazy: true });
+
+		// sade returns void when it handles --help/--version or errors
+		if (!parsed) return;
+
+		const { name, args: handler_args } = parsed;
+		const tool = tool_map.get(name);
+
+		if (!tool) return;
+
+		// sade passes positional args followed by opts object.
+		// Our commands have no positional args, so the last (and only) arg is opts.
+		const opts = /** @type {Record<string, unknown>} */ (
+			/** @type {unknown} */ (handler_args[handler_args.length - 1] ?? {})
+		);
+
+		try {
+			const required_error = validate_required(opts, tool.inputSchema);
+			if (required_error) {
+				process.stderr.write(`Error: ${required_error}\n`);
+				process.exitCode = 1;
+				return;
+			}
+
+			const enum_error = validate_enums(opts, tool.inputSchema);
+			if (enum_error) {
+				process.stderr.write(`Error: ${enum_error}\n`);
+				process.exitCode = 1;
+				return;
+			}
+
+			const coerced = coerce_args(opts, tool.inputSchema);
+
+			const result = await this.#call_tool(tool.name, coerced, ctx);
+
+			process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+		} catch (err) {
+			process.stderr.write(
+				`Error: ${err instanceof Error ? err.message : String(err)}\n`,
+			);
+			process.exitCode = 1;
+		}
 	}
 }
