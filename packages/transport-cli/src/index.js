@@ -308,6 +308,36 @@ function format_tool_result(result, options) {
 }
 
 /**
+ * @param {Record<string, unknown>} result
+ * @returns {string}
+ */
+function format_tool_error(result) {
+	const content = result.content;
+
+	if (Array.isArray(content)) {
+		const text_blocks = content
+			.map((item) => {
+				if (
+					is_record(item) &&
+					item.type === 'text' &&
+					typeof item.text === 'string'
+				) {
+					return item.text;
+				}
+
+				return undefined;
+			})
+			.filter((item) => typeof item === 'string');
+
+		if (text_blocks.length > 0) {
+			return text_blocks.join('\n');
+		}
+	}
+
+	return JSON.stringify(result, null, 2);
+}
+
+/**
  * @template {Record<string, unknown> | undefined} [TCustom=undefined]
  */
 export class CliTransport {
@@ -478,6 +508,12 @@ export class CliTransport {
 		const tool = this.#get_tool(tool_map, name);
 		const args = await resolve_tool_input(input);
 		const result = await this.#call_tool(tool.name, args, ctx);
+
+		if (result?.isError) {
+			process.stderr.write(`Error: ${format_tool_error(result)}\n`);
+			process.exitCode = 1;
+			return;
+		}
 
 		process.stdout.write(format_tool_result(result, options));
 	}

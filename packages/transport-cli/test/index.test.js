@@ -374,6 +374,29 @@ describe('CliTransport', () => {
 			expect(stderr_text()).toContain('Error:');
 			expect(process.exitCode).toBe(1);
 		});
+
+		it('writes tool-level isError responses to stderr', async () => {
+			const server = create_server();
+			server.tool(
+				{
+					name: 'greet',
+					description: 'Greet someone',
+					schema: v.object({
+						name: v.string(),
+					}),
+				},
+				() => ({
+					content: [{ type: 'text', text: 'ok' }],
+				}),
+			);
+
+			const cli = new CliTransport(server);
+			await cli.run(undefined, ['greet', '{}']);
+
+			expect(stderr_text()).toContain('Invalid arguments');
+			expect(process.exitCode).toBe(1);
+			expect(stdout_text()).toBe('');
+		});
 	});
 
 	describe('output controls', () => {
