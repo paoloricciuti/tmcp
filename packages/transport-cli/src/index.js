@@ -21,7 +21,7 @@ const CLIENT_INFO = {
 };
 
 const RESERVED_COMMANDS = new Set(['call', 'schema', 'tools']);
-const UNSAFE_ALIAS_NAME = /[<>[\]]/;
+const UNSAFE_ALIAS_NAME = /[<>[\]\s]/;
 
 /**
  * @param {unknown} value
