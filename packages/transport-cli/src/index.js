@@ -3,6 +3,7 @@
  * @import { ListToolsResult, Tool } from "./internal.js";
  */
 import process from 'node:process';
+import { randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import sade from 'sade';
 
@@ -234,7 +235,11 @@ function filter_fields(value, paths) {
 		if (segments.length === 0) {
 			throw new Error('`--fields` only supports dot-separated paths');
 		}
-		set_path_value(result, segments, get_path_value(value, segments));
+		set_path_value(
+			result,
+			segments,
+			structuredClone(get_path_value(value, segments)),
+		);
 	}
 
 	return result;
@@ -324,7 +329,7 @@ export class CliTransport {
 	/**
 	 * @type {string}
 	 */
-	#session_id = crypto.randomUUID();
+	#session_id = randomUUID();
 
 	/**
 	 * @param {McpServer<any, TCustom>} server

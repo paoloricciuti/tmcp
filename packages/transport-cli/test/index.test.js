@@ -471,6 +471,49 @@ describe('CliTransport', () => {
 			});
 		});
 
+		it('does not mutate the original result for overlapping field paths', async () => {
+			const server = create_server();
+			const structured_content = {
+				user: {
+					name: 'Alice',
+					email: 'alice@example.com',
+				},
+			};
+
+			server.tool(
+				{
+					name: 'get_user',
+					description: 'Get a user',
+				},
+				() =>
+					/** @type {any} */ ({
+						structuredContent: structured_content,
+					}),
+			);
+
+			const cli = new CliTransport(server);
+			await cli.run(undefined, [
+				'get_user',
+				'--output',
+				'structured',
+				'--fields',
+				'user,user.name',
+			]);
+
+			expect(stdout_json()).toEqual({
+				user: {
+					name: 'Alice',
+					email: 'alice@example.com',
+				},
+			});
+			expect(structured_content).toEqual({
+				user: {
+					name: 'Alice',
+					email: 'alice@example.com',
+				},
+			});
+		});
+
 		it('errors when text output contains non-text blocks', async () => {
 			const server = create_server();
 			server.tool(
