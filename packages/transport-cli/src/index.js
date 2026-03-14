@@ -555,6 +555,9 @@ export class CliTransport {
 
 			for (const tool of tools) {
 				if (RESERVED_COMMANDS.has(tool.name)) {
+					process.stderr.write(
+						`Warning: skipping bare alias for tool "${tool.name}" because its name conflicts with a built-in command. Use \`call ${tool.name}\` instead.\n`,
+					);
 					continue;
 				}
 

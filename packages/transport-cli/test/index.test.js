@@ -275,6 +275,39 @@ describe('CliTransport', () => {
 			);
 		});
 
+		it('warns for reserved command names and still allows calling the tool explicitly', async () => {
+			const server = create_server();
+
+			server.tool(
+				{ name: 'tools', description: 'Reserved-name tool' },
+				() => ({
+					content: [{ type: 'text', text: 'reserved' }],
+				}),
+			);
+
+			const list_cli = new CliTransport(server);
+			await list_cli.run(undefined, ['tools']);
+
+			expect(stderr_text()).toContain(
+				'Warning: skipping bare alias for tool "tools" because its name conflicts with a built-in command.',
+			);
+			const listed_tools = /** @type {Array<{ name: string }>} */ (
+				stdout_json()
+			);
+			expect(listed_tools.some((tool) => tool.name === 'tools')).toBe(
+				true,
+			);
+
+			stdout_chunks = [];
+			stderr_chunks = [];
+
+			const call_cli = new CliTransport(server);
+			await call_cli.run(undefined, ['call', 'tools']);
+
+			expect(stdout_json().content[0].text).toBe('reserved');
+			expect(stderr_text()).toContain('Use `call tools` instead.');
+		});
+
 		it('passes custom context to the server', async () => {
 			/** @type {{ userId: string } | undefined} */
 			let captured_ctx;
