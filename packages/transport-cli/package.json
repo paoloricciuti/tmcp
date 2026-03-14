@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/transport-cli",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "CLI transport for TMCP with static JSON-first tool commands",
 	"type": "module",
 	"main": "src/index.js",
