@@ -1,0 +1,56 @@
+{
+	"name": "@tmcp/transport-cli",
+	"version": "0.0.3",
+	"description": "CLI transport for TMCP with static JSON-first tool commands",
+	"type": "module",
+	"main": "src/index.js",
+	"types": "src/types/index.d.ts",
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"scripts": {
+		"generate:types": "dts-buddy && publint",
+		"prepublish": "pnpm generate:types",
+		"test": "vitest"
+	},
+	"files": [
+		"src"
+	],
+	"exports": {
+		".": {
+			"types": "./src/types/index.d.ts",
+			"default": "./src/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"peerDependencies": {
+		"tmcp": "^1.16.3"
+	},
+	"dependencies": {
+		"sade": "^1.8.1"
+	},
+	"keywords": [
+		"tmcp",
+		"cli",
+		"transport",
+		"mcp",
+		"json"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/paoloricciuti/tmcp.git",
+		"directory": "packages/transport-cli"
+	},
+	"devDependencies": {
+		"@tmcp/adapter-valibot": "workspace:^",
+		"@types/node": "^24.0.13",
+		"dts-buddy": "^0.6.2",
+		"publint": "^0.3.12",
+		"tmcp": "workspace:^",
+		"valibot": "^1.1.0",
+		"vitest": "^4.0.6"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
+}
