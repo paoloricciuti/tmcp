@@ -113,6 +113,9 @@ importers:
       '@tmcp/adapter-valibot':
         specifier: workspace:^
         version: link:../../packages/adapter-valibot
+      '@tmcp/transport-cli':
+        specifier: workspace:^
+        version: link:../../packages/transport-cli
       '@tmcp/transport-stdio':
         specifier: workspace:^
         version: link:../../packages/transport-stdio

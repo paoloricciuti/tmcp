@@ -46,6 +46,10 @@ describe('CliTransport', () => {
 		original_exit_code = process.exitCode;
 		process.exitCode = undefined;
 
+		vi.spyOn(process, 'exit')
+			// @ts-expect-error test helper
+			.mockImplementation(() => undefined);
+
 		vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
 			stdout_chunks.push(String(chunk));
 			return true;
@@ -72,6 +76,12 @@ describe('CliTransport', () => {
 
 	function stdout_json() {
 		return JSON.parse(stdout_text());
+	}
+
+	function exit_spy() {
+		return /** @type {ReturnType<typeof vi.spyOn>} */ (
+			vi.mocked(process.exit)
+		);
 	}
 
 	describe('tools command', () => {
@@ -119,6 +129,7 @@ describe('CliTransport', () => {
 				'tools/list',
 				'tools/list',
 			]);
+			expect(exit_spy()).toHaveBeenCalledWith(0);
 		});
 	});
 
@@ -406,6 +417,7 @@ describe('CliTransport', () => {
 
 			expect(stderr_text()).toContain('Error:');
 			expect(process.exitCode).toBe(1);
+			expect(exit_spy()).toHaveBeenCalledWith(1);
 		});
 
 		it('writes tool-level isError responses to stderr', async () => {
@@ -651,6 +663,32 @@ describe('CliTransport', () => {
 	});
 
 	describe('help output', () => {
+		it('prints help when no command is provided', async () => {
+			const server = create_server({ name: 'my-custom-cli' });
+			server.tool({ name: 'noop', description: 'Does nothing' }, () => ({
+				content: [{ type: 'text', text: 'ok' }],
+			}));
+
+			const cli = new CliTransport(server);
+			exit_spy().mockClear();
+			const log_spy = vi
+				.spyOn(console, 'log')
+				.mockImplementation(() => {});
+
+			try {
+				await cli.run(undefined, []);
+			} catch {
+				// sade may throw after trying to exit.
+			}
+
+			expect(
+				stdout_text() +
+					stderr_text() +
+					log_spy.mock.calls.flat().join(' '),
+			).toContain('my-custom-cli');
+			log_spy.mockRestore();
+		});
+
 		it('uses the server name in help output', async () => {
 			const server = create_server({ name: 'my-custom-cli' });
 			server.tool({ name: 'noop', description: 'Does nothing' }, () => ({
@@ -658,10 +696,7 @@ describe('CliTransport', () => {
 			}));
 
 			const cli = new CliTransport(server);
-			const exit_spy = vi
-				.spyOn(process, 'exit')
-				// @ts-expect-error test helper
-				.mockImplementation(() => {});
+			exit_spy().mockClear();
 			const log_spy = vi
 				.spyOn(console, 'log')
 				.mockImplementation(() => {});
@@ -677,8 +712,6 @@ describe('CliTransport', () => {
 					stderr_text() +
 					log_spy.mock.calls.flat().join(' '),
 			).toContain('my-custom-cli');
-
-			exit_spy.mockRestore();
 			log_spy.mockRestore();
 		});
 	});

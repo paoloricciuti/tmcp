@@ -123,6 +123,7 @@ node my-cli.js get-user '{"id":"1"}' --output structured --fields user.name,user
 - Output is written to stdout.
 - JSON outputs are pretty-printed.
 - Errors are written to stderr and set `process.exitCode` to `1`.
+- Running the CLI without a command prints help output.
 - The CLI initializes an MCP session, sends `notifications/initialized`, and paginates through `tools/list` automatically.
 - The program name shown in help output comes from `McpServer`'s `name`.
 

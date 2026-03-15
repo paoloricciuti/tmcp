@@ -368,6 +368,10 @@ export class CliTransport {
 		this.#server = server;
 	}
 
+	#exit() {
+		process.exit(process.exitCode ?? 0);
+	}
+
 	/**
 	 * @param {string} method
 	 * @param {Record<string, unknown>} [params]
@@ -581,16 +585,25 @@ export class CliTransport {
 					.action(() => {});
 			}
 
-			const args = argv ? ['node', script_name, ...argv] : process.argv;
+			const command_args = argv ?? process.argv.slice(2);
+			const args = [
+				'node',
+				script_name,
+				...(command_args.length === 0 ? ['--help'] : command_args),
+			];
 			const parsed = prog.parse(args, { lazy: true });
 
-			if (!parsed) return;
+			if (!parsed) {
+				this.#exit();
+				return;
+			}
 
 			const { name, args: handler_args } = parsed;
 			const { positionals, options } = extract_command_args(handler_args);
 
 			if (name === 'tools') {
 				process.stdout.write(format_json(tools));
+				this.#exit();
 				return;
 			}
 
@@ -605,6 +618,7 @@ export class CliTransport {
 				process.stdout.write(
 					format_json(this.#get_tool(tool_map, tool_name)),
 				);
+				this.#exit();
 				return;
 			}
 
@@ -627,6 +641,7 @@ export class CliTransport {
 					normalize_tool_options(options),
 					ctx,
 				);
+				this.#exit();
 				return;
 			}
 
@@ -641,12 +656,17 @@ export class CliTransport {
 					normalize_tool_options(options),
 					ctx,
 				);
+				this.#exit();
+				return;
 			}
+
+			this.#exit();
 		} catch (err) {
 			process.stderr.write(
 				`Error: ${err instanceof Error ? err.message : String(err)}\n`,
 			);
 			process.exitCode = 1;
+			this.#exit();
 		}
 	}
 }
