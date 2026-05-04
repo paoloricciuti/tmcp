@@ -1171,7 +1171,7 @@ describe('HTTP Transport', () => {
 			}
 		});
 
-		it('silently swallows ERR_INVALID_STATE rejections from handle()', async () => {
+		it('silently swallows ERR_INVALID_STATE rejections from handle() (Node.js)', async () => {
 			const consoleError = vi
 				.spyOn(console, 'error')
 				.mockImplementation(() => {});
@@ -1219,6 +1219,111 @@ describe('HTTP Transport', () => {
 
 				// ERR_INVALID_STATE must never reach console.error.
 				expect(consoleError).not.toHaveBeenCalled();
+			} finally {
+				consoleError.mockRestore();
+			}
+		});
+
+		it('silently swallows WHATWG-style closed-stream TypeErrors from handle() (Bun / Deno / browser)', async () => {
+			const consoleError = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
+
+			try {
+				// WHATWG-compliant runtimes throw a plain TypeError with no `code`
+				// property; the message always contains the word "closed".
+				const whatwg_closed = new TypeError(
+					'Cannot enqueue into a closed ReadableStream',
+				);
+
+				const mock_server = {
+					on: () => {},
+					receive: async () => {
+						throw whatwg_closed;
+					},
+				};
+
+				const local_transport = new HttpTransport(
+					/** @type {any} */ (mock_server),
+					{
+						path: '/mcp',
+						getSessionId: () => 'whatwg-closed-session',
+					},
+				);
+
+				await local_transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json',
+							'mcp-session-id': 'whatwg-closed-session',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'tools/call',
+							id: 1,
+							params: { name: 'any-tool', arguments: {} },
+						}),
+					}),
+				);
+
+				// Wait for handle().catch() to run.
+				await new Promise((r) => setTimeout(r, 50));
+
+				// A plain TypeError with "closed" in the message must be swallowed.
+				expect(consoleError).not.toHaveBeenCalled();
+			} finally {
+				consoleError.mockRestore();
+			}
+		});
+
+		it('does not swallow TypeErrors unrelated to stream closure', async () => {
+			const consoleError = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
+
+			try {
+				// A TypeError whose message has nothing to do with "closed"
+				// should still surface so genuine bugs are not hidden.
+				const unrelated_type_error = new TypeError(
+					'Cannot read properties of undefined',
+				);
+
+				const mock_server = {
+					on: () => {},
+					receive: async () => {
+						throw unrelated_type_error;
+					},
+				};
+
+				const local_transport = new HttpTransport(
+					/** @type {any} */ (mock_server),
+					{
+						path: '/mcp',
+						getSessionId: () => 'unrelated-error-session',
+					},
+				);
+
+				await local_transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json',
+							'mcp-session-id': 'unrelated-error-session',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'tools/call',
+							id: 1,
+							params: { name: 'any-tool', arguments: {} },
+						}),
+					}),
+				);
+
+				// Wait for handle().catch() to run.
+				await new Promise((r) => setTimeout(r, 50));
+
+				expect(consoleError).toHaveBeenCalledWith(unrelated_type_error);
 			} finally {
 				consoleError.mockRestore();
 			}

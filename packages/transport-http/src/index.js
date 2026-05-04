@@ -35,6 +35,27 @@ import {
 import { DEV } from 'esm-env';
 
 /**
+ * Returns `true` for "stream already closed" errors thrown when a client
+ * disconnects before the server can enqueue a response.
+ *
+ * Node.js sets `err.code === 'ERR_INVALID_STATE'` on the TypeError it throws
+ * from `ReadableStreamDefaultController.enqueue()`. WHATWG-compliant runtimes
+ * (Bun, Deno, browsers) throw a plain TypeError with no `code` property, but
+ * always include the word "closed" in the message.
+ *
+ * @param {unknown} err
+ */
+function is_stream_closed_error(err) {
+	return (
+		/** @type {any} */ (err)?.code === 'ERR_INVALID_STATE' ||
+		(err instanceof TypeError &&
+			/** @type {TypeError} */ (err).message
+				.toLowerCase()
+				.includes('closed'))
+	);
+}
+
+/**
  * @template {Record<string, unknown> | undefined} [TCustom=undefined]
  */
 export class HttpTransport {
@@ -444,12 +465,12 @@ export class HttpTransport {
 					controller?.close();
 				} catch (err) {
 					// Client disconnected before response was ready; stream already closed.
-					if (err?.code !== 'ERR_INVALID_STATE') throw err;
+					if (!is_stream_closed_error(err)) throw err;
 				}
 			};
 
 			handle().catch((err) => {
-				if (err?.code !== 'ERR_INVALID_STATE') console.error(err);
+				if (!is_stream_closed_error(err)) console.error(err);
 			});
 
 			const has_request = messages.some((message) => message.id != null);
