@@ -1051,10 +1051,8 @@ describe('HTTP Transport', () => {
 	});
 
 	describe('client disconnect handling', () => {
-		it('swallows ERR_INVALID_STATE when the response stream is cancelled before the response is sent', async () => {
-			const consoleError = vi
-				.spyOn(console, 'error')
-				.mockImplementation(() => {});
+		it('does not log errors when the client disconnects mid-response', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 			try {
 				/** @type {() => void} */
@@ -1067,16 +1065,10 @@ describe('HTTP Transport', () => {
 					capabilities: { tools: { listChanged: true } },
 				}).setup((server) => {
 					server.tool(
-						{
-							name: 'slow-tool',
-							description:
-								'A tool that waits for a signal before responding',
-						},
+						{ name: 'slow-tool', description: 'A slow tool' },
 						async () => {
 							await barrier;
-							return {
-								content: [{ type: 'text', text: 'done' }],
-							};
+							return { content: [{ type: 'text', text: 'done' }] };
 						},
 					);
 				});
@@ -1102,49 +1094,30 @@ describe('HTTP Transport', () => {
 					}),
 				);
 
-				// Simulate client disconnect by cancelling the response stream
-				// before the slow tool has had a chance to respond.
 				await response.body.cancel();
-
-				// Let the slow tool complete — handle() will now attempt
-				// controller.enqueue() on an already-cancelled stream.
 				resolve_barrier();
-
-				// Wait for the background handle() task to settle.
 				await new Promise((r) => setTimeout(r, 50));
 
-				// ERR_INVALID_STATE from the cancelled stream must be silently swallowed.
 				expect(consoleError).not.toHaveBeenCalled();
 			} finally {
 				consoleError.mockRestore();
 			}
 		});
 
-		it('logs non-ERR_INVALID_STATE rejections from handle() via console.error', async () => {
-			const consoleError = vi
-				.spyOn(console, 'error')
-				.mockImplementation(() => {});
+		it('logs unexpected errors via console.error', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 			try {
-				const boom = Object.assign(new Error('unexpected failure'), {
-					code: 'ERR_CUSTOM',
-				});
-
-				// Minimal server stub whose receive() always rejects.
+				const boom = Object.assign(new Error('unexpected failure'), { code: 'ERR_CUSTOM' });
 				const mock_server = {
 					on: () => {},
-					receive: async () => {
-						throw boom;
-					},
+					receive: async () => { throw boom; },
 				};
 
-				const local_transport = new HttpTransport(
-					/** @type {any} */ (mock_server),
-					{
-						path: '/mcp',
-						getSessionId: () => 'error-test-session',
-					},
-				);
+				const local_transport = new HttpTransport(/** @type {any} */ (mock_server), {
+					path: '/mcp',
+					getSessionId: () => 'error-test-session',
+				});
 
 				await local_transport.respond(
 					new Request('http://localhost/mcp', {
@@ -1162,41 +1135,27 @@ describe('HTTP Transport', () => {
 					}),
 				);
 
-				// Wait for handle().catch() to run.
 				await new Promise((r) => setTimeout(r, 50));
-
 				expect(consoleError).toHaveBeenCalledWith(boom);
 			} finally {
 				consoleError.mockRestore();
 			}
 		});
 
-		it('silently swallows ERR_INVALID_STATE rejections from handle() (Node.js)', async () => {
-			const consoleError = vi
-				.spyOn(console, 'error')
-				.mockImplementation(() => {});
+		it('does not log Node.js ERR_INVALID_STATE errors', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 			try {
-				const invalid_state = Object.assign(
-					new Error('stream already closed'),
-					{ code: 'ERR_INVALID_STATE' },
-				);
-
-				// Minimal server stub whose receive() rejects with ERR_INVALID_STATE.
+				const invalid_state = Object.assign(new Error('stream already closed'), { code: 'ERR_INVALID_STATE' });
 				const mock_server = {
 					on: () => {},
-					receive: async () => {
-						throw invalid_state;
-					},
+					receive: async () => { throw invalid_state; },
 				};
 
-				const local_transport = new HttpTransport(
-					/** @type {any} */ (mock_server),
-					{
-						path: '/mcp',
-						getSessionId: () => 'invalid-state-session',
-					},
-				);
+				const local_transport = new HttpTransport(/** @type {any} */ (mock_server), {
+					path: '/mcp',
+					getSessionId: () => 'invalid-state-session',
+				});
 
 				await local_transport.respond(
 					new Request('http://localhost/mcp', {
@@ -1214,42 +1173,27 @@ describe('HTTP Transport', () => {
 					}),
 				);
 
-				// Wait for handle().catch() to run.
 				await new Promise((r) => setTimeout(r, 50));
-
-				// ERR_INVALID_STATE must never reach console.error.
 				expect(consoleError).not.toHaveBeenCalled();
 			} finally {
 				consoleError.mockRestore();
 			}
 		});
 
-		it('silently swallows WHATWG-style closed-stream TypeErrors from handle() (Bun / Deno / browser)', async () => {
-			const consoleError = vi
-				.spyOn(console, 'error')
-				.mockImplementation(() => {});
+		it('does not log WHATWG stream-closed TypeErrors', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 			try {
-				// WHATWG-compliant runtimes throw a plain TypeError with no `code`
-				// property; the message always contains the word "closed".
-				const whatwg_closed = new TypeError(
-					'Cannot enqueue into a closed ReadableStream',
-				);
-
+				const whatwg_closed = new TypeError('Cannot enqueue into a closed ReadableStream');
 				const mock_server = {
 					on: () => {},
-					receive: async () => {
-						throw whatwg_closed;
-					},
+					receive: async () => { throw whatwg_closed; },
 				};
 
-				const local_transport = new HttpTransport(
-					/** @type {any} */ (mock_server),
-					{
-						path: '/mcp',
-						getSessionId: () => 'whatwg-closed-session',
-					},
-				);
+				const local_transport = new HttpTransport(/** @type {any} */ (mock_server), {
+					path: '/mcp',
+					getSessionId: () => 'whatwg-closed-session',
+				});
 
 				await local_transport.respond(
 					new Request('http://localhost/mcp', {
@@ -1267,42 +1211,27 @@ describe('HTTP Transport', () => {
 					}),
 				);
 
-				// Wait for handle().catch() to run.
 				await new Promise((r) => setTimeout(r, 50));
-
-				// A plain TypeError with "closed" in the message must be swallowed.
 				expect(consoleError).not.toHaveBeenCalled();
 			} finally {
 				consoleError.mockRestore();
 			}
 		});
 
-		it('does not swallow TypeErrors unrelated to stream closure', async () => {
-			const consoleError = vi
-				.spyOn(console, 'error')
-				.mockImplementation(() => {});
+		it('logs TypeErrors unrelated to stream closure', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 			try {
-				// A TypeError whose message has nothing to do with "closed"
-				// should still surface so genuine bugs are not hidden.
-				const unrelated_type_error = new TypeError(
-					'Cannot read properties of undefined',
-				);
-
+				const unrelated = new TypeError('Cannot read properties of undefined');
 				const mock_server = {
 					on: () => {},
-					receive: async () => {
-						throw unrelated_type_error;
-					},
+					receive: async () => { throw unrelated; },
 				};
 
-				const local_transport = new HttpTransport(
-					/** @type {any} */ (mock_server),
-					{
-						path: '/mcp',
-						getSessionId: () => 'unrelated-error-session',
-					},
-				);
+				const local_transport = new HttpTransport(/** @type {any} */ (mock_server), {
+					path: '/mcp',
+					getSessionId: () => 'unrelated-error-session',
+				});
 
 				await local_transport.respond(
 					new Request('http://localhost/mcp', {
@@ -1320,10 +1249,8 @@ describe('HTTP Transport', () => {
 					}),
 				);
 
-				// Wait for handle().catch() to run.
 				await new Promise((r) => setTimeout(r, 50));
-
-				expect(consoleError).toHaveBeenCalledWith(unrelated_type_error);
+				expect(consoleError).toHaveBeenCalledWith(unrelated);
 			} finally {
 				consoleError.mockRestore();
 			}
