@@ -433,17 +433,24 @@ export class HttpTransport {
 						),
 				);
 
-				controller?.enqueue(
-					this.#text_encoder.encode(
-						'event: message\ndata: ' +
-							JSON.stringify(response) +
-							'\n\n',
-					),
-				);
-				controller?.close();
+				try {
+					controller?.enqueue(
+						this.#text_encoder.encode(
+							'event: message\ndata: ' +
+								JSON.stringify(response) +
+								'\n\n',
+						),
+					);
+					controller?.close();
+				} catch (err) {
+					// Client disconnected before response was ready; stream already closed.
+					if (err?.code !== 'ERR_INVALID_STATE') throw err;
+				}
 			};
 
-			handle();
+			handle().catch((err) => {
+				if (err?.code !== 'ERR_INVALID_STATE') console.error(err);
+			});
 
 			const has_request = messages.some((message) => message.id != null);
 

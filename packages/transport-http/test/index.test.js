@@ -1049,4 +1049,179 @@ describe('HTTP Transport', () => {
 			await local_transport.close();
 		});
 	});
+
+	describe('client disconnect handling', () => {
+		it('swallows ERR_INVALID_STATE when the response stream is cancelled before the response is sent', async () => {
+			const consoleError = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
+
+			try {
+				/** @type {() => void} */
+				let resolve_barrier;
+				const barrier = new Promise((r) => {
+					resolve_barrier = r;
+				});
+
+				const { mcp_server: local_mcp_server } = new_server({
+					capabilities: { tools: { listChanged: true } },
+				}).setup((server) => {
+					server.tool(
+						{
+							name: 'slow-tool',
+							description:
+								'A tool that waits for a signal before responding',
+						},
+						async () => {
+							await barrier;
+							return {
+								content: [{ type: 'text', text: 'done' }],
+							};
+						},
+					);
+				});
+
+				const local_transport = new HttpTransport(local_mcp_server, {
+					path: '/mcp',
+					getSessionId: () => 'disconnect-test-session',
+				});
+
+				const response = await local_transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json',
+							'mcp-session-id': 'disconnect-test-session',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'tools/call',
+							id: 1,
+							params: { name: 'slow-tool', arguments: {} },
+						}),
+					}),
+				);
+
+				// Simulate client disconnect by cancelling the response stream
+				// before the slow tool has had a chance to respond.
+				await response.body.cancel();
+
+				// Let the slow tool complete — handle() will now attempt
+				// controller.enqueue() on an already-cancelled stream.
+				resolve_barrier();
+
+				// Wait for the background handle() task to settle.
+				await new Promise((r) => setTimeout(r, 50));
+
+				// ERR_INVALID_STATE from the cancelled stream must be silently swallowed.
+				expect(consoleError).not.toHaveBeenCalled();
+			} finally {
+				consoleError.mockRestore();
+			}
+		});
+
+		it('logs non-ERR_INVALID_STATE rejections from handle() via console.error', async () => {
+			const consoleError = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
+
+			try {
+				const boom = Object.assign(new Error('unexpected failure'), {
+					code: 'ERR_CUSTOM',
+				});
+
+				// Minimal server stub whose receive() always rejects.
+				const mock_server = {
+					on: () => {},
+					receive: async () => {
+						throw boom;
+					},
+				};
+
+				const local_transport = new HttpTransport(
+					/** @type {any} */ (mock_server),
+					{
+						path: '/mcp',
+						getSessionId: () => 'error-test-session',
+					},
+				);
+
+				await local_transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json',
+							'mcp-session-id': 'error-test-session',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'tools/call',
+							id: 1,
+							params: { name: 'any-tool', arguments: {} },
+						}),
+					}),
+				);
+
+				// Wait for handle().catch() to run.
+				await new Promise((r) => setTimeout(r, 50));
+
+				expect(consoleError).toHaveBeenCalledWith(boom);
+			} finally {
+				consoleError.mockRestore();
+			}
+		});
+
+		it('silently swallows ERR_INVALID_STATE rejections from handle()', async () => {
+			const consoleError = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
+
+			try {
+				const invalid_state = Object.assign(
+					new Error('stream already closed'),
+					{ code: 'ERR_INVALID_STATE' },
+				);
+
+				// Minimal server stub whose receive() rejects with ERR_INVALID_STATE.
+				const mock_server = {
+					on: () => {},
+					receive: async () => {
+						throw invalid_state;
+					},
+				};
+
+				const local_transport = new HttpTransport(
+					/** @type {any} */ (mock_server),
+					{
+						path: '/mcp',
+						getSessionId: () => 'invalid-state-session',
+					},
+				);
+
+				await local_transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json',
+							'mcp-session-id': 'invalid-state-session',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'tools/call',
+							id: 1,
+							params: { name: 'any-tool', arguments: {} },
+						}),
+					}),
+				);
+
+				// Wait for handle().catch() to run.
+				await new Promise((r) => setTimeout(r, 50));
+
+				// ERR_INVALID_STATE must never reach console.error.
+				expect(consoleError).not.toHaveBeenCalled();
+			} finally {
+				consoleError.mockRestore();
+			}
+		});
+	});
 });
