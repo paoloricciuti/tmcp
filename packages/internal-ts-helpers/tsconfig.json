@@ -9,7 +9,8 @@
 		"emitDeclarationOnly": false,
 		"strict": true,
 		"noEmit": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"types": ["node"]
 	},
 	"include": ["src/**/*", "test/**/*"],
 	"exclude": ["node_modules"]
