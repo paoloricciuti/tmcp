@@ -1,6 +1,7 @@
 {
 	"name": "@tmcp/transport-stdio",
 	"version": "0.4.2",
+	"license": "MIT",
 	"description": "Transport for TMCP using STDIO",
 	"type": "module",
 	"main": "src/index.js",
