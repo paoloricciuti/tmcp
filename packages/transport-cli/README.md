@@ -138,6 +138,27 @@ await cli.run({ userId: 'cli-user' }, process.argv.slice(2));
 
 The context is forwarded on every request, so handlers can read it from `server.ctx.custom`.
 
+## Extending the CLI
+
+Pass a `setup` callback to the constructor to customize the underlying [`sade`](https://github.com/lukeed/sade) instance. The hook runs after the built-in commands (`tools`, `schema`, `call`) and tool aliases have been registered, but before arguments are parsed, so you can add new commands, set a version, examples, and more.
+
+```javascript
+const cli = new CliTransport(server, {
+	setup: (prog) => {
+		prog
+			.version('1.2.3')
+			.command('hello <name>', 'Say hi')
+			.action((name) => {
+				console.log(`Hello, ${name}!`);
+			});
+	},
+});
+
+await cli.run();
+```
+
+Custom command actions are awaited, so async handlers work as expected. Custom command names must not collide with built-in commands (`tools`, `schema`, `call`) or tool aliases — sade will throw `Command already exists` if they do.
+
 ## API
 
 ### `CliTransport`
@@ -145,7 +166,7 @@ The context is forwarded on every request, so handlers can read it from `server.
 #### Constructor
 
 ```typescript
-new CliTransport(server: McpServer)
+new CliTransport(server: McpServer, options?: { setup?: (prog: Sade) => void })
 ```
 
 #### Methods

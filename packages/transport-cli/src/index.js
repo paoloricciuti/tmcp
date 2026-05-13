@@ -1,5 +1,6 @@
 /**
  * @import { McpServer } from "tmcp";
+ * @import { Sade } from "sade";
  * @import { ListToolsResult, Tool } from "./internal.js";
  */
 import process from 'node:process';
@@ -13,6 +14,11 @@ import sade from 'sade';
 
 /**
  * @typedef {{ output?: OutputMode; fields?: string }} ToolOptions
+ */
+
+/**
+ * @typedef {Object} CliTransportOptions
+ * @property {(prog: Sade) => void} [setup] Hook invoked with the configured `sade` instance after built-in commands and tool aliases have been registered, but before parsing. Use it to add custom commands, set a version, examples, etc.
  */
 
 const CLIENT_INFO = {
@@ -362,10 +368,17 @@ export class CliTransport {
 	#session_id = randomUUID();
 
 	/**
-	 * @param {McpServer<any, TCustom>} server
+	 * @type {CliTransportOptions}
 	 */
-	constructor(server) {
+	#options;
+
+	/**
+	 * @param {McpServer<any, TCustom>} server
+	 * @param {CliTransportOptions} [options]
+	 */
+	constructor(server, options = {}) {
 		this.#server = server;
+		this.#options = options;
 	}
 
 	#exit() {
@@ -585,6 +598,31 @@ export class CliTransport {
 					.action(() => {});
 			}
 
+			/** @type {Set<string>} */
+			const custom_commands = new Set();
+
+			if (typeof this.#options.setup === 'function') {
+				const original_command = prog.command.bind(prog);
+				prog.command = (usage, description, options) => {
+					const result = original_command(
+						usage,
+						description,
+						options,
+					);
+					const [head] = String(usage).split(/\s+/);
+					if (head) {
+						custom_commands.add(head);
+					}
+					return result;
+				};
+
+				try {
+					this.#options.setup(prog);
+				} finally {
+					prog.command = original_command;
+				}
+			}
+
 			const command_args = argv ?? process.argv.slice(2);
 			const args = [
 				'node',
@@ -600,6 +638,18 @@ export class CliTransport {
 
 			const { name, args: handler_args } = parsed;
 			const { positionals, options } = extract_command_args(handler_args);
+
+			if (custom_commands.has(name)) {
+				const handler =
+					/** @type {((...args: Array<unknown>) => unknown) | undefined} */ (
+						parsed.handler
+					);
+				if (typeof handler === 'function') {
+					await handler(...handler_args);
+				}
+				this.#exit();
+				return;
+			}
 
 			if (name === 'tools') {
 				process.stdout.write(format_json(tools));

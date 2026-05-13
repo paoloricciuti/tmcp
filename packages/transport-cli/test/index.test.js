@@ -662,6 +662,95 @@ describe('CliTransport', () => {
 		});
 	});
 
+	describe('setup hook', () => {
+		it('invokes setup with the configured sade instance and runs custom commands', async () => {
+			const server = create_server();
+			server.tool({ name: 'noop', description: 'noop' }, () => ({
+				content: [{ type: 'text', text: 'noop' }],
+			}));
+
+			/** @type {unknown} */
+			let received_prog;
+			const action_spy = vi.fn((/** @type {string} */ name) => {
+				process.stdout.write(`Hello, ${name}!\n`);
+			});
+
+			const cli = new CliTransport(server, {
+				setup: (prog) => {
+					received_prog = prog;
+					prog.command('hello <name>', 'Say hi').action(action_spy);
+				},
+			});
+
+			await cli.run(undefined, ['hello', 'World']);
+
+			expect(received_prog).toBeDefined();
+			expect(typeof (/** @type {any} */ (received_prog).command)).toBe(
+				'function',
+			);
+			expect(action_spy).toHaveBeenCalledTimes(1);
+			expect(action_spy.mock.calls[0][0]).toBe('World');
+			expect(stdout_text()).toContain('Hello, World!');
+		});
+
+		it('awaits async custom command actions', async () => {
+			const server = create_server();
+			let completed = false;
+
+			const cli = new CliTransport(server, {
+				setup: (prog) => {
+					prog.command('ping', 'Ping').action(async () => {
+						await new Promise((resolve) => setTimeout(resolve, 5));
+						completed = true;
+						process.stdout.write('pong\n');
+					});
+				},
+			});
+
+			await cli.run(undefined, ['ping']);
+
+			expect(completed).toBe(true);
+			expect(stdout_text()).toContain('pong');
+		});
+
+		it('throws when a custom command reuses a built-in name', async () => {
+			const server = create_server();
+
+			const cli = new CliTransport(server, {
+				setup: (prog) => {
+					prog.command('tools', 'Override tools').action(() => {});
+				},
+			});
+
+			await cli.run(undefined, ['tools']);
+
+			expect(stderr_text()).toContain(
+				'Error: Command already exists: tools',
+			);
+			expect(process.exitCode).toBe(1);
+		});
+
+		it('throws when a custom command reuses a tool alias name', async () => {
+			const server = create_server();
+			server.tool({ name: 'greet', description: 'Greet' }, () => ({
+				content: [{ type: 'text', text: 'from tool' }],
+			}));
+
+			const cli = new CliTransport(server, {
+				setup: (prog) => {
+					prog.command('greet', 'Override greet').action(() => {});
+				},
+			});
+
+			await cli.run(undefined, ['greet']);
+
+			expect(stderr_text()).toContain(
+				'Error: Command already exists: greet',
+			);
+			expect(process.exitCode).toBe(1);
+		});
+	});
+
 	describe('help output', () => {
 		it('prints help when no command is provided', async () => {
 			const server = create_server({ name: 'my-custom-cli' });
