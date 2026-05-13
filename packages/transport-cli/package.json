@@ -5,6 +5,7 @@
 	"type": "module",
 	"main": "src/index.js",
 	"types": "src/types/index.d.ts",
+	"license": "MIT",
 	"engines": {
 		"node": ">=18.0.0"
 	},
