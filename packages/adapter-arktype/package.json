@@ -1,6 +1,7 @@
 {
 	"name": "@tmcp/adapter-arktype",
 	"version": "0.2.2",
+	"license": "MIT",
 	"description": "ArkType adapter for TMCP JSON Schema conversion",
 	"type": "module",
 	"main": "src/index.js",
