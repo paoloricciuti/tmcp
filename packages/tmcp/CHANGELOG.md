@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.19.4
+
+### Patch Changes
+
+- 77be8a1: chore: add license
+
 ## 1.19.3
 
 ### Patch Changes

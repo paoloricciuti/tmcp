@@ -1,5 +1,13 @@
 # @tmcp/session-manager-durable-objects
 
+## 0.2.3
+
+### Patch Changes
+
+- 77be8a1: chore: add license
+- Updated dependencies [77be8a1]
+    - @tmcp/session-manager@0.2.2
+
 ## 0.2.2
 
 ### Patch Changes

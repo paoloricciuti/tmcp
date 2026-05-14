@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/adapter-zod",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"license": "MIT",
 	"description": "Zod adapter for TMCP JSON Schema conversion",
 	"type": "module",

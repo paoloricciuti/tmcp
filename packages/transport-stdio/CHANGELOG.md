@@ -1,5 +1,11 @@
 # @tmcp/transport-stdio
 
+## 0.4.3
+
+### Patch Changes
+
+- 77be8a1: chore: add license
+
 ## 0.4.2
 
 ### Patch Changes

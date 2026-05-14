@@ -1,5 +1,11 @@
 # @tmcp/transport-in-memory
 
+## 0.0.7
+
+### Patch Changes
+
+- 77be8a1: chore: add license
+
 ## 0.0.6
 
 ### Patch Changes

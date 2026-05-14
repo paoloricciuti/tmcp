@@ -1,5 +1,13 @@
 # @tmcp/transport-http
 
+## 0.8.6
+
+### Patch Changes
+
+- 77be8a1: chore: add license
+- Updated dependencies [77be8a1]
+    - @tmcp/session-manager@0.2.2
+
 ## 0.8.5
 
 ### Patch Changes
