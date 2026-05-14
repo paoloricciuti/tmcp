@@ -19,7 +19,7 @@
 	},
 	"peerDependencies": {
 		"effect": "^3.0.0",
-		"tmcp": "workspace:^"
+		"tmcp": "^1.10.2"
 	},
 	"dependencies": {
 		"@standard-schema/spec": "^1.0.0",

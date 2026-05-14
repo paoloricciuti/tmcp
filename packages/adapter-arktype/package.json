@@ -19,7 +19,7 @@
 	},
 	"peerDependencies": {
 		"arktype": "^2.0.0",
-		"tmcp": "workspace:^"
+		"tmcp": "^1.17.0"
 	},
 	"dependencies": {
 		"@standard-schema/spec": "^1.0.0",
