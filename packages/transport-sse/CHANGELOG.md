@@ -1,5 +1,13 @@
 # @tmcp/transport-sse
 
+## 0.5.5
+
+### Patch Changes
+
+- 77be8a1: chore: add license
+- Updated dependencies [77be8a1]
+    - @tmcp/session-manager@0.2.2
+
 ## 0.5.4
 
 ### Patch Changes

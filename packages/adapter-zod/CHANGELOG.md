@@ -1,5 +1,11 @@
 # @tmcp/adapter-zod
 
+## 0.1.8
+
+### Patch Changes
+
+- 77be8a1: chore: add license
+
 ## 0.1.7
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
 	"name": "create-tmcp",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"license": "MIT",
 	"description": "CLI tool to create TMCP (lightweight MCP) projects with interactive setup",
 	"type": "module",

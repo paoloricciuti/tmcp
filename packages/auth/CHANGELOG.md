@@ -1,5 +1,11 @@
 # @tmcp/auth
 
+## 0.4.1
+
+### Patch Changes
+
+- 77be8a1: chore: add license
+
 ## 0.4.0
 
 ### Minor Changes

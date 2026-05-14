@@ -1,5 +1,11 @@
 # create-tmcp
 
+## 0.1.5
+
+### Patch Changes
+
+- 77be8a1: chore: add license
+
 ## 0.1.4
 
 ### Patch Changes
