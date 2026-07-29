@@ -102,6 +102,19 @@ export type StoredResource =
 			) => Promise<ReadResourceResult> | ReadResourceResult;
 	  };
 
+export type CachePolicy = {
+	/**
+	 * Time-to-live in milliseconds for cacheable results (>= 0). Defaults to 0 (no caching).
+	 */
+	ttlMs?: number;
+	/**
+	 * Cache scope for cacheable results. Defaults to 'private'. `public` must be
+	 * explicitly opted into: `enabled` callbacks, auth context, and dynamic
+	 * resource/template listings can make otherwise identical lists user-specific.
+	 */
+	cacheScope?: 'public' | 'private';
+};
+
 export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	capabilities?: ServerCapabilities;
 	instructions?: string;
@@ -113,7 +126,17 @@ export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	};
 	logging?: {
 		default: LoggingLevel;
-	}
+	};
+	/**
+	 * Cache policy for per-request protocol cacheable results
+	 * (`server/discover`, `tools/list`, `prompts/list`, `resources/list`,
+	 * `resources/read`, `resources/templates/list`). Defaults to
+	 * `{ ttlMs: 0, cacheScope: 'private' }`. Per-method overrides win over
+	 * the top-level defaults.
+	 */
+	cache?: CachePolicy & {
+		methods?: Record<string, CachePolicy>;
+	};
 };
 
 export type ChangedArgs = {

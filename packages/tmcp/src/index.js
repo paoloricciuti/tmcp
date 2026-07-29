@@ -14,25 +14,42 @@ import { UriTemplateMatcher } from 'uri-template-matcher';
 import * as v from 'valibot';
 import {
 	CallToolResultSchema,
+	ClientCapabilitiesSchema,
 	CompleteResultSchema,
 	CreateMessageRequestParamsSchema,
 	CreateMessageResultSchema,
 	GetPromptResultSchema,
+	ImplementationSchema,
 	InitializeRequestParamsSchema,
 	JSONRPCNotificationSchema,
 	JSONRPCRequestSchema,
 	JSONRPCResponseSchema,
+	LoggingLevelSchema,
 	McpError,
 	ReadResourceResultSchema,
 	ElicitResultSchema,
 	JSONRPCErrorSchema,
+	missing_required_client_capability_error,
+	unsupported_protocol_version_error,
 } from './validation/index.js';
 import {
 	get_supported_versions,
 	negotiate_protocol_version,
+	KNOWN_PER_REQUEST_PROTOCOL_VERSIONS,
 } from './validation/version.js';
 import { should_version_negotiation_fail } from './validation/version.js';
+import {
+	is_method_allowed,
+	CACHEABLE_METHODS,
+} from './validation/method-policy.js';
 import { event } from './internal/utils.js';
+
+export {
+	McpError,
+	HEADER_MISMATCH,
+	MISSING_REQUIRED_CLIENT_CAPABILITY,
+	UNSUPPORTED_PROTOCOL_VERSION,
+} from './validation/index.js';
 
 /**
  * Information about a validated access token, provided to request handlers.
@@ -52,6 +69,7 @@ import { event } from './internal/utils.js';
  * @typedef {Object} Context
  * @property {string} [sessionId]
  * @property {{ clientCapabilities?: ClientCapabilitiesType, clientInfo?: ClientInfoType, logLevel?: LoggingLevel }} [sessionInfo]
+ * @property {string} [protocolVersion] The exact per-request protocol version when the current request carries per-request protocol metadata; `undefined` for session-negotiated requests.
  * @property {AuthInfo} [auth]
  * @property {TCustom} [custom]
  */
@@ -65,7 +83,7 @@ import { event } from './internal/utils.js';
  */
 
 /**
- * @template {Record<string, unknown> | undefined} TStructuredContent
+ * @template TStructuredContent
  * @typedef {CallToolResultType<TStructuredContent>} CallToolResult
  */
 
@@ -211,7 +229,12 @@ export class McpServer {
 	#event_target = new EventTarget();
 
 	/**
-	 * @type {AsyncLocalStorage<Context<CustomContext> & { progress_token?: string }>}
+	 * @type {ServerInfo}
+	 */
+	#server_info;
+
+	/**
+	 * @type {AsyncLocalStorage<Context<CustomContext> & { progress_token?: string, stateless?: boolean }>}
 	 */
 	#ctx_storage = new AsyncLocalStorage();
 
@@ -221,6 +244,7 @@ export class McpServer {
 	 */
 	constructor(server_info, options) {
 		this.#options = options;
+		this.#server_info = server_info;
 		this.#server.addMethod('initialize', (initialize_request) => {
 			try {
 				// Validate basic request format
@@ -254,9 +278,12 @@ export class McpServer {
 				);
 
 				// Return server response with negotiated version and capabilities
+				// (per-request protocol options are not part of the legacy initialize result)
+				// eslint-disable-next-line no-unused-vars
+				const { cache, ...legacy_options } = options;
 				return {
 					protocolVersion: negotiated_version,
-					...options,
+					...legacy_options,
 					serverInfo: server_info,
 				};
 			} catch (error) {
@@ -292,6 +319,17 @@ export class McpServer {
 		this.#server.addMethod('notifications/initialized', () => {
 			return null;
 		});
+		this.#server.addMethod('server/discover', () => {
+			// only reachable for per-request (stateless) requests thanks to
+			// the method policy guard in `receive`
+			return {
+				supportedVersions: this.#enabled_protocol_versions(),
+				capabilities: this.#discover_capabilities(),
+				...(this.#options.instructions != null
+					? { instructions: this.#options.instructions }
+					: {}),
+			};
+		});
 		this.#init_tools();
 		this.#init_prompts();
 		this.#init_resources();
@@ -323,7 +361,8 @@ export class McpServer {
 	 */
 	get ctx() {
 		// eslint-disable-next-line no-unused-vars
-		const { progress_token, ...rest } = this.#ctx_storage.getStore() ?? {};
+		const { progress_token, stateless, ...rest } =
+			this.#ctx_storage.getStore() ?? {};
 		return rest;
 	}
 
@@ -617,7 +656,7 @@ export class McpServer {
 			async ({ name, arguments: args }) => {
 				const prompt = this.#prompts.get(name);
 				if (!prompt) {
-					throw new McpError(-32601, `Prompt ${name} not found`);
+					throw new McpError(-32602, `Prompt ${name} not found`);
 				}
 				if (!prompt.schema) {
 					return v.parse(
@@ -747,7 +786,7 @@ export class McpServer {
 					params = match.params;
 				}
 				if (!resource) {
-					throw new McpError(-32601, `Resource ${uri} not found`);
+					throw new McpError(-32602, `Resource ${uri} not found`);
 				}
 			}
 			if (resource.template) {
@@ -1102,6 +1141,110 @@ export class McpServer {
 		this.#resource(stored_template);
 	}
 	/**
+	 * The per-request protocol versions supported by tmcp.
+	 * @returns {string[]}
+	 */
+	#enabled_protocol_versions() {
+		return [...KNOWN_PER_REQUEST_PROTOCOL_VERSIONS];
+	}
+
+	/**
+	 * Derive the capabilities advertised through `server/discover` from the
+	 * server options. Behavior that cannot be delivered to stateless
+	 * requests is stripped: `resources.subscribe` and every `listChanged`
+	 * flag (list-changed notifications require `subscriptions/listen`, not
+	 * implemented) are removed, and `logging` is dropped entirely
+	 * (per-request logLevel gating is not implemented yet). The bare
+	 * `tools`/`prompts`/`resources` presence and `completions`,
+	 * `experimental`, `extensions` are kept.
+	 * @returns {Record<string, unknown>}
+	 */
+	#discover_capabilities() {
+		// eslint-disable-next-line no-unused-vars
+		const { resources, tools, prompts, logging, ...rest } =
+			this.#options.capabilities ?? {};
+		/** @type {Record<string, unknown>} */
+		const capabilities = { ...rest };
+		if (resources) {
+			// eslint-disable-next-line no-unused-vars
+			const { subscribe, listChanged, ...resources_rest } = resources;
+			capabilities.resources = resources_rest;
+		}
+		if (tools) {
+			// eslint-disable-next-line no-unused-vars
+			const { listChanged, ...tools_rest } = tools;
+			capabilities.tools = tools_rest;
+		}
+		if (prompts) {
+			// eslint-disable-next-line no-unused-vars
+			const { listChanged, ...prompts_rest } = prompts;
+			capabilities.prompts = prompts_rest;
+		}
+		return capabilities;
+	}
+
+	/**
+	 * Resolve the effective cache policy for a cacheable method.
+	 * @param {string} method
+	 * @returns {{ ttlMs: number, cacheScope: 'public' | 'private' }}
+	 */
+	#cache_policy(method) {
+		const cache = this.#options.cache;
+		const override = cache?.methods?.[method];
+		return {
+			ttlMs: override?.ttlMs ?? cache?.ttlMs ?? 0,
+			cacheScope: override?.cacheScope ?? cache?.cacheScope ?? 'private',
+		};
+	}
+
+	/**
+	 * Decorate a successful per-request (stateless) wire result:
+	 * `resultType` (preserving handler-provided string extension values,
+	 * anything else becomes `'complete'`), serverInfo `_meta` merge, and
+	 * `ttlMs`/`cacheScope` for cacheable methods. The cache fields are
+	 * ALWAYS taken from the configured policy, overwriting any
+	 * handler-provided values: handlers are profile-unaware and must not be
+	 * able to opt results into public caching.
+	 * @param {string} method
+	 * @param {Record<string, unknown>} result
+	 */
+	#decorate_result(method, result) {
+		if (typeof result.resultType !== 'string') {
+			result.resultType = 'complete';
+		}
+		result._meta = {
+			.../** @type {Record<string, unknown> | undefined} */ (
+				result._meta
+			),
+			'io.modelcontextprotocol/serverInfo': this.#server_info,
+		};
+		if (CACHEABLE_METHODS.has(method)) {
+			const policy = this.#cache_policy(method);
+			result.ttlMs = policy.ttlMs;
+			result.cacheScope = policy.cacheScope;
+		}
+	}
+
+	/**
+	 * Build a JSON-RPC error response for a request, or `null` for a
+	 * notification (which cannot receive a response).
+	 * @param {string | number | undefined} id
+	 * @param {McpError} error
+	 */
+	#error_response(id, error) {
+		if (id === undefined) return Promise.resolve(null);
+		return Promise.resolve({
+			jsonrpc: /** @type {const} */ ('2.0'),
+			id,
+			error: {
+				code: error.code,
+				message: error.message,
+				...(error.data !== undefined ? { data: error.data } : {}),
+			},
+		});
+	}
+
+	/**
 	 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 	 *
 	 * @param {JSONRPCMessage} message
@@ -1117,14 +1260,165 @@ export class McpServer {
 
 		// Check if it's a request or response
 		if (validated_message.success) {
+			const request_message = validated_message.output;
+			const id = 'id' in request_message ? request_message.id : undefined;
+			const meta = request_message.params?._meta;
 			const progress_token = /** @type {string | undefined} */ (
-				validated_message.output.params?._meta?.progressToken
+				meta?.progressToken
 			);
-			return this.#ctx_storage.run(
-				{ ...(ctx ?? {}), progress_token },
-				async () =>
-					await this.#server.receive(validated_message.output),
-			);
+			const requested_version =
+				meta?.['io.modelcontextprotocol/protocolVersion'];
+			const request_capabilities =
+				meta?.['io.modelcontextprotocol/clientCapabilities'];
+			const request_client_info =
+				meta?.['io.modelcontextprotocol/clientInfo'];
+			const request_log_level =
+				meta?.['io.modelcontextprotocol/logLevel'];
+
+			// `protocolVersion` and the internal `stateless` flag are set
+			// exclusively by the classification below: transport-provided
+			// values must never make a session-negotiated request look like
+			// a per-request one
+			// eslint-disable-next-line no-unused-vars
+			const { protocolVersion, stateless: _, ...transport_ctx } =
+				/** @type {Context<CustomContext> & { stateless?: boolean }} */ (
+					ctx ?? {}
+				);
+			/** @type {Context<CustomContext> & { progress_token?: string, stateless?: boolean }} */
+			let store = { ...transport_ctx, progress_token };
+			// classify the request: the presence of ANY reserved per-request
+			// _meta key enters the per-request path — incomplete or invalid
+			// metadata is rejected, never silently merged or downgraded to
+			// the session path
+			if (
+				requested_version !== undefined ||
+				request_capabilities !== undefined ||
+				request_client_info !== undefined ||
+				request_log_level !== undefined
+			) {
+				if (
+					requested_version === undefined ||
+					request_capabilities === undefined
+				) {
+					return this.#error_response(
+						id,
+						new McpError(
+							-32602,
+							'Requests with per-request protocol metadata must include both "io.modelcontextprotocol/protocolVersion" and "io.modelcontextprotocol/clientCapabilities" in _meta',
+						),
+					);
+				}
+				if (typeof requested_version !== 'string') {
+					return this.#error_response(
+						id,
+						new McpError(
+							-32602,
+							'Invalid "io.modelcontextprotocol/protocolVersion" in _meta: expected a string',
+						),
+					);
+				}
+				// `looseObject` alone would accept arrays, so check the
+				// basic shape explicitly first
+				const parsed_capabilities =
+					typeof request_capabilities !== 'object' ||
+					request_capabilities === null ||
+					Array.isArray(request_capabilities)
+						? undefined
+						: v.safeParse(
+								ClientCapabilitiesSchema,
+								request_capabilities,
+							);
+				if (!parsed_capabilities?.success) {
+					return this.#error_response(
+						id,
+						new McpError(
+							-32602,
+							'Invalid "io.modelcontextprotocol/clientCapabilities" in _meta: expected a client capabilities object',
+						),
+					);
+				}
+				const parsed_client_info =
+					request_client_info === undefined
+						? undefined
+						: v.safeParse(ImplementationSchema, request_client_info);
+				if (parsed_client_info && !parsed_client_info.success) {
+					return this.#error_response(
+						id,
+						new McpError(
+							-32602,
+							'Invalid "io.modelcontextprotocol/clientInfo" in _meta: expected an implementation object with "name" and "version"',
+						),
+					);
+				}
+				const parsed_log_level =
+					request_log_level === undefined
+						? undefined
+						: v.safeParse(LoggingLevelSchema, request_log_level);
+				if (parsed_log_level && !parsed_log_level.success) {
+					return this.#error_response(
+						id,
+						new McpError(
+							-32602,
+							'Invalid "io.modelcontextprotocol/logLevel" in _meta: expected a logging level',
+						),
+					);
+				}
+				const enabled = this.#enabled_protocol_versions();
+				if (!enabled.includes(requested_version)) {
+					return this.#error_response(
+						id,
+						unsupported_protocol_version_error(
+							enabled,
+							requested_version,
+						),
+					);
+				}
+				// per-request info fully replaces any transport-provided
+				// session info: stateless requests never inherit session state
+				store = {
+					...store,
+					stateless: true,
+					protocolVersion: requested_version,
+					sessionInfo: {
+						clientCapabilities: parsed_capabilities.output,
+						clientInfo: parsed_client_info?.output,
+						logLevel: parsed_log_level?.output,
+					},
+				};
+			}
+
+			const stateless = store.stateless === true;
+			if (!is_method_allowed(request_message.method, stateless)) {
+				return this.#error_response(
+					id,
+					new McpError(
+						-32601,
+						`Method ${request_message.method} not found`,
+					),
+				);
+			}
+
+			return this.#ctx_storage.run(store, async () => {
+				const response = await this.#server.receive(request_message);
+				if (stateless && response != null && 'result' in response) {
+					// a successful stateless response must always be a
+					// decorated object result, even when the handler
+					// resolved `null` (e.g. completion of an unknown ref)
+					if (
+						response.result == null ||
+						typeof response.result !== 'object'
+					) {
+						response.result = {};
+					}
+					this.#decorate_result(
+						request_message.method,
+						/** @type {Record<string, unknown>} */ (
+							response.result
+						),
+					);
+				}
+				return response;
+			});
 		}
 		// It's a response - handle with client
 		const validated_response = v.parse(
@@ -1144,6 +1438,12 @@ export class McpServer {
 	 * @returns {Promise<unknown>}
 	 */
 	async request({ method, params }) {
+		if (this.#is_stateless) {
+			throw new McpError(
+				-32603,
+				'Low-level server-to-client requests are not supported for per-request protocol requests: multi round-trip requests are not implemented yet',
+			);
+		}
 		this.#lazyily_create_client();
 		return this.#client?.request(method, params, 'standalone');
 	}
@@ -1183,6 +1483,41 @@ export class McpServer {
 	}
 
 	/**
+	 * Whether the current request was classified as per-request (stateless).
+	 */
+	get #is_stateless() {
+		return this.#ctx_storage.getStore()?.stateless === true;
+	}
+
+	/**
+	 * Guard for server-to-client input requests (`elicitation()`/`message()`).
+	 * This is the one deliberate profile-sensitive branch: for per-request
+	 * (stateless) requests, a missing capability raises `-32021` with
+	 * `data.requiredCapabilities` and a declared capability still fails
+	 * (server-to-client JSON-RPC needs a session; MRTR is not implemented yet).
+	 * For session-negotiated requests the historical `-32601` behavior is kept.
+	 * @param {'elicitation' | 'sampling'} capability
+	 * @param {string} description Human readable description for the legacy error message
+	 */
+	#assert_client_request_allowed(capability, description) {
+		const stateless = this.#is_stateless;
+		if (!this.#client_capabilities?.[capability]) {
+			if (stateless) {
+				throw missing_required_client_capability_error({
+					[capability]: {},
+				});
+			}
+			throw new McpError(-32601, `Client doesn't support ${description}`);
+		}
+		if (stateless) {
+			throw new McpError(
+				-32603,
+				`Server-to-client requests (${description}) are not supported for per-request protocol requests: multi round-trip requests are not implemented yet`,
+			);
+		}
+	}
+
+	/**
 	 * Emit an elicitation request to the client. Elicitations are used to ask the user for input in a structured way, the client will show a UI to the user to fill the input.
 	 * The schema should be a valid Standard Schema V1 schema and should be an Object with the properties you need.
 	 * The client will return the validated input as a JSON object that matches the schema.
@@ -1195,8 +1530,7 @@ export class McpServer {
 	 * @returns {Promise<ElicitResult & { content?: StandardSchemaV1.InferOutput<TSchema> }>}
 	 */
 	async elicitation(message, schema) {
-		if (!this.#client_capabilities?.elicitation)
-			throw new McpError(-32601, "Client doesn't support elicitation");
+		this.#assert_client_request_allowed('elicitation', 'elicitation');
 
 		this.#lazyily_create_client();
 		const result = await this.#client?.request(
@@ -1229,8 +1563,7 @@ export class McpServer {
 	 * @returns {Promise<CreateMessageResult>}
 	 */
 	async message(request) {
-		if (!this.#client_capabilities?.sampling)
-			throw new McpError(-32601, "Client doesn't support sampling");
+		this.#assert_client_request_allowed('sampling', 'sampling');
 
 		this.#lazyily_create_client();
 

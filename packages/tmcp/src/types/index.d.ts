@@ -4,7 +4,7 @@ const created_resource: unique symbol;
 const created_template: unique symbol;
 declare module 'tmcp' {
 	import type { StandardSchemaV1 } from '@standard-schema/spec';
-	import type { JSONRPCServer, JSONRPCClient, JSONRPCParams, JSONRPCRequest } from 'json-rpc-2.0';
+	import type { JSONRPCServer, JSONRPCClient, JSONRPCParams, JSONRPCRequest, JSONRPCErrorException } from 'json-rpc-2.0';
 	import type { JSONSchema7 } from 'json-schema';
 	import * as v from 'valibot';
 	export class McpServer<StandardSchema extends StandardSchemaV1 | undefined = undefined, CustomContext extends Record<string, unknown> | undefined = undefined> {
@@ -45,12 +45,32 @@ declare module 'tmcp' {
 		 * @deprecated Use `server.ctx.sessionInfo.clientCapabilities` instead.
 		 */
 		currentClientCapabilities(): ({
-			experimental?: {} | undefined;
-			sampling?: {} | undefined;
-			elicitation?: {} | undefined;
-			roots?: {
-				listChanged?: boolean | undefined;
+			experimental?: ({} & {
+				[key: string]: unknown;
+			}) | undefined;
+			sampling?: ({} & {
+				[key: string]: unknown;
+			}) | undefined;
+			elicitation?: ({
+				form?: ({} & {
+					[key: string]: unknown;
+				}) | undefined;
+				url?: ({} & {
+					[key: string]: unknown;
+				}) | undefined;
+			} & {
+				[key: string]: unknown;
+			}) | undefined;
+			extensions?: {
+				[x: string]: {} & {
+					[key: string]: unknown;
+				};
 			} | undefined;
+			roots?: ({
+				listChanged?: boolean | undefined;
+			} & {
+				[key: string]: unknown;
+			}) | undefined;
 		} & {
 			[key: string]: unknown;
 		}) | undefined;
@@ -220,12 +240,16 @@ declare module 'tmcp' {
 			clientInfo?: ClientInfo_1;
 			logLevel?: LoggingLevel;
 		} | undefined;
+		/**
+		 * The exact per-request protocol version when the current request carries per-request protocol metadata; `undefined` for session-negotiated requests.
+		 */
+		protocolVersion?: string | undefined;
 		auth?: AuthInfo | undefined;
 		custom?: TCustom | undefined;
 	};
 	export type Icons = Icons_1;
 	export type Subscriptions = Record<SubscriptionsKeys, string[]>;
-	export type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = CallToolResult_1<TStructuredContent>;
+	export type CallToolResult<TStructuredContent> = CallToolResult_1<TStructuredContent>;
 	export type ReadResourceResult = ReadResourceResult_1;
 	export type GetPromptResult = GetPromptResult_1;
 	export type ClientCapabilities = ClientCapabilities_1;
@@ -295,6 +319,19 @@ declare module 'tmcp' {
 		context: { arguments: Record<string, string> },
 	) => CompleteResult_1 | Promise<CompleteResult_1>;
 
+	type CachePolicy = {
+		/**
+		 * Time-to-live in milliseconds for cacheable results (>= 0). Defaults to 0 (no caching).
+		 */
+		ttlMs?: number;
+		/**
+		 * Cache scope for cacheable results. Defaults to 'private'. `public` must be
+		 * explicitly opted into: `enabled` callbacks, auth context, and dynamic
+		 * resource/template listings can make otherwise identical lists user-specific.
+		 */
+		cacheScope?: 'public' | 'private';
+	};
+
 	type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 		capabilities?: ServerCapabilities;
 		instructions?: string;
@@ -306,7 +343,17 @@ declare module 'tmcp' {
 		};
 		logging?: {
 			default: LoggingLevel_1;
-		}
+		};
+		/**
+		 * Cache policy for per-request protocol cacheable results
+		 * (`server/discover`, `tools/list`, `prompts/list`, `resources/list`,
+		 * `resources/read`, `resources/templates/list`). Defaults to
+		 * `{ ttlMs: 0, cacheScope: 'private' }`. Per-method overrides win over
+		 * the top-level defaults.
+		 */
+		cache?: CachePolicy & {
+			methods?: Record<string, CachePolicy>;
+		};
 	};
 
 	type ChangedArgs = {
@@ -378,6 +425,24 @@ declare module 'tmcp' {
 	// Main exported type
 	type ExtractURITemplateVariables<T extends string> =
 		ExtractVariablesFromTemplate<T>;
+	/**
+	 * A required header was missing, malformed, or mismatched the request body.
+	 */
+	export const HEADER_MISMATCH: -32020;
+	/**
+	 * The request requires a client capability that was not declared.
+	 * `error.data` contains `{ requiredCapabilities }`.
+	 */
+	export const MISSING_REQUIRED_CLIENT_CAPABILITY: -32021;
+	/**
+	 * The requested per-request protocol version is not supported.
+	 * `error.data` contains `{ supported, requested }`.
+	 */
+	export const UNSUPPORTED_PROTOCOL_VERSION: -32022;
+	export class McpError extends JSONRPCErrorException {
+		
+		constructor(code: number, message: string, data?: unknown);
+	}
 	const JSONRPCMessageSchema: v.UnionSchema<[v.ObjectSchema<{
 		readonly method: v.StringSchema<undefined>;
 		readonly params: v.OptionalSchema<v.LooseObjectSchema<{
@@ -511,19 +576,29 @@ declare module 'tmcp' {
 		/**
 		 * Experimental, non-standard capabilities that the client supports.
 		 */
-		readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the client supports sampling from an LLM.
+		 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 		 */
-		readonly sampling: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the client supports eliciting user input.
+		 * Accepts both the legacy bare `{}` shape and the modern `{ form?, url? }` sub-shapes.
 		 */
-		readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{
+			readonly form: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			readonly url: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, undefined>;
+		/**
+		 * Extensions supported by the client, keyed by prefixed extension identifier.
+		 */
+		readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
 		/**
 		 * Present if the client supports listing roots.
+		 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 		 */
-		readonly roots: v.OptionalSchema<v.ObjectSchema<{
+		readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
 			/**
 			 * Whether the client supports issuing notifications for changes to the roots list.
 			 */
@@ -539,19 +614,29 @@ declare module 'tmcp' {
 			/**
 			 * Experimental, non-standard capabilities that the client supports.
 			 */
-			readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			/**
 			 * Present if the client supports sampling from an LLM.
+			 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 			 */
-			readonly sampling: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			/**
 			 * Present if the client supports eliciting user input.
+			 * Accepts both the legacy bare `{}` shape and the modern `{ form?, url? }` sub-shapes.
 			 */
-			readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{
+				readonly form: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				readonly url: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, undefined>;
+			/**
+			 * Extensions supported by the client, keyed by prefixed extension identifier.
+			 */
+			readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
 			/**
 			 * Present if the client supports listing roots.
+			 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 			 */
-			readonly roots: v.OptionalSchema<v.ObjectSchema<{
+			readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
 				/**
 				 * Whether the client supports issuing notifications for changes to the roots list.
 				 */
@@ -618,8 +703,13 @@ declare module 'tmcp' {
 		readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the server supports sending log messages to the client.
+		 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 		 */
 		readonly logging: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		/**
+		 * Extensions supported by the server, keyed by prefixed extension identifier.
+		 */
+		readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
 		/**
 		 * Present if the server supports sending completions to the client.
 		 */
@@ -671,8 +761,13 @@ declare module 'tmcp' {
 			readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			/**
 			 * Present if the server supports sending log messages to the client.
+			 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 			 */
 			readonly logging: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			/**
+			 * Extensions supported by the server, keyed by prefixed extension identifier.
+			 */
+			readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
 			/**
 			 * Present if the server supports sending completions to the client.
 			 */
@@ -980,7 +1075,7 @@ declare module 'tmcp' {
 	/**
 	 * The server's response to a resources/read request from the client.
 	 */
-	const ReadResourceResultSchema: v.ObjectSchema<{
+	const ReadResourceResultSchema: v.LooseObjectSchema<{
 		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
 			/**
 			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
@@ -1109,7 +1204,7 @@ declare module 'tmcp' {
 	/**
 	 * The server's response to a prompts/get request from the client.
 	 */
-	const GetPromptResultSchema: v.ObjectSchema<{
+	const GetPromptResultSchema: v.LooseObjectSchema<{
 		/**
 		 * An optional description for the prompt.
 		 */
@@ -1357,20 +1452,18 @@ declare module 'tmcp' {
 			readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 			/**
 			 * A JSON Schema object defining the expected parameters for the tool.
+			 * Any JSON Schema 2020-12 keywords are allowed alongside the required `type: "object"` root.
 			 */
-			readonly inputSchema: v.ObjectSchema<{
+			readonly inputSchema: v.LooseObjectSchema<{
+				readonly $schema: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 				readonly type: v.LiteralSchema<"object", undefined>;
-				readonly properties: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
-				readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
 			}, undefined>;
 			/**
 			 * An optional JSON Schema object defining the structure of the tool's output returned in
-			 * the structuredContent field of a CallToolResult.
+			 * the structuredContent field of a CallToolResult. Any JSON Schema 2020-12 keywords are allowed.
 			 */
-			readonly outputSchema: v.OptionalSchema<v.ObjectSchema<{
-				readonly type: v.LiteralSchema<"object", undefined>;
-				readonly properties: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
-				readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+			readonly outputSchema: v.OptionalSchema<v.LooseObjectSchema<{
+				readonly $schema: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 			}, undefined>, undefined>;
 			/**
 			 * Optional additional tool information.
@@ -1445,7 +1538,7 @@ declare module 'tmcp' {
 	/**
 	 * The server's response to a tool call.
 	 */
-	const CallToolResultSchema: v.ObjectSchema<{
+	const CallToolResultSchema: v.LooseObjectSchema<{
 		/**
 		 * A list of content objects that represent the result of the tool call.
 		 *
@@ -1599,11 +1692,11 @@ declare module 'tmcp' {
 			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>, undefined>, readonly []>;
 		/**
-		 * An object containing structured tool output.
+		 * Structured tool output. May be ANY JSON value, not only objects.
 		 *
-		 * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
+		 * If the Tool defines an outputSchema, this field MUST be present in the result and match the schema.
 		 */
-		readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		readonly structuredContent: v.OptionalSchema<v.UnknownSchema, undefined>;
 		/**
 		 * Whether the tool call ended in an error.
 		 *
@@ -1808,7 +1901,7 @@ declare module 'tmcp' {
 	/**
 	 * The server's response to a completion/complete request
 	 */
-	const CompleteResultSchema: v.ObjectSchema<{
+	const CompleteResultSchema: v.LooseObjectSchema<{
 		readonly completion: v.ObjectSchema<{
 			/**
 			 * An array of completion values. Must not exceed 100 items.
@@ -1837,7 +1930,7 @@ declare module 'tmcp' {
 		description?: string;
 	};
 	type InitializeRequestParams = v.InferInput<typeof InitializeRequestParamsSchema>;
-	type CallToolResult_1<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
+	type CallToolResult_1<TStructuredContent> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;
 		isError?: boolean;
 	} : ({
@@ -1888,7 +1981,7 @@ declare module 'tmcp/tool' {
 	 *
 	 * */
 	export function defineTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined>(options: ToolOptions<TSchema, TOutputSchema>, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): CreatedTool<TSchema, TOutputSchema>;
-	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = CallToolResult_1<TStructuredContent>;
+	type CallToolResult<TStructuredContent> = CallToolResult_1<TStructuredContent>;
 	
 	type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
 		name: string;
@@ -1984,7 +2077,7 @@ declare module 'tmcp/tool' {
 	/**
 	 * The server's response to a tool call.
 	 */
-	const CallToolResultSchema: v.ObjectSchema<{
+	const CallToolResultSchema: v.LooseObjectSchema<{
 		/**
 		 * A list of content objects that represent the result of the tool call.
 		 *
@@ -2138,11 +2231,11 @@ declare module 'tmcp/tool' {
 			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>, undefined>, readonly []>;
 		/**
-		 * An object containing structured tool output.
+		 * Structured tool output. May be ANY JSON value, not only objects.
 		 *
-		 * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
+		 * If the Tool defines an outputSchema, this field MUST be present in the result and match the schema.
 		 */
-		readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		readonly structuredContent: v.OptionalSchema<v.UnknownSchema, undefined>;
 		/**
 		 * Whether the tool call ended in an error.
 		 *
@@ -2165,7 +2258,7 @@ declare module 'tmcp/tool' {
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
 	type Icons = v.InferInput<typeof IconsSchema>;
-	type CallToolResult_1<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
+	type CallToolResult_1<TStructuredContent> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;
 		isError?: boolean;
 	} : ({
@@ -2242,7 +2335,7 @@ declare module 'tmcp/prompt' {
 	/**
 	 * The server's response to a prompts/get request from the client.
 	 */
-	const GetPromptResultSchema: v.ObjectSchema<{
+	const GetPromptResultSchema: v.LooseObjectSchema<{
 		/**
 		 * An optional description for the prompt.
 		 */
@@ -2405,7 +2498,7 @@ declare module 'tmcp/prompt' {
 	/**
 	 * The server's response to a completion/complete request
 	 */
-	const CompleteResultSchema: v.ObjectSchema<{
+	const CompleteResultSchema: v.LooseObjectSchema<{
 		readonly completion: v.ObjectSchema<{
 			/**
 			 * An array of completion values. Must not exceed 100 items.
@@ -2488,7 +2581,7 @@ declare module 'tmcp/resource' {
 	/**
 	 * The server's response to a resources/read request from the client.
 	 */
-	const ReadResourceResultSchema: v.ObjectSchema<{
+	const ReadResourceResultSchema: v.LooseObjectSchema<{
 		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
 			/**
 			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
@@ -2712,7 +2805,7 @@ declare module 'tmcp/template' {
 	/**
 	 * The server's response to a resources/read request from the client.
 	 */
-	const ReadResourceResultSchema: v.ObjectSchema<{
+	const ReadResourceResultSchema: v.LooseObjectSchema<{
 		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
 			/**
 			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
@@ -2759,7 +2852,7 @@ declare module 'tmcp/template' {
 	/**
 	 * The server's response to a completion/complete request
 	 */
-	const CompleteResultSchema: v.ObjectSchema<{
+	const CompleteResultSchema: v.LooseObjectSchema<{
 		readonly completion: v.ObjectSchema<{
 			/**
 			 * An array of completion values. Must not exceed 100 items.
@@ -2825,7 +2918,7 @@ declare module 'tmcp/utils' {
 		
 		function media(type: "audio" | "image", data: string, mime_type: string): {
 			content: {
-				type: "image" | "audio";
+				type: "audio" | "image";
 				data: string;
 				mimeType: string;
 			}[];
@@ -2858,21 +2951,21 @@ declare module 'tmcp/utils' {
 				description?: string | undefined;
 				title?: string | undefined;
 				uri: string;
+				_meta?: ({} & {
+					[key: string]: unknown;
+				}) | undefined;
+				mimeType?: string | undefined;
 				icons?: {
 					src: string;
 					mimeType?: string | undefined;
 					sizes?: string[] | undefined;
 				}[] | undefined;
-				mimeType?: string | undefined;
-				_meta?: ({} & {
-					[key: string]: unknown;
-				}) | undefined;
 				type: "resource_link";
 			}[];
 		};
 		
 		function structured<T extends Record<string, unknown>>(obj: T): {
-			readonly content: [{
+			readonly content: readonly [{
 				readonly type: "text";
 				readonly text: string;
 			}];
@@ -2945,7 +3038,7 @@ declare module 'tmcp/utils' {
 			messages: {
 				role: "user";
 				content: {
-					type: "image" | "audio";
+					type: "audio" | "image";
 					data: string;
 					mimeType: string;
 				};
@@ -2984,15 +3077,15 @@ declare module 'tmcp/utils' {
 					description?: string | undefined;
 					title?: string | undefined;
 					uri: string;
+					_meta?: ({} & {
+						[key: string]: unknown;
+					}) | undefined;
+					mimeType?: string | undefined;
 					icons?: {
 						src: string;
 						mimeType?: string | undefined;
 						sizes?: string[] | undefined;
 					}[] | undefined;
-					mimeType?: string | undefined;
-					_meta?: ({} & {
-						[key: string]: unknown;
-					}) | undefined;
 					type: "resource_link";
 				};
 			}[];
@@ -3148,7 +3241,7 @@ declare module 'tmcp/utils' {
 	/**
 	 * The server's response to a resources/read request from the client.
 	 */
-	const ReadResourceResultSchema: v.ObjectSchema<{
+	const ReadResourceResultSchema: v.LooseObjectSchema<{
 		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
 			/**
 			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
@@ -3309,7 +3402,7 @@ declare module 'tmcp/utils' {
 	/**
 	 * The server's response to a prompts/get request from the client.
 	 */
-	const GetPromptResultSchema: v.ObjectSchema<{
+	const GetPromptResultSchema: v.LooseObjectSchema<{
 		/**
 		 * An optional description for the prompt.
 		 */
@@ -3472,7 +3565,7 @@ declare module 'tmcp/utils' {
 	/**
 	 * The server's response to a tool call.
 	 */
-	const CallToolResultSchema: v.ObjectSchema<{
+	const CallToolResultSchema: v.LooseObjectSchema<{
 		/**
 		 * A list of content objects that represent the result of the tool call.
 		 *
@@ -3626,11 +3719,11 @@ declare module 'tmcp/utils' {
 			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>, undefined>, readonly []>;
 		/**
-		 * An object containing structured tool output.
+		 * Structured tool output. May be ANY JSON value, not only objects.
 		 *
-		 * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
+		 * If the Tool defines an outputSchema, this field MUST be present in the result and match the schema.
 		 */
-		readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		readonly structuredContent: v.OptionalSchema<v.UnknownSchema, undefined>;
 		/**
 		 * Whether the tool call ended in an error.
 		 *
@@ -3652,7 +3745,7 @@ declare module 'tmcp/utils' {
 		 */
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
-	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
+	type CallToolResult<TStructuredContent> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;
 		isError?: boolean;
 	} : ({

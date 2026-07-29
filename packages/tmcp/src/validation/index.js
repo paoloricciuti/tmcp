@@ -1,24 +1,91 @@
+import { JSONRPCErrorException } from 'json-rpc-2.0';
 import * as v from 'valibot';
-export const LATEST_PROTOCOL_VERSION = '2025-06-18';
-export const DEFAULT_NEGOTIATED_PROTOCOL_VERSION = '2025-03-26';
-export const SUPPORTED_PROTOCOL_VERSIONS = [
+import {
 	LATEST_PROTOCOL_VERSION,
-	'2025-03-26',
-	'2024-11-05',
-	'2024-10-07',
-];
+	MODERN_PROTOCOL_VERSION,
+	SUPPORTED_VERSIONS,
+} from './version.js';
+
+export { LATEST_PROTOCOL_VERSION, MODERN_PROTOCOL_VERSION };
+export const DEFAULT_NEGOTIATED_PROTOCOL_VERSION = '2025-03-26';
+/**
+ * Supported session-negotiated protocol versions. Re-exported from
+ * `validation/version.js`, which is the single source of truth.
+ * Note: `2024-10-07` was dropped from this list — it was never actually
+ * negotiable.
+ */
+export const SUPPORTED_PROTOCOL_VERSIONS = SUPPORTED_VERSIONS;
 /* JSON-RPC types */
 export const JSONRPC_VERSION = '2.0';
 
-export class McpError extends Error {
+/* Modern protocol error codes (2026-07-28) */
+
+/**
+ * A required header was missing, malformed, or mismatched the request body.
+ */
+export const HEADER_MISMATCH = -32020;
+
+/**
+ * The request requires a client capability that was not declared.
+ * `error.data` contains `{ requiredCapabilities }`.
+ */
+export const MISSING_REQUIRED_CLIENT_CAPABILITY = -32021;
+
+/**
+ * The requested per-request protocol version is not supported.
+ * `error.data` contains `{ supported, requested }`.
+ */
+export const UNSUPPORTED_PROTOCOL_VERSION = -32022;
+
+export class McpError extends JSONRPCErrorException {
 	/**
 	 * @param {number} code
 	 * @param {string} message
+	 * @param {unknown} [data]
 	 */
-	constructor(code, message) {
-		super(`MCP error ${code}: ${message}`);
+	constructor(code, message, data) {
+		super(`MCP error ${code}: ${message}`, code, data);
+		// `JSONRPCErrorException` rewrites the prototype to its own in its
+		// constructor, which would break `instanceof McpError` (and any
+		// subclass); restore the correct prototype chain.
+		Object.setPrototypeOf(this, new.target.prototype);
 		this.name = 'McpError';
 	}
+}
+
+/**
+ * Create a `MISSING_REQUIRED_CLIENT_CAPABILITY` (-32021) error.
+ * @param {Record<string, unknown>} required_capabilities
+ */
+export function missing_required_client_capability_error(
+	required_capabilities,
+) {
+	return new McpError(
+		MISSING_REQUIRED_CLIENT_CAPABILITY,
+		`Missing required client capability: ${Object.keys(required_capabilities).join(', ')}`,
+		{ requiredCapabilities: required_capabilities },
+	);
+}
+
+/**
+ * Create an `UNSUPPORTED_PROTOCOL_VERSION` (-32022) error.
+ * @param {string[]} supported
+ * @param {string} requested
+ */
+export function unsupported_protocol_version_error(supported, requested) {
+	return new McpError(
+		UNSUPPORTED_PROTOCOL_VERSION,
+		`Unsupported protocol version: ${requested}`,
+		{ supported, requested },
+	);
+}
+
+/**
+ * Create a `HEADER_MISMATCH` (-32020) error.
+ * @param {string} message
+ */
+export function header_mismatch_error(message) {
+	return new McpError(HEADER_MISMATCH, message);
 }
 
 /**
@@ -243,23 +310,36 @@ export const ClientCapabilitiesSchema = v.looseObject({
 	/**
 	 * Experimental, non-standard capabilities that the client supports.
 	 */
-	experimental: v.optional(v.object({})),
+	experimental: v.optional(v.looseObject({})),
 
 	/**
 	 * Present if the client supports sampling from an LLM.
+	 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 	 */
-	sampling: v.optional(v.object({})),
+	sampling: v.optional(v.looseObject({})),
 
 	/**
 	 * Present if the client supports eliciting user input.
+	 * Accepts both the legacy bare `{}` shape and the modern `{ form?, url? }` sub-shapes.
 	 */
-	elicitation: v.optional(v.object({})),
+	elicitation: v.optional(
+		v.looseObject({
+			form: v.optional(v.looseObject({})),
+			url: v.optional(v.looseObject({})),
+		}),
+	),
+
+	/**
+	 * Extensions supported by the client, keyed by prefixed extension identifier.
+	 */
+	extensions: v.optional(v.record(v.string(), v.looseObject({}))),
 
 	/**
 	 * Present if the client supports listing roots.
+	 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 	 */
 	roots: v.optional(
-		v.object({
+		v.looseObject({
 			/**
 			 * Whether the client supports issuing notifications for changes to the roots list.
 			 */
@@ -299,8 +379,14 @@ export const ServerCapabilitiesSchema = v.object({
 
 	/**
 	 * Present if the server supports sending log messages to the client.
+	 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 	 */
 	logging: v.optional(v.object({})),
+
+	/**
+	 * Extensions supported by the server, keyed by prefixed extension identifier.
+	 */
+	extensions: v.optional(v.record(v.string(), v.looseObject({}))),
 
 	/**
 	 * Present if the server supports sending completions to the client.
@@ -596,7 +682,7 @@ export const ReadResourceRequestSchema = v.object({
 /**
  * The server's response to a resources/read request from the client.
  */
-export const ReadResourceResultSchema = v.object({
+export const ReadResourceResultSchema = v.looseObject({
 	...ResultSchema.entries,
 	contents: v.array(
 		v.union([TextResourceContentsSchema, BlobResourceContentsSchema]),
@@ -851,7 +937,7 @@ export const PromptMessageSchema = v.object({
 /**
  * The server's response to a prompts/get request from the client.
  */
-export const GetPromptResultSchema = v.object({
+export const GetPromptResultSchema = v.looseObject({
 	...ResultSchema.entries,
 
 	/**
@@ -937,22 +1023,20 @@ export const ToolSchema = v.object({
 
 	/**
 	 * A JSON Schema object defining the expected parameters for the tool.
+	 * Any JSON Schema 2020-12 keywords are allowed alongside the required `type: "object"` root.
 	 */
-	inputSchema: v.object({
+	inputSchema: v.looseObject({
+		$schema: v.optional(v.string()),
 		type: v.literal('object'),
-		properties: v.optional(v.object({})),
-		required: v.optional(v.array(v.string())),
 	}),
 
 	/**
 	 * An optional JSON Schema object defining the structure of the tool's output returned in
-	 * the structuredContent field of a CallToolResult.
+	 * the structuredContent field of a CallToolResult. Any JSON Schema 2020-12 keywords are allowed.
 	 */
 	outputSchema: v.optional(
-		v.object({
-			type: v.literal('object'),
-			properties: v.optional(v.object({})),
-			required: v.optional(v.array(v.string())),
+		v.looseObject({
+			$schema: v.optional(v.string()),
 		}),
 	),
 
@@ -988,7 +1072,7 @@ export const ListToolsResultSchema = v.object({
 /**
  * The server's response to a tool call.
  */
-export const CallToolResultSchema = v.object({
+export const CallToolResultSchema = v.looseObject({
 	...ResultSchema.entries,
 
 	/**
@@ -1000,11 +1084,11 @@ export const CallToolResultSchema = v.object({
 	content: v.optional(v.array(ContentBlockSchema), []),
 
 	/**
-	 * An object containing structured tool output.
+	 * Structured tool output. May be ANY JSON value, not only objects.
 	 *
-	 * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
+	 * If the Tool defines an outputSchema, this field MUST be present in the result and match the schema.
 	 */
-	structuredContent: v.optional(v.looseObject({})),
+	structuredContent: v.optional(v.unknown()),
 
 	/**
 	 * Whether the tool call ended in an error.
@@ -1396,7 +1480,7 @@ export const CompleteRequestSchema = v.object({
 /**
  * The server's response to a completion/complete request
  */
-export const CompleteResultSchema = v.object({
+export const CompleteResultSchema = v.looseObject({
 	...ResultSchema.entries,
 	completion: v.object({
 		/**
@@ -1538,7 +1622,7 @@ export const ServerResultSchema = v.union([
  * @typedef {v.InferInput<typeof InitializeRequestParamsSchema>} InitializeRequestParams
  */
 /**
- * @template {Record<string, unknown> | undefined} TStructuredContent
+ * @template TStructuredContent
  * @typedef {Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? { structuredContent?: undefined, isError?: boolean } : ({ structuredContent: TStructuredContent, isError?: false } | { isError: true, structuredContent?: TStructuredContent }))} CallToolResult
  */
 /**
