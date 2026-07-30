@@ -384,7 +384,12 @@ describe('MRTR (multi round-trip requests)', () => {
 						'https://example.com/authorize',
 					);
 					return {
-						content: [{ type: 'text', text: answer.action }],
+						content: [
+							{
+								type: 'text',
+								text: `${answer.action}:${Object.hasOwn(answer, 'content')}`,
+							},
+						],
 					};
 				},
 			);
@@ -394,14 +399,66 @@ describe('MRTR (multi round-trip requests)', () => {
 					'tools/call',
 					{
 						name: 'authorize',
-						inputResponses: { 1: { action: 'accept' } },
+						inputResponses: {
+							1: {
+								action: 'accept',
+								content: { secret: 'must not pass through' },
+							},
+						},
 					},
 					{ [CC]: { elicitation: { url: {} } } },
 				),
 			);
 
 			expect(response.error).toBeUndefined();
-			expect(response.result.content[0].text).toBe('accept');
+			expect(response.result.content[0].text).toBe('accept:false');
+		});
+
+		it('strips URL content before carrying the response in requestState', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'authorize', description: 'x', replayable: true },
+				async () => {
+					await server.elicitation(
+						'Authorize access',
+						'https://example.com/authorize',
+						{ key: 'authorization' },
+					);
+					await server.message(
+						{ messages: [], maxTokens: 5 },
+						{ key: 'summary' },
+					);
+					return { content: [] };
+				},
+			);
+
+			const response = await server.receive(
+				stateless_request(
+					'tools/call',
+					{
+						name: 'authorize',
+						inputResponses: {
+							authorization: {
+								action: 'accept',
+								content: { secret: 'must not be carried' },
+							},
+						},
+					},
+					{
+						[CC]: { elicitation: { url: {} }, sampling: {} },
+					},
+				),
+			);
+
+			expect(response.result.inputRequests.summary.method).toBe(
+				'sampling/createMessage',
+			);
+			expect(JSON.parse(response.result.requestState)).toEqual({
+				version: 1,
+				inputResponses: {
+					authorization: { action: 'accept' },
+				},
+			});
 		});
 
 		it('handlers never see inputResponses/requestState in their params', async () => {
@@ -487,6 +544,45 @@ describe('MRTR (multi round-trip requests)', () => {
 			expect(response.error.message).toContain('key "1"');
 		});
 
+		it.each([
+			['envelope', { action: 'invalid' }],
+			['content', { action: 'accept', content: { answer: 42 } }],
+		])(
+			'allows recovery from invalid elicitation %s with the same key',
+			async (_kind, invalid_response) => {
+				const server = create_server();
+				server.tool(
+					{ name: 'ask', description: 'x', replayable: true },
+					async () => {
+						try {
+							await server.elicitation('gimme', answer_schema(), {
+								key: 'answer',
+							});
+						} catch {
+							await server.elicitation(
+								'gimme again',
+								answer_schema(),
+								{ key: 'answer' },
+							);
+						}
+						return { content: [] };
+					},
+				);
+
+				const response = await server.receive(
+					stateless_request('tools/call', {
+						name: 'ask',
+						inputResponses: { answer: invalid_response },
+					}),
+				);
+
+				expect(response.error).toBeUndefined();
+				expect(
+					response.result.inputRequests.answer.params.message,
+				).toBe('gimme again');
+			},
+		);
+
 		it('rejects an invalid sampling response for a consumed key', async () => {
 			const server = create_server();
 			server.tool(
@@ -504,6 +600,39 @@ describe('MRTR (multi round-trip requests)', () => {
 			);
 			expect(response.error.code).toBe(-32602);
 			expect(response.error.message).toContain('key "1"');
+		});
+
+		it('allows recovery from an invalid sampling response with the same key', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'sample', description: 'x', replayable: true },
+				async () => {
+					try {
+						await server.message(
+							{ messages: [], maxTokens: 5 },
+							{ key: 'sample' },
+						);
+					} catch {
+						await server.message(
+							{ messages: [], maxTokens: 10 },
+							{ key: 'sample' },
+						);
+					}
+					return { content: [] };
+				},
+			);
+
+			const response = await server.receive(
+				stateless_request('tools/call', {
+					name: 'sample',
+					inputResponses: { sample: { model: 'missing-fields' } },
+				}),
+			);
+
+			expect(response.error).toBeUndefined();
+			expect(response.result.inputRequests.sample.params.maxTokens).toBe(
+				10,
+			);
 		});
 
 		it('rejects form elicitation when the client only supports URL mode', async () => {
@@ -577,6 +706,193 @@ describe('MRTR (multi round-trip requests)', () => {
 
 			expect(response.error.code).toBe(-32602);
 			expect(response.error.message).toContain('not a valid URL');
+		});
+
+		it('allows a handler to recover from failed input preparation', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'authorize', description: 'x', replayable: true },
+				async () => {
+					try {
+						await server.elicitation(
+							'Authorize access',
+							'not-a-url',
+							{ key: 'authorization' },
+						);
+					} catch {
+						return {
+							content: [{ type: 'text', text: 'fallback' }],
+						};
+					}
+					return { content: [] };
+				},
+			);
+
+			const response = await server.receive(
+				stateless_request(
+					'tools/call',
+					{ name: 'authorize' },
+					{ [CC]: { elicitation: { url: {} } } },
+				),
+			);
+
+			expect(response.error).toBeUndefined();
+			expect(response.result.content[0].text).toBe('fallback');
+		});
+
+		it('releases the key after failed input preparation', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'authorize', description: 'x', replayable: true },
+				async () => {
+					try {
+						await server.elicitation(
+							'Authorize access',
+							'not-a-url',
+							{ key: 'authorization' },
+						);
+					} catch {
+						await server.elicitation(
+							'Authorize access',
+							'https://example.com/authorize',
+							{ key: 'authorization' },
+						);
+					}
+					return { content: [] };
+				},
+			);
+
+			const response = await server.receive(
+				stateless_request(
+					'tools/call',
+					{ name: 'authorize' },
+					{ [CC]: { elicitation: { url: {} } } },
+				),
+			);
+
+			expect(response.error).toBeUndefined();
+			expect(response.result.inputRequests.authorization.params).toEqual({
+				mode: 'url',
+				message: 'Authorize access',
+				url: 'https://example.com/authorize',
+			});
+		});
+
+		it('accepts published enum schemas and primitive defaults', async () => {
+			const requested_schema = {
+				type: 'object',
+				properties: {
+					string: { type: 'string', default: 'red' },
+					number: { type: 'number', default: 1 },
+					boolean: { type: 'boolean', default: true },
+					untitled_single: {
+						type: 'string',
+						enum: ['red', 'blue'],
+						default: 'red',
+					},
+					legacy_single: {
+						type: 'string',
+						enum: ['red', 'blue'],
+						enumNames: ['Red', 'Blue'],
+						default: 'blue',
+					},
+					untitled_multi: {
+						type: 'array',
+						minItems: 1,
+						maxItems: 2,
+						items: { type: 'string', enum: ['red', 'blue'] },
+						default: ['red'],
+					},
+					titled_multi: {
+						type: 'array',
+						items: {
+							anyOf: [
+								{ const: 'red', title: 'Red' },
+								{ const: 'blue', title: 'Blue' },
+							],
+						},
+						default: ['blue'],
+					},
+					titled_single: {
+						type: 'string',
+						oneOf: [
+							{ const: 'red', title: 'Red' },
+							{ const: 'blue', title: 'Blue' },
+						],
+						default: 'red',
+					},
+				},
+			};
+			class EnumAdapter extends MockAdapter {
+				/** @returns {Promise<object>} */
+				async toJsonSchema() {
+					return requested_schema;
+				}
+			}
+			const server = create_server({ adapter: new EnumAdapter() });
+			server.tool(
+				{ name: 'ask', description: 'x', replayable: true },
+				async () => {
+					await server.elicitation('Choose colors', mock_schema());
+					return { content: [] };
+				},
+			);
+
+			const response = await server.receive(
+				stateless_request('tools/call', { name: 'ask' }),
+			);
+
+			expect(response.error).toBeUndefined();
+			expect(
+				response.result.inputRequests['1'].params.requestedSchema,
+			).toEqual(requested_schema);
+		});
+
+		it('strips adapter-specific keywords from outgoing form schemas', async () => {
+			class AdapterWithExtraKeywords extends MockAdapter {
+				/** @returns {Promise<object>} */
+				async toJsonSchema() {
+					return {
+						type: 'object',
+						properties: {
+							email: {
+								type: 'string',
+								format: 'email',
+								pattern: '^[^@]+@[^@]+$',
+							},
+							count: {
+								type: 'number',
+								exclusiveMinimum: 0,
+							},
+						},
+						additionalProperties: false,
+					};
+				}
+			}
+			const server = create_server({
+				adapter: new AdapterWithExtraKeywords(),
+			});
+			server.tool(
+				{ name: 'ask', description: 'x', replayable: true },
+				async () => {
+					await server.elicitation('Provide details', mock_schema());
+					return { content: [] };
+				},
+			);
+
+			const response = await server.receive(
+				stateless_request('tools/call', { name: 'ask' }),
+			);
+
+			expect(
+				response.result.inputRequests['1'].params.requestedSchema,
+			).toEqual({
+				type: 'object',
+				properties: {
+					email: { type: 'string', format: 'email' },
+					count: { type: 'number' },
+				},
+			});
 		});
 
 		it('rejects adapter output that is not a valid form elicitation schema', async () => {

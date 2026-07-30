@@ -4,7 +4,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JsonSchemaAdapter } from '../src/adapter.js';
-import { McpServer } from '../src/index.js';
+import { McpError, McpServer } from '../src/index.js';
 import { defineTool as define_tool } from '../src/tool.js';
 import { definePrompt as define_prompt } from '../src/prompt.js';
 import { defineResource as define_resource } from '../src/resource.js';
@@ -3890,7 +3890,10 @@ describe('McpServer', () => {
 				{
 					jsonrpc: '2.0',
 					id: request_id,
-					result: { action: 'accept' },
+					result: {
+						action: 'accept',
+						content: { secret: 'must not pass through' },
+					},
 				},
 				{ sessionId: 'session-url', sessionInfo: session_info },
 			);
@@ -3898,6 +3901,46 @@ describe('McpServer', () => {
 
 			expect(elicitation_result).toEqual({ action: 'accept' });
 			send_off();
+		});
+
+		it('should reject malformed session capabilities with an MCP error', async () => {
+			/** @type {unknown} */
+			let caught_error;
+			server.tool(
+				{
+					name: 'malformed-capability-tool',
+					description: 'Requests elicitation',
+				},
+				async () => {
+					try {
+						await server.elicitation('Provide input', mock_schema);
+					} catch (error) {
+						caught_error = error;
+					}
+					return { content: [] };
+				},
+			);
+
+			await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 21,
+					method: 'tools/call',
+					params: { name: 'malformed-capability-tool' },
+				}),
+				{
+					sessionId: 'session-malformed-capability',
+					sessionInfo: {
+						clientCapabilities: /** @type {any} */ ({
+							elicitation: null,
+						}),
+						clientInfo: { name: 'test', version: '1.0.0' },
+					},
+				},
+			);
+
+			expect(caught_error).toBeInstanceOf(McpError);
+			expect(/** @type {McpError} */ (caught_error).code).toBe(-32601);
 		});
 
 		it('should not send elicitation when client lacks capability', async () => {

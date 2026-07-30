@@ -1875,15 +1875,18 @@ export class McpServer {
 	 */
 	#assert_client_request_allowed(capability, description, elicitation_mode) {
 		const declared_capability = this.#client_capabilities?.[capability];
+		const capability_is_object =
+			typeof declared_capability === 'object' &&
+			declared_capability !== null &&
+			!Array.isArray(declared_capability);
 		const supports_elicitation_mode =
-			capability !== 'elicitation' ||
-			(elicitation_mode === 'url'
-				? declared_capability?.url !== undefined
-				: declared_capability !== undefined &&
-					(Object.keys(declared_capability).length === 0 ||
+			capability_is_object &&
+			(capability !== 'elicitation' ||
+				(elicitation_mode === 'url'
+					? declared_capability.url !== undefined
+					: Object.keys(declared_capability).length === 0 ||
 						declared_capability.form !== undefined));
-		const supported =
-			declared_capability !== undefined && supports_elicitation_mode;
+		const supported = supports_elicitation_mode;
 		if (!supported) {
 			if (this.#is_stateless) {
 				throw missing_required_client_capability_error({
@@ -1984,6 +1987,19 @@ export class McpServer {
 	}
 
 	/**
+	 * Let a handler recover from an invalid client answer by asking again with
+	 * the same key instead of consuming the same invalid value repeatedly.
+	 * @param {MrtrState} mrtr
+	 * @param {string} key
+	 */
+	#release_input_response(mrtr, key) {
+		mrtr.used_keys.delete(key);
+		if (mrtr.input_responses !== undefined) {
+			delete mrtr.input_responses[key];
+		}
+	}
+
+	/**
 	 * Save data that the handler will need when the client retries this
 	 * request. tmcp turns it into text, sends it to the client, and restores it
 	 * as `server.ctx.requestState` on the retry.
@@ -2043,7 +2059,7 @@ export class McpServer {
 				`Invalid elicitation schema: form elicitation requires a flat object containing only supported primitive fields (${JSON.stringify(parsed.issues)})`,
 			);
 		}
-		return request;
+		return parsed.output;
 	}
 
 	/**
@@ -2054,7 +2070,7 @@ export class McpServer {
 	 * @param {string} message
 	 * @param {string} url
 	 * @param {{ key?: string }} [options] `key` names this question so tmcp can match its answer on a retry.
-	 * @returns {Promise<ElicitResult>}
+	 * @returns {Promise<Omit<ElicitResult, 'content'>>}
 	 */
 	/**
 	 * Emit an elicitation request to the client. Elicitations are used to ask the user for input in a structured way, the client will show a UI to the user to fill the input.
@@ -2081,7 +2097,7 @@ export class McpServer {
 	 * @param {string} message
 	 * @param {TSchema | string} schema_or_url
 	 * @param {{ key?: string }} [options]
-	 * @returns {Promise<ElicitResult | (ElicitResult & { content?: StandardSchemaV1.InferOutput<TSchema> })>}
+	 * @returns {Promise<Omit<ElicitResult, 'content'> | (ElicitResult & { content?: StandardSchemaV1.InferOutput<TSchema> })>}
 	 */
 	async elicitation(message, schema_or_url, options = {}) {
 		const mode = typeof schema_or_url === 'string' ? 'url' : 'form';
@@ -2099,31 +2115,49 @@ export class McpServer {
 				mrtr.input_responses !== undefined &&
 				Object.hasOwn(mrtr.input_responses, key);
 			if (has_response) {
-				const provided = mrtr.input_responses?.[key];
-				const parsed = v.safeParse(ElicitResultSchema, provided);
-				if (!parsed.success) {
-					throw new McpError(
-						-32602,
-						`Invalid input response for key "${key}": expected an elicitation result ({ action, content? })`,
+				try {
+					const provided = mrtr.input_responses?.[key];
+					const parsed = v.safeParse(ElicitResultSchema, provided);
+					if (!parsed.success) {
+						throw new McpError(
+							-32602,
+							`Invalid input response for key "${key}": expected an elicitation result ({ action, content? })`,
+						);
+					}
+					const result =
+						typeof schema_or_url !== 'string'
+							? await this.#validate_elicit_result(
+									parsed.output,
+									schema_or_url,
+									-32602,
+								)
+							: this.#without_elicit_content(parsed.output);
+					mrtr.consumed_responses.set(
+						key,
+						typeof schema_or_url === 'string'
+							? result
+							: parsed.output,
 					);
+					return result;
+				} catch (error) {
+					this.#release_input_response(mrtr, key);
+					throw error;
 				}
-				const result =
-					typeof schema_or_url !== 'string'
-						? await this.#validate_elicit_result(
-								parsed.output,
-								schema_or_url,
-								-32602,
-							)
-						: parsed.output;
-				mrtr.consumed_responses.set(key, parsed.output);
-				return result;
 			}
 			const pending_request = this.#create_elicitation_request(
 				message,
 				schema_or_url,
 			);
 			mrtr.pending.set(key, pending_request);
-			await pending_request;
+			try {
+				await pending_request;
+			} catch (error) {
+				if (mrtr.pending.get(key) === pending_request) {
+					mrtr.pending.delete(key);
+					mrtr.used_keys.delete(key);
+				}
+				throw error;
+			}
 			throw mrtr.signal;
 		}
 
@@ -2140,7 +2174,19 @@ export class McpServer {
 		const elicit_result = v.parse(ElicitResultSchema, result);
 		return typeof schema_or_url !== 'string'
 			? this.#validate_elicit_result(elicit_result, schema_or_url)
-			: elicit_result;
+			: this.#without_elicit_content(elicit_result);
+	}
+
+	/**
+	 * URL elicitation is out of band, so form content must never reach the
+	 * handler or be carried into a later stateless retry.
+	 * @param {ElicitResult} elicit_result
+	 * @returns {Omit<ElicitResult, 'content'>}
+	 */
+	#without_elicit_content(elicit_result) {
+		const result = { ...elicit_result };
+		delete result.content;
+		return result;
 	}
 
 	/**
@@ -2201,16 +2247,24 @@ export class McpServer {
 				mrtr.input_responses !== undefined &&
 				Object.hasOwn(mrtr.input_responses, key);
 			if (has_response) {
-				const provided = mrtr.input_responses?.[key];
-				const parsed = v.safeParse(CreateMessageResultSchema, provided);
-				if (!parsed.success) {
-					throw new McpError(
-						-32602,
-						`Invalid input response for key "${key}": expected a sampling result (CreateMessageResult)`,
+				try {
+					const provided = mrtr.input_responses?.[key];
+					const parsed = v.safeParse(
+						CreateMessageResultSchema,
+						provided,
 					);
+					if (!parsed.success) {
+						throw new McpError(
+							-32602,
+							`Invalid input response for key "${key}": expected a sampling result (CreateMessageResult)`,
+						);
+					}
+					mrtr.consumed_responses.set(key, parsed.output);
+					return parsed.output;
+				} catch (error) {
+					this.#release_input_response(mrtr, key);
+					throw error;
 				}
-				mrtr.consumed_responses.set(key, parsed.output);
-				return parsed.output;
 			}
 			mrtr.pending.set(
 				key,

@@ -1335,6 +1335,7 @@ export const StringSchemaSchema = v.object({
 	minLength: v.optional(v.number()),
 	maxLength: v.optional(v.number()),
 	format: v.optional(v.picklist(['email', 'uri', 'date', 'date-time'])),
+	default: v.optional(v.string()),
 });
 
 /**
@@ -1346,27 +1347,86 @@ export const NumberSchemaSchema = v.object({
 	description: v.optional(v.string()),
 	minimum: v.optional(v.number()),
 	maximum: v.optional(v.number()),
+	default: v.optional(v.number()),
 });
 
 /**
- * Primitive schema definition for enum fields.
+ * An enum option with a wire value and a display title.
  */
-export const EnumSchemaSchema = v.object({
+const TitledEnumOptionSchema = v.object({
+	const: v.string(),
+	title: v.string(),
+});
+
+const UntitledSingleSelectEnumSchema = v.object({
+	type: v.literal('string'),
+	title: v.optional(v.string()),
+	description: v.optional(v.string()),
+	enum: v.array(v.string()),
+	default: v.optional(v.string()),
+});
+
+const TitledSingleSelectEnumSchema = v.object({
+	type: v.literal('string'),
+	title: v.optional(v.string()),
+	description: v.optional(v.string()),
+	oneOf: v.array(TitledEnumOptionSchema),
+	default: v.optional(v.string()),
+});
+
+const UntitledMultiSelectEnumSchema = v.object({
+	type: v.literal('array'),
+	title: v.optional(v.string()),
+	description: v.optional(v.string()),
+	minItems: v.optional(v.number()),
+	maxItems: v.optional(v.number()),
+	items: v.object({
+		type: v.literal('string'),
+		enum: v.array(v.string()),
+	}),
+	default: v.optional(v.array(v.string())),
+});
+
+const TitledMultiSelectEnumSchema = v.object({
+	type: v.literal('array'),
+	title: v.optional(v.string()),
+	description: v.optional(v.string()),
+	minItems: v.optional(v.number()),
+	maxItems: v.optional(v.number()),
+	items: v.object({
+		anyOf: v.array(TitledEnumOptionSchema),
+	}),
+	default: v.optional(v.array(v.string())),
+});
+
+const LegacyTitledEnumSchema = v.object({
 	type: v.literal('string'),
 	title: v.optional(v.string()),
 	description: v.optional(v.string()),
 	enum: v.array(v.string()),
 	enumNames: v.optional(v.array(v.string())),
+	default: v.optional(v.string()),
 });
+
+/**
+ * Schema definition for single- and multi-select enum fields.
+ */
+export const EnumSchemaSchema = v.union([
+	LegacyTitledEnumSchema,
+	UntitledSingleSelectEnumSchema,
+	TitledSingleSelectEnumSchema,
+	UntitledMultiSelectEnumSchema,
+	TitledMultiSelectEnumSchema,
+]);
 
 /**
  * Union of all primitive schema definitions.
  */
 export const PrimitiveSchemaDefinitionSchema = v.union([
 	BooleanSchemaSchema,
-	StringSchemaSchema,
 	NumberSchemaSchema,
 	EnumSchemaSchema,
+	StringSchemaSchema,
 ]);
 
 /**

@@ -374,7 +374,7 @@ declare module 'tmcp' {
 						key?: string;
 				  }
 				| undefined,
-		): Promise<ElicitResult>;
+		): Promise<Omit<ElicitResult, 'content'>>;
 		/**
 		 * Emit an elicitation request to the client. Elicitations are used to ask the user for input in a structured way, the client will show a UI to the user to fill the input.
 		 * The schema should be a valid Standard Schema V1 schema and should be an Object with the properties you need.
