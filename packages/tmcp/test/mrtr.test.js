@@ -187,6 +187,39 @@ describe('MRTR (multi round-trip requests)', () => {
 			expect(response.result.requestState).toBeUndefined();
 		});
 
+		it('emits a URL elicitation request when the client supports URL mode', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'authorize', description: 'x', replayable: true },
+				async () => {
+					await server.elicitation(
+						'Authorize access',
+						'https://example.com/authorize',
+						{ key: 'authorization' },
+					);
+					return { content: [] };
+				},
+			);
+
+			const response = await server.receive(
+				stateless_request(
+					'tools/call',
+					{ name: 'authorize' },
+					{ [CC]: { elicitation: { url: {} } } },
+				),
+			);
+
+			expect(response.error).toBeUndefined();
+			expect(response.result.inputRequests.authorization).toEqual({
+				method: 'elicitation/create',
+				params: {
+					mode: 'url',
+					message: 'Authorize access',
+					url: 'https://example.com/authorize',
+				},
+			});
+		});
+
 		it('emits an InputRequiredResult from a prompt calling message() (sampling)', async () => {
 			const server = create_server();
 			server.prompt(
@@ -341,6 +374,36 @@ describe('MRTR (multi round-trip requests)', () => {
 			expect(executions).toBe(2);
 		});
 
+		it('resolves URL elicitation without form content', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'authorize', description: 'x', replayable: true },
+				async () => {
+					const answer = await server.elicitation(
+						'Authorize access',
+						'https://example.com/authorize',
+					);
+					return {
+						content: [{ type: 'text', text: answer.action }],
+					};
+				},
+			);
+
+			const response = await server.receive(
+				stateless_request(
+					'tools/call',
+					{
+						name: 'authorize',
+						inputResponses: { 1: { action: 'accept' } },
+					},
+					{ [CC]: { elicitation: { url: {} } } },
+				),
+			);
+
+			expect(response.error).toBeUndefined();
+			expect(response.result.content[0].text).toBe('accept');
+		});
+
 		it('handlers never see inputResponses/requestState in their params', async () => {
 			const server = create_server();
 			/** @type {any} */
@@ -465,6 +528,55 @@ describe('MRTR (multi round-trip requests)', () => {
 			expect(response.error.data).toEqual({
 				requiredCapabilities: { elicitation: { form: {} } },
 			});
+		});
+
+		it('rejects URL elicitation when the client only supports form mode', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'authorize', description: 'x', replayable: true },
+				async () => {
+					await server.elicitation(
+						'Authorize access',
+						'https://example.com/authorize',
+					);
+					return { content: [] };
+				},
+			);
+			const response = await server.receive(
+				stateless_request(
+					'tools/call',
+					{ name: 'authorize' },
+					{ [CC]: { elicitation: { form: {} } } },
+				),
+			);
+
+			expect(response.error.code).toBe(
+				MISSING_REQUIRED_CLIENT_CAPABILITY,
+			);
+			expect(response.error.data).toEqual({
+				requiredCapabilities: { elicitation: { url: {} } },
+			});
+		});
+
+		it('rejects an invalid URL elicitation request', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'authorize', description: 'x', replayable: true },
+				async () => {
+					await server.elicitation('Authorize access', 'not-a-url');
+					return { content: [] };
+				},
+			);
+			const response = await server.receive(
+				stateless_request(
+					'tools/call',
+					{ name: 'authorize' },
+					{ [CC]: { elicitation: { url: {} } } },
+				),
+			);
+
+			expect(response.error.code).toBe(-32602);
+			expect(response.error.message).toContain('not a valid URL');
 		});
 
 		it('rejects adapter output that is not a valid form elicitation schema', async () => {

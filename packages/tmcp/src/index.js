@@ -1871,20 +1871,26 @@ export class McpServer {
 	 * method is allowed to ask for it.
 	 * @param {'elicitation' | 'sampling'} capability
 	 * @param {string} description Human-readable description for the session-negotiated error message
+	 * @param {'form' | 'url'} [elicitation_mode]
 	 */
-	#assert_client_request_allowed(capability, description) {
+	#assert_client_request_allowed(capability, description, elicitation_mode) {
 		const declared_capability = this.#client_capabilities?.[capability];
+		const supports_elicitation_mode =
+			capability !== 'elicitation' ||
+			(elicitation_mode === 'url'
+				? declared_capability?.url !== undefined
+				: declared_capability !== undefined &&
+					(Object.keys(declared_capability).length === 0 ||
+						declared_capability.form !== undefined));
 		const supported =
-			declared_capability !== undefined &&
-			(capability !== 'elicitation' ||
-				!this.#is_stateless ||
-				Object.keys(declared_capability).length === 0 ||
-				declared_capability.form !== undefined);
+			declared_capability !== undefined && supports_elicitation_mode;
 		if (!supported) {
 			if (this.#is_stateless) {
 				throw missing_required_client_capability_error({
 					[capability]:
-						capability === 'elicitation' ? { form: {} } : {},
+						capability === 'elicitation'
+							? { [elicitation_mode ?? 'form']: {} }
+							: {},
 				});
 			}
 			throw new McpError(-32601, `Client doesn't support ${description}`);
@@ -1998,22 +2004,40 @@ export class McpServer {
 	}
 
 	/**
-	 * Build and validate the form request sent to the client.
+	 * Build and validate an elicitation request sent to the client.
 	 * @template {StandardSchema extends undefined ? never : StandardSchema} TSchema
 	 * @param {string} message
-	 * @param {TSchema} schema
+	 * @param {TSchema | string} schema_or_url
 	 */
-	async #create_elicitation_request(message, schema) {
-		const request = {
-			method: /** @type {const} */ ('elicitation/create'),
-			params: {
-				message,
-				requestedSchema:
-					await this.#options.adapter?.toJsonSchema(schema),
-			},
-		};
+	async #create_elicitation_request(message, schema_or_url) {
+		const request =
+			typeof schema_or_url === 'string'
+				? {
+						method: /** @type {const} */ ('elicitation/create'),
+						params: {
+							mode: /** @type {const} */ ('url'),
+							message,
+							url: schema_or_url,
+						},
+					}
+				: {
+						method: /** @type {const} */ ('elicitation/create'),
+						params: {
+							message,
+							requestedSchema:
+								await this.#options.adapter?.toJsonSchema(
+									schema_or_url,
+								),
+						},
+					};
 		const parsed = v.safeParse(ElicitRequestSchema, request);
 		if (!parsed.success) {
+			if (typeof schema_or_url === 'string') {
+				throw new McpError(
+					-32602,
+					`URL ${schema_or_url} is not a valid URL`,
+				);
+			}
 			throw new McpError(
 				-32603,
 				`Invalid elicitation schema: form elicitation requires a flat object containing only supported primitive fields (${JSON.stringify(parsed.issues)})`,
@@ -2022,6 +2046,16 @@ export class McpServer {
 		return request;
 	}
 
+	/**
+	 * Ask the user to complete an interaction at a URL. The client will open
+	 * the URL out of band and return the user's action without form content.
+	 *
+	 * @overload
+	 * @param {string} message
+	 * @param {string} url
+	 * @param {{ key?: string }} [options] `key` names this question so tmcp can match its answer on a retry.
+	 * @returns {Promise<ElicitResult>}
+	 */
 	/**
 	 * Emit an elicitation request to the client. Elicitations are used to ask the user for input in a structured way, the client will show a UI to the user to fill the input.
 	 * The schema should be a valid Standard Schema V1 schema and should be an Object with the properties you need.
@@ -2036,13 +2070,26 @@ export class McpServer {
 	 * handles errors, use `isInputRequired()` and rethrow tmcp's private error.
 	 *
 	 * @template {StandardSchema extends undefined ? never : StandardSchema} TSchema
+	 * @overload
 	 * @param {string} message
 	 * @param {TSchema} schema
 	 * @param {{ key?: string }} [options] `key` names this question so tmcp can match its answer on a retry. By default tmcp uses `"1"`, `"2"`, and so on. Set a name when the handler may ask different questions on different runs. When mixing named and numbered questions, use non-numeric names.
 	 * @returns {Promise<ElicitResult & { content?: StandardSchemaV1.InferOutput<TSchema> }>}
 	 */
-	async elicitation(message, schema, options = {}) {
-		this.#assert_client_request_allowed('elicitation', 'elicitation');
+	/**
+	 * @template {StandardSchema extends undefined ? never : StandardSchema} TSchema
+	 * @param {string} message
+	 * @param {TSchema | string} schema_or_url
+	 * @param {{ key?: string }} [options]
+	 * @returns {Promise<ElicitResult | (ElicitResult & { content?: StandardSchemaV1.InferOutput<TSchema> })>}
+	 */
+	async elicitation(message, schema_or_url, options = {}) {
+		const mode = typeof schema_or_url === 'string' ? 'url' : 'form';
+		this.#assert_client_request_allowed(
+			'elicitation',
+			`${mode} mode elicitation`,
+			mode,
+		);
 
 		const mrtr = this.#mrtr;
 		if (mrtr !== undefined) {
@@ -2060,17 +2107,20 @@ export class McpServer {
 						`Invalid input response for key "${key}": expected an elicitation result ({ action, content? })`,
 					);
 				}
-				const result = await this.#validate_elicit_result(
-					parsed.output,
-					schema,
-					-32602,
-				);
+				const result =
+					typeof schema_or_url !== 'string'
+						? await this.#validate_elicit_result(
+								parsed.output,
+								schema_or_url,
+								-32602,
+							)
+						: parsed.output;
 				mrtr.consumed_responses.set(key, parsed.output);
 				return result;
 			}
 			const pending_request = this.#create_elicitation_request(
 				message,
-				schema,
+				schema_or_url,
 			);
 			mrtr.pending.set(key, pending_request);
 			await pending_request;
@@ -2078,14 +2128,19 @@ export class McpServer {
 		}
 
 		this.#lazyily_create_client();
-		const request = await this.#create_elicitation_request(message, schema);
+		const request = await this.#create_elicitation_request(
+			message,
+			schema_or_url,
+		);
 		const result = await this.#client?.request(
 			request.method,
 			request.params,
 			'standalone',
 		);
 		const elicit_result = v.parse(ElicitResultSchema, result);
-		return this.#validate_elicit_result(elicit_result, schema);
+		return typeof schema_or_url !== 'string'
+			? this.#validate_elicit_result(elicit_result, schema_or_url)
+			: elicit_result;
 	}
 
 	/**

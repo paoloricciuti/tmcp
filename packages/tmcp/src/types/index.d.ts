@@ -362,6 +362,20 @@ declare module 'tmcp' {
 		 * */
 		setRequestState(state: unknown): void;
 		/**
+		 * Ask the user to complete an interaction at a URL. The client will open
+		 * the URL out of band and return the user's action without form content.
+		 *
+		 * */
+		elicitation(
+			message: string,
+			url: string,
+			options?:
+				| {
+						key?: string;
+				  }
+				| undefined,
+		): Promise<ElicitResult>;
+		/**
 		 * Emit an elicitation request to the client. Elicitations are used to ask the user for input in a structured way, the client will show a UI to the user to fill the input.
 		 * The schema should be a valid Standard Schema V1 schema and should be an Object with the properties you need.
 		 * The client will return the validated input as a JSON object that matches the schema.
@@ -374,7 +388,6 @@ declare module 'tmcp' {
 		 * `replayable: true`. Always await this call. If a surrounding `catch`
 		 * handles errors, use `isInputRequired()` and rethrow tmcp's private error.
 		 *
-		 * @param options `key` names this question so tmcp can match its answer on a retry. By default tmcp uses `"1"`, `"2"`, and so on. Set a name when the handler may ask different questions on different runs. When mixing named and numbered questions, use non-numeric names.
 		 * */
 		elicitation<
 			TSchema extends StandardSchema extends undefined
@@ -383,9 +396,11 @@ declare module 'tmcp' {
 		>(
 			message: string,
 			schema: TSchema,
-			options?: {
-				key?: string;
-			},
+			options?:
+				| {
+						key?: string;
+				  }
+				| undefined,
 		): Promise<
 			ElicitResult & {
 				content?: StandardSchemaV1.InferOutput<TSchema>;

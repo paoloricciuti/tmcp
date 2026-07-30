@@ -1373,26 +1373,40 @@ export const PrimitiveSchemaDefinitionSchema = v.union([
  * A request from the server to elicit user input via the client.
  * The client should present the message and form fields to the user.
  */
+const ElicitRequestFormParamsSchema = v.object({
+	...BaseRequestParamsSchema.entries,
+	mode: v.optional(v.literal('form')),
+
+	/**
+	 * The message to present to the user.
+	 */
+	message: v.string(),
+
+	/**
+	 * The schema for the requested user input.
+	 */
+	requestedSchema: v.object({
+		$schema: v.optional(v.string()),
+		type: v.literal('object'),
+		properties: v.record(v.string(), PrimitiveSchemaDefinitionSchema),
+		required: v.optional(v.array(v.string())),
+	}),
+});
+
+const ElicitRequestURLParamsSchema = v.object({
+	...BaseRequestParamsSchema.entries,
+	mode: v.literal('url'),
+	message: v.string(),
+	url: v.pipe(v.string(), v.url()),
+});
+
 export const ElicitRequestSchema = v.object({
 	...RequestSchema.entries,
 	method: v.literal('elicitation/create'),
-	params: v.object({
-		...BaseRequestParamsSchema.entries,
-
-		/**
-		 * The message to present to the user.
-		 */
-		message: v.string(),
-
-		/**
-		 * The schema for the requested user input.
-		 */
-		requestedSchema: v.object({
-			type: v.literal('object'),
-			properties: v.record(v.string(), PrimitiveSchemaDefinitionSchema),
-			required: v.optional(v.array(v.string())),
-		}),
-	}),
+	params: v.union([
+		ElicitRequestFormParamsSchema,
+		ElicitRequestURLParamsSchema,
+	]),
 });
 
 /**

@@ -3838,6 +3838,68 @@ describe('McpServer', () => {
 			send_off();
 		});
 
+		it('should send URL elicitation and return an action without form content', async () => {
+			const send_listener = vi.fn();
+			const send_off = server.on('send', send_listener);
+			let elicitation_result;
+
+			server.tool(
+				{
+					name: 'url-elicitation-tool',
+					description: 'A tool that requests URL elicitation',
+				},
+				async () => {
+					elicitation_result = await server.elicitation(
+						'Authorize access',
+						'https://example.com/authorize',
+					);
+					return { content: [] };
+				},
+			);
+
+			const session_info = {
+				clientCapabilities: { elicitation: { url: {} } },
+				clientInfo: { name: 'test', version: '1.0.0' },
+			};
+			const tool_promise = server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 20,
+					method: 'tools/call',
+					params: { name: 'url-elicitation-tool' },
+				}),
+				{ sessionId: 'session-url', sessionInfo: session_info },
+			);
+
+			await vi.waitFor(() => expect(send_listener).toHaveBeenCalled());
+			expect(send_listener).toHaveBeenCalledWith({
+				request: {
+					id: expect.any(Number),
+					jsonrpc: '2.0',
+					method: 'elicitation/create',
+					params: {
+						mode: 'url',
+						message: 'Authorize access',
+						url: 'https://example.com/authorize',
+					},
+				},
+			});
+
+			const request_id = send_listener.mock.calls[0][0].request.id;
+			await server.receive(
+				{
+					jsonrpc: '2.0',
+					id: request_id,
+					result: { action: 'accept' },
+				},
+				{ sessionId: 'session-url', sessionInfo: session_info },
+			);
+			await tool_promise;
+
+			expect(elicitation_result).toEqual({ action: 'accept' });
+			send_off();
+		});
+
 		it('should not send elicitation when client lacks capability', async () => {
 			const send_listener = vi.fn();
 			const send_off = server.on('send', send_listener);
