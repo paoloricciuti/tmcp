@@ -140,9 +140,7 @@ describe('stateless protocol (2026-07-28)', () => {
 					stateless_request('tools/list', {}, { [CC]: invalid }),
 				);
 				expect(response.error.code).toBe(-32602);
-				expect(response.error.message).toContain(
-					'clientCapabilities',
-				);
+				expect(response.error.message).toContain('clientCapabilities');
 			}
 		});
 
@@ -507,9 +505,7 @@ describe('stateless protocol (2026-07-28)', () => {
 		});
 
 		it('McpError instances pass instanceof checks', () => {
-			expect(new McpError(-32602, 'nope') instanceof McpError).toBe(
-				true,
-			);
+			expect(new McpError(-32602, 'nope') instanceof McpError).toBe(true);
 		});
 
 		it('returns -32602 for a malformed protocolVersion format on initialize', async () => {

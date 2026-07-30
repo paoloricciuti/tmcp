@@ -5,10 +5,15 @@
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType } from "./validation/index.js";
- * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents, AllSame, TemplateOptions } from "./internal/internal.js";
+ * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents, AllSame, TemplateOptions, MrtrState } from "./internal/internal.js";
  * @import { CreatedTool, ToolOptions, CreatedPrompt, PromptOptions, CreatedResource, CreatedTemplate, ResourceOptions } from "./internal/internal.js";
  */
-import { JSONRPCClient, JSONRPCServer } from 'json-rpc-2.0';
+import {
+	createJSONRPCErrorResponse,
+	JSONRPCClient,
+	JSONRPCErrorException,
+	JSONRPCServer,
+} from 'json-rpc-2.0';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { UriTemplateMatcher } from 'uri-template-matcher';
 import * as v from 'valibot';
@@ -29,6 +34,7 @@ import {
 	ReadResourceResultSchema,
 	ElicitResultSchema,
 	JSONRPCErrorSchema,
+	InputResponsesSchema,
 	missing_required_client_capability_error,
 	unsupported_protocol_version_error,
 } from './validation/index.js';
@@ -41,6 +47,7 @@ import { should_version_negotiation_fail } from './validation/version.js';
 import {
 	is_method_allowed,
 	CACHEABLE_METHODS,
+	MRTR_METHODS,
 } from './validation/method-policy.js';
 import { event } from './internal/utils.js';
 
@@ -50,6 +57,58 @@ export {
 	MISSING_REQUIRED_CLIENT_CAPABILITY,
 	UNSUPPORTED_PROTOCOL_VERSION,
 } from './validation/index.js';
+
+/**
+ * Maximum length of the `requestState` text accepted from or returned to a
+ * client. This prevents a client from making the server process an
+ * excessively large value.
+ */
+const MAX_ENCODED_REQUEST_STATE_LENGTH = 262144;
+
+const RequestStateEnvelopeSchema = v.object({
+	version: v.literal(1),
+	inputResponses: InputResponsesSchema,
+	state: v.optional(v.unknown()),
+});
+
+/**
+ * Private error used to stop a handler when it needs input from the client.
+ * The server catches it and returns an `InputRequiredResult` instead of an
+ * error response. It is not exported, so application code cannot create a
+ * fake one.
+ */
+class InputRequiredSignal extends Error {
+	constructor() {
+		super(
+			'Input required: this request must end with an InputRequiredResult. If you see this message in a response, a catch block in a handler swallowed the internal input-required signal or the input call was not awaited — always await input calls and rethrow the signal (see isInputRequired()).',
+		);
+		this.name = 'InputRequiredSignal';
+	}
+}
+
+/**
+ * Check whether an error means that tmcp is waiting for client input.
+ *
+ * When there is no open connection to the client, `elicitation()` and
+ * `message()` ask the client to retry the original request with the answer.
+ * They stop the current handler by throwing a private error. A broad `catch`
+ * in the handler must rethrow that error, or tmcp cannot ask for the retry.
+ * Use this helper to distinguish it from errors your handler should process:
+ *
+ * ```js
+ * try {
+ *   const answer = await server.elicitation(msg, schema);
+ * } catch (error) {
+ *   if (isInputRequired(error)) throw error;
+ *   // handle the real error
+ * }
+ * ```
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+export function isInputRequired(error) {
+	return error instanceof InputRequiredSignal;
+}
 
 /**
  * Information about a validated access token, provided to request handlers.
@@ -70,6 +129,7 @@ export {
  * @property {string} [sessionId]
  * @property {{ clientCapabilities?: ClientCapabilitiesType, clientInfo?: ClientInfoType, logLevel?: LoggingLevel }} [sessionInfo]
  * @property {string} [protocolVersion] The exact per-request protocol version when the current request carries per-request protocol metadata; `undefined` for session-negotiated requests.
+ * @property {unknown} [requestState] Data saved by the handler before asking the client for input, then returned by the client on the retry. It is `undefined` when no data was saved or when the request uses an open session. The default JSON converter lets the client read and change this value. Do not store secrets in it or use it to make authorization decisions. Configure `requestStateCodec` if the server must detect changes.
  * @property {AuthInfo} [auth]
  * @property {TCustom} [custom]
  */
@@ -195,7 +255,13 @@ async function safe_enabled(enabled) {
  * @template {Record<string, unknown> | undefined} [CustomContext=undefined]
  */
 export class McpServer {
-	#server = new JSONRPCServer();
+	#server = new JSONRPCServer({
+		errorListener: (...args) => {
+			const mrtr = this.#ctx_storage.getStore()?.mrtr;
+			if (mrtr !== undefined && args[1] === mrtr.signal) return;
+			console.warn(...args);
+		},
+	});
 	/**
 	 * @type {JSONRPCClient<"broadcast" | "standalone"> | undefined}
 	 */
@@ -234,7 +300,7 @@ export class McpServer {
 	#server_info;
 
 	/**
-	 * @type {AsyncLocalStorage<Context<CustomContext> & { progress_token?: string, stateless?: boolean }>}
+	 * @type {AsyncLocalStorage<Context<CustomContext> & { progress_token?: string, stateless?: boolean, mrtr?: MrtrState }>}
 	 */
 	#ctx_storage = new AsyncLocalStorage();
 
@@ -245,6 +311,34 @@ export class McpServer {
 	constructor(server_info, options) {
 		this.#options = options;
 		this.#server_info = server_info;
+		// Remember when a handler stopped because it needs client input. After
+		// the JSON-RPC library finishes, `receive()` replaces that temporary
+		// error with an `InputRequiredResult`. All other errors keep their
+		// normal code and message.
+		this.#server.mapErrorToJSONRPCErrorResponse = (id, error) => {
+			const mrtr = this.#ctx_storage.getStore()?.mrtr;
+			if (
+				mrtr !== undefined &&
+				error === mrtr.signal &&
+				mrtr.pending.size > 0
+			) {
+				mrtr.signal_at_boundary = true;
+			}
+			if (error instanceof JSONRPCErrorException) {
+				return createJSONRPCErrorResponse(
+					id,
+					error.code,
+					error.message,
+					error.data,
+				);
+			}
+			return createJSONRPCErrorResponse(
+				id,
+				-32603,
+				/** @type {Error | undefined} */ (error)?.message ??
+					'An unexpected error occurred',
+			);
+		};
 		this.#server.addMethod('initialize', (initialize_request) => {
 			try {
 				// Validate basic request format
@@ -361,8 +455,11 @@ export class McpServer {
 	 */
 	get ctx() {
 		// eslint-disable-next-line no-unused-vars
-		const { progress_token, stateless, ...rest } =
+		const { progress_token, stateless, mrtr, ...rest } =
 			this.#ctx_storage.getStore() ?? {};
+		if (mrtr !== undefined) {
+			rest.requestState = mrtr.incoming_state;
+		}
 		return rest;
 	}
 
@@ -519,6 +616,7 @@ export class McpServer {
 
 				// Validate input arguments if schema is provided
 				let validated_args = args;
+				this.#mark_mrtr_registration('tool', name, tool.replayable);
 				if (tool.schema) {
 					let validation_result =
 						tool.schema['~standard'].validate(args);
@@ -658,6 +756,7 @@ export class McpServer {
 				if (!prompt) {
 					throw new McpError(-32602, `Prompt ${name} not found`);
 				}
+				this.#mark_mrtr_registration('prompt', name, prompt.replayable);
 				if (!prompt.schema) {
 					return v.parse(
 						GetPromptResultSchema,
@@ -789,6 +888,11 @@ export class McpServer {
 					throw new McpError(-32602, `Resource ${uri} not found`);
 				}
 			}
+			this.#mark_mrtr_registration(
+				resource.template ? 'template' : 'resource',
+				resource.name,
+				resource.replayable,
+			);
 			if (resource.template) {
 				if (!params)
 					throw new McpError(
@@ -820,6 +924,12 @@ export class McpServer {
 	 * Request roots list from client
 	 */
 	async #refresh_roots() {
+		if (this.#is_stateless) {
+			throw new McpError(
+				-32603,
+				'Client roots are not available during per-request (stateless) execution: roots are deprecated in protocol version 2026-07-28 and tmcp does not emit roots/list as a multi round-trip input request',
+			);
+		}
 		if (!this.#client_capabilities?.roots) return;
 
 		this.#lazyily_create_client();
@@ -1279,12 +1389,16 @@ export class McpServer {
 			// exclusively by the classification below: transport-provided
 			// values must never make a session-negotiated request look like
 			// a per-request one
-			// eslint-disable-next-line no-unused-vars
-			const { protocolVersion, stateless: _, ...transport_ctx } =
-				/** @type {Context<CustomContext> & { stateless?: boolean }} */ (
-					ctx ?? {}
-				);
-			/** @type {Context<CustomContext> & { progress_token?: string, stateless?: boolean }} */
+			const {
+				// eslint-disable-next-line no-unused-vars
+				protocolVersion,
+				// eslint-disable-next-line no-unused-vars
+				stateless: _,
+				...transport_ctx
+			} = /** @type {Context<CustomContext> & { stateless?: boolean }} */ (
+				ctx ?? {}
+			);
+			/** @type {Context<CustomContext> & { progress_token?: string, stateless?: boolean, mrtr?: MrtrState }} */
 			let store = { ...transport_ctx, progress_token };
 			// classify the request: the presence of ANY reserved per-request
 			// _meta key enters the per-request path — incomplete or invalid
@@ -1340,7 +1454,10 @@ export class McpServer {
 				const parsed_client_info =
 					request_client_info === undefined
 						? undefined
-						: v.safeParse(ImplementationSchema, request_client_info);
+						: v.safeParse(
+								ImplementationSchema,
+								request_client_info,
+							);
 				if (parsed_client_info && !parsed_client_info.success) {
 					return this.#error_response(
 						id,
@@ -1398,8 +1515,244 @@ export class McpServer {
 				);
 			}
 
+			// Read retry answers and saved state before running the handler, then
+			// remove them from its normal arguments. Only tool calls, prompt reads,
+			// and resource reads can receive these fields.
+			/** @type {string | undefined} */
+			let encoded_incoming_state;
+			const params = request_message.params;
+			const raw_input_responses = params?.inputResponses;
+			const raw_request_state = params?.requestState;
+			if (
+				!stateless &&
+				(raw_input_responses !== undefined ||
+					raw_request_state !== undefined)
+			) {
+				return this.#error_response(
+					id,
+					new McpError(
+						-32602,
+						'"inputResponses" and "requestState" params are only supported by per-request (stateless) multi round-trip requests',
+					),
+				);
+			}
+			if (stateless) {
+				/** @type {Record<string, unknown> | undefined} */
+				let input_responses;
+				if (
+					raw_input_responses !== undefined ||
+					raw_request_state !== undefined
+				) {
+					if (!MRTR_METHODS.has(request_message.method)) {
+						return this.#error_response(
+							id,
+							new McpError(
+								-32602,
+								`"inputResponses" and "requestState" params are only accepted on multi round-trip methods (${[...MRTR_METHODS].join(', ')})`,
+							),
+						);
+					}
+					if (raw_input_responses !== undefined) {
+						const parsed = v.safeParse(
+							InputResponsesSchema,
+							raw_input_responses,
+						);
+						if (!parsed.success) {
+							return this.#error_response(
+								id,
+								new McpError(
+									-32602,
+									'Invalid "inputResponses": expected a map of input response objects keyed by input request key',
+								),
+							);
+						}
+						input_responses = parsed.output;
+					}
+					if (raw_request_state !== undefined) {
+						if (typeof raw_request_state !== 'string') {
+							return this.#error_response(
+								id,
+								new McpError(
+									-32602,
+									'Invalid "requestState": expected the opaque string previously returned by the server',
+								),
+							);
+						}
+						if (
+							raw_request_state.length >
+							MAX_ENCODED_REQUEST_STATE_LENGTH
+						) {
+							return this.#error_response(
+								id,
+								new McpError(
+									-32602,
+									`Invalid "requestState": encoded state exceeds the maximum accepted length of ${MAX_ENCODED_REQUEST_STATE_LENGTH} characters`,
+								),
+							);
+						}
+						encoded_incoming_state = raw_request_state;
+					}
+					if (params) {
+						delete params.inputResponses;
+						delete params.requestState;
+					}
+				}
+				if (MRTR_METHODS.has(request_message.method)) {
+					store.mrtr = {
+						input_responses,
+						incoming_state: undefined,
+						ordinal: 0,
+						used_keys: new Set(),
+						pending: new Map(),
+						consumed_responses: new Map(),
+						outgoing_state: undefined,
+						registration: undefined,
+						signal: new InputRequiredSignal(),
+						signal_at_boundary: false,
+					};
+				}
+			}
+
 			return this.#ctx_storage.run(store, async () => {
+				const mrtr = store.mrtr;
+				if (
+					mrtr !== undefined &&
+					encoded_incoming_state !== undefined
+				) {
+					try {
+						const decoded_state =
+							await this.#request_state_codec.decode(
+								encoded_incoming_state,
+							);
+						const parsed_state = v.safeParse(
+							RequestStateEnvelopeSchema,
+							decoded_state,
+						);
+						if (!parsed_state.success) {
+							throw new Error('expected state returned by tmcp');
+						}
+						mrtr.incoming_state = parsed_state.output.state;
+						mrtr.outgoing_state = parsed_state.output.state;
+						mrtr.input_responses = Object.assign(
+							Object.create(null),
+							parsed_state.output.inputResponses,
+							mrtr.input_responses,
+						);
+					} catch (error) {
+						return this.#error_response(
+							id,
+							new McpError(
+								-32602,
+								`Invalid "requestState": the configured codec failed to decode it (${/** @type {Error} */ (error)?.message})`,
+							),
+						);
+					}
+				}
 				const response = await this.#server.receive(request_message);
+				if (
+					mrtr !== undefined &&
+					mrtr.pending.size > 0 &&
+					response != null
+				) {
+					if ('result' in response) {
+						// The handler returned even though it still needs client input.
+						// It probably caught tmcp's private error or forgot to await the
+						// input call.
+						return this.#error_response(
+							id,
+							new McpError(
+								-32603,
+								`Handler${mrtr.registration ? ` for ${mrtr.registration.kind} "${mrtr.registration.name}"` : ''} returned a result while input requests are pending: a catch block swallowed the internal input-required signal thrown by elicitation()/message(), or an input call was not awaited. Always await input calls. Catch blocks must rethrow the signal — use isInputRequired(error) to detect it and rethrow selectively.`,
+							),
+						);
+					}
+					if (mrtr.signal_at_boundary) {
+						/** @type {Record<string, { method: string, params: Record<string, unknown> }>} */
+						let input_requests;
+						try {
+							const entries = await Promise.all(
+								[...mrtr.pending].map(
+									async ([key, request]) =>
+										/** @type {[string, { method: string, params: Record<string, unknown> }]} */ ([
+											key,
+											await request,
+										]),
+								),
+							);
+							input_requests = Object.fromEntries(entries);
+						} catch (error) {
+							return this.#error_response(
+								id,
+								new McpError(
+									-32603,
+									`Failed to prepare an input request: ${/** @type {Error} */ (error)?.message ?? 'unknown error'}`,
+								),
+							);
+						}
+						// Tell the client what input is needed. Do not add cache fields,
+						// because this is not the final result and must not be cached.
+						/** @type {Record<string, unknown>} */
+						const result = {
+							resultType: 'input_required',
+							inputRequests: input_requests,
+							_meta: {
+								'io.modelcontextprotocol/serverInfo':
+									this.#server_info,
+							},
+						};
+						if (
+							mrtr.outgoing_state !== undefined ||
+							mrtr.consumed_responses.size > 0
+						) {
+							/** @type {string} */
+							let encoded;
+							try {
+								// Clients only have to answer the latest inputRequests. Keep
+								// answers already used by the handler so the next retry can
+								// start from the top without asking the same questions again.
+								encoded =
+									await this.#request_state_codec.encode({
+										version: 1,
+										inputResponses: Object.fromEntries(
+											mrtr.consumed_responses,
+										),
+										...(mrtr.outgoing_state !== undefined
+											? { state: mrtr.outgoing_state }
+											: {}),
+									});
+							} catch (error) {
+								return this.#error_response(
+									id,
+									new McpError(
+										-32603,
+										`Failed to encode requestState with the configured codec: ${/** @type {Error} */ (error)?.message}`,
+									),
+								);
+							}
+							if (
+								typeof encoded !== 'string' ||
+								encoded.length >
+									MAX_ENCODED_REQUEST_STATE_LENGTH
+							) {
+								return this.#error_response(
+									id,
+									new McpError(
+										-32603,
+										`The requestState codec must produce a string of at most ${MAX_ENCODED_REQUEST_STATE_LENGTH} characters`,
+									),
+								);
+							}
+							result.requestState = encoded;
+						}
+						return {
+							jsonrpc: /** @type {const} */ ('2.0'),
+							id: /** @type {string | number} */ (id),
+							result,
+						};
+					}
+					// an unrelated error won the race against (or replaced)
+					// the signal: let it through unchanged
+				}
 				if (stateless && response != null && 'result' in response) {
 					// a successful stateless response must always be a
 					// decorated object result, even when the handler
@@ -1441,7 +1794,7 @@ export class McpServer {
 		if (this.#is_stateless) {
 			throw new McpError(
 				-32603,
-				'Low-level server-to-client requests are not supported for per-request protocol requests: multi round-trip requests are not implemented yet',
+				'Low-level server-to-client requests are not supported for per-request protocol requests: there is no server-to-client JSON-RPC channel, and arbitrary requests cannot be translated into multi round-trip input requests',
 			);
 		}
 		this.#lazyily_create_client();
@@ -1476,45 +1829,142 @@ export class McpServer {
 	}
 
 	/**
-	 * Refresh roots list from client
+	 * Refresh the roots list when the server has an open client session.
+	 *
+	 * This throws when handling a standalone request because roots are no
+	 * longer supported by protocol version `2026-07-28`.
 	 */
 	async refreshRoots() {
 		await this.#refresh_roots();
 	}
 
 	/**
-	 * Whether the current request was classified as per-request (stateless).
+	 * Whether the client included its version and capabilities in this request
+	 * instead of opening a session first.
 	 */
 	get #is_stateless() {
 		return this.#ctx_storage.getStore()?.stateless === true;
 	}
 
 	/**
-	 * Guard for server-to-client input requests (`elicitation()`/`message()`).
-	 * This is the one deliberate profile-sensitive branch: for per-request
-	 * (stateless) requests, a missing capability raises `-32021` with
-	 * `data.requiredCapabilities` and a declared capability still fails
-	 * (server-to-client JSON-RPC needs a session; MRTR is not implemented yet).
-	 * For session-negotiated requests the historical `-32601` behavior is kept.
+	 * Check that the client supports the requested input and that the current
+	 * method is allowed to ask for it.
 	 * @param {'elicitation' | 'sampling'} capability
-	 * @param {string} description Human readable description for the legacy error message
+	 * @param {string} description Human-readable description for the session-negotiated error message
 	 */
 	#assert_client_request_allowed(capability, description) {
-		const stateless = this.#is_stateless;
 		if (!this.#client_capabilities?.[capability]) {
-			if (stateless) {
+			if (this.#is_stateless) {
 				throw missing_required_client_capability_error({
 					[capability]: {},
 				});
 			}
 			throw new McpError(-32601, `Client doesn't support ${description}`);
 		}
-		if (stateless) {
+		if (this.#is_stateless && this.#mrtr === undefined) {
 			throw new McpError(
 				-32603,
-				`Server-to-client requests (${description}) are not supported for per-request protocol requests: multi round-trip requests are not implemented yet`,
+				`${description} input requests are only available inside tools/call, prompts/get, and resources/read during per-request (stateless) execution`,
 			);
 		}
+	}
+
+	/**
+	 * Work data used while the current request waits for client input.
+	 * It is absent when the current method cannot ask for input.
+	 */
+	get #mrtr() {
+		return this.#ctx_storage.getStore()?.mrtr;
+	}
+
+	/**
+	 * Remember which handler is running so input calls can check its
+	 * `replayable` setting and include its name in errors.
+	 * @param {string} kind
+	 * @param {string} name
+	 * @param {boolean | undefined} replayable
+	 */
+	#mark_mrtr_registration(kind, name, replayable) {
+		const mrtr = this.#mrtr;
+		if (mrtr === undefined) return;
+		mrtr.registration = { kind, name, replayable: replayable === true };
+	}
+
+	/**
+	 * Convert tmcp's retry data to and from text. Plain JSON is used by default,
+	 * which means the client can read and change the value.
+	 */
+	get #request_state_codec() {
+		return (
+			this.#options.requestStateCodec ?? {
+				/** @type {(state: unknown)=>string} */
+				encode: (state) => JSON.stringify(state),
+				/** @type {(encoded: string)=>unknown} */
+				decode: (encoded) => JSON.parse(encoded),
+			}
+		);
+	}
+
+	/**
+	 * Check that the handler allows tmcp to run it again after client input.
+	 * @param {MrtrState} mrtr
+	 * @param {string} description
+	 */
+	#assert_replayable(mrtr, description) {
+		if (mrtr.registration?.replayable) return;
+		const registration = mrtr.registration
+			? `${mrtr.registration.kind} "${mrtr.registration.name}"`
+			: 'registration';
+		throw new McpError(
+			-32603,
+			`${registration} asked the client for ${description}, but it is not marked as replayable. The client must retry the ORIGINAL request with its answer, which starts the handler again FROM THE TOP. Work done before the input call, such as database writes, emails, or payments, may therefore happen more than once. Set \`replayable: true\` on the ${mrtr.registration?.kind ?? 'tool/prompt/resource'} definition only when that work is safe to repeat or is delayed until after all input is available. This is a tmcp safety check, not an MCP requirement.`,
+		);
+	}
+
+	/**
+	 * Use the provided input name, or assign the next number (`"1"`, `"2"`,
+	 * and so on). Numbering starts again each time the client retries.
+	 * @param {MrtrState} mrtr
+	 * @param {string | undefined} explicit_key
+	 */
+	#next_input_key(mrtr, explicit_key) {
+		if (explicit_key != null) {
+			if (mrtr.used_keys.has(explicit_key)) {
+				throw new McpError(
+					-32603,
+					`Duplicate input request key "${explicit_key}": each elicitation()/message() call within one request attempt must use a distinct key`,
+				);
+			}
+			mrtr.used_keys.add(explicit_key);
+			return explicit_key;
+		}
+		let key;
+		do {
+			mrtr.ordinal += 1;
+			key = String(mrtr.ordinal);
+		} while (mrtr.used_keys.has(key));
+		mrtr.used_keys.add(key);
+		return key;
+	}
+
+	/**
+	 * Save data that the handler will need when the client retries this
+	 * request. tmcp turns it into text, sends it to the client, and restores it
+	 * as `server.ctx.requestState` on the retry.
+	 * Passing `undefined` clears previously set state.
+	 *
+	 * This does nothing when the server has an open client session or when the
+	 * request finishes without asking for input.
+	 *
+	 * SECURITY: the default JSON converter lets the client read and change this
+	 * data. Do not put secrets in it or use it for authorization. Configure a
+	 * protected `requestStateCodec` if the server must detect changes.
+	 * @param {unknown} state
+	 */
+	setRequestState(state) {
+		const mrtr = this.#mrtr;
+		if (mrtr === undefined) return;
+		mrtr.outgoing_state = state;
 	}
 
 	/**
@@ -1524,13 +1974,55 @@ export class McpServer {
 	 *
 	 * If the client doesn't support elicitation, it will throw an error.
 	 *
+	 * When there is no open client session, tmcp returns the question to the
+	 * client and asks it to retry the original request with the answer. The
+	 * handler then starts again from the beginning, so its definition must set
+	 * `replayable: true`. Always await this call. If a surrounding `catch`
+	 * handles errors, use `isInputRequired()` and rethrow tmcp's private error.
+	 *
 	 * @template {StandardSchema extends undefined ? never : StandardSchema} TSchema
 	 * @param {string} message
 	 * @param {TSchema} schema
+	 * @param {{ key?: string }} [options] `key` names this question so tmcp can match its answer on a retry. By default tmcp uses `"1"`, `"2"`, and so on. Set a name when the handler may ask different questions on different runs. When mixing named and numbered questions, use non-numeric names.
 	 * @returns {Promise<ElicitResult & { content?: StandardSchemaV1.InferOutput<TSchema> }>}
 	 */
-	async elicitation(message, schema) {
+	async elicitation(message, schema, options = {}) {
 		this.#assert_client_request_allowed('elicitation', 'elicitation');
+
+		const mrtr = this.#mrtr;
+		if (mrtr !== undefined) {
+			this.#assert_replayable(mrtr, 'elicitation');
+			const key = this.#next_input_key(mrtr, options.key);
+			const has_response =
+				mrtr.input_responses !== undefined &&
+				Object.hasOwn(mrtr.input_responses, key);
+			if (has_response) {
+				const provided = mrtr.input_responses?.[key];
+				const parsed = v.safeParse(ElicitResultSchema, provided);
+				if (!parsed.success) {
+					throw new McpError(
+						-32602,
+						`Invalid input response for key "${key}": expected an elicitation result ({ action, content? })`,
+					);
+				}
+				const result = await this.#validate_elicit_result(
+					parsed.output,
+					schema,
+					-32602,
+				);
+				mrtr.consumed_responses.set(key, result);
+				return result;
+			}
+			const pending_request = Promise.resolve(
+				this.#options.adapter?.toJsonSchema(schema),
+			).then((requested_schema) => ({
+				method: 'elicitation/create',
+				params: { message, requestedSchema: requested_schema },
+			}));
+			mrtr.pending.set(key, pending_request);
+			await pending_request;
+			throw mrtr.signal;
+		}
 
 		this.#lazyily_create_client();
 		const result = await this.#client?.request(
@@ -1543,6 +2035,24 @@ export class McpServer {
 			'standalone',
 		);
 		const elicit_result = v.parse(ElicitResultSchema, result);
+		return this.#validate_elicit_result(elicit_result, schema);
+	}
+
+	/**
+	 * Validate the `content` of an elicit result against the schema the
+	 * input was requested with.
+	 * @template {StandardSchema extends undefined ? never : StandardSchema} TSchema
+	 * @param {ElicitResult} elicit_result
+	 * @param {TSchema} schema
+	 * @param {number} [invalid_content_code]
+	 * @returns {Promise<ElicitResult & { content?: StandardSchemaV1.InferOutput<TSchema> }>}
+	 */
+	async #validate_elicit_result(
+		elicit_result,
+		schema,
+		invalid_content_code = -32603,
+	) {
+		if (elicit_result.action !== 'accept') return elicit_result;
 		let validated_result = schema['~standard'].validate(
 			elicit_result.content,
 		);
@@ -1550,7 +2060,7 @@ export class McpServer {
 			validated_result = await validated_result;
 		if (validated_result.issues) {
 			throw new McpError(
-				-32603,
+				invalid_content_code,
 				`Invalid elicitation result: ${JSON.stringify(validated_result.issues)}`,
 			);
 		}
@@ -1558,20 +2068,56 @@ export class McpServer {
 	}
 
 	/**
-	 * Request language model sampling from the client
+	 * Request language model sampling from the client.
+	 *
+	 * When there is no open client session, tmcp returns the sampling request
+	 * to the client and asks it to retry the original request with the answer.
+	 * The handler then starts again from the beginning, so its definition must
+	 * set `replayable: true`. Always await this call. If a surrounding `catch`
+	 * handles errors, use `isInputRequired()` and rethrow tmcp's private error.
 	 * @param {CreateMessageRequestParams} request
+	 * @param {{ key?: string }} [options] `key` names this request so tmcp can match its answer on a retry. By default tmcp uses `"1"`, `"2"`, and so on. Set a name when the handler may make different requests on different runs. When mixing named and numbered requests, use non-numeric names.
 	 * @returns {Promise<CreateMessageResult>}
 	 */
-	async message(request) {
+	async message(request, options = {}) {
 		this.#assert_client_request_allowed('sampling', 'sampling');
-
-		this.#lazyily_create_client();
 
 		// Validate the request
 		const validated_request = v.parse(
 			CreateMessageRequestParamsSchema,
 			request,
 		);
+
+		const mrtr = this.#mrtr;
+		if (mrtr !== undefined) {
+			this.#assert_replayable(mrtr, 'sampling');
+			const key = this.#next_input_key(mrtr, options.key);
+			const has_response =
+				mrtr.input_responses !== undefined &&
+				Object.hasOwn(mrtr.input_responses, key);
+			if (has_response) {
+				const provided = mrtr.input_responses?.[key];
+				const parsed = v.safeParse(CreateMessageResultSchema, provided);
+				if (!parsed.success) {
+					throw new McpError(
+						-32602,
+						`Invalid input response for key "${key}": expected a sampling result (CreateMessageResult)`,
+					);
+				}
+				mrtr.consumed_responses.set(key, parsed.output);
+				return parsed.output;
+			}
+			mrtr.pending.set(
+				key,
+				Promise.resolve({
+					method: 'sampling/createMessage',
+					params: validated_request,
+				}),
+			);
+			throw mrtr.signal;
+		}
+
+		this.#lazyily_create_client();
 
 		// Make the request to the client
 		const response = await this.#client?.request(

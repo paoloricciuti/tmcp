@@ -1545,6 +1545,60 @@ export const RootsListChangedNotificationSchema = v.object({
 	...NotificationSchema.entries,
 	method: v.literal('notifications/roots/list_changed'),
 });
+/* Asking the client for input before finishing a request. */
+
+/**
+ * A question or task the client must answer before retrying the original
+ * request. MCP includes `roots/list` here, but tmcp never asks for roots this
+ * way.
+ */
+export const InputRequestSchema = v.union([
+	ElicitRequestSchema,
+	CreateMessageRequestSchema,
+	ListRootsRequestSchema,
+]);
+
+/**
+ * Questions or tasks the client must complete, stored by name.
+ */
+export const InputRequestsSchema = v.record(v.string(), InputRequestSchema);
+
+/**
+ * Answers returned by the client. Each name matches one from `inputRequests`.
+ * tmcp checks an answer when the handler reaches the matching input call, so
+ * unrelated answers are left alone.
+ */
+export const InputResponsesSchema = v.custom(
+	/** @type {(input: unknown)=>input is Record<string, unknown>} */ (
+		(input) =>
+			typeof input === 'object' &&
+			input !== null &&
+			!Array.isArray(input) &&
+			(Object.getPrototypeOf(input) === Object.prototype ||
+				Object.getPrototypeOf(input) === null)
+	),
+	'Expected an input response map',
+);
+
+/**
+ * A result sent by the server to indicate that additional input is needed
+ * before the request can be completed. At least one of `inputRequests` or
+ * `requestState` MUST be present.
+ */
+export const InputRequiredResultSchema = v.pipe(
+	v.looseObject({
+		...ResultSchema.entries,
+		resultType: v.literal('input_required'),
+		inputRequests: v.optional(InputRequestsSchema),
+		requestState: v.optional(v.string()),
+	}),
+	v.check(
+		(result) =>
+			result.inputRequests !== undefined ||
+			result.requestState !== undefined,
+		'InputRequiredResult requires inputRequests or requestState',
+	),
+);
 /* Client messages */
 export const ClientRequestSchema = v.union([
 	PingRequestSchema,
@@ -1589,18 +1643,28 @@ export const ServerNotificationSchema = v.union([
 	ToolListChangedNotificationSchema,
 	PromptListChangedNotificationSchema,
 ]);
-export const ServerResultSchema = v.union([
-	EmptyResultSchema,
-	InitializeResultSchema,
-	CompleteResultSchema,
-	GetPromptResultSchema,
-	ListPromptsResultSchema,
-	ListResourcesResultSchema,
-	ListResourceTemplatesResultSchema,
-	ReadResourceResultSchema,
-	CallToolResultSchema,
-	ListToolsResultSchema,
-]);
+export const ServerResultSchema = v.pipe(
+	v.union([
+		InputRequiredResultSchema,
+		EmptyResultSchema,
+		InitializeResultSchema,
+		CompleteResultSchema,
+		GetPromptResultSchema,
+		ListPromptsResultSchema,
+		ListResourcesResultSchema,
+		ListResourceTemplatesResultSchema,
+		ReadResourceResultSchema,
+		CallToolResultSchema,
+		ListToolsResultSchema,
+	]),
+	v.check(
+		(result) =>
+			/** @type {Record<string, unknown>} */ (result).resultType !==
+				'input_required' ||
+			v.safeParse(InputRequiredResultSchema, result).success,
+		'Invalid InputRequiredResult',
+	),
+);
 
 /**
  * @typedef {v.InferInput<typeof IconsSchema>} Icons
@@ -1690,4 +1754,13 @@ export const ServerResultSchema = v.union([
  */
 /**
  * @typedef {v.InferInput<typeof ResourceLinkSchema>} ResourceLink
+ */
+/**
+ * @typedef {v.InferInput<typeof InputRequestsSchema>} InputRequests
+ */
+/**
+ * @typedef {v.InferInput<typeof InputResponsesSchema>} InputResponses
+ */
+/**
+ * @typedef {v.InferInput<typeof InputRequiredResultSchema>} InputRequiredResult
  */

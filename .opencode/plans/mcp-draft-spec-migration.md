@@ -6,9 +6,9 @@ This plan originally targeted a draft revision. **Update (2026-07-29): protocol 
 
 tmcp supports legacy, initialization-based versions through `2025-06-18`. It does not need to implement or recognize `2025-11-25` before adding the modern version. Unsupported versions are handled generically and only versions that actually work may be advertised.
 
-## Implementation status (2026-07-29)
+## Implementation status (2026-07-30)
 
-Phases 0–2 are **implemented** in `packages/tmcp` (core only; transports untouched). Decisions taken during implementation:
+Phases 0–3 are **implemented** in `packages/tmcp` (core only; transports untouched). Decisions taken during implementation:
 
 - **No opt-in flag.** The `unstableProtocolVersions` option from Phase 0 was implemented and then removed once the revision was published: per-request `2026-07-28` support is enabled by default. `LATEST_PROTOCOL_VERSION` stays `2025-06-18` for legacy negotiation. `KNOWN_PER_REQUEST_PROTOCOL_VERSIONS` in `validation/version.js` is the source of truth for per-request versions.
 - **Terminology**: the code deliberately avoids "modern vs legacy" / `era` naming (future revisions may add new exceptions). Requests are classified as *session-negotiated* vs *per-request (stateless)*. The classification lives in exactly one place: an internal `stateless: boolean` flag on the existing `AsyncLocalStorage` store (same pattern as `progress_token`, stripped from the public `ctx` getter, transport-provided values discarded). `ctx.protocolVersion` is purely informational and NOT used for classification — legacy sessions also have a negotiated version and may expose it there later.
@@ -18,11 +18,16 @@ Phases 0–2 are **implemented** in `packages/tmcp` (core only; transports untou
 - **Errors**: `McpError` now extends `json-rpc-2.0`'s `JSONRPCErrorException` so real `code`/`data` reach the wire (previously everything collapsed to `-32603`). Caveat found in review: `JSONRPCErrorException` rewrites the instance prototype, so the constructor restores it with `Object.setPrototypeOf(this, new.target.prototype)` — without this, `instanceof McpError` is false and the initialize catch path breaks. Constants `-32020/-32021/-32022` are exported from the package root. The `-32601`→`-32602` unknown prompt/resource fix shipped for BOTH eras as a changeset-documented bug fix.
 - **`server/discover`**: exact `DiscoverResult` shape (serverInfo only in `_meta`, `supportedVersions`). Advertised capabilities strip `resources.subscribe`, all `listChanged` flags, and `logging` — features whose stateless delivery mechanism (Phase 4 subscriptions / Phase 6 log gating) is not implemented must not be advertised.
 - **Result encoding**: stateless results get `resultType: 'complete'` (handler-provided values preserved only when they are strings), serverInfo merged into `_meta` without clobbering app keys, and `ttlMs`/`cacheScope` on cacheable methods. The encoder ALWAYS overwrites cache fields from the configured `cache` option (`{ ttlMs?, cacheScope?, methods? }`, defaults `{ ttlMs: 0, cacheScope: 'private' }`) — profile-unaware handlers must not be able to opt results into public caching. Null/non-object stateless results are coerced to `{}` and decorated.
-- **Guards**: `elicitation()`/`message()` on stateless requests raise `-32021` with `data.requiredCapabilities` when the capability is missing, or `-32603` ("MRTR not implemented") when declared; low-level `request()` is blocked on stateless contexts. Legacy behavior (`-32601`) unchanged.
+- **MRTR**: `tools/call`, `prompts/get`, and `resources/read` can suspend stateless execution with keyed elicitation/sampling `inputRequests`; retries consume matching `inputResponses` and re-execute handlers from the top. The per-registration `replayable: true` acknowledgment gates input calls and clearly documents duplicated-side-effect risk. Stable keys support conditional flow, concurrent input preparation is batched, and broad catch blocks must rethrow the private signal (detectable with `isInputRequired`). Session-negotiated input requests keep the existing awaitable path. Stateless input calls from any other method fail immediately instead of falling through to a server-to-client request that cannot complete. Clients only need to answer the latest `inputRequests`: tmcp carries responses already consumed by the handler in its `requestState` envelope, then merges them beneath newly supplied responses on retry.
+- **MRTR request-local state**: a fresh ALS value is created for each `receive()` attempt and discarded afterward. The keyed `pending` map owns both unfinished schema conversion promises and completed input requests; `used_keys` reserves answered and unanswered keys; `consumed_responses` records only validated answers actually used during this attempt; one `registration` object owns handler identity plus its replay flag; `outgoing_state !== undefined` is the only source of truth for handler state. There is no separate preparation set, outgoing-state flag, or split entity/replay flag.
+- **Request state**: handlers can use `setRequestState()` / `ctx.requestState`; the pluggable codec defaults to plain JSON with explicit client-tampering warnings and encoded-size bounds. No cross-request state is retained in memory. Stateless roots fail clearly, low-level `request()` stays blocked, and session-negotiated requests reject MRTR-only `inputResponses`/`requestState` fields with `-32602`.
 - Result wire schemas were loosened `v.object` → `v.looseObject` (needed to preserve handler-provided `resultType`/extension fields). Side effect, documented in the changeset: unknown top-level handler fields now pass through instead of being stripped.
 - `structuredContent` is loosened at the type level too: the `CallToolResult` generic no longer constrains it to `Record<string, unknown>`, so non-object output schemas (e.g. a string) type-check. Pure widening — existing tools unaffected.
 - The Phase 1.3 HTTP status mapping (`-32020/-32021/-32022` → 400, `-32601` → 404) was **moved to Phase 5.1**: core exports the constants and produces correct error bodies; shipping only status codes without the modern header validation buys nothing. Until 5.1, these errors travel as JSON-RPC errors over HTTP 200.
-- Other packages need NO changes for phases 0–2 (verified: they only depend on `Context["sessionInfo"]` and version constants). Stateless requests already flow end-to-end through the current HTTP transport (POSTs reach core unconditionally) and stdio (responses come from `receive`'s return value, so pre-initialize `server/discover` works).
+- Other packages need NO changes for phases 0–3. Verified after MRTR: stdio serializes `receive()` responses unchanged; HTTP and SSE stream the returned JSON-RPC response without inspecting `resultType`; the in-memory transport returns `response.result`; schema adapters already expose asynchronous `toJsonSchema()`; session managers, auth, and persistence are not involved because no MRTR state survives a request. Transport-level MRTR tests would only test transparent serialization and are optional, not a Phase 3 requirement.
+- **Phase 3 review/quality**: delayed concurrent schema conversion, simultaneous `receive()` isolation, latest-only sequential answers, prototype-like input keys (`constructor`, `toString`, `__proto__`), unrelated malformed responses, invalid elicitation/sampling responses, elicitation decline/cancel, request-state encode/size failures, adapter preparation failures, expected-signal logging, stateless roots, unsupported stateless input methods, and un-awaited input calls all have regression coverage. Pending schema promises are resolved only when tmcp is building `InputRequiredResult`, so they cannot replace an unrelated handler result/error. Public comments/JSDoc explain concrete client/handler behavior rather than internal jargon. Redundant always-successful schema assertions were removed; focused validation tests only cover tmcp-specific restrictions that can regress.
+- **Current verification**: 170/170 package tests across four files; package TypeScript check, ESLint, Prettier, generated declarations, publint, full workspace typecheck, and `git diff --check` all pass.
+- **Release/worktree status**: changes remain uncommitted. Generated core declarations are current. `.changeset/warm-onions-repeat.md` covers the overall `2026-07-28` protocol feature and `.changeset/mrtr-input-required.md` covers Phase 3 MRTR behavior and follow-up fixes.
 - `2024-10-07` was dropped when consolidating the two disagreeing version lists (`validation/version.js` won — it was never actually negotiable).
 - Deferred deliberately: `_meta` key-syntax/reserved-prefix enforcement, extension-advertisement validation for extension `resultType` values, Phase 6 per-request logLevel gating (stateless requests currently fall back to the server default log level).
 
@@ -192,22 +197,22 @@ Add a cache policy option with safe defaults (`ttlMs: 0`, `cacheScope: "private"
 - Add documented/resource-bounded handling for `$ref` and composition keywords.
 - Preserve adapter output rather than normalizing away unknown keywords such as `x-mcp-header`.
 
-### 2.5 Capability schemas and deprecations — DONE (modern-roots decision still open)
+### 2.5 Capability schemas and deprecations — DONE (modern roots: decided, not supported on stateless — see Decided)
 
 - Add `extensions` maps to client and server capabilities using prefixed extension identifiers.
 - Update modern sampling, elicitation, and roots capability shapes to the pinned schema.
 - Mark Roots, Sampling, Logging, and sampling `includeContext` values `thisServer`/`allServers` deprecated without removing legacy support.
 - Decide explicitly whether modern roots support is implemented through MRTR. Deprecation alone does not remove roots from the modern draft.
 
-## Phase 3: Multi Round-Trip Requests (MRTR)
+## Phase 3: Multi Round-Trip Requests (MRTR) — DONE (see Implementation status)
 
 MRTR is the highest-risk part and the only feature that changes handler execution semantics.
 
 ### 3.1 Scope
 
 - Only `tools/call`, `prompts/get`, and `resources/read` may return `InputRequiredResult`.
-- Legacy calls keep using the existing awaitable JSON-RPC client path.
-- Modern `elicitation()`, `message()`, and any supported roots helper consume a matching `inputResponses` entry or terminate the current execution with an internal input-required signal.
+- Session-negotiated calls keep using the existing awaitable JSON-RPC client path.
+- Stateless `elicitation()` and `message()` (roots are not supported) consume a matching `inputResponses` entry or stop the current execution so tmcp can return `InputRequiredResult`.
 - The dispatch boundary catches that signal and emits an `InputRequiredResult`; arbitrary user errors continue through normal error handling.
 
 ### 3.2 Stable input identity
@@ -215,7 +220,7 @@ MRTR is the highest-risk part and the only feature that changes handler executio
 - `inputRequests` and `inputResponses` are keyed maps, not ordered arrays.
 - Generate deterministic unique keys for source-compatible calls and add an optional stable key to public input APIs for handlers with conditional control flow.
 - Validate every supplied response against the corresponding response schema and ignore unrelated extra entries as required by the draft.
-- Never emit an input request unless the current modern request declares the required client capability. Return `-32021` when a required capability is absent.
+- Never emit an input request unless the current stateless request declares the required client capability. Return `-32021` when a required capability is absent.
 
 ### 3.3 Replay contract
 
@@ -224,22 +229,27 @@ MRTR is the highest-risk part and the only feature that changes handler executio
 - Document that broad `catch` blocks must rethrow the internal input-required signal; add tests for accidental swallowing and make the signal identifiable without exposing a forgeable public protocol object.
 - Do not claim transparent continuation semantics: JavaScript async continuations cannot be serialized across stateless retries.
 
-### 3.4 `requestState` security
+### 3.4 `requestState` security — DECIDED: pluggable codec, unopinionated default
 
-- Omit `requestState` when keyed replay needs no additional state.
-- If tmcp emits state, treat it as attacker-controlled on return and provide an integrity-protected codec.
-- Bind protected state to the authenticated principal, short expiry, originating method, and a digest of salient request parameters.
-- Require shared key/configuration for state that must survive retries across nodes.
-- Enforce server-side single-use when the operation requires stronger replay prevention than a signed expiry can provide.
-- Bound encoded and decoded state size.
+Decision: tmcp ships with as few opinions as possible by default — the default codec is plain `JSON.stringify`/`JSON.parse` (no signing, no encryption), and the codec is pluggable so advanced deployments can substitute an integrity-protected implementation. Consequences:
 
-### 3.5 Replay acknowledgment gate
+- The default codec provides NO integrity protection: returned `requestState` is attacker-controlled. The JSDoc on the codec option and on the state APIs must say this explicitly, and tmcp must never put trusted/secret data into default-encoded state.
+- Omit `requestState` entirely when keyed replay needs no additional state.
+- The guidance below applies to custom codec implementations (documented, not enforced by tmcp): bind protected state to the authenticated principal, short expiry, originating method, and a digest of salient request parameters; use shared key material for state that must survive retries across nodes; enforce server-side single-use where a signed expiry is insufficient.
+- Bound the encoded state size before decode and after encode. Custom codecs
+  are responsible for bounding decoded application values because tmcp cannot
+  measure arbitrary decoded representations meaningfully.
 
-Replay risk only exists for handlers that actually request input: a handler that never calls `elicitation()`, `message()`, or a roots helper is replay-safe by construction, because no retry ever occurs. This makes modern-era support safe to eventually enable by default for the vast majority of servers, provided the MRTR input APIs themselves are gated:
+### 3.5 Replay acknowledgment gate — DECIDED: per-registration flag
 
-- Gate MRTR input APIs behind an explicit acknowledgment — per-server or per-registration, e.g. `{ replayable: true }` on the tool/prompt/resource definition — confirming the author understands the handler re-executes from the top on retry.
-- A modern request reaching an un-acknowledged input call fails cleanly with a structured error instead of silently emitting `InputRequiredResult` and replaying side effects. Legacy requests are unaffected (they keep the awaitable JSON-RPC path).
-- This turns the eventual default-on flip (Phase 0 sequencing) from a broad version switch into the narrow "my handler replays" switch: discovery, stateless requests, subscriptions, and result decoration become automatic; only input-requesting handlers need author action.
+Replay risk only exists for handlers that actually request input: a handler that never calls `elicitation()` or `message()` is replay-safe by construction, because no retry ever occurs. (Roots are NOT supported on stateless requests — see Decided.)
+
+Decision: the exact implemented flag is `{ replayable: true }` on tool, prompt, resource, and template definitions. Requirements from the maintainer:
+
+- The JSDoc for the flag must explain the WHOLE problem clearly: stateless retries re-execute the handler from the top, so side effects before an input call run once per attempt; the flag is the author asserting that code before input points is idempotent or deferred. This gate is a tmcp safety measure, NOT a spec requirement.
+- The structured error raised when a stateless request reaches an un-acknowledged input call must likewise explain WHY it exists (handler re-execution / duplicated side effects) and name the flag to set — not just "not allowed".
+- Legacy requests are unaffected (they keep the awaitable JSON-RPC path).
+- This keeps the default-on posture safe: discovery, stateless requests, and result decoration are automatic; only input-requesting handlers need author action.
 
 ## Phase 4: subscriptions
 
@@ -387,7 +397,7 @@ This can ship as a minor release only if:
 - Legacy behavior and exported handler input types remain compatible.
 - Modern required fields are injected at the wire boundary.
 - Existing session-manager contracts are unchanged.
-- Modern support is explicitly enabled.
+- Published per-request support remains additive and enabled by default.
 - MRTR replay occurs only for modern requests and is prominently documented.
 
 Otherwise, defer the incompatible portion to the next major release.
@@ -397,10 +407,10 @@ Otherwise, defer the incompatible portion to the next major release.
 1. ~~Pin the schema and add opt-in version plumbing~~ (done; opt-in later removed — default-on).
 2. ~~Add request profiles, structured errors, and central method policy~~ (done).
 3. ~~Add modern result encoding, exact `server/discover`, cache policy, capability schemas, and JSON Schema loosening~~ (done).
-4. Split HTTP and stdio into legacy/modern runtimes with strict modern validation.
+4. ~~Implement and harden MRTR after stateless request plumbing is fully tested~~ (done; core-only, transports forward it unchanged).
 5. Add the dedicated subscription registry, transport streaming, cancellation, and stdio concurrency.
-6. Implement and harden MRTR after stateless request plumbing is fully tested.
-7. Complete logging/deprecation behavior and in-memory helpers.
+6. Complete per-request logging/deprecation behavior and in-memory helpers.
+7. Add HTTP validation/status handling and the remaining transport hardening from Phase 5 without splitting core behavior into duplicated runtimes.
 8. Harden existing auth support independently.
 9. Update docs/templates and release.
 10. Consider the tasks extension separately.
@@ -409,10 +419,11 @@ Otherwise, defer the incompatible portion to the next major release.
 
 - ~~Modern versions gated behind an instability-marked option~~ Superseded: the revision was published upstream (tag `2026-07-28`), so per-request handling is enabled by default with no option at all. Only the MRTR replay acknowledgment (3.5) remains author-facing. Handlers without input requests get automatic dual-era support with no action.
 - The legacy `-32601` → `-32602` not-found error fix shipped for BOTH eras as a changeset-documented bug fix (see 1.3).
+- Roots are NOT implemented through MRTR: roots are deprecated in `2026-07-28`; session-negotiated roots keep working, and stateless `refreshRoots()` calls fail clearly instead of emitting a roots input request.
+- `requestState` encoding: pluggable codec with an unopinionated `JSON.stringify` default — no built-in crypto (see 3.4).
+- Replay protection: per-registration acknowledgment flag on tool, prompt, resource, and template definitions (see 3.5), with JSDoc and error messages that explain the re-execution problem, not just state the rule.
+- Input identity: additive `{ key?: string }` options on existing `elicitation()` and `message()` APIs; automatic numeric keys remain source-compatible for straight-line handlers.
 
 ## Open decisions
 
-- Whether modern roots are implemented through MRTR or intentionally not supported despite preserving legacy roots.
-- Whether MRTR gets an optional stable-key argument on existing APIs or a new additive typed input API.
-- Whether request-state encoding is built in with configured shared key material or exposed as a codec interface.
 - Whether the first subscription registry is core-only/in-memory or ships with distributed adapters (per the standing constraints, any state must be pluggable from the transports like the existing session managers — serverless deployments cannot rely on process memory).

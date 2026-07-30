@@ -1,15 +1,12 @@
 /**
- * Declarative per-method protocol policy.
+ * Which request styles may call each method.
  *
- * Requests are classified once (in `McpServer.receive`) as either
- * session-negotiated (the classic `initialize` handshake) or per-request
- * (carrying the reserved `_meta` protocol keys, i.e. stateless). This map
- * describes which of those two request profiles each method is reachable
- * from, so that handlers themselves can stay profile-unaware.
+ * Some clients first open a session with `initialize`; newer clients include
+ * their version and capabilities on every request. This map lists methods
+ * that only work with one of those styles.
  *
- * Methods not present in the map are allowed for both profiles (unknown
- * methods still get the standard "method not found" from the JSON-RPC
- * server).
+ * Methods not listed here work with both styles. Unknown methods still return
+ * the normal "method not found" error.
  */
 
 /**
@@ -20,7 +17,7 @@
  * @type {Record<string, MethodPolicy>}
  */
 const method_policy = {
-	// session-negotiated only
+	// Requires an open client session.
 	initialize: { session: true, stateless: false },
 	'notifications/initialized': { session: true, stateless: false },
 	ping: { session: true, stateless: false },
@@ -28,14 +25,14 @@ const method_policy = {
 	'resources/subscribe': { session: true, stateless: false },
 	'resources/unsubscribe': { session: true, stateless: false },
 	'notifications/roots/list_changed': { session: true, stateless: false },
-	// per-request (stateless) only
+	// Only available when version details are included in this request.
 	'server/discover': { session: false, stateless: true },
 };
 
 /**
- * Check whether a method is reachable for the given request profile.
+ * Check whether the current request style can call this method.
  * @param {string} method
- * @param {boolean} stateless - Whether the current request carries per-request protocol metadata
+ * @param {boolean} stateless Whether the client included its version and capabilities in this request
  * @returns {boolean}
  */
 export function is_method_allowed(method, stateless) {
@@ -45,8 +42,8 @@ export function is_method_allowed(method, stateless) {
 }
 
 /**
- * Methods whose results are `CacheableResult`s in the per-request protocol
- * and must carry `ttlMs` and `cacheScope` on the wire.
+ * Methods whose responses tell the client how long they may be reused and
+ * whether they may be shared.
  */
 export const CACHEABLE_METHODS = new Set([
 	'server/discover',
@@ -55,4 +52,16 @@ export const CACHEABLE_METHODS = new Set([
 	'resources/list',
 	'resources/read',
 	'resources/templates/list',
+]);
+
+/**
+ * Methods that may ask the client for more input and continue when the client
+ * retries. Only these methods accept `inputResponses` and `requestState` or
+ * return `InputRequiredResult`. Other methods reject those fields so client
+ * mistakes are visible.
+ */
+export const MRTR_METHODS = new Set([
+	'tools/call',
+	'prompts/get',
+	'resources/read',
 ]);
