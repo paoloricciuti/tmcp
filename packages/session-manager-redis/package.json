@@ -27,7 +27,7 @@
 			"import": "./src/index.js"
 		}
 	},
-	"packageManager": "pnpm@10.27.0",
+	"packageManager": "pnpm@11.2.2",
 	"type": "module",
 	"publishConfig": {
 		"access": "public"

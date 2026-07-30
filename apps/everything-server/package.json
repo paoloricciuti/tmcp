@@ -13,7 +13,7 @@
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
-	"packageManager": "pnpm@10.27.0",
+	"packageManager": "pnpm@11.2.2",
 	"type": "module",
 	"dependencies": {
 		"@tmcp/adapter-valibot": "workspace:^",
