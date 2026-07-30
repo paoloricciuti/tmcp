@@ -5,9 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  dts-buddy:
-    hash: 07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b
-    path: patches/dts-buddy.patch
+  dts-buddy: 07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b
 
 importers:
 
@@ -512,6 +510,9 @@ importers:
       tmcp:
         specifier: workspace:^
         version: link:../tmcp
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.15(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
 
 packages:
 
@@ -1066,19 +1067,23 @@ packages:
 
   '@modelcontextprotocol/inspector-cli@0.18.0':
     resolution: {integrity: sha512-QMPjKx8zKmX17S1LF2gWuwbYglKexkdgB0HhKZFXzGrQ0MYoKUsIgokMyV48xr4LipaLS3b2v3ut3nV/jhWeSg==}
+    deprecated: 'v1 is deprecated. Upgrade to v2: npm i @modelcontextprotocol/inspector@latest. v1 gets security fixes only, published under the v1-latest tag.'
     hasBin: true
 
   '@modelcontextprotocol/inspector-client@0.18.0':
     resolution: {integrity: sha512-M6A5SN09tYCoTTGwMi5hdQpesX5eHYn3FCAHTWfv1pZ1Cy7h5GjB1LxL5WhbMhXWmFFJ6AnQVGAJj0P0XkVhUg==}
+    deprecated: 'v1 is deprecated. Upgrade to v2: npm i @modelcontextprotocol/inspector@latest. v1 gets security fixes only, published under the v1-latest tag.'
     hasBin: true
 
   '@modelcontextprotocol/inspector-server@0.18.0':
     resolution: {integrity: sha512-N7mDwUuj+gB8ZbZ52M4Oqh37qChS8kWJUkc4qL/MMsaQTVshXEOTcyiQ/mLKa17O5uODZQerAnQJWZbZYReBkg==}
+    deprecated: 'v1 is deprecated. Upgrade to v2: npm i @modelcontextprotocol/inspector@latest. v1 gets security fixes only, published under the v1-latest tag.'
     hasBin: true
 
   '@modelcontextprotocol/inspector@0.18.0':
     resolution: {integrity: sha512-aBrBDaI8MtvyS9j3TMRgTHZaOwbe/zh2rbIVplIBtxWifaSfvQX9DbnoI3xv9sZjgeFyF/3CwZdfEVTUx2RfBg==}
     engines: {node: '>=22.7.5'}
+    deprecated: 'v1 is deprecated. Upgrade to v2: npm i @modelcontextprotocol/inspector@latest. v1 gets security fixes only, published under the v1-latest tag.'
     hasBin: true
 
   '@modelcontextprotocol/sdk@1.24.3':
@@ -1973,6 +1978,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@valibot/to-json-schema@1.5.0':
     resolution: {integrity: sha512-GE7DmSr1C2UCWPiV0upRH6mv0cCPsqYGs819fb6srCS1tWhyXrkGGe+zxUiwzn/L1BOfADH4sNjY/YHCuP8phQ==}

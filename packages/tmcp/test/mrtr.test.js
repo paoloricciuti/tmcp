@@ -332,6 +332,89 @@ describe('MRTR (multi round-trip requests)', () => {
 	});
 
 	describe('retry with inputResponses', () => {
+		it('requires each retry round to opt into logging independently', async () => {
+			const server = create_server({
+				capabilities: { tools: {}, logging: {} },
+			});
+			let attempt = 0;
+			server.tool(
+				{ name: 'ask', description: 'x', replayable: true },
+				async () => {
+					attempt += 1;
+					server.log('info', `attempt ${attempt}`);
+					await server.elicitation('first', answer_schema(), {
+						key: 'first',
+					});
+					await server.elicitation('second', answer_schema(), {
+						key: 'second',
+					});
+					return { content: [] };
+				},
+			);
+			const on_send = vi.fn();
+			const off = server.on('send', on_send);
+
+			const first = await server.receive(
+				stateless_request(
+					'tools/call',
+					{ name: 'ask' },
+					{ 'io.modelcontextprotocol/logLevel': 'info' },
+				),
+			);
+			expect(first.result.resultType).toBe('input_required');
+			expect(on_send).toHaveBeenCalledTimes(1);
+
+			const second = await server.receive(
+				stateless_request('tools/call', {
+					name: 'ask',
+					inputResponses: {
+						first: {
+							action: 'accept',
+							content: { answer: 'yes' },
+						},
+					},
+				}),
+			);
+			expect(second.result.resultType).toBe('input_required');
+			expect(attempt).toBe(2);
+			expect(on_send).toHaveBeenCalledTimes(1);
+			expect(on_send).toHaveBeenNthCalledWith(1, {
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/message',
+					params: { level: 'info', data: 'attempt 1' },
+				},
+			});
+
+			const third = await server.receive(
+				stateless_request(
+					'tools/call',
+					{
+						name: 'ask',
+						requestState: second.result.requestState,
+						inputResponses: {
+							second: {
+								action: 'accept',
+								content: { answer: 'done' },
+							},
+						},
+					},
+					{ 'io.modelcontextprotocol/logLevel': 'info' },
+				),
+			);
+			expect(third.result.resultType).toBe('complete');
+			expect(attempt).toBe(3);
+			expect(on_send).toHaveBeenCalledTimes(2);
+			expect(on_send).toHaveBeenNthCalledWith(2, {
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/message',
+					params: { level: 'info', data: 'attempt 3' },
+				},
+			});
+			off();
+		});
+
 		it('resolves the input call with the provided response and re-executes the handler from the top', async () => {
 			const server = create_server();
 			let executions = 0;

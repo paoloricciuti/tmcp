@@ -36,14 +36,14 @@ export class StdioTransport {
 	constructor(server) {
 		this.#server = server;
 		this.#cleaners.add(
+			this.#server.on('send', ({ request }) => {
+				process.stdout.write(JSON.stringify(request) + '\n');
+			}),
+		);
+		this.#cleaners.add(
 			this.#server.on('initialize', ({ capabilities, clientInfo }) => {
 				this.#session_info.clientCapabilities = capabilities;
 				this.#session_info.clientInfo = clientInfo;
-				this.#cleaners.add(
-					this.#server.on('send', ({ request }) => {
-						process.stdout.write(JSON.stringify(request) + '\n');
-					}),
-				);
 				this.#cleaners.add(
 					this.#server.on('broadcast', ({ request }) => {
 						if (

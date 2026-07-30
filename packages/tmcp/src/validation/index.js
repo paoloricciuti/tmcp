@@ -1168,7 +1168,7 @@ export const SetLevelRequestSchema = v.object({
 });
 
 /**
- * Notification of a log message passed from server to client. If no logging/setLevel request has been sent from the client, the server MAY decide which messages to send automatically.
+ * Notification of a log message passed from server to client. Per-request clients opt in through `io.modelcontextprotocol/logLevel`; session-negotiated clients use `logging/setLevel` or the server default.
  */
 export const LoggingMessageNotificationSchema = v.object({
 	...NotificationSchema.entries,

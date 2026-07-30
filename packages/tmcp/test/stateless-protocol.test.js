@@ -251,6 +251,7 @@ describe('stateless protocol (2026-07-28)', () => {
 					tools: {},
 					prompts: {},
 					resources: {},
+					logging: {},
 				},
 				instructions: 'use it wisely',
 				ttlMs: 60000,
@@ -261,7 +262,7 @@ describe('stateless protocol (2026-07-28)', () => {
 			});
 		});
 
-		it('strips undeliverable capabilities: subscribe, listChanged and logging', async () => {
+		it('strips subscription capabilities while keeping request-scoped logging', async () => {
 			const server = create_server();
 			const response = await server.receive(
 				stateless_request('server/discover'),
@@ -270,9 +271,128 @@ describe('stateless protocol (2026-07-28)', () => {
 				tools: {},
 				prompts: {},
 				resources: {},
+				logging: {},
 			});
 			expect(response.result.serverInfo).toBeUndefined();
 			expect(response.result.protocolVersions).toBeUndefined();
+		});
+	});
+
+	describe('per-request logging', () => {
+		it('uses only an explicit request logLevel and does not carry it across requests', async () => {
+			const server = create_server({
+				logging: { default: 'debug' },
+			});
+			server.tool(
+				{ name: 'logger', description: 'logs messages' },
+				() => {
+					server.log('debug', 'debug message');
+					server.log('error', 'error message');
+					return { content: [{ type: 'text', text: 'logged' }] };
+				},
+			);
+			const on_send = vi.fn();
+			const off = server.on('send', on_send);
+
+			await server.receive(
+				stateless_request('tools/call', { name: 'logger' }),
+				{ sessionInfo: { logLevel: 'debug' } },
+			);
+			expect(on_send).not.toHaveBeenCalled();
+
+			await server.receive(
+				stateless_request(
+					'tools/call',
+					{ name: 'logger' },
+					{ 'io.modelcontextprotocol/logLevel': 'warning' },
+				),
+			);
+			expect(on_send).toHaveBeenCalledTimes(1);
+			expect(on_send).toHaveBeenCalledWith({
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/message',
+					params: { level: 'error', data: 'error message' },
+				},
+			});
+
+			await server.receive(
+				stateless_request('tools/call', { name: 'logger' }),
+			);
+			expect(on_send).toHaveBeenCalledTimes(1);
+			off();
+		});
+
+		it('prefers the explicit request logLevel over a stricter transport session level', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'logger', description: 'logs messages' },
+				() => {
+					server.log('debug', 'debug message');
+					return { content: [] };
+				},
+			);
+			const on_send = vi.fn();
+			const off = server.on('send', on_send);
+
+			await server.receive(
+				stateless_request(
+					'tools/call',
+					{ name: 'logger' },
+					{ 'io.modelcontextprotocol/logLevel': 'debug' },
+				),
+				{ sessionInfo: { logLevel: 'emergency' } },
+			);
+
+			expect(on_send).toHaveBeenCalledTimes(1);
+			expect(on_send).toHaveBeenCalledWith({
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/message',
+					params: { level: 'debug', data: 'debug message' },
+				},
+			});
+			off();
+		});
+
+		it('keeps the session-negotiated default after a stateless request uses a different level', async () => {
+			const server = create_server({
+				logging: { default: 'debug' },
+			});
+			server.tool(
+				{ name: 'logger', description: 'logs messages' },
+				() => {
+					server.log('debug', 'debug message');
+					return { content: [] };
+				},
+			);
+			const on_send = vi.fn();
+			const off = server.on('send', on_send);
+
+			await server.receive(
+				stateless_request(
+					'tools/call',
+					{ name: 'logger' },
+					{ 'io.modelcontextprotocol/logLevel': 'error' },
+				),
+			);
+			expect(on_send).not.toHaveBeenCalled();
+
+			await server.receive({
+				jsonrpc: '2.0',
+				id: 2,
+				method: 'tools/call',
+				params: { name: 'logger' },
+			});
+			expect(on_send).toHaveBeenCalledTimes(1);
+			expect(on_send).toHaveBeenCalledWith({
+				request: {
+					jsonrpc: '2.0',
+					method: 'notifications/message',
+					params: { level: 'debug', data: 'debug message' },
+				},
+			});
+			off();
 		});
 	});
 

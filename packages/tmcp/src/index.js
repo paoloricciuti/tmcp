@@ -1264,15 +1264,14 @@ export class McpServer {
 	 * server options. Behavior that cannot be delivered to stateless
 	 * requests is stripped: `resources.subscribe` and every `listChanged`
 	 * flag (list-changed notifications require `subscriptions/listen`, not
-	 * implemented) are removed, and `logging` is dropped entirely
-	 * (per-request logLevel gating is not implemented yet). The bare
-	 * `tools`/`prompts`/`resources` presence and `completions`,
+	 * implemented) are removed. Logging is kept because stateless log
+	 * notifications are gated by the current request's explicit `logLevel`.
+	 * The bare `tools`/`prompts`/`resources` presence and `completions`,
 	 * `experimental`, `extensions` are kept.
 	 * @returns {Record<string, unknown>}
 	 */
 	#discover_capabilities() {
-		// eslint-disable-next-line no-unused-vars
-		const { resources, tools, prompts, logging, ...rest } =
+		const { resources, tools, prompts, ...rest } =
 			this.#options.capabilities ?? {};
 		/** @type {Record<string, unknown>} */
 		const capabilities = { ...rest };
@@ -2322,10 +2321,12 @@ export class McpServer {
 			);
 		}
 
-		const current_session_level =
-			this.#ctx_storage.getStore()?.sessionInfo?.logLevel ??
-			this.#options.logging?.default ??
-			'info';
+		const store = this.#ctx_storage.getStore();
+		const current_session_level = store?.stateless
+			? store.sessionInfo?.logLevel
+			: (store?.sessionInfo?.logLevel ??
+				this.#options.logging?.default ??
+				'info');
 
 		if (
 			current_session_level &&
