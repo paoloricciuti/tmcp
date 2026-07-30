@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { McpServer } from 'tmcp';
 import { InMemoryTransport } from '../src/index.js';
 import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
@@ -1564,20 +1564,18 @@ describe('InMemoryTransport', () => {
 			);
 
 			const tool_call = session.callTool('response_tool');
-			let tool_call_response:
-				| Awaited<ReturnType<typeof session.callTool>>
-				| undefined;
-
-			// await a tick to ensure the tool call is processed and request is sent
-			await Promise.resolve();
-
-			if (session.lastRequest?.id) {
-				await session.response(session.lastRequest.id, {
-					action: 'accept',
-					content: { name: 'Test User' },
-				});
-				tool_call_response = await tool_call;
+			await vi.waitFor(() => {
+				expect(session.lastRequest).toBeDefined();
+			});
+			const request_id = session.lastRequest?.id;
+			if (request_id == undefined) {
+				throw new Error('Expected an elicitation request');
 			}
+			await session.response(request_id, {
+				action: 'accept',
+				content: { name: 'Test User' },
+			});
+			const tool_call_response = await tool_call;
 
 			expect(tool_call_response).toEqual({
 				content: [
@@ -1783,25 +1781,25 @@ describe('InMemoryTransport', () => {
 
 			session.callTool('response_tool');
 
-			// await a tick to ensure the tool call is processed and request is sent
-			await Promise.resolve();
-			expect(session.lastRequest).toStrictEqual({
-				id: 1,
-				jsonrpc: '2.0',
-				method: 'elicitation/create',
-				params: {
-					message: 'send a response',
-					requestedSchema: {
-						$schema: 'http://json-schema.org/draft-07/schema#',
-						properties: {
-							name: {
-								type: 'string',
+			await vi.waitFor(() => {
+				expect(session.lastRequest).toStrictEqual({
+					id: 1,
+					jsonrpc: '2.0',
+					method: 'elicitation/create',
+					params: {
+						message: 'send a response',
+						requestedSchema: {
+							$schema: 'http://json-schema.org/draft-07/schema#',
+							properties: {
+								name: {
+									type: 'string',
+								},
 							},
+							required: ['name'],
+							type: 'object',
 						},
-						required: ['name'],
-						type: 'object',
 					},
-				},
+				});
 			});
 		});
 	});
