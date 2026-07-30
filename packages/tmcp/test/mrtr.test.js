@@ -58,6 +58,33 @@ function answer_schema() {
 }
 
 /**
+ * Accepts a wire string and returns a number to prove replay validates the
+ * original client response rather than the previous transformed output.
+ * @returns {MockSchema<{ answer: number }>}
+ */
+function coercing_answer_schema() {
+	return {
+		'~standard': {
+			validate: (input) => {
+				const answer = /** @type {{ answer?: unknown } | null} */ (
+					input
+				)?.answer;
+				return typeof answer === 'string' &&
+					!Number.isNaN(Number(answer))
+					? { value: { answer: Number(answer) } }
+					: {
+							issues: [
+								{ message: 'answer must be a numeric string' },
+							],
+						};
+			},
+			vendor: 'mock',
+			version: 1,
+		},
+	};
+}
+
+/**
  * Mock adapter for testing
  * @augments {JsonSchemaAdapter<MockSchema<any>>}
  */
@@ -416,6 +443,62 @@ describe('MRTR (multi round-trip requests)', () => {
 			expect(response.error.message).toContain('key "1"');
 		});
 
+		it('rejects form elicitation when the client only supports URL mode', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'ask', description: 'x', replayable: true },
+				async () => {
+					await server.elicitation('gimme', mock_schema());
+					return { content: [] };
+				},
+			);
+			const response = await server.receive(
+				stateless_request(
+					'tools/call',
+					{ name: 'ask' },
+					{ [CC]: { elicitation: { url: {} } } },
+				),
+			);
+			expect(response.error.code).toBe(
+				MISSING_REQUIRED_CLIENT_CAPABILITY,
+			);
+			expect(response.error.data).toEqual({
+				requiredCapabilities: { elicitation: { form: {} } },
+			});
+		});
+
+		it('rejects adapter output that is not a valid form elicitation schema', async () => {
+			class NestedAdapter extends MockAdapter {
+				/** @returns {Promise<object>} */
+				async toJsonSchema() {
+					return {
+						type: 'object',
+						properties: {
+							nested: {
+								type: 'object',
+								properties: { value: { type: 'string' } },
+							},
+						},
+					};
+				}
+			}
+			const server = create_server({ adapter: new NestedAdapter() });
+			server.tool(
+				{ name: 'ask', description: 'x', replayable: true },
+				async () => {
+					await server.elicitation('gimme', mock_schema());
+					return { content: [] };
+				},
+			);
+			const response = await server.receive(
+				stateless_request('tools/call', { name: 'ask' }),
+			);
+			expect(response.error.code).toBe(-32603);
+			expect(response.error.message).toContain(
+				'Invalid elicitation schema',
+			);
+		});
+
 		it('rejects a non-object inputResponses map with -32602', async () => {
 			const server = create_server();
 			server.tool(
@@ -575,6 +658,56 @@ describe('MRTR (multi round-trip requests)', () => {
 			expect(third.result.content[0].text).toBe('done');
 		});
 
+		it('revalidates carried elicitation responses from their original wire value', async () => {
+			const server = create_server();
+			/** @type {number[]} */
+			const seen_answers = [];
+			server.tool(
+				{ name: 'coercing', description: 'x', replayable: true },
+				async () => {
+					const first = await server.elicitation(
+						'first',
+						coercing_answer_schema(),
+						{ key: 'first' },
+					);
+					seen_answers.push(first.content?.answer ?? 0);
+					await server.elicitation('confirm', mock_schema(), {
+						key: 'confirm',
+					});
+					return { content: [{ type: 'text', text: 'done' }] };
+				},
+			);
+
+			const first = await server.receive(
+				stateless_request('tools/call', { name: 'coercing' }),
+			);
+			const second = await server.receive(
+				stateless_request('tools/call', {
+					name: 'coercing',
+					inputResponses: {
+						first: {
+							action: 'accept',
+							content: { answer: '42' },
+						},
+					},
+				}),
+			);
+			const third = await server.receive(
+				stateless_request('tools/call', {
+					name: 'coercing',
+					requestState: second.result.requestState,
+					inputResponses: {
+						confirm: { action: 'accept', content: {} },
+					},
+				}),
+			);
+
+			expect(first.result.resultType).toBe('input_required');
+			expect(second.result.resultType).toBe('input_required');
+			expect(third.result.resultType).toBe('complete');
+			expect(seen_answers).toEqual([42, 42]);
+		});
+
 		it('rejects duplicate explicit keys within one attempt', async () => {
 			const server = create_server();
 			server.tool(
@@ -596,6 +729,30 @@ describe('MRTR (multi round-trip requests)', () => {
 						same: { action: 'accept', content: {} },
 					},
 				}),
+			);
+			expect(response.error.code).toBe(-32603);
+			expect(response.error.message).toContain(
+				'Duplicate input request key "same"',
+			);
+		});
+
+		it('rejects simultaneous unanswered input calls with the same key', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'dupe', description: 'x', replayable: true },
+				async () => {
+					await Promise.all([
+						server.elicitation('a', mock_schema(), { key: 'same' }),
+						server.message(
+							{ messages: [], maxTokens: 5 },
+							{ key: 'same' },
+						),
+					]);
+					return { content: [] };
+				},
+			);
+			const response = await server.receive(
+				stateless_request('tools/call', { name: 'dupe' }),
 			);
 			expect(response.error.code).toBe(-32603);
 			expect(response.error.message).toContain(
@@ -673,7 +830,7 @@ describe('MRTR (multi round-trip requests)', () => {
 				MISSING_REQUIRED_CLIENT_CAPABILITY,
 			);
 			expect(response.error.data).toEqual({
-				requiredCapabilities: { elicitation: {} },
+				requiredCapabilities: { elicitation: { form: {} } },
 			});
 		});
 	});
@@ -791,6 +948,28 @@ describe('MRTR (multi round-trip requests)', () => {
 			);
 			expect(response.error.code).toBe(-32602);
 			expect(response.error.message).toContain('requestState');
+		});
+
+		it('distinguishes malformed tmcp state from codec failures', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'stateful', description: 'x', replayable: true },
+				() => ({ content: [] }),
+			);
+			const response = await server.receive(
+				stateless_request('tools/call', {
+					name: 'stateful',
+					requestState: JSON.stringify({
+						version: 2,
+						inputResponses: {},
+					}),
+				}),
+			);
+			expect(response.error.code).toBe(-32602);
+			expect(response.error.message).toContain(
+				'expected state previously returned by tmcp',
+			);
+			expect(response.error.message).not.toContain('codec failed');
 		});
 
 		it('reports requestState encoding failures', async () => {
@@ -1146,6 +1325,19 @@ describe('MRTR (multi round-trip requests)', () => {
 	});
 
 	describe('method policy', () => {
+		it('returns method-not-found before validating MRTR-only params', async () => {
+			const server = create_server();
+			const response = await server.receive(
+				stateless_request('unknown/method', {
+					inputResponses: {},
+				}),
+			);
+			expect(response.error.code).toBe(-32601);
+			expect(response.error.message).toContain(
+				'Method unknown/method not found',
+			);
+		});
+
 		it('rejects inputResponses/requestState on non-MRTR methods with -32602', async () => {
 			const server = create_server();
 			for (const params of [

@@ -32,6 +32,7 @@ import {
 	LoggingLevelSchema,
 	McpError,
 	ReadResourceResultSchema,
+	ElicitRequestSchema,
 	ElicitResultSchema,
 	JSONRPCErrorSchema,
 	InputResponsesSchema,
@@ -1514,6 +1515,15 @@ export class McpServer {
 					),
 				);
 			}
+			if (!this.#server.hasMethod(request_message.method)) {
+				return this.#error_response(
+					id,
+					new McpError(
+						-32601,
+						`Method ${request_message.method} not found`,
+					),
+				);
+			}
 
 			// Read retry answers and saved state before running the handler, then
 			// remove them from its normal arguments. Only tool calls, prompt reads,
@@ -1607,6 +1617,7 @@ export class McpServer {
 						consumed_responses: new Map(),
 						outgoing_state: undefined,
 						registration: undefined,
+						input_error: undefined,
 						signal: new InputRequiredSignal(),
 						signal_at_boundary: false,
 					};
@@ -1619,24 +1630,10 @@ export class McpServer {
 					mrtr !== undefined &&
 					encoded_incoming_state !== undefined
 				) {
+					let decoded_state;
 					try {
-						const decoded_state =
-							await this.#request_state_codec.decode(
-								encoded_incoming_state,
-							);
-						const parsed_state = v.safeParse(
-							RequestStateEnvelopeSchema,
-							decoded_state,
-						);
-						if (!parsed_state.success) {
-							throw new Error('expected state returned by tmcp');
-						}
-						mrtr.incoming_state = parsed_state.output.state;
-						mrtr.outgoing_state = parsed_state.output.state;
-						mrtr.input_responses = Object.assign(
-							Object.create(null),
-							parsed_state.output.inputResponses,
-							mrtr.input_responses,
+						decoded_state = await this.#request_state_codec.decode(
+							encoded_incoming_state,
 						);
 					} catch (error) {
 						return this.#error_response(
@@ -1647,8 +1644,31 @@ export class McpServer {
 							),
 						);
 					}
+					const parsed_state = v.safeParse(
+						RequestStateEnvelopeSchema,
+						decoded_state,
+					);
+					if (!parsed_state.success) {
+						return this.#error_response(
+							id,
+							new McpError(
+								-32602,
+								'Invalid "requestState": expected state previously returned by tmcp',
+							),
+						);
+					}
+					mrtr.incoming_state = parsed_state.output.state;
+					mrtr.outgoing_state = parsed_state.output.state;
+					mrtr.input_responses = Object.assign(
+						Object.create(null),
+						parsed_state.output.inputResponses,
+						mrtr.input_responses,
+					);
 				}
 				const response = await this.#server.receive(request_message);
+				if (mrtr?.input_error !== undefined) {
+					return this.#error_response(id, mrtr.input_error);
+				}
 				if (
 					mrtr !== undefined &&
 					mrtr.pending.size > 0 &&
@@ -1853,10 +1873,18 @@ export class McpServer {
 	 * @param {string} description Human-readable description for the session-negotiated error message
 	 */
 	#assert_client_request_allowed(capability, description) {
-		if (!this.#client_capabilities?.[capability]) {
+		const declared_capability = this.#client_capabilities?.[capability];
+		const supported =
+			declared_capability !== undefined &&
+			(capability !== 'elicitation' ||
+				!this.#is_stateless ||
+				Object.keys(declared_capability).length === 0 ||
+				declared_capability.form !== undefined);
+		if (!supported) {
 			if (this.#is_stateless) {
 				throw missing_required_client_capability_error({
-					[capability]: {},
+					[capability]:
+						capability === 'elicitation' ? { form: {} } : {},
 				});
 			}
 			throw new McpError(-32601, `Client doesn't support ${description}`);
@@ -1930,10 +1958,12 @@ export class McpServer {
 	#next_input_key(mrtr, explicit_key) {
 		if (explicit_key != null) {
 			if (mrtr.used_keys.has(explicit_key)) {
-				throw new McpError(
+				const error = new McpError(
 					-32603,
 					`Duplicate input request key "${explicit_key}": each elicitation()/message() call within one request attempt must use a distinct key`,
 				);
+				mrtr.input_error = error;
+				throw error;
 			}
 			mrtr.used_keys.add(explicit_key);
 			return explicit_key;
@@ -1965,6 +1995,31 @@ export class McpServer {
 		const mrtr = this.#mrtr;
 		if (mrtr === undefined) return;
 		mrtr.outgoing_state = state;
+	}
+
+	/**
+	 * Build and validate the form request sent to the client.
+	 * @template {StandardSchema extends undefined ? never : StandardSchema} TSchema
+	 * @param {string} message
+	 * @param {TSchema} schema
+	 */
+	async #create_elicitation_request(message, schema) {
+		const request = {
+			method: /** @type {const} */ ('elicitation/create'),
+			params: {
+				message,
+				requestedSchema:
+					await this.#options.adapter?.toJsonSchema(schema),
+			},
+		};
+		const parsed = v.safeParse(ElicitRequestSchema, request);
+		if (!parsed.success) {
+			throw new McpError(
+				-32603,
+				`Invalid elicitation schema: form elicitation requires a flat object containing only supported primitive fields (${JSON.stringify(parsed.issues)})`,
+			);
+		}
+		return request;
 	}
 
 	/**
@@ -2010,28 +2065,23 @@ export class McpServer {
 					schema,
 					-32602,
 				);
-				mrtr.consumed_responses.set(key, result);
+				mrtr.consumed_responses.set(key, parsed.output);
 				return result;
 			}
-			const pending_request = Promise.resolve(
-				this.#options.adapter?.toJsonSchema(schema),
-			).then((requested_schema) => ({
-				method: 'elicitation/create',
-				params: { message, requestedSchema: requested_schema },
-			}));
+			const pending_request = this.#create_elicitation_request(
+				message,
+				schema,
+			);
 			mrtr.pending.set(key, pending_request);
 			await pending_request;
 			throw mrtr.signal;
 		}
 
 		this.#lazyily_create_client();
+		const request = await this.#create_elicitation_request(message, schema);
 		const result = await this.#client?.request(
-			'elicitation/create',
-			{
-				message,
-				requestedSchema:
-					await this.#options.adapter?.toJsonSchema(schema),
-			},
+			request.method,
+			request.params,
 			'standalone',
 		);
 		const elicit_result = v.parse(ElicitResultSchema, result);

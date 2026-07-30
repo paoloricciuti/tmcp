@@ -568,7 +568,7 @@ describe('stateless protocol (2026-07-28)', () => {
 			);
 			expect(caught.code).toBe(MISSING_REQUIRED_CLIENT_CAPABILITY);
 			expect(caught.data).toEqual({
-				requiredCapabilities: { elicitation: {} },
+				requiredCapabilities: { elicitation: { form: {} } },
 			});
 		});
 

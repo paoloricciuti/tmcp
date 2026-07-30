@@ -12,6 +12,7 @@ import {
 	LoggingLevel,
 	ToolAnnotations,
 	Icons,
+	McpError,
 } from '../validation/index.js';
 import { ExtractURITemplateVariables } from './uri-template.js';
 
@@ -37,6 +38,7 @@ export type MrtrState = {
 	registration:
 		| { kind: string; name: string; replayable: boolean }
 		| undefined;
+	input_error: McpError | undefined;
 	signal: Error;
 	signal_at_boundary: boolean;
 };
