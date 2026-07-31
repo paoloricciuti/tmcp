@@ -20,6 +20,7 @@ pnpm add -D @tmcp/transport-in-memory
 - **Custom Context Support**: Type-safe custom context passing via generics
 - **Complete MCP API**: All MCP protocol methods supported
 - **Subscription Tracking**: Monitors resource subscriptions per session
+- **Per-Request Client**: Test sessionless discovery, strict errors, notifications, and MRTR retries
 
 ## Basic Usage
 
@@ -106,6 +107,47 @@ Get or create a session.
 const session = transport.session(); // Auto-generated ID
 const session2 = transport.session('custom-id'); // Custom ID
 ```
+
+##### `stateless(options?)`
+
+Create a sessionless client for the `2026-07-28` per-request protocol. Its ordinary MCP methods have the same signatures as `Session`, so most tests can switch clients without changing their requests.
+
+```javascript
+const client = transport.stateless({
+	clientCapabilities: { elicitation: {} },
+	clientInfo: { name: 'test-client', version: '1.0.0' },
+	logLevel: 'info',
+});
+
+const discovery = await client.discover();
+const tools = await client.listTools();
+const result = await client.callTool('greet', { name: 'World' });
+```
+
+The shared high-level methods are `request()`, `listTools()`, `callTool()`, `listPrompts()`, `getPrompt()`, `listResources()`, `listResourceTemplates()`, `readResource()`, and `complete()`. Their argument and successful-result types match `Session`. Stateless-only methods are `discover()` and `requestWithInput()`; session lifecycle, logging-level, subscription, and server-response methods remain on `Session` because the per-request protocol does not support them.
+
+The stateless client throws `JSONRPCErrorException` for JSON-RPC errors instead of returning an undefined result. Notifications emitted during its requests are available through `client.sentMessages`; separate clients and separate transports keep concurrent notifications isolated.
+
+Application-specific `_meta` entries in `params` are preserved. Reserved `io.modelcontextprotocol/*` metadata is always produced from the client options and overwrites conflicting values in `params` so the helper cannot send internally inconsistent protocol metadata.
+
+Use `requestWithInput()` to answer MRTR input requests until the original operation completes:
+
+```javascript
+const result = await client.requestWithInput(
+	'tools/call',
+	{ name: 'ask_user' },
+	async (request, key) => {
+		if (request.method === 'elicitation/create') {
+			return { action: 'accept', content: { answer: 'yes' } };
+		}
+		throw new Error(`Unsupported input request: ${key}`);
+	},
+);
+```
+
+Ordinary high-level methods throw a clear error if the server requests MRTR input, preserving their successful-result compatibility with `Session`. Use `requestWithInput()` for tools, prompts, or resources that request client input.
+
+MRTR retries can re-execute the server handler from the top. Tests should account for the same idempotency requirements as a real per-request client. Set `maxRounds` in the final options argument to bound attempts, and pass custom context as its `ctx` property. To resume an existing exchange, include its `requestState` and `inputResponses` in the initial params; subsequent rounds replace those fields with the latest server state and callback answers.
 
 ##### `request(method, params?, sessionId?, ctx?)`
 
