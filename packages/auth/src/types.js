@@ -90,6 +90,7 @@
  * @property {string[]} [token_endpoint_auth_methods_supported] - Supported auth methods
  * @property {string[]} [revocation_endpoint_auth_methods_supported] - Revocation auth methods
  * @property {string} [service_documentation] - Service documentation URL
+ * @property {boolean} [client_id_metadata_document_supported] - Client ID Metadata Document support
  */
 
 /**

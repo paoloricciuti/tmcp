@@ -8,7 +8,7 @@ tmcp supports legacy, initialization-based versions through `2025-06-18`. It doe
 
 ## Implementation status (2026-08-04)
 
-Phases 0–5 and the Phase 6 per-request logging and in-memory client paths are **implemented for process-local subscriptions**. Core, strict dual-profile HTTP request routing, stdio delivery/concurrency, sessionless in-memory testing, and transport-owned subscription routing are covered. No bundled distributed `SubscriptionManager` adapter exists yet, so multi-replica subscription delivery remains incomplete. Decisions taken during implementation:
+Phases 0–7 are **implemented for process-local subscriptions**. Core, strict dual-profile HTTP request routing, stdio delivery/concurrency, sessionless in-memory testing, transport-owned subscription routing, and the optional authorization package are covered. No bundled distributed `SubscriptionManager` adapter exists yet, so multi-replica subscription delivery remains incomplete. Decisions taken during implementation:
 
 - **No opt-in flag.** The `unstableProtocolVersions` option from Phase 0 was implemented and then removed once the revision was published: per-request `2026-07-28` support is enabled by default. `LATEST_PROTOCOL_VERSION` stays `2025-06-18` for legacy negotiation. `KNOWN_PER_REQUEST_PROTOCOL_VERSIONS` in `validation/version.js` is the source of truth for per-request versions.
 - **Terminology**: the code deliberately avoids "modern vs legacy" / `era` naming (future revisions may add new exceptions). Requests are classified as _session-negotiated_ vs _per-request (stateless)_. The classification lives in exactly one place: an internal `stateless: boolean` flag on the existing `AsyncLocalStorage` store (same pattern as `progress_token`, stripped from the public `ctx` getter, transport-provided values discarded). `ctx.protocolVersion` is purely informational and NOT used for classification — legacy sessions also have a negotiated version and may expose it there later.
@@ -27,13 +27,15 @@ Phases 0–5 and the Phase 6 per-request logging and in-memory client paths are 
 - **Strict per-request HTTP runtime**: POST bodies are classified before session allocation, so per-request traffic never reads, creates, or returns a session ID. The transport validates standard and annotated tool parameter headers before dispatch, returns `-32020/-32022` as HTTP 400 and unavailable methods as HTTP 404, keeps successful requests on ordered SSE, and exposes disconnects through `ctx.signal`. Handler-generated errors, including `-32021`, remain inside HTTP 200 SSE because streaming has already started.
 - Other packages need NO changes for phases 0–3. Verified after MRTR: stdio serializes `receive()` responses unchanged; HTTP and SSE stream the returned JSON-RPC response without inspecting `resultType`; the in-memory transport returns `response.result`; schema adapters already expose asynchronous `toJsonSchema()`; session managers, auth, and persistence are not involved because no MRTR state survives a request. Transport-level MRTR tests would only test transparent serialization and are optional, not a Phase 3 requirement.
 - **Phase 3 review/quality**: delayed concurrent schema conversion, simultaneous `receive()` isolation, latest-only sequential answers, three-attempt coercing-schema replay, prototype-like input keys (`constructor`, `toString`, `__proto__`), unrelated malformed responses, invalid elicitation/sampling response recovery, elicitation decline/cancel, request-state decode/envelope/encode/size failures, adapter preparation failures and recovery, adapter-specific schema keyword stripping, expected-signal logging, stateless roots, unsupported stateless input methods, unknown-method precedence, deterministic simultaneous duplicate keys, URL/form mode-specific elicitation capabilities, malformed session capabilities, URL wire requests plus handler/retry-state content stripping, invalid elicitation URLs, all published enum schema shapes, invalid nested form schemas, and un-awaited input calls all have regression coverage. Pending schema promises are resolved only when tmcp is building `InputRequiredResult`, so they cannot replace an unrelated handler result/error. Public comments/JSDoc explain concrete client/handler behavior rather than internal jargon. Redundant always-successful schema assertions were removed; focused validation tests only cover tmcp-specific restrictions that can regress.
-- **Current verification**: the full workspace suite passes 440/440 Vitest tests plus 40/40 conformance checks (480 total), including 223 core, 108 HTTP transport, 45 in-memory transport, five stdio transport, five session-manager, and 54 auth tests. Package source ESLint, touched-file Prettier, generated declarations, publint, full workspace typecheck, and `git diff --check` all pass. The root-wide lint/format commands also scan ignored generated docs output and unparseable create-tmcp templates, so they are not currently clean validation commands. The in-memory legacy elicitation tests now wait for asynchronous request preparation instead of assuming adapter conversion finishes within one microtask.
+- **Current verification**: the full workspace suite passes 453/453 Vitest tests plus 40/40 conformance checks (493 total), including 223 core, 108 HTTP transport, 45 in-memory transport, five stdio transport, five session-manager, and 67 auth tests. Package source ESLint, touched-file Prettier, generated declarations, publint, full workspace typecheck, and `git diff --check` all pass. The root-wide lint/format commands also scan ignored generated docs output and unparseable create-tmcp templates, so they are not currently clean validation commands. The in-memory legacy elicitation tests now wait for asynchronous request preparation instead of assuming adapter conversion finishes within one microtask.
 - **CI package manager**: the root manifest and package-level pins use pnpm 11.2.2. Every workflow lets `pnpm/action-setup` resolve that root pin instead of duplicating a version input. `pnpm install --frozen-lockfile` succeeds with that exact version, matching the lockfile generator.
 - **Phase 6 logging**: `server/discover` now advertises configured logging support. Stateless log notifications require the current request's explicit `io.modelcontextprotocol/logLevel`; server defaults, transport session levels, and earlier stateless requests cannot leak into the decision. Regression coverage includes request-over-transport precedence, stateless-to-session isolation, and an MRTR opt-in → omitted → opt-in sequence proving every retry round is evaluated independently in both directions. Session-negotiated logging remains unchanged.
 - **Phase 6 transport audit**: HTTP routes `send` notifications through the originating POST controller's `AsyncLocalStorage`; concurrent stateless requests prove logs stay on their own response streams. Stdio registers `send` immediately, so stateless logs work before legacy initialization, while legacy broadcasts and session-state listeners still wait for `initialize`. The listener also forwards standalone/background `send` events before initialization; this broader stdout behavior is intentional and changes servers that construct a transport but never initialize it. The in-memory transport now provides `stateless()` clients with discovery, explicit per-request metadata, strict JSON-RPC errors, automatic MRTR retries, and isolated concurrent notification capture. `Session` and `StatelessClient` inherit one shared set of compatible high-level MCP methods; stateless high-level calls reject input-required results and direct callers to `requestWithInput()` so their successful return types stay compatible. Separate transports sharing one server ignore `send` events outside their own request context. The internal `client_id` exists only to select each client's captured-message bucket; it is never protocol or session state. Subscription helpers remain coupled to Phase 4. SSE will not gain modern support. No schema adapter or session-manager changes are needed for logging.
-- **Release/worktree status**: Phase 3, its final review fixes, URL elicitation, the Phase 6 logging slice, HTTP coverage, stdio delivery, in-memory test synchronization, pnpm 11 CI alignment, and the sessionless in-memory client are committed through `4c0b6f8`. The process-local Phase 4 subscription implementation and latest plan updates are unstaged. `.changeset/warm-onions-repeat.md` covers the overall `2026-07-28` protocol feature and Phase 6 logging; `.changeset/mrtr-input-required.md` covers Phase 3 MRTR behavior and follow-up fixes; `.changeset/quiet-stdio-logs.md` covers immediate stdio request-notification delivery; `.changeset/tidy-stateless-clients.md` covers the in-memory client API; `.changeset/calm-streams-listen.md` covers subscriptions.
+- **Phase 7 authorization:** `@tmcp/auth` already resolved URL client IDs, so it now advertises Client ID Metadata Document support and enforces the mechanism's mandatory URL, required-field, exact client-ID, redirect-URI, and no-shared-secret rules. Public-client token authentication is advertised. DCR stays operational but is documented as deprecated; its `application_type` requirement and issuer-keyed credential persistence apply to clients and do not add server APIs. Recommended but non-mandatory caching, fetch policy, timeout/size limits, and RFC 9207 `iss` support are deferred to focused follow-up work rather than expanding this migration.
+- **Release/worktree status**: Phase 3, its final review fixes, URL elicitation, the Phase 6 logging slice, HTTP coverage, stdio delivery, in-memory test synchronization, pnpm 11 CI alignment, and the sessionless in-memory client are committed through `4c0b6f8`. The current worktree completes process-local Phase 4 subscriptions, the strict Phase 5.1 per-request HTTP runtime, and Phase 7 authorization conformance. `.changeset/warm-onions-repeat.md` covers the overall `2026-07-28` protocol feature and Phase 6 logging; `.changeset/mrtr-input-required.md` covers Phase 3 MRTR behavior and follow-up fixes; `.changeset/quiet-stdio-logs.md` covers immediate stdio request-notification delivery; `.changeset/tidy-stateless-clients.md` covers the in-memory client API; `.changeset/calm-streams-listen.md` covers subscriptions; `.changeset/strict-http-requests.md` covers strict HTTP behavior and its new core APIs; `.changeset/modern-auth-clients.md` covers Phase 7 authorization changes.
 - `2024-10-07` was dropped when consolidating the two disagreeing version lists (`validation/version.js` won — it was never actually negotiable).
-- Deferred deliberately: `_meta` key-syntax/reserved-prefix enforcement and extension-advertisement validation for extension `resultType` values.
+- **No generic `_meta` key enforcement:** the key-format rules constrain producers, but the protocol does not require receivers to reject malformed or unknown keys or define an error for doing so. tmcp emits valid keys and keeps received `_meta` loose for forward compatibility, including future official keys under reserved prefixes.
+- **No generic extension `resultType` enforcement:** tmcp owns `complete` and `input_required` and preserves other string values. Only an extension implementation knows which additional values it defines; the protocol provides no generic mapping from a result-type string to an advertised extension capability. Extension packages/authors must emit valid values and clients must reject values they do not recognize.
 
 ## Standing maintainer constraints (apply to all remaining phases)
 
@@ -192,7 +194,7 @@ Add required modern wire fields to:
 
 Add a cache policy option with safe defaults (`ttlMs: 0`, `cacheScope: "private"`). Allow method-level configuration and a resource-specific read policy where useful. Public caching must be explicit because enabled callbacks, auth context, and dynamic resource/template listing can make otherwise identical methods user-specific.
 
-### 2.4 JSON Schema 2020-12 and JSON values — DONE (except `$ref`/dialect handling, deferred)
+### 2.4 JSON Schema 2020-12 and JSON values — DONE
 
 - Loosen tool `inputSchema` and `outputSchema` wire schemas to accept any JSON Schema 2020-12 keywords while retaining the protocol's object-root requirements where applicable.
 - Allow `structuredContent` to contain any JSON value, not only objects.
@@ -200,6 +202,8 @@ Add a cache policy option with safe defaults (`ttlMs: 0`, `cacheScope: "private"
 - Do not automatically dereference network `$ref` values.
 - Add documented/resource-bounded handling for `$ref` and composition keywords.
 - Preserve adapter output rather than normalizing away unknown keywords such as `x-mcp-header`.
+
+Decision: schema validation and dialect support belong to the configured Standard Schema library and adapter. tmcp does not automatically dereference network `$ref` values, satisfying the protocol's required safe default. Adapter-specific dialect documentation and validation resource bounds are independent hardening work, not a blocker for this migration.
 
 ### 2.5 Capability schemas and deprecations — DONE (modern roots: decided, not supported on stateless — see Decided)
 
@@ -296,7 +300,7 @@ Until at least one of these adapters exists, HTTP's injectable manager supports 
 
 ## Phase 5: transports
 
-### 5.1 `@tmcp/transport-http`
+### 5.1 `@tmcp/transport-http` — DONE
 
 Status: implemented. Request-scoped `send` notifications, including logs and progress, use the originating POST sink through transport-local `AsyncLocalStorage`; cancellation changes the sink state before aborting handler context so no later messages are written.
 
@@ -321,8 +325,8 @@ Parse a single body message first, validate its headers, classify its era, then 
 
 #### CORS
 
-- Add modern `Mcp-*` headers to configurable allow/expose defaults where applicable.
-- Keep CORS behavior separate from mandatory request-header and Origin validation.
+- **Done:** default wildcard CORS handling allows modern `Mcp-*` request headers for non-credentialed browser requests; explicit allowlists remain user configuration. Credentialed wildcard convenience may be improved independently.
+- **Done:** CORS response headers remain separate from mandatory request-header and `Origin` security validation. Modern responses expose no new MCP headers that browser code must read.
 
 ### 5.2 `@tmcp/transport-stdio`
 
@@ -345,15 +349,15 @@ Status note: stateless request/response, subscription routing, cancellation, and
 
 ### 5.4 `@tmcp/transport-sse`
 
-- Mark HTTP+SSE deprecated in docs and package metadata according to the project's release policy.
-- Do not add modern support to this deprecated transport.
+- **Decided:** no package-specific deprecation work is required; HTTP+SSE is already deprecated by the protocol.
+- **Done by scope:** do not add modern support to this deprecated transport.
 
 ### 5.5 Session managers
 
 - **Done:** keep all existing session-manager interfaces and adapters unchanged for legacy HTTP behavior.
 - **Done:** add a separate subscription manager interface rather than changing the meaning of session IDs or existing stream managers.
 - **Deliberately deferred:** add bundled distributed implementations for PostgreSQL, Redis, and Durable Objects. They remain required before claiming built-in multi-replica subscription support.
-- Document server-minted handles passed as tool arguments as the modern pattern for application cross-call state. Consider a utility only after concrete repeated use appears.
+- **Decided:** server-minted handles are ordinary application-level tool results and arguments, not a tmcp abstraction. No utility or migration work is required.
 
 ## Phase 6: per-request logging and notification behavior
 
@@ -363,21 +367,23 @@ Status note: stateless request/response, subscription routing, cancellation, and
 - Ensure progress and logging notifications are delivered only to the originating request response sink. **Done for existing transports:** HTTP has concurrent request-stream isolation coverage, stdio immediately writes `send` notifications to its single protocol stream, and in-memory sessionless clients isolate concurrent notification routes.
 - **Done:** keep legacy list/resource broadcasts unchanged while routing per-request changes through the subscription manager.
 
-## Phase 7: auth (`@tmcp/auth`)
+## Phase 7: auth (`@tmcp/auth`) — DONE
 
-Audit and extend the existing implementation rather than adding duplicate paths:
+Only mandatory server-side conformance changes were added:
 
-- `application_type` already exists in `src/schemas.js`; constrain and require the appropriate value where the draft requires clients to supply it.
-- Client ID Metadata Document fetching already exists in `src/oauth.js`; harden it with HTTPS/path requirements, complete metadata validation, timeout, response-size limit, redirect policy, caching, and SSRF-safe URL handling.
-- Keep Dynamic Client Registration for backward compatibility while documenting its deprecation.
-- Add `iss` to built-in authorization responses and define how custom provider redirects can safely opt into the same behavior.
-- Issuer-keyed persisted credentials remain a client-side requirement; document it without adding unrelated server storage.
+- **No server change:** an appropriate DCR `application_type` is a client requirement. The existing server metadata field remains open rather than adding stricter behavior that the protocol does not require from this package.
+- **Done:** because the package already resolves URL client IDs, advertise Client ID Metadata Document support and enforce its mandatory URL/document, exact client-ID, redirect-URI, and no-shared-secret rules.
+- **Done:** keep Dynamic Client Registration for backward compatibility while documenting its deprecation.
+- **Deferred:** RFC 9207 `iss` is a recommendation in this revision, not a mandatory server requirement. Implement it separately with a complete callback model rather than heuristic response rewriting in this already-large migration.
+- **Done:** document issuer-keyed persisted credentials as a client-side requirement without adding unrelated server storage.
+
+Authorization remains optional in MCP. Recommended CIMD caching, DNS/egress policy injection, timeout and response-size limits, and a switch to disable CIMD can be implemented in a separate hardening change without expanding this protocol migration's public API.
 
 ## Phase 8: tasks extension (optional)
 
 Tasks are an official extension, not part of core modern protocol support. If implemented later, add a separate `@tmcp/tasks` package advertising `io.modelcontextprotocol/tasks` through `extensions`, with `tasks/get` polling and `tasks/update`. Do not block the core migration on it.
 
-## Phase 9: tests, docs, and release
+## Phase 9: tests, docs, and release — IMPLEMENTATION COMPLETE
 
 ### Test matrix
 
@@ -403,6 +409,8 @@ Add dual-era coverage for every shared method and transport:
 - Update READMEs, `apps/docs`, and `create-tmcp` templates only after the compatibility APIs stabilize.
 - Clearly distinguish deprecated features from removed modern methods.
 
+Decision: broader documentation and template work is deferred because those surfaces already need updates for earlier versions. The maintainer will handle the release separately. Neither blocks completion of this implementation round.
+
 ### Release conditions
 
 This can ship as a minor release only if:
@@ -423,9 +431,9 @@ Otherwise, defer the incompatible portion to the next major release.
 4. ~~Implement and harden MRTR after stateless request plumbing is fully tested~~ (done; core-only, transports forward it unchanged).
 5. ~~Add the dedicated subscription manager, transport streaming, cancellation, and stdio concurrency~~ (done for process-local managers; distributed adapters remain open work).
 6. ~~Complete per-request logging/deprecation behavior and in-memory helpers~~ (done, including subscription helpers).
-7. Add HTTP validation/status handling and the remaining transport hardening from Phase 5 without splitting core behavior into duplicated runtimes.
-8. Harden existing auth support independently.
-9. Update docs/templates and release.
+7. Phase 5 transport hardening is complete without splitting core behavior into duplicated runtimes: strict HTTP validation/status handling and CORS separation are implemented, while HTTP+SSE needs no package-specific deprecation work.
+8. ~~Harden existing auth support independently~~ (done).
+9. Update docs/templates later; the maintainer handles the release separately.
 10. Consider the tasks extension separately.
 
 ## Decided (was open)
@@ -436,6 +444,9 @@ Otherwise, defer the incompatible portion to the next major release.
 - `requestState` encoding: pluggable codec with an unopinionated `JSON.stringify` default — no built-in crypto (see 3.4).
 - Replay protection: per-registration acknowledgment flag on tool, prompt, resource, and template definitions (see 3.5), with JSDoc and error messages that explain the re-execution problem, not just state the rule.
 - Input identity: additive `{ key?: string }` options on existing `elicitation()` and `message()` APIs; automatic numeric keys remain source-compatible for straight-line handlers.
+- `_meta` key syntax and reserved prefixes constrain producers; tmcp validates its own emitted keys but deliberately does not reject unknown received metadata.
+- Extension-specific `resultType` values are owned by advertised extension implementations. Core preserves arbitrary string values rather than maintaining an extension registry.
+- JSON Schema dialect validation, local `$ref` resolution, and validation resource limits belong to schema libraries/adapters. tmcp never automatically fetches network references.
 
 ## Open work
 
