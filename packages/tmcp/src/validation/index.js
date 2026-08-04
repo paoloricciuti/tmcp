@@ -37,6 +37,9 @@ export const MISSING_REQUIRED_CLIENT_CAPABILITY = -32021;
  */
 export const UNSUPPORTED_PROTOCOL_VERSION = -32022;
 
+export const SUBSCRIPTION_ID_META_KEY =
+	'io.modelcontextprotocol/subscriptionId';
+
 export class McpError extends JSONRPCErrorException {
 	/**
 	 * @param {number} code
@@ -89,6 +92,28 @@ export function header_mismatch_error(message) {
 }
 
 /**
+ * A uniquely identifying ID for a request in JSON-RPC.
+ */
+export const RequestIdSchema = v.union([
+	v.string(),
+	v.pipe(v.number(), v.integer()),
+]);
+
+/**
+ * The severity of a log message.
+ */
+export const LoggingLevelSchema = v.picklist([
+	'debug',
+	'info',
+	'notice',
+	'warning',
+	'error',
+	'critical',
+	'alert',
+	'emergency',
+]);
+
+/**
  * A progress token, used to associate progress notifications with the original request.
  */
 export const ProgressTokenSchema = v.union([
@@ -117,12 +142,21 @@ export const RequestSchema = v.object({
 	params: v.optional(BaseRequestParamsSchema),
 });
 
+const NotificationMetaSchema = v.looseObject({});
+
+const SubscriptionNotificationMetaSchema = v.looseObject({
+	[SUBSCRIPTION_ID_META_KEY]: v.optional(RequestIdSchema),
+});
+
 const BaseNotificationParamsSchema = v.looseObject({
 	/**
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
 	 */
-	_meta: v.optional(v.looseObject({})),
+	_meta: v.optional(NotificationMetaSchema),
+});
+const SubscriptionNotificationParamsSchema = v.looseObject({
+	_meta: v.optional(SubscriptionNotificationMetaSchema),
 });
 export const NotificationSchema = v.object({
 	method: v.string(),
@@ -135,14 +169,6 @@ export const ResultSchema = v.looseObject({
 	 */
 	_meta: v.optional(v.looseObject({})),
 });
-
-/**
- * A uniquely identifying ID for a request in JSON-RPC.
- */
-export const RequestIdSchema = v.union([
-	v.string(),
-	v.pipe(v.number(), v.integer()),
-]);
 
 /**
  * A request that expects a response.
@@ -695,6 +721,67 @@ export const ReadResourceResultSchema = v.looseObject({
 export const ResourceListChangedNotificationSchema = v.object({
 	...NotificationSchema.entries,
 	method: v.literal('notifications/resources/list_changed'),
+	params: v.optional(SubscriptionNotificationParamsSchema),
+});
+
+/**
+ * Notification types requested on a per-request subscription stream. Every field
+ * is opt-in.
+ */
+export const SubscriptionFilterSchema = v.object({
+	toolsListChanged: v.optional(v.boolean()),
+	promptsListChanged: v.optional(v.boolean()),
+	resourcesListChanged: v.optional(v.boolean()),
+	resourceSubscriptions: v.optional(v.array(v.string())),
+});
+
+const PerRequestMetaSchema = v.looseObject({
+	...RequestMetaSchema.entries,
+	'io.modelcontextprotocol/protocolVersion': v.string(),
+	'io.modelcontextprotocol/clientCapabilities': ClientCapabilitiesSchema,
+	'io.modelcontextprotocol/clientInfo': v.optional(ImplementationSchema),
+	'io.modelcontextprotocol/logLevel': v.optional(LoggingLevelSchema),
+});
+
+/**
+ * Open a long-lived stream for server notifications.
+ */
+export const SubscriptionsListenRequestParamsSchema = v.object({
+	...BaseRequestParamsSchema.entries,
+	_meta: PerRequestMetaSchema,
+	notifications: SubscriptionFilterSchema,
+});
+
+export const SubscriptionsListenRequestSchema = v.object({
+	...RequestSchema.entries,
+	method: v.literal('subscriptions/listen'),
+	params: SubscriptionsListenRequestParamsSchema,
+});
+
+/**
+ * Returned when the server gracefully closes a subscription stream.
+ */
+export const SubscriptionsListenResultSchema = v.looseObject({
+	...ResultSchema.entries,
+	resultType: v.literal('complete'),
+	_meta: v.looseObject({
+		[SUBSCRIPTION_ID_META_KEY]: RequestIdSchema,
+	}),
+});
+
+/**
+ * The first notification emitted for a per-request subscription stream.
+ */
+export const SubscriptionsAcknowledgedNotificationSchema = v.object({
+	...NotificationSchema.entries,
+	method: v.literal('notifications/subscriptions/acknowledged'),
+	params: v.object({
+		...SubscriptionNotificationParamsSchema.entries,
+		_meta: v.looseObject({
+			[SUBSCRIPTION_ID_META_KEY]: RequestIdSchema,
+		}),
+		notifications: SubscriptionFilterSchema,
+	}),
 });
 
 /**
@@ -736,7 +823,7 @@ export const ResourceUpdatedNotificationSchema = v.object({
 	...NotificationSchema.entries,
 	method: v.literal('notifications/resources/updated'),
 	params: v.object({
-		...BaseNotificationParamsSchema.entries,
+		...SubscriptionNotificationParamsSchema.entries,
 
 		/**
 		 * The URI of the resource that has been updated. This might be a sub-resource of the one that the client actually subscribed to.
@@ -953,6 +1040,7 @@ export const GetPromptResultSchema = v.looseObject({
 export const PromptListChangedNotificationSchema = v.object({
 	...NotificationSchema.entries,
 	method: v.literal('notifications/prompts/list_changed'),
+	params: v.optional(SubscriptionNotificationParamsSchema),
 });
 /* Tools */
 
@@ -1134,22 +1222,9 @@ export const CallToolRequestSchema = v.object({
 export const ToolListChangedNotificationSchema = v.object({
 	...NotificationSchema.entries,
 	method: v.literal('notifications/tools/list_changed'),
+	params: v.optional(SubscriptionNotificationParamsSchema),
 });
 /* Logging */
-
-/**
- * The severity of a log message.
- */
-export const LoggingLevelSchema = v.picklist([
-	'debug',
-	'info',
-	'notice',
-	'warning',
-	'error',
-	'critical',
-	'alert',
-	'emergency',
-]);
 
 /**
  * A request from the client to the server, to enable or adjust logging.
@@ -1684,6 +1759,7 @@ export const ClientRequestSchema = v.union([
 	ListResourcesRequestSchema,
 	ListResourceTemplatesRequestSchema,
 	ReadResourceRequestSchema,
+	SubscriptionsListenRequestSchema,
 	SubscribeRequestSchema,
 	UnsubscribeRequestSchema,
 	CallToolRequestSchema,
@@ -1712,6 +1788,7 @@ export const ServerNotificationSchema = v.union([
 	CancelledNotificationSchema,
 	ProgressNotificationSchema,
 	LoggingMessageNotificationSchema,
+	SubscriptionsAcknowledgedNotificationSchema,
 	ResourceUpdatedNotificationSchema,
 	ResourceListChangedNotificationSchema,
 	ToolListChangedNotificationSchema,
@@ -1720,6 +1797,7 @@ export const ServerNotificationSchema = v.union([
 export const ServerResultSchema = v.pipe(
 	v.union([
 		InputRequiredResultSchema,
+		SubscriptionsListenResultSchema,
 		EmptyResultSchema,
 		InitializeResultSchema,
 		CompleteResultSchema,
@@ -1837,4 +1915,19 @@ export const ServerResultSchema = v.pipe(
  */
 /**
  * @typedef {v.InferInput<typeof InputRequiredResultSchema>} InputRequiredResult
+ */
+/**
+ * @typedef {v.InferInput<typeof RequestIdSchema>} RequestId
+ */
+/**
+ * @typedef {v.InferInput<typeof SubscriptionFilterSchema>} SubscriptionFilter
+ */
+/**
+ * @typedef {v.InferInput<typeof SubscriptionsListenResultSchema>} SubscriptionsListenResult
+ */
+/**
+ * @typedef {v.InferInput<typeof JSONRPCRequestSchema> & v.InferInput<typeof SubscriptionsListenRequestSchema>} SubscriptionsListenRequest
+ */
+/**
+ * @typedef {v.InferInput<typeof JSONRPCNotificationSchema> & v.InferInput<typeof SubscriptionsAcknowledgedNotificationSchema>} SubscriptionsAcknowledgedNotification
  */

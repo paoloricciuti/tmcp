@@ -1,10 +1,11 @@
 /**
- * @import { McpServer, Context, Subscriptions, ClientCapabilities, ClientInfo, LoggingLevel, InitializeResult } from "tmcp";
+ * @import { McpServer, Context, Subscriptions, ClientCapabilities, ClientInfo, LoggingLevel, InitializeResult, SubscriptionFilter, SubscriptionsListenResult } from "tmcp";
  * @import { JSONRPCRequest, JSONRPCResponse } from "json-rpc-2.0";
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { JSONRPCErrorException } from 'json-rpc-2.0';
+import { InMemorySubscriptionManager } from '@tmcp/session-manager';
 
 const PER_REQUEST_PROTOCOL_VERSION = '2026-07-28';
 
@@ -156,6 +157,70 @@ class Client {
 	}
 }
 
+export class StatelessSubscription {
+	/** @type {string | number} */
+	id;
+	/** @type {InMemorySubscriptionManager} */
+	#manager;
+	/** @type {string} */
+	#origin;
+	/** @type {Promise<SubscriptionsListenResult>} */
+	#pending;
+	/** @type {() => Array<JSONRPCRequest>} */
+	#messages;
+	/** @type {Promise<SubscriptionsListenResult> | undefined} */
+	#closing;
+
+	/**
+	 * @param {string | number} id
+	 * @param {string} origin
+	 * @param {InMemorySubscriptionManager} manager
+	 * @param {Promise<SubscriptionsListenResult>} pending
+	 * @param {() => Array<JSONRPCRequest>} messages
+	 */
+	constructor(id, origin, manager, pending, messages) {
+		this.id = id;
+		this.#origin = origin;
+		this.#manager = manager;
+		this.#pending = pending;
+		this.#messages = messages;
+	}
+
+	/** All acknowledged and change notifications for this subscription. */
+	get messages() {
+		return this.#messages().filter(
+			(message) =>
+				/** @type {Record<string, unknown> | undefined} */ (
+					message.params?._meta
+				)?.['io.modelcontextprotocol/subscriptionId'] === this.id,
+		);
+	}
+
+	get acknowledgement() {
+		return this.messages.find(
+			(message) =>
+				message.method === 'notifications/subscriptions/acknowledged',
+		);
+	}
+
+	get notifications() {
+		return this.messages.filter(
+			(message) =>
+				message.method !== 'notifications/subscriptions/acknowledged',
+		);
+	}
+
+	/** Gracefully close the subscription and await its final listen result. */
+	close() {
+		if (this.#closing) return this.#closing;
+		this.#closing = (async () => {
+			await this.#manager.close(this.id, this.#origin, 'closed');
+			return this.#pending;
+		})();
+		return this.#closing;
+	}
+}
+
 /**
  * A sessionless MCP client for the per-request protocol. Its ordinary MCP
  * methods have the same signatures as `Session`.
@@ -169,16 +234,19 @@ export class StatelessClient extends Client {
 	#sent_messages;
 	/** @type {() => void} */
 	#clear;
-	/** @type {() => void} */
+	/** @type {() => void | Promise<void>} */
 	#close;
+	/** @type {(notifications: SubscriptionFilter, ctx?: TCustom) => Promise<StatelessSubscription>} */
+	#listen;
 
 	/**
 	 * @param {ClientRequest<TCustom>} request
 	 * @param {() => Array<JSONRPCRequest>} sent_messages
 	 * @param {() => void} clear
-	 * @param {() => void} close
+	 * @param {() => void | Promise<void>} close
+	 * @param {(notifications: SubscriptionFilter, ctx?: TCustom) => Promise<StatelessSubscription>} listen
 	 */
-	constructor(request, sent_messages, clear, close) {
+	constructor(request, sent_messages, clear, close, listen) {
 		super(async (method, params, ctx) => {
 			const result = await request(method, params, ctx);
 			if (
@@ -196,6 +264,7 @@ export class StatelessClient extends Client {
 		this.#sent_messages = sent_messages;
 		this.#clear = clear;
 		this.#close = close;
+		this.#listen = listen;
 	}
 
 	/**
@@ -205,6 +274,15 @@ export class StatelessClient extends Client {
 	 */
 	discover(ctx) {
 		return this.request('server/discover', undefined, ctx);
+	}
+
+	/**
+	 * Open a long-lived per-request notification subscription.
+	 * @param {SubscriptionFilter} notifications
+	 * @param {TCustom} [ctx]
+	 */
+	listen(notifications, ctx) {
+		return this.#listen(notifications, ctx);
 	}
 
 	/**
@@ -275,7 +353,7 @@ export class StatelessClient extends Client {
 	}
 
 	close() {
-		this.#close();
+		return this.#close();
 	}
 }
 
@@ -565,6 +643,14 @@ export class InMemoryTransport {
 	 */
 	#request_context_storage = new AsyncLocalStorage();
 
+	#subscription_manager = new InMemorySubscriptionManager();
+
+	/** @type {Map<string, Map<string | number, () => void>>} */
+	#subscription_acknowledgements = new Map();
+
+	/** @type {Set<string>} */
+	#stateless_clients = new Set();
+
 	/**
 	 * @param {McpServer<any, TCustom>} server
 	 */
@@ -573,21 +659,51 @@ export class InMemoryTransport {
 
 		// Set up global event listeners for message capture
 		this.#cleaners.add(
-			this.#server.on('send', ({ request }) => {
-				const request_context =
-					this.#request_context_storage.getStore();
-				if (!request_context) return;
-				const client_id = request_context.client_id;
-				let messages = this.#sent_messages.get(client_id);
-				if (!messages) {
-					this.#sent_messages.set(client_id, (messages = []));
-				}
-				messages.push(request);
-			}),
+			this.#server.on(
+				'send',
+				({ request, subscriptionId, subscriptionOrigin }) => {
+					if (
+						subscriptionId !== undefined &&
+						subscriptionOrigin !== undefined
+					) {
+						if (!this.#stateless_clients.has(subscriptionOrigin))
+							return;
+						let messages =
+							this.#sent_messages.get(subscriptionOrigin);
+						if (!messages) {
+							this.#sent_messages.set(
+								subscriptionOrigin,
+								(messages = []),
+							);
+						}
+						messages.push(request);
+						if (
+							request.method ===
+							'notifications/subscriptions/acknowledged'
+						) {
+							this.#subscription_acknowledgements
+								.get(subscriptionOrigin)
+								?.get(subscriptionId)?.();
+						}
+						return;
+					}
+					const request_context =
+						this.#request_context_storage.getStore();
+					if (!request_context) return;
+					const client_id = request_context.client_id;
+					let messages = this.#sent_messages.get(client_id);
+					if (!messages) {
+						this.#sent_messages.set(client_id, (messages = []));
+					}
+					messages.push(request);
+				},
+			),
 		);
 
 		this.#cleaners.add(
-			this.#server.on('broadcast', ({ request }) => {
+			this.#server.on('broadcast', ({ request, subscriptionOnly }) => {
+				this.#subscription_manager.send(request);
+				if (subscriptionOnly) return;
 				// Broadcasts should be delivered to ALL subscribed sessions
 				// not just the current async context
 				for (const [sessionId, session] of this.#sessions.entries()) {
@@ -644,6 +760,7 @@ export class InMemoryTransport {
 	 */
 	stateless(options = {}) {
 		const client_id = crypto.randomUUID();
+		this.#stateless_clients.add(client_id);
 		let request_id = 0;
 		const metadata = {
 			'io.modelcontextprotocol/protocolVersion':
@@ -679,6 +796,14 @@ export class InMemoryTransport {
 			() => this.sentMessages(client_id),
 			() => this.#clear_client_messages(client_id),
 			() => this.#close_client(client_id),
+			(notifications, ctx) =>
+				this.#listen(
+					metadata,
+					request_id++,
+					client_id,
+					notifications,
+					ctx,
+				),
 		);
 	}
 
@@ -767,7 +892,11 @@ export class InMemoryTransport {
 							_meta: { ...params_metadata, ...metadata },
 						},
 					},
-					{ custom: ctx },
+					{
+						custom: ctx,
+						subscriptionOrigin: client_id,
+						subscriptionManager: this.#subscription_manager,
+					},
 				),
 		);
 
@@ -779,6 +908,68 @@ export class InMemoryTransport {
 			);
 		}
 		return /** @type {TResult} */ (response?.result);
+	}
+
+	/**
+	 * @param {Record<string, unknown>} metadata
+	 * @param {string | number} request_id
+	 * @param {string} client_id
+	 * @param {SubscriptionFilter} notifications
+	 * @param {TCustom} [ctx]
+	 */
+	async #listen(metadata, request_id, client_id, notifications, ctx) {
+		let acknowledgements =
+			this.#subscription_acknowledgements.get(client_id);
+		if (!acknowledgements) {
+			acknowledgements = new Map();
+			this.#subscription_acknowledgements.set(
+				client_id,
+				acknowledgements,
+			);
+		}
+		/** @type {() => void} */
+		let acknowledge = () => {};
+		/**
+		 * @type {Promise<void>}
+		 */
+		const acknowledged = new Promise((resolve) => {
+			acknowledge = resolve;
+		});
+		acknowledgements.set(request_id, acknowledge);
+
+		const pending = this.#stateless_request(
+			'subscriptions/listen',
+			metadata,
+			request_id,
+			client_id,
+			{ notifications },
+			ctx,
+		);
+		try {
+			await Promise.race([
+				acknowledged,
+				pending.then(() => {
+					throw new Error(
+						'Subscription closed before acknowledgement',
+					);
+				}),
+			]);
+		} finally {
+			if (acknowledgements.get(request_id) === acknowledge) {
+				acknowledgements.delete(request_id);
+			}
+			if (acknowledgements.size === 0) {
+				this.#subscription_acknowledgements.delete(client_id);
+			}
+		}
+
+		return new StatelessSubscription(
+			request_id,
+			client_id,
+			this.#subscription_manager,
+			pending,
+			() => this.sentMessages(client_id),
+		);
 	}
 
 	/**
@@ -859,7 +1050,10 @@ export class InMemoryTransport {
 	 * Remove an in-memory client message bucket.
 	 * @param {string} client_id
 	 */
-	#close_client(client_id) {
+	async #close_client(client_id) {
+		await this.#subscription_manager.closeAll(client_id, 'cancelled');
+		this.#stateless_clients.delete(client_id);
+		this.#subscription_acknowledgements.delete(client_id);
 		this.#sent_messages.delete(client_id);
 	}
 
@@ -884,12 +1078,14 @@ export class InMemoryTransport {
 	/**
 	 * Close all sessions and clean up all event listeners
 	 */
-	close() {
+	async close() {
+		await this.#subscription_manager.closeAll(undefined, 'cancelled');
 		// Close all sessions
 		for (const session of this.#sessions.values()) {
 			session.close();
 		}
 		this.#sessions.clear();
+		this.#stateless_clients.clear();
 
 		// Clean up adapter-level listeners
 		for (const cleaner of this.#cleaners) {

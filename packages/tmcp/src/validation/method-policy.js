@@ -20,6 +20,7 @@ const method_policy = {
 	// Requires an open client session.
 	initialize: { session: true, stateless: false },
 	'notifications/initialized': { session: true, stateless: false },
+	'notifications/progress': { session: true, stateless: false },
 	ping: { session: true, stateless: false },
 	'logging/setLevel': { session: true, stateless: false },
 	'resources/subscribe': { session: true, stateless: false },
@@ -27,6 +28,7 @@ const method_policy = {
 	'notifications/roots/list_changed': { session: true, stateless: false },
 	// Only available when version details are included in this request.
 	'server/discover': { session: false, stateless: true },
+	'subscriptions/listen': { session: false, stateless: true },
 };
 
 /**

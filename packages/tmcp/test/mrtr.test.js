@@ -281,6 +281,37 @@ describe('MRTR (multi round-trip requests)', () => {
 			expect(response.result.cacheScope).toBeUndefined();
 		});
 
+		it('keeps a completed MRTR resource result private', async () => {
+			const server = create_server({
+				cache: { ttlMs: 5000, cacheScope: 'public' },
+			});
+			server.resource(
+				{
+					name: 'private',
+					description: 'x',
+					uri: 'test://private',
+					replayable: true,
+				},
+				async (uri) => {
+					await server.elicitation('unlock', mock_schema());
+					return { contents: [{ uri, text: 'user-specific' }] };
+				},
+			);
+
+			const response = await server.receive(
+				stateless_request('resources/read', {
+					uri: 'test://private',
+					inputResponses: {
+						1: { action: 'accept', content: { answer: 'yes' } },
+					},
+				}),
+			);
+
+			expect(response.result.resultType).toBe('complete');
+			expect(response.result.ttlMs).toBe(0);
+			expect(response.result.cacheScope).toBe('private');
+		});
+
 		it('emits an InputRequiredResult from a template-matched resource read', async () => {
 			const server = create_server();
 			server.template(

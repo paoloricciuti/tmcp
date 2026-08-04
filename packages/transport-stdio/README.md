@@ -78,15 +78,19 @@ Starts listening for JSON-RPC messages on stdin and sets up response handling on
 - Parses JSON-RPC messages and forwards to the server
 - Writes responses to `process.stdout`
 - Handles process termination signals
+- Processes per-request calls concurrently so `subscriptions/listen` does not block cancellation or later requests
+- Serializes all stdout writes and suppresses a cancelled listen response
 
 ## Message Flow
 
 1. **Input**: JSON-RPC messages received via `stdin`
 2. **Processing**: Messages are parsed and forwarded to the MCP server
 3. **Output**: Server responses are written to `stdout`
-4. **Errors**: Processing errors are logged to `stderr`
+4. **Errors**: JSON-RPC errors are returned on `stdout`; malformed input lines are ignored
 
 The transport automatically tracks `clientInfo`, client capabilities, and log level reported by the client and exposes them through `server.ctx.sessionInfo`. Resource subscriptions declared by the client are also recorded so `server.changed('resource', uri)` only emits notifications when the client has opted in.
+
+`closeSubscription(id)` gracefully completes a `subscriptions/listen` request. `close()` cancels all active per-request subscriptions and removes transport listeners.
 
 ## Integration with MCP Inspector
 
@@ -152,7 +156,7 @@ transport.listen();
 
 The transport includes comprehensive error handling:
 
-- **JSON Parse Errors**: Malformed JSON messages are caught and logged
+- **JSON Parse Errors**: Malformed JSON input lines are ignored
 - **Server Errors**: Server processing errors are handled gracefully
 - **Process Termination**: Clean shutdown on SIGINT/SIGTERM signals
 

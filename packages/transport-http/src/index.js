@@ -1,7 +1,7 @@
 /**
  * @import { AuthInfo, McpServer } from "tmcp";
  * @import { OAuth  } from "@tmcp/auth";
- * @import { StreamSessionManager, InfoSessionManager } from "@tmcp/session-manager";
+ * @import { StreamSessionManager, InfoSessionManager, SubscriptionManager } from "@tmcp/session-manager";
  * @import { OptionalizeSessionManager } from "./type-utils.js"
  */
 
@@ -22,15 +22,23 @@
  * 	path?: string | null
  * 	oauth?: OAuth<"built">
  * 	cors?: CorsConfig | boolean,
+ * 	allowedOrigins?: string | string[] | true
  * 	sessionManager?: { streams?: StreamSessionManager, info?: OptionalizeSessionManager<InfoSessionManager> }
+ * 	subscriptionManager?: SubscriptionManager
  * 	disableSse?: boolean
  * }} HttpTransportOptions
+ */
+
+/**
+ * @typedef {{ promise: Promise<boolean>, resolve: (registered: boolean) => void }} SubscriptionRegistration
+ * @typedef {{ controller?: ReadableStreamDefaultController, state: 'open' | 'cancelled' | 'disconnected', subscription?: { id: string | number, registration: SubscriptionRegistration } }} SubscriptionSink
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
 import {
 	InMemoryStreamSessionManager,
 	InMemoryInfoSessionManager,
+	InMemorySubscriptionManager,
 } from '@tmcp/session-manager';
 import { DEV } from 'esm-env';
 
@@ -48,7 +56,7 @@ export class HttpTransport {
 	#server;
 
 	/**
-	 * @type {Required<Omit<HttpTransportOptions, 'oauth' | 'cors' | 'sessionManager' | 'disableSse'>> & { cors?: CorsConfig | boolean, sessionManager: SessionManager, disableSse?: boolean }}
+	 * @type {Required<Omit<HttpTransportOptions, 'oauth' | 'cors' | 'allowedOrigins' | 'sessionManager' | 'subscriptionManager' | 'disableSse'>> & { cors?: CorsConfig | boolean, allowedOrigins?: string | string[] | true, sessionManager: SessionManager, disableSse?: boolean }}
 	 */
 	#options;
 
@@ -74,6 +82,15 @@ export class HttpTransport {
 
 	#text_encoder = new TextEncoder();
 
+	/** @type {SubscriptionManager} */
+	#subscription_manager;
+
+	/** @type {Map<string, Map<string | number, SubscriptionSink>>} */
+	#subscription_sinks = new Map();
+	/** @type {WeakMap<Response, { id: string | number, origin: string }>} */
+	#subscription_responses = new WeakMap();
+	#warned_implicit_origin = false;
+
 	/**
 	 *
 	 * @param {McpServer<any, TCustom>} server
@@ -86,7 +103,9 @@ export class HttpTransport {
 			path = '/mcp',
 			oauth,
 			cors,
+			allowedOrigins,
 			disableSse,
+			subscriptionManager: _subscriptionManager,
 			sessionManager: _sessionManager = {
 				streams: new InMemoryStreamSessionManager(),
 				info: new InMemoryInfoSessionManager(),
@@ -103,6 +122,9 @@ export class HttpTransport {
 				_sessionManager.streams ?? new InMemoryStreamSessionManager(),
 			info: _sessionManager.info ?? new InMemoryInfoSessionManager(),
 		};
+		const subscriptionManager = /** @type {SubscriptionManager} */ (
+			_subscriptionManager ?? new InMemorySubscriptionManager()
+		);
 
 		if (options?.path === undefined && DEV) {
 			// TODO: remove on 1.0.0 release
@@ -119,10 +141,12 @@ export class HttpTransport {
 			getSessionId,
 			path,
 			cors,
+			allowedOrigins,
 			sessionManager,
 			disableSse,
 		};
 		this.#path = path;
+		this.#subscription_manager = subscriptionManager;
 
 		this.#server.on('initialize', ({ capabilities, clientInfo }) => {
 			const sessionId = this.#session_id_storage.getStore();
@@ -159,31 +183,177 @@ export class HttpTransport {
 			this.#options.sessionManager.info.setLogLevel(sessionId, level);
 		});
 
-		this.#server.on('broadcast', async ({ request }) => {
-			let sessions = undefined;
-			if (request.method === 'notifications/resources/updated') {
-				sessions =
-					await this.#options.sessionManager.info.getSubscriptions(
-						request.params.uri,
-					);
-			}
-			await this.#options.sessionManager.streams.send(
-				sessions,
-				'event: message\ndata: ' + JSON.stringify(request) + '\n\n',
-			);
-		});
-
-		this.#server.on('send', async ({ request }) => {
-			// use the current controller if the request has an id (it means it's a request and not a notification)
-			const controller = this.#controller_storage.getStore();
-			if (!controller) return;
-
-			controller.enqueue(
-				this.#text_encoder.encode(
+		this.#server.on(
+			'broadcast',
+			async ({ request, subscriptionOnly: subscription_only }) => {
+				this.#subscription_manager.send(request);
+				if (subscription_only) return;
+				let sessions = undefined;
+				if (request.method === 'notifications/resources/updated') {
+					sessions =
+						await this.#options.sessionManager.info.getSubscriptions(
+							request.params.uri,
+						);
+				}
+				await this.#options.sessionManager.streams.send(
+					sessions,
 					'event: message\ndata: ' + JSON.stringify(request) + '\n\n',
-				),
-			);
+				);
+			},
+		);
+
+		this.#server.on(
+			'send',
+			({ request, subscriptionId, subscriptionOrigin }) => {
+				if (
+					subscriptionId !== undefined &&
+					subscriptionOrigin !== undefined
+				) {
+					const sink = this.#subscription_sinks
+						.get(subscriptionOrigin)
+						?.get(subscriptionId);
+					if (!sink) return;
+					if (
+						request.method ===
+						'notifications/subscriptions/acknowledged'
+					) {
+						sink.subscription?.registration.resolve(true);
+					}
+					if (sink.state !== 'open' || !sink.controller) return;
+					try {
+						sink.controller.enqueue(
+							this.#text_encoder.encode(
+								'event: message\ndata: ' +
+									JSON.stringify(request) +
+									'\n\n',
+							),
+						);
+					} catch {
+						sink.state = 'disconnected';
+						void this.#subscription_manager.close(
+							subscriptionId,
+							subscriptionOrigin,
+							'cancelled',
+						);
+					}
+					return;
+				}
+				// use the current controller if the request has an id (it means it's a request and not a notification)
+				const controller = this.#controller_storage.getStore();
+				if (!controller) return;
+
+				try {
+					controller.enqueue(
+						this.#text_encoder.encode(
+							'event: message\ndata: ' +
+								JSON.stringify(request) +
+								'\n\n',
+						),
+					);
+				} catch {
+					// The response stream may have closed before background work sent.
+				}
+			},
+		);
+	}
+
+	/**
+	 * @param {string} origin
+	 * @param {string | number} id
+	 * @param {SubscriptionSink} sink
+	 * @returns {boolean}
+	 */
+	#register_subscription_sink(origin, id, sink) {
+		let sinks = this.#subscription_sinks.get(origin);
+		if (!sinks) {
+			sinks = new Map();
+			this.#subscription_sinks.set(origin, sinks);
+		}
+		if (sinks.has(id)) return false;
+		sinks.set(id, sink);
+		return true;
+	}
+
+	/**
+	 * @param {string} origin
+	 * @param {string | number} id
+	 * @param {SubscriptionSink} sink
+	 */
+	#delete_subscription_sink(origin, id, sink) {
+		const sinks = this.#subscription_sinks.get(origin);
+		if (sinks?.get(id) !== sink) return;
+		sinks.delete(id);
+		if (sinks.size === 0) this.#subscription_sinks.delete(origin);
+	}
+
+	/**
+	 * Cancel a routed subscription after its manager registration attempt has
+	 * completed. This closes a listen that races cancellation without allowing
+	 * a duplicate POST to affect the original sink.
+	 * @param {string | number} id
+	 * @param {string} origin
+	 */
+	async #cancel_subscription(id, origin) {
+		const sink = this.#subscription_sinks.get(origin)?.get(id);
+		if (!sink) return false;
+		sink.state = 'cancelled';
+		const registered = await sink.subscription?.registration.promise;
+		if (!registered) return false;
+		this.#delete_subscription_sink(origin, id, sink);
+		return this.#subscription_manager.close(id, origin, 'cancelled');
+	}
+
+	/** @param {SubscriptionSink} sink */
+	#manager_for_sink(sink) {
+		return /** @type {SubscriptionManager} */ ({
+			create: (subscription, callbacks) => {
+				if (
+					this.#subscription_sinks
+						.get(subscription.origin)
+						?.get(subscription.id) !== sink
+				) {
+					return false;
+				}
+				return this.#subscription_manager.create(subscription, {
+					...callbacks,
+					close: (reason) => {
+						if (
+							reason === 'cancelled' &&
+							sink.state !== 'disconnected'
+						) {
+							sink.state = 'cancelled';
+						}
+						return callbacks.close(reason);
+					},
+				});
+			},
+			send: (notification) =>
+				this.#subscription_manager.send(notification),
+			close: (id, origin, reason) =>
+				this.#subscription_manager.close(id, origin, reason),
+			closeAll: (origin, reason) =>
+				this.#subscription_manager.closeAll(origin, reason),
 		});
+	}
+
+	/** @param {Request} request */
+	#allows_origin(request) {
+		const origin = request.headers.get('origin');
+		if (!origin) return true;
+		if (origin === new URL(request.url).origin) return true;
+		const allowed = this.#options.allowedOrigins;
+		if (allowed === undefined) {
+			if (!this.#warned_implicit_origin) {
+				console.warn(
+					'[tmcp][transport-http] Cross-origin requests are allowed because `allowedOrigins` is not configured. Set it to an explicit origin list, `[]` to reject all cross-origin requests, or `true` to explicitly allow every origin.',
+				);
+				this.#warned_implicit_origin = true;
+			}
+			return true;
+		}
+		if (allowed === true) return true;
+		if (typeof allowed === 'string') return allowed === origin;
+		return Array.isArray(allowed) && allowed.includes(origin);
 	}
 
 	/**
@@ -273,6 +443,7 @@ export class HttpTransport {
 	 * @param {string} session_id
 	 */
 	async #handle_delete(session_id) {
+		await this.#subscription_manager.closeAll(session_id, 'cancelled');
 		await this.#options.sessionManager.streams.delete(session_id);
 		await this.#options.sessionManager.info.delete(session_id);
 		return new Response(null, {
@@ -281,6 +452,28 @@ export class HttpTransport {
 				'mcp-session-id': session_id,
 			},
 		});
+	}
+
+	/**
+	 * @param {string} session_id
+	 * @param {string} data
+	 * @param {string | number | null} [id]
+	 */
+	#invalid_request(session_id, data, id = null) {
+		return new Response(
+			JSON.stringify({
+				jsonrpc: '2.0',
+				id,
+				error: { code: -32600, message: 'Invalid Request', data },
+			}),
+			{
+				status: 400,
+				headers: {
+					'Content-Type': 'application/json',
+					'mcp-session-id': session_id,
+				},
+			},
+		);
 	}
 
 	/**
@@ -306,12 +499,12 @@ export class HttpTransport {
 			return new Response(
 				JSON.stringify({
 					jsonrpc: '2.0',
+					id: null,
 					error: {
 						code: -32000,
 						message:
 							'Conflict: Only one SSE stream is allowed per session',
 					},
-					id: null,
 				}),
 				{
 					headers: {
@@ -360,6 +553,7 @@ export class HttpTransport {
 			return new Response(
 				JSON.stringify({
 					jsonrpc: '2.0',
+					id: null,
 					error: {
 						code: -32600,
 						message: 'Invalid Request',
@@ -378,22 +572,113 @@ export class HttpTransport {
 
 		try {
 			const body = await request.clone().json();
-
-			/**
-			 * @type {ReadableStreamDefaultController | undefined}
-			 */
-			let controller;
+			if (
+				Array.isArray(body) ||
+				typeof body !== 'object' ||
+				body === null
+			) {
+				return this.#invalid_request(
+					session_id,
+					Array.isArray(body)
+						? 'JSON-RPC batch requests are not supported'
+						: 'Expected a JSON-RPC message object',
+				);
+			}
+			const valid_id =
+				typeof body.id === 'string' || typeof body.id === 'number';
+			const request_message =
+				body.jsonrpc === '2.0' &&
+				typeof body.method === 'string' &&
+				(body.id === undefined || valid_id);
+			const has_result = Object.hasOwn(body, 'result');
+			const has_error = Object.hasOwn(body, 'error');
+			const response_message =
+				body.jsonrpc === '2.0' && valid_id && has_result !== has_error;
+			if (!request_message && !response_message) {
+				return this.#invalid_request(
+					session_id,
+					'Expected a valid JSON-RPC request, notification, or response',
+					valid_id ? body.id : null,
+				);
+			}
+			const messages = [body];
+			const subscription_id =
+				body.method === 'subscriptions/listen' && valid_id
+					? /** @type {string | number} */ (body.id)
+					: undefined;
+			const subscription_origin =
+				subscription_id === undefined
+					? session_id
+					: crypto.randomUUID();
+			/** @type {{ id: string | number, registration: SubscriptionRegistration } | undefined} */
+			let subscription;
+			if (subscription_id !== undefined) {
+				/** @type {(registered: boolean) => void} */
+				let resolve = () => {};
+				/** @type {Promise<boolean>} */
+				const promise = new Promise((ready) => {
+					resolve = ready;
+				});
+				subscription = {
+					id: subscription_id,
+					registration: { promise, resolve },
+				};
+			}
+			/** @type {SubscriptionSink} */
+			const sink = {
+				/** @type {ReadableStreamDefaultController | undefined} */
+				controller: undefined,
+				state: 'open',
+				subscription,
+			};
+			const manager = this.#subscription_manager;
+			const server_subscription_manager = this.#manager_for_sink(sink);
+			const register_sink = this.#register_subscription_sink.bind(this);
+			const delete_sink = this.#delete_subscription_sink.bind(this);
+			const release_sink = () => {
+				const current = sink.subscription;
+				if (!current) return;
+				current.registration.resolve(false);
+				delete_sink(subscription_origin, current.id, sink);
+			};
+			const cancel = async () => {
+				sink.state = 'disconnected';
+				const current = sink.subscription;
+				if (
+					!current ||
+					this.#subscription_sinks
+						.get(subscription_origin)
+						?.get(current.id) !== sink
+				) {
+					return;
+				}
+				const registered = await current.registration.promise;
+				delete_sink(subscription_origin, current.id, sink);
+				if (registered) {
+					await manager.close(
+						current.id,
+						subscription_origin,
+						'cancelled',
+					);
+				}
+			};
 
 			// Create a short-lived stream that closes after sending the response
 			const stream = new ReadableStream({
-				start(_controller) {
-					controller = _controller;
+				start(controller) {
+					sink.controller = controller;
+					if (subscription_id !== undefined) {
+						register_sink(
+							subscription_origin,
+							subscription_id,
+							sink,
+						);
+					}
 				},
+				cancel,
 			});
 
 			const session_id_storage = this.#session_id_storage;
-
-			const messages = Array.isArray(body) ? body : [body];
 
 			const handle = async () => {
 				const init_message = messages.find(
@@ -417,7 +702,7 @@ export class HttpTransport {
 							.catch(() => undefined);
 
 				const response = await this.#controller_storage.run(
-					controller,
+					sink.controller,
 					() =>
 						session_id_storage.run(session_id, () =>
 							this.#server.receive(body, {
@@ -429,29 +714,39 @@ export class HttpTransport {
 									logLevel: log_level,
 								},
 								custom: ctx,
+								subscriptionOrigin: subscription_origin,
+								subscriptionManager:
+									server_subscription_manager,
 							}),
 						),
 				);
 
-				controller?.enqueue(
-					this.#text_encoder.encode(
-						'event: message\ndata: ' +
-							JSON.stringify(response) +
-							'\n\n',
-					),
-				);
-				controller?.close();
+				if (sink.state === 'open' && response != null) {
+					sink.controller?.enqueue(
+						this.#text_encoder.encode(
+							'event: message\ndata: ' +
+								JSON.stringify(response) +
+								'\n\n',
+						),
+					);
+				}
+				if (sink.state !== 'disconnected') sink.controller?.close();
+				release_sink();
 			};
 
-			handle();
+			void handle().catch((error) => {
+				if (sink.state !== 'disconnected')
+					sink.controller?.error(error);
+				release_sink();
+			});
 
-			const has_request = messages.some((message) => message.id != null);
+			const has_request = request_message && valid_id;
 
 			// Determine status code based on response type
 			// 202 Accepted for notifications/responses, 200 OK for standard requests
 			const status = !has_request ? 202 : 200;
 
-			return new Response(has_request ? stream : null, {
+			const response = new Response(has_request ? stream : null, {
 				headers: has_request
 					? {
 							'Content-Type': 'text/event-stream',
@@ -462,11 +757,19 @@ export class HttpTransport {
 					: undefined,
 				status,
 			});
+			if (subscription_id !== undefined) {
+				this.#subscription_responses.set(response, {
+					id: subscription_id,
+					origin: subscription_origin,
+				});
+			}
+			return response;
 		} catch (error) {
 			// Handle JSON parsing errors
 			return new Response(
 				JSON.stringify({
 					jsonrpc: '2.0',
+					id: null,
 					error: {
 						code: -32700,
 						message: 'Parse error',
@@ -482,6 +785,44 @@ export class HttpTransport {
 				},
 			);
 		}
+	}
+
+	/**
+	 * Gracefully complete one active per-request subscription.
+	 * @param {Response} response
+	 * @returns {Promise<boolean>}
+	 */
+	async closeSubscription(response) {
+		const subscription = this.#subscription_responses.get(response);
+		if (!subscription) return false;
+		this.#subscription_responses.delete(response);
+		const sink = this.#subscription_sinks
+			.get(subscription.origin)
+			?.get(subscription.id);
+		if (!sink) return false;
+		const registered = await sink.subscription?.registration.promise;
+		if (!registered) return false;
+		return this.#subscription_manager.close(
+			subscription.id,
+			subscription.origin,
+			'closed',
+		);
+	}
+
+	/**
+	 * Close every active per-request subscription owned by this transport.
+	 */
+	async close() {
+		/** @type {Array<[string | number, string]>} */
+		const owned = [];
+		for (const [origin, sinks] of this.#subscription_sinks) {
+			for (const id of sinks.keys()) {
+				owned.push([id, origin]);
+			}
+		}
+		await Promise.all(
+			owned.map(([id, origin]) => this.#cancel_subscription(id, origin)),
+		);
 	}
 
 	/**
@@ -517,6 +858,10 @@ export class HttpTransport {
 	 */
 	async respond(request, ctx) {
 		const url = new URL(request.url);
+		const path_matches = this.#path === null || url.pathname === this.#path;
+		if (path_matches && !this.#allows_origin(request)) {
+			return new Response('Forbidden origin', { status: 403 });
+		}
 
 		/**
 		 * @type {AuthInfo | null}
@@ -546,7 +891,7 @@ export class HttpTransport {
 		}
 
 		// Check if the request path matches the configured MCP path
-		if (url.pathname !== this.#path && this.#path !== null) {
+		if (!path_matches) {
 			return null;
 		}
 

@@ -29,30 +29,26 @@ import { McpServer } from 'tmcp';
 import { InMemoryTransport } from '@tmcp/transport-in-memory';
 
 // Create your MCP server
-const server = new McpServer({
-	name: 'test-server',
-	version: '1.0.0',
-});
+const server = new McpServer(
+	{ name: 'test-server', version: '1.0.0' },
+	{
+		adapter: undefined,
+		capabilities: { tools: { listChanged: true } },
+	},
+);
 
 // Add a tool
 server.tool(
 	{
 		name: 'greet',
 		description: 'Greet someone',
-		inputSchema: {
-			type: 'object',
-			properties: {
-				name: { type: 'string' },
-			},
-			required: ['name'],
-		},
 	},
-	async ({ name }) => {
+	async () => {
 		return {
 			content: [
 				{
 					type: 'text',
-					text: `Hello, ${name}!`,
+					text: 'Hello, World!',
 				},
 			],
 		};
@@ -71,12 +67,12 @@ await session.initialize(
 );
 
 // Call the tool
-const result = await session.callTool('greet', { name: 'World' });
+const result = await session.callTool('greet');
 console.log(result.content[0].text); // "Hello, World!"
 
 // Clean up
 session.close();
-transport.close();
+await transport.close();
 ```
 
 ## API Reference
@@ -124,9 +120,18 @@ const tools = await client.listTools();
 const result = await client.callTool('greet', { name: 'World' });
 ```
 
-The shared high-level methods are `request()`, `listTools()`, `callTool()`, `listPrompts()`, `getPrompt()`, `listResources()`, `listResourceTemplates()`, `readResource()`, and `complete()`. Their argument and successful-result types match `Session`. Stateless-only methods are `discover()` and `requestWithInput()`; session lifecycle, logging-level, subscription, and server-response methods remain on `Session` because the per-request protocol does not support them.
+The shared high-level methods are `request()`, `listTools()`, `callTool()`, `listPrompts()`, `getPrompt()`, `listResources()`, `listResourceTemplates()`, `readResource()`, and `complete()`. Their argument and successful-result types match `Session`. Stateless-only methods are `discover()`, `requestWithInput()`, and `listen()`; session lifecycle, logging-level, legacy resource-subscription, and server-response methods remain on `Session`.
 
 The stateless client throws `JSONRPCErrorException` for JSON-RPC errors instead of returning an undefined result. Notifications emitted during its requests are available through `client.sentMessages`; separate clients and separate transports keep concurrent notifications isolated.
+
+Use `listen()` to open a per-request notification stream. It resolves after acknowledgement and returns a helper exposing `acknowledgement`, `notifications`, and `close()`:
+
+```javascript
+const subscription = await client.listen({ toolsListChanged: true });
+server.changed('tools');
+await vi.waitFor(() => expect(subscription.notifications).toHaveLength(1));
+await subscription.close();
+```
 
 Application-specific `_meta` entries in `params` are preserved. Reserved `io.modelcontextprotocol/*` metadata is always produced from the client options and overwrites conflicting values in `params` so the helper cannot send internally inconsistent protocol metadata.
 
@@ -178,7 +183,7 @@ transport.clear();
 Close all sessions and clean up event listeners.
 
 ```javascript
-transport.close();
+await transport.close();
 ```
 
 ### `Session`
@@ -347,7 +352,10 @@ session.close();
 You can pass custom context through all requests using TypeScript generics:
 
 ```ts
-const server = new McpServer({ name: 'test', version: '1.0.0' }).withContext<{
+const server = new McpServer(
+	{ name: 'test', version: '1.0.0' },
+	{ adapter: undefined },
+).withContext<{
 	userId: string;
 	requestId: string;
 }>();

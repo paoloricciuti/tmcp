@@ -4,8 +4,8 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType } from "./validation/index.js";
- * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents, AllSame, TemplateOptions, MrtrState } from "./internal/internal.js";
+ * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType, SubscriptionFilter as SubscriptionFilterType, SubscriptionsListenRequest as SubscriptionsListenRequestType, SubscriptionsListenResult as SubscriptionsListenResultType, SubscriptionsAcknowledgedNotification as SubscriptionsAcknowledgedNotificationType } from "./validation/index.js";
+ * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents, AllSame, TemplateOptions, MrtrState, Subscription as SubscriptionType, SubscriptionCallbacks as SubscriptionCallbacksType, SubscriptionManager as SubscriptionManagerType, SubscriptionOrigin as SubscriptionOriginType } from "./internal/internal.js";
  * @import { CreatedTool, ToolOptions, CreatedPrompt, PromptOptions, CreatedResource, CreatedTemplate, ResourceOptions } from "./internal/internal.js";
  */
 import {
@@ -19,6 +19,7 @@ import { UriTemplateMatcher } from 'uri-template-matcher';
 import * as v from 'valibot';
 import {
 	CallToolResultSchema,
+	CancelledNotificationSchema,
 	ClientCapabilitiesSchema,
 	CompleteResultSchema,
 	CreateMessageRequestParamsSchema,
@@ -37,6 +38,8 @@ import {
 	JSONRPCErrorSchema,
 	InputResponsesSchema,
 	missing_required_client_capability_error,
+	SUBSCRIPTION_ID_META_KEY,
+	SubscriptionsListenRequestParamsSchema,
 	unsupported_protocol_version_error,
 } from './validation/index.js';
 import {
@@ -65,7 +68,6 @@ export {
  * excessively large value.
  */
 const MAX_ENCODED_REQUEST_STATE_LENGTH = 262144;
-
 const RequestStateEnvelopeSchema = v.object({
 	version: v.literal(1),
 	inputResponses: InputResponsesSchema,
@@ -134,6 +136,22 @@ export function isInputRequired(error) {
  * @property {AuthInfo} [auth]
  * @property {TCustom} [custom]
  */
+
+/**
+ * Context accepted by `receive()`. Subscription routing fields are
+ * transport-only and are deliberately omitted from `server.ctx`.
+ * @template {Record<string, unknown> | undefined} [TCustom=undefined]
+ * @typedef {Context<TCustom> & { subscriptionOrigin?: SubscriptionOriginType, subscriptionManager?: SubscriptionManagerType }} ReceiveContext
+ */
+
+/** @typedef {SubscriptionFilterType} SubscriptionFilter */
+/** @typedef {SubscriptionOriginType} SubscriptionOrigin */
+/** @typedef {SubscriptionType} Subscription */
+/** @typedef {SubscriptionCallbacksType} SubscriptionCallbacks */
+/** @typedef {SubscriptionManagerType} SubscriptionManager */
+/** @typedef {SubscriptionsListenRequestType} SubscriptionsListenRequest */
+/** @typedef {SubscriptionsListenResultType} SubscriptionsListenResult */
+/** @typedef {SubscriptionsAcknowledgedNotificationType} SubscriptionsAcknowledgedNotification */
 
 /**
  * @typedef {IconsType} Icons
@@ -301,7 +319,7 @@ export class McpServer {
 	#server_info;
 
 	/**
-	 * @type {AsyncLocalStorage<Context<CustomContext> & { progress_token?: string, stateless?: boolean, mrtr?: MrtrState }>}
+	 * @type {AsyncLocalStorage<ReceiveContext<CustomContext> & { progress_token?: string, request_id?: string | number, stateless?: boolean, mrtr?: MrtrState }>}
 	 */
 	#ctx_storage = new AsyncLocalStorage();
 
@@ -431,6 +449,7 @@ export class McpServer {
 		this.#init_roots();
 		this.#init_completion();
 		this.#init_logging();
+		this.#init_subscriptions();
 	}
 
 	/**
@@ -455,9 +474,17 @@ export class McpServer {
 	 * @type {Context<CustomContext>}
 	 */
 	get ctx() {
-		// eslint-disable-next-line no-unused-vars
-		const { progress_token, stateless, mrtr, ...rest } =
-			this.#ctx_storage.getStore() ?? {};
+		/* eslint-disable no-unused-vars */
+		const {
+			progress_token,
+			request_id,
+			stateless,
+			mrtr,
+			subscriptionOrigin,
+			subscriptionManager,
+			...rest
+		} = this.#ctx_storage.getStore() ?? {};
+		/* eslint-enable no-unused-vars */
 		if (mrtr !== undefined) {
 			rest.requestState = mrtr.incoming_state;
 		}
@@ -976,26 +1003,229 @@ export class McpServer {
 		});
 	}
 
+	/**
+	 * Reduce a requested filter to notification types enabled by this server.
+	 * @param {SubscriptionFilter} requested
+	 * @returns {SubscriptionFilter}
+	 */
+	#subscription_filters(requested) {
+		const capabilities = this.#options.capabilities;
+		/** @type {SubscriptionFilter} */
+		const filters = {};
+		if (
+			requested.toolsListChanged === true &&
+			capabilities?.tools?.listChanged === true
+		) {
+			filters.toolsListChanged = true;
+		}
+		if (
+			requested.promptsListChanged === true &&
+			capabilities?.prompts?.listChanged === true
+		) {
+			filters.promptsListChanged = true;
+		}
+		if (
+			requested.resourcesListChanged === true &&
+			capabilities?.resources?.listChanged === true
+		) {
+			filters.resourcesListChanged = true;
+		}
+		if (
+			requested.resourceSubscriptions?.length &&
+			capabilities?.resources?.subscribe === true
+		) {
+			const resources = [
+				...new Set(requested.resourceSubscriptions),
+			].filter(
+				(uri) =>
+					this.#subscription_resource_registration(uri) !== undefined,
+			);
+			if (resources.length > 0) filters.resourceSubscriptions = resources;
+		}
+		return filters;
+	}
+
+	/**
+	 * Resolve a static resource or a concrete URI handled by a template. The
+	 * template pattern itself is not a subscribable resource URI.
+	 * @param {string} uri
+	 */
+	#subscription_resource_registration(uri) {
+		const resource = this.#resources.get(uri);
+		if (resource) return resource.template ? undefined : resource;
+		const match = this.#templates.match(uri);
+		return match ? this.#resources.get(match.template) : undefined;
+	}
+
+	/**
+	 * Register the long-lived per-request subscription method and cancellation
+	 * notification. Transports keep the response sink open while the returned
+	 * promise is pending.
+	 */
+	#init_subscriptions() {
+		this.#server.addMethod('subscriptions/listen', async (params) => {
+			const parsed = v.safeParse(
+				SubscriptionsListenRequestParamsSchema,
+				params,
+			);
+			if (!parsed.success) {
+				throw new McpError(
+					-32602,
+					'Invalid subscriptions/listen params: expected a notifications filter',
+				);
+			}
+			const id = this.#ctx_storage.getStore()?.request_id;
+			if (id === undefined) {
+				throw new McpError(
+					-32600,
+					'subscriptions/listen must be a JSON-RPC request with an id',
+				);
+			}
+			const store = this.#ctx_storage.getStore();
+			const origin = store?.subscriptionOrigin;
+			const manager = store?.subscriptionManager;
+			if (typeof origin !== 'string' || manager === undefined) {
+				throw new McpError(
+					-32603,
+					'subscriptions/listen requires the transport to provide a subscriptionManager and stable string subscriptionOrigin for this connection',
+				);
+			}
+			const filters = this.#subscription_filters(
+				parsed.output.notifications,
+			);
+			/** @type {(result: Record<string, unknown>)=>void} */
+			let settle = () => {};
+			const pending = new Promise((resolve) => {
+				settle = resolve;
+			});
+			const created = await manager.create(
+				{ id, origin, filters },
+				{
+					acknowledge: () =>
+						this.#subscription_send(id, origin, {
+							jsonrpc: '2.0',
+							method: 'notifications/subscriptions/acknowledged',
+							params: {
+								notifications: filters,
+								_meta: {
+									[SUBSCRIPTION_ID_META_KEY]: id,
+								},
+							},
+						}),
+					send: (notification) =>
+						this.#subscription_send(
+							id,
+							origin,
+							this.#tag_subscription(notification, id),
+						),
+					close: () => {
+						settle({
+							_meta: { [SUBSCRIPTION_ID_META_KEY]: id },
+						});
+					},
+				},
+			);
+			if (!created) {
+				throw new McpError(
+					-32602,
+					`A subscription with id ${JSON.stringify(id)} is already active for this connection`,
+				);
+			}
+			return pending;
+		});
+
+		this.#server.addMethod('notifications/cancelled', async (params) => {
+			const cancellation = v.safeParse(
+				CancelledNotificationSchema.entries.params,
+				params,
+			);
+			const store = this.#ctx_storage.getStore();
+			const origin = store?.subscriptionOrigin;
+			const manager = store?.subscriptionManager;
+			if (
+				cancellation.success &&
+				origin !== undefined &&
+				manager !== undefined
+			) {
+				await manager.close(
+					cancellation.output.requestId,
+					origin,
+					'cancelled',
+				);
+			}
+			return null;
+		});
+	}
+
+	/**
+	 * @param {JSONRPCRequest} notification
+	 * @param {string | number} subscription_id
+	 */
+	#tag_subscription(notification, subscription_id) {
+		const params = /** @type {Record<string, unknown>} */ (
+			notification.params ?? {}
+		);
+		return {
+			...notification,
+			params: {
+				...params,
+				_meta: {
+					.../** @type {Record<string, unknown> | undefined} */ (
+						params._meta
+					),
+					[SUBSCRIPTION_ID_META_KEY]: subscription_id,
+				},
+			},
+		};
+	}
+
+	/**
+	 * @param {string | number} subscription_id
+	 * @param {string} origin
+	 * @param {JSONRPCRequest} request
+	 */
+	#subscription_send(subscription_id, origin, request) {
+		this.#event_target.dispatchEvent(
+			event('send', {
+				subscriptionId: subscription_id,
+				subscriptionOrigin: origin,
+				request,
+			}),
+		);
+	}
+
 	#notify_tools_list_changed() {
 		if (this.#options.capabilities?.tools?.listChanged) {
-			this.#notify('notifications/tools/list_changed', {}, 'broadcast');
+			this.#broadcast_change('notifications/tools/list_changed', {});
 		}
 	}
 
 	#notify_prompts_list_changed() {
 		if (this.#options.capabilities?.prompts?.listChanged) {
-			this.#notify('notifications/prompts/list_changed', {}, 'broadcast');
+			this.#broadcast_change('notifications/prompts/list_changed', {});
 		}
 	}
 
 	#notify_resources_list_changed() {
 		if (this.#options.capabilities?.resources?.listChanged) {
-			this.#notify(
-				'notifications/resources/list_changed',
-				{},
-				'broadcast',
-			);
+			this.#broadcast_change('notifications/resources/list_changed', {});
 		}
+	}
+
+	/**
+	 * Publish a change through the existing broadcast lifecycle. Transports use
+	 * `subscriptionOnly` to keep concrete template updates off legacy streams.
+	 * @param {string} method
+	 * @param {Record<string, unknown>} params
+	 * @param {boolean} [subscription_only]
+	 */
+	#broadcast_change(method, params, subscription_only = false) {
+		this.#event_target.dispatchEvent(
+			event('broadcast', {
+				request: { jsonrpc: '2.0', method, params },
+				...(subscription_only ? { subscriptionOnly: true } : {}),
+			}),
+		);
 	}
 
 	/**
@@ -1260,17 +1490,19 @@ export class McpServer {
 	}
 
 	/**
-	 * Derive the capabilities advertised through `server/discover` from the
-	 * server options. Behavior that cannot be delivered to stateless
-	 * requests is stripped: `resources.subscribe` and every `listChanged`
-	 * flag (list-changed notifications require `subscriptions/listen`, not
-	 * implemented) are removed. Logging is kept because stateless log
-	 * notifications are gated by the current request's explicit `logLevel`.
-	 * The bare `tools`/`prompts`/`resources` presence and `completions`,
-	 * `experimental`, `extensions` are kept.
+	 * Derive capabilities advertised through `server/discover`. Subscription
+	 * flags stay hidden until the active transport can route long-lived listen
+	 * streams; core support alone cannot guarantee delivery.
 	 * @returns {Record<string, unknown>}
 	 */
 	#discover_capabilities() {
+		const store = this.#ctx_storage.getStore();
+		if (
+			store?.subscriptionManager !== undefined &&
+			typeof store.subscriptionOrigin === 'string'
+		) {
+			return { ...(this.#options.capabilities ?? {}) };
+		}
 		const { resources, tools, prompts, ...rest } =
 			this.#options.capabilities ?? {};
 		/** @type {Record<string, unknown>} */
@@ -1317,8 +1549,9 @@ export class McpServer {
 	 * able to opt results into public caching.
 	 * @param {string} method
 	 * @param {Record<string, unknown>} result
+	 * @param {boolean} [private_result]
 	 */
-	#decorate_result(method, result) {
+	#decorate_result(method, result, private_result = false) {
 		if (typeof result.resultType !== 'string') {
 			result.resultType = 'complete';
 		}
@@ -1329,7 +1562,9 @@ export class McpServer {
 			'io.modelcontextprotocol/serverInfo': this.#server_info,
 		};
 		if (CACHEABLE_METHODS.has(method)) {
-			const policy = this.#cache_policy(method);
+			const policy = private_result
+				? { ttlMs: 0, cacheScope: /** @type {const} */ ('private') }
+				: this.#cache_policy(method);
 			result.ttlMs = policy.ttlMs;
 			result.cacheScope = policy.cacheScope;
 		}
@@ -1358,7 +1593,7 @@ export class McpServer {
 	 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 	 *
 	 * @param {JSONRPCMessage} message
-	 * @param {Context<CustomContext>} [ctx]
+	 * @param {ReceiveContext<CustomContext>} [ctx]
 	 * @returns {ReturnType<JSONRPCServer['receive']> | ReturnType<JSONRPCClient['receive'] | undefined>}
 	 */
 	receive(message, ctx) {
@@ -1395,11 +1630,11 @@ export class McpServer {
 				// eslint-disable-next-line no-unused-vars
 				stateless: _,
 				...transport_ctx
-			} = /** @type {Context<CustomContext> & { stateless?: boolean }} */ (
+			} = /** @type {ReceiveContext<CustomContext> & { stateless?: boolean }} */ (
 				ctx ?? {}
 			);
-			/** @type {Context<CustomContext> & { progress_token?: string, stateless?: boolean, mrtr?: MrtrState }} */
-			let store = { ...transport_ctx, progress_token };
+			/** @type {ReceiveContext<CustomContext> & { progress_token?: string, request_id?: string | number, stateless?: boolean, mrtr?: MrtrState }} */
+			let store = { ...transport_ctx, progress_token, request_id: id };
 			// classify the request: the presence of ANY reserved per-request
 			// _meta key enters the per-request path — incomplete or invalid
 			// metadata is rejected, never silently merged or downgraded to
@@ -1787,6 +2022,7 @@ export class McpServer {
 						/** @type {Record<string, unknown>} */ (
 							response.result
 						),
+						(mrtr?.consumed_responses.size ?? 0) > 0,
 					);
 				}
 				return response;
@@ -1835,15 +2071,22 @@ export class McpServer {
 			this.#notify_resources_list_changed();
 		} else {
 			const resource = this.#resources.get(id);
-			if (!resource) return;
-			this.#notify(
-				`notifications/resources/updated`,
-				{
+			const subscription_resource =
+				this.#subscription_resource_registration(id);
+			if (!resource && !subscription_resource) return;
+			if (resource) {
+				this.#broadcast_change(`notifications/resources/updated`, {
 					uri: id,
 					title: resource.name,
-				},
-				'broadcast',
-			);
+				});
+			}
+			if (!resource && subscription_resource) {
+				this.#broadcast_change(
+					'notifications/resources/updated',
+					{ uri: id },
+					true,
+				);
+			}
 		}
 	}
 

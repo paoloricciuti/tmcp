@@ -3,6 +3,8 @@
 	"file": "index.d.ts",
 	"names": [
 		"HttpTransport",
+		"SubscriptionRegistration",
+		"SubscriptionSink",
 		"ToOmit",
 		"OptionalizeSessionManager"
 	],
@@ -14,6 +16,6 @@
 		null,
 		null
 	],
-	"mappings": ";;;;cAuCaA,aAAaA;;;;;;;;;;;;;;;;;;;;;;;;;;MCpCrBC,MAAMA;;MAECC,yBAAyBA",
+	"mappings": ";;;;cA+CaA,aAAaA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aAf0DC,wBAAwBA;;;;aACiFC,gBAAgBA;;;;;;;;MC9BxMC,MAAMA;;MAECC,yBAAyBA",
 	"ignoreList": []
 }

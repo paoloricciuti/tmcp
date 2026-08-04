@@ -2129,4 +2129,73 @@ describe('StatelessClient', () => {
 			data: 'legacy',
 		});
 	});
+
+	it('opens, delivers, and gracefully closes per-request subscriptions', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: { tools: { listChanged: true } },
+		});
+		const transport = new InMemoryTransport(server);
+		const client = transport.stateless();
+
+		const discovery = await client.discover();
+		expect(discovery.capabilities).toEqual({
+			tools: { listChanged: true },
+		});
+		const subscription = await client.listen({ toolsListChanged: true });
+		expect(subscription.acknowledgement).toMatchObject({
+			method: 'notifications/subscriptions/acknowledged',
+			params: {
+				notifications: { toolsListChanged: true },
+				_meta: {
+					'io.modelcontextprotocol/subscriptionId': subscription.id,
+				},
+			},
+		});
+
+		server.changed('tools');
+		await vi.waitFor(() =>
+			expect(subscription.notifications).toContainEqual(
+				expect.objectContaining({
+					method: 'notifications/tools/list_changed',
+				}),
+			),
+		);
+		await expect(subscription.close()).resolves.toMatchObject({
+			resultType: 'complete',
+			_meta: {
+				'io.modelcontextprotocol/subscriptionId': subscription.id,
+			},
+		});
+	});
+
+	it('cancels active subscriptions when a stateless client closes', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: {},
+		});
+		const transport = new InMemoryTransport(server);
+		const client = transport.stateless();
+		const subscription = await client.listen({});
+
+		await client.close();
+		await expect(subscription.close()).resolves.toMatchObject({
+			resultType: 'complete',
+		});
+	});
+
+	it('waits for active subscriptions when the transport closes', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: {},
+		});
+		const transport = new InMemoryTransport(server);
+		const subscription = await transport.stateless().listen({});
+
+		await transport.close();
+
+		await expect(subscription.close()).resolves.toMatchObject({
+			resultType: 'complete',
+		});
+	});
 });

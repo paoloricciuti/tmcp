@@ -18,7 +18,7 @@
 		"./package.json": "./package.json"
 	},
 	"peerDependencies": {
-		"tmcp": "^1.18.0",
+		"tmcp": "^1.20.0",
 		"@tmcp/auth": "^0.3.3 || ^0.4.0"
 	},
 	"peerDependenciesMeta": {

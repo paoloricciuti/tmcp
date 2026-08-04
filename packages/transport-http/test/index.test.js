@@ -1006,6 +1006,106 @@ describe('HTTP Transport', () => {
 			);
 			await response?.body?.cancel();
 		});
+
+		it('allows browser origins by default and warns once', async () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				getSessionId: () => 'test-session-id',
+			});
+
+			try {
+				const request = () =>
+					new Request('http://localhost/mcp', {
+						method: 'OPTIONS',
+						headers: { Origin: 'https://client.example' },
+					});
+				const first = await transport.respond(request());
+				const second = await transport.respond(request());
+
+				expect(first?.status).toBe(204);
+				expect(second?.status).toBe(204);
+				expect(warn).toHaveBeenCalledOnce();
+			} finally {
+				warn.mockRestore();
+			}
+		});
+
+		it('rejects browser origins excluded by an explicit policy', async () => {
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				getSessionId: () => 'test-session-id',
+				allowedOrigins: [],
+			});
+
+			const response = await transport.respond(
+				new Request('http://localhost/mcp', {
+					method: 'GET',
+					headers: { Origin: 'https://attacker.example' },
+				}),
+			);
+
+			expect(response?.status).toBe(403);
+		});
+
+		it('does not reject origins on unrelated application routes', async () => {
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				getSessionId: () => 'test-session-id',
+			});
+
+			const response = await transport.respond(
+				new Request('http://localhost/other', {
+					method: 'GET',
+					headers: { Origin: 'https://attacker.example' },
+				}),
+			);
+
+			expect(response).toBeNull();
+		});
+
+		it('accepts browser origins in the request allowlist', async () => {
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				getSessionId: () => 'test-session-id',
+				allowedOrigins: 'https://client.example',
+				cors: { origin: 'https://client.example' },
+			});
+
+			const response = await transport.respond(
+				new Request('http://localhost/mcp', {
+					method: 'GET',
+					headers: { Origin: 'https://client.example' },
+				}),
+			);
+
+			expect(response?.status).toBe(200);
+			await response?.body?.cancel();
+		});
+
+		it('accepts every browser origin when explicitly enabled', async () => {
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				getSessionId: () => 'test-session-id',
+				allowedOrigins: true,
+			});
+
+			try {
+				const response = await transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'GET',
+						headers: { Origin: 'https://client.example' },
+					}),
+				);
+
+				expect(response?.status).toBe(200);
+				expect(warn).not.toHaveBeenCalled();
+				await response?.body?.cancel();
+			} finally {
+				warn.mockRestore();
+			}
+		});
 	});
 
 	describe('disableSse with server', () => {

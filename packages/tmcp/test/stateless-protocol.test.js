@@ -12,6 +12,7 @@ import {
 	UNSUPPORTED_PROTOCOL_VERSION,
 	McpError,
 } from '../src/index.js';
+import { is_method_allowed } from '../src/validation/method-policy.js';
 
 const MODERN = '2026-07-28';
 const PV = 'io.modelcontextprotocol/protocolVersion';
@@ -200,6 +201,15 @@ describe('stateless protocol (2026-07-28)', () => {
 	});
 
 	describe('method policy', () => {
+		it('keeps progress notifications on session-negotiated connections', () => {
+			expect(is_method_allowed('notifications/progress', false)).toBe(
+				true,
+			);
+			expect(is_method_allowed('notifications/progress', true)).toBe(
+				false,
+			);
+		});
+
 		it.each([
 			[
 				'initialize',

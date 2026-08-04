@@ -10,10 +10,11 @@ pnpm add @tmcp/session-manager
 
 ## Overview
 
-Session management is split into two concerns:
+Session management is split into three concerns:
 
 - **Stream session managers** handle the storage of long-lived streaming connections (SSE/HTTP) and the fan-out of notifications back to the right session.
 - **Info session managers** persist metadata that MCP transports need across requests, such as client capabilities, client info, requested log level, and resource subscriptions.
+- **Subscription managers** route MCP `2026-07-28` per-request change notifications to long-lived `subscriptions/listen` streams.
 
 Together they manage:
 
@@ -23,6 +24,7 @@ Together they manage:
 - **Message Delivery**: Sending messages to specific sessions or everyone
 - **Client Metadata**: Persisting capabilities, `clientInfo`, and log level between requests
 - **Resource Subscriptions**: Tracking which sessions subscribed to which URIs
+- **Per-Request Subscriptions**: Acknowledging, filtering, ordering, and closing sessionless notification streams
 
 ## Usage
 
@@ -41,6 +43,8 @@ const sessionManagers = {
 	info: new InMemoryInfoSessionManager(),
 };
 ```
+
+`InMemorySubscriptionManager` is the default for transports that support the per-request protocol. It preserves JSON-RPC ID types, buffers changes until acknowledgement completes, and serializes delivery per subscription.
 
 ### Custom Session Managers
 
@@ -108,6 +112,10 @@ class CustomInfoSessionManager extends InfoSessionManager {
 		// Track that the session subscribed to the URI
 	}
 
+	removeSubscription(id, uri) {
+		// Stop tracking this resource subscription
+	}
+
 	delete(id) {
 		// Remove all metadata for the session (client info, capabilities, subscriptions, etc.)
 	}
@@ -115,6 +123,17 @@ class CustomInfoSessionManager extends InfoSessionManager {
 ```
 
 ## API
+
+### `SubscriptionManager` (Abstract Base Class)
+
+Transport-owned manager for `subscriptions/listen` registrations.
+
+- `create(subscription, callbacks)` – atomically register `{ id, origin, filters }` and acknowledge before delivering buffered changes
+- `send(notification)` – route one change to every matching registration
+- `close(id, origin, reason)` – close one registration without conflating numeric and string IDs
+- `closeAll(origin?, reason?)` – close all registrations, optionally for one transport origin
+
+Only the descriptor is suitable for persistence. Callback functions remain on the instance serving the response stream; distributed implementations should use pub/sub to deliver notifications and close commands to that instance.
 
 ### `StreamSessionManager` (Abstract Base Class)
 
@@ -134,6 +153,7 @@ Stores session metadata that needs to survive across HTTP requests or reconnects
 - `getLogLevel(id)` / `setLogLevel(id, level)`
 - `getSubscriptions(uri)` – return all session IDs that subscribed to a resource
 - `addSubscription(id, uri)` – record a new resource subscription
+- `removeSubscription(id, uri)` – remove one resource subscription
 - `delete(id)` – remove all metadata for a session when it disconnects
 
 ### `InMemoryStreamSessionManager` & `InMemoryInfoSessionManager`

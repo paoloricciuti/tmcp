@@ -2,10 +2,15 @@
 	"version": 3,
 	"file": "index.d.ts",
 	"names": [
+		"matchesSubscription",
+		"SubscriptionManager",
+		"InMemorySubscriptionManager",
 		"StreamSessionManager",
 		"InMemoryStreamSessionManager",
 		"InfoSessionManager",
-		"InMemoryInfoSessionManager"
+		"InMemoryInfoSessionManager",
+		"Subscription",
+		"SubscriptionCallbacks"
 	],
 	"sources": [
 		"../index.js"
@@ -13,6 +18,6 @@
 	"sourcesContent": [
 		null
 	],
-	"mappings": ";;;;;;;;cASaA,oBAAoBA;;;;;;;;;;;;;;;;;;cAwCpBC,4BAA4BA;;;;;;;;;;;;;;cAsD5BC,kBAAkBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cA2FlBC,0BAA0BA",
+	"mappings": ";;;;;;;;;;;;iBAkBgBA,mBAAmBA;;;;;;;cA4BtBC,mBAAmBA;;;;;;;;;;;;;;;;;;;;;;;;;;;cA2DnBC,2BAA2BA;;;;;;;;;;;;;;cAsJ3BC,oBAAoBA;;;;;;;;;;;;;;;;;;cAwCpBC,4BAA4BA;;;;;;;;;;;;;;cA0D5BC,kBAAkBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cA2FlBC,0BAA0BA;;;aApb4CC,YAAYA;;;;;aAC0FC,qBAAqBA",
 	"ignoreList": []
 }

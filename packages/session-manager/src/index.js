@@ -1,8 +1,254 @@
 /* eslint-disable no-unused-vars */
 
 /**
- * @import { Context } from "tmcp";
+ * @import { Context, SubscriptionFilter } from "tmcp";
+ * @import { JSONRPCRequest } from "json-rpc-2.0";
  */
+
+/**
+ * @typedef {{ id: string | number, origin: string, filters: SubscriptionFilter }} Subscription
+ * @typedef {{ acknowledge: () => void | Promise<void>, send: (notification: JSONRPCRequest) => void | Promise<void>, close: (reason: 'closed' | 'cancelled') => void | Promise<void> }} SubscriptionCallbacks
+ */
+
+/**
+ * Determine whether a notification belongs on a subscription stream.
+ * Distributed managers can use this directly or maintain equivalent indexes.
+ * @param {SubscriptionFilter} filters
+ * @param {JSONRPCRequest} notification
+ */
+export function matchesSubscription(filters, notification) {
+	if (notification.method === 'notifications/tools/list_changed') {
+		return filters.toolsListChanged === true;
+	}
+	if (notification.method === 'notifications/prompts/list_changed') {
+		return filters.promptsListChanged === true;
+	}
+	if (notification.method === 'notifications/resources/list_changed') {
+		return filters.resourcesListChanged === true;
+	}
+	if (notification.method === 'notifications/resources/updated') {
+		const uri = /** @type {Record<string, unknown> | undefined} */ (
+			notification.params
+		)?.uri;
+		return (
+			typeof uri === 'string' &&
+			filters.resourceSubscriptions?.includes(uri) === true
+		);
+	}
+	return false;
+}
+
+/**
+ * Routes notifications to long-lived per-request subscription streams.
+ * Implementations persist only the serializable subscription descriptor;
+ * callbacks remain local to the process serving the response stream.
+ * @abstract
+ */
+export class SubscriptionManager {
+	/**
+	 * @abstract
+	 * Atomically register a subscription. Matching notifications must be
+	 * buffered until acknowledgement completes and then delivered in order.
+	 * @param {Subscription} subscription
+	 * @param {SubscriptionCallbacks} callbacks
+	 * @returns {boolean | Promise<boolean>}
+	 */
+	create(subscription, callbacks) {
+		void subscription;
+		void callbacks;
+		throw new Error('Method not implemented.');
+	}
+
+	/**
+	 * @abstract
+	 * @param {JSONRPCRequest} notification
+	 * @returns {void | Promise<void>}
+	 */
+	send(notification) {
+		void notification;
+		throw new Error('Method not implemented.');
+	}
+
+	/**
+	 * @abstract
+	 * Request closure of one subscription. Implementations must preserve the
+	 * JSON-RPC ID type when identifying a registration.
+	 * @param {string | number} id
+	 * @param {string} origin
+	 * @param {'closed' | 'cancelled'} reason
+	 * @returns {boolean | Promise<boolean>}
+	 */
+	close(id, origin, reason) {
+		void id;
+		void origin;
+		void reason;
+		throw new Error('Method not implemented.');
+	}
+
+	/**
+	 * @abstract
+	 * Close every subscription, optionally limited to one transport origin.
+	 * @param {string} [origin]
+	 * @param {'closed' | 'cancelled'} [reason]
+	 * @returns {void | Promise<void>}
+	 */
+	closeAll(origin, reason = 'cancelled') {
+		void origin;
+		void reason;
+		throw new Error('Method not implemented.');
+	}
+}
+
+/**
+ * Process-local subscription manager. Distributed implementations should
+ * mirror its acknowledgement buffering and per-subscription ordering.
+ */
+export class InMemorySubscriptionManager extends SubscriptionManager {
+	/** @type {Map<string, Map<string | number, { subscription: Subscription, callbacks: SubscriptionCallbacks, queue: Promise<'active' | 'failed'>, close_promise?: Promise<boolean> }>>} */
+	#subscriptions = new Map();
+
+	/**
+	 * @param {{ subscription: Subscription, callbacks: SubscriptionCallbacks, queue: Promise<'active' | 'failed'>, close_promise?: Promise<boolean> }} record
+	 * @param {JSONRPCRequest} notification
+	 */
+	#enqueue(record, notification) {
+		const delivery = record.queue.then(async (state) => {
+			if (state === 'failed' || record.close_promise) return state;
+			await record.callbacks.send(notification);
+			return /** @type {const} */ ('active');
+		});
+		// A failed send rejects its caller without poisoning later queue entries.
+		record.queue = delivery.catch(() => 'active');
+		return delivery.then(() => {});
+	}
+
+	/**
+	 * @param {Subscription} subscription
+	 * @param {SubscriptionCallbacks} callbacks
+	 * @returns {Promise<boolean>}
+	 */
+	async create(subscription, callbacks) {
+		let subscriptions = this.#subscriptions.get(subscription.origin);
+		if (!subscriptions) {
+			subscriptions = new Map();
+			this.#subscriptions.set(subscription.origin, subscriptions);
+		}
+		if (subscriptions.has(subscription.id)) return false;
+		/** @type {(value?: void) => void} */
+		let resolve_acknowledgement = () => {};
+		/** @type {(reason?: unknown) => void} */
+		let reject_acknowledgement = () => {};
+		const acknowledge_promise = new Promise((resolve, reject) => {
+			resolve_acknowledgement = resolve;
+			reject_acknowledgement = reject;
+		});
+		/** @type {{ subscription: Subscription, callbacks: SubscriptionCallbacks, queue: Promise<'active' | 'failed'>, close_promise?: Promise<boolean> }} */
+		const record = {
+			subscription,
+			callbacks,
+			// Starting behind acknowledgement replaces both active and pending state.
+			queue: acknowledge_promise.then(
+				() => /** @type {const} */ ('active'),
+				() => /** @type {const} */ ('failed'),
+			),
+		};
+		subscriptions.set(subscription.id, record);
+		try {
+			Promise.resolve(callbacks.acknowledge()).then(
+				resolve_acknowledgement,
+				reject_acknowledgement,
+			);
+		} catch (error) {
+			reject_acknowledgement(error);
+		}
+		try {
+			await acknowledge_promise;
+			if (record.close_promise) return true;
+			await record.queue;
+			return true;
+		} catch (error) {
+			if (!record.close_promise) {
+				subscriptions.delete(subscription.id);
+				if (subscriptions.size === 0) {
+					this.#subscriptions.delete(subscription.origin);
+				}
+			}
+			throw error;
+		}
+	}
+
+	/**
+	 * @param {JSONRPCRequest} notification
+	 * @returns {Promise<void>}
+	 */
+	async send(notification) {
+		/** @type {Promise<void>[]} */
+		const deliveries = [];
+		for (const subscriptions of this.#subscriptions.values()) {
+			for (const record of subscriptions.values()) {
+				if (
+					record.close_promise ||
+					!matchesSubscription(
+						record.subscription.filters,
+						notification,
+					)
+				) {
+					continue;
+				}
+				deliveries.push(this.#enqueue(record, notification));
+			}
+		}
+		await Promise.all(deliveries);
+	}
+
+	/**
+	 * @param {string | number} id
+	 * @param {string} origin
+	 * @param {'closed' | 'cancelled'} reason
+	 * @returns {Promise<boolean>}
+	 */
+	async close(id, origin, reason) {
+		const subscriptions = this.#subscriptions.get(origin);
+		if (!subscriptions) return false;
+		const record = subscriptions.get(id);
+		if (!record) return false;
+		if (record.close_promise) return record.close_promise;
+
+		record.close_promise = (async () => {
+			try {
+				await record.queue;
+				await record.callbacks.close(reason);
+				return true;
+			} finally {
+				if (subscriptions.get(id) === record) subscriptions.delete(id);
+				if (subscriptions.size === 0)
+					this.#subscriptions.delete(origin);
+			}
+		})();
+		return record.close_promise;
+	}
+
+	/**
+	 * @param {string} [origin]
+	 * @param {'closed' | 'cancelled'} [reason]
+	 * @returns {Promise<void>}
+	 */
+	async closeAll(origin, reason = 'cancelled') {
+		/** @type {Array<[string | number, string]>} */
+		const registrations = [];
+		for (const [stored_origin, subscriptions] of this.#subscriptions) {
+			if (origin !== undefined && stored_origin !== origin) continue;
+			for (const id of subscriptions.keys()) {
+				registrations.push([id, stored_origin]);
+			}
+		}
+		await Promise.all(
+			registrations.map(([id, stored_origin]) =>
+				this.close(id, stored_origin, reason),
+			),
+		);
+	}
+}
 
 /**
  * @abstract
@@ -92,7 +338,11 @@ export class InMemoryStreamSessionManager extends StreamSessionManager {
 	send(sessions, data) {
 		for (const [id, controller] of this.#sessions.entries()) {
 			if (sessions == null || sessions.includes(id)) {
-				controller.enqueue(this.#text_encoder.encode(data));
+				try {
+					controller.enqueue(this.#text_encoder.encode(data));
+				} catch {
+					this.#sessions.delete(id);
+				}
 			}
 		}
 	}
@@ -301,7 +551,10 @@ export class InMemoryInfoSessionManager extends InfoSessionManager {
 	 * @type {InfoSessionManager["delete"]}
 	 */
 	delete(id) {
-		this.#subscriptions.delete(id);
+		for (const [uri, subscriptions] of this.#subscriptions) {
+			subscriptions.delete(id);
+			if (subscriptions.size === 0) this.#subscriptions.delete(uri);
+		}
 		this.#log_level.delete(id);
 		this.#client_capabilities.delete(id);
 		this.#client_info.delete(id);

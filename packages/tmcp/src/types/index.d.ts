@@ -318,7 +318,7 @@ declare module 'tmcp' {
 		 * */
 		receive(
 			message: JSONRPCMessage,
-			ctx?: Context<CustomContext>,
+			ctx?: ReceiveContext<CustomContext>,
 		):
 			| ReturnType<JSONRPCServer['receive']>
 			| ReturnType<JSONRPCClient['receive'] | undefined>;
@@ -491,6 +491,25 @@ declare module 'tmcp' {
 		auth?: AuthInfo | undefined;
 		custom?: TCustom | undefined;
 	};
+	/**
+	 * Context accepted by `receive()`. Subscription routing fields are
+	 * transport-only and are deliberately omitted from `server.ctx`.
+	 */
+	export type ReceiveContext<
+		TCustom extends Record<string, unknown> | undefined = undefined,
+	> = Context<TCustom> & {
+		subscriptionOrigin?: SubscriptionOrigin_1;
+		subscriptionManager?: SubscriptionManager_1;
+	};
+	export type SubscriptionFilter = SubscriptionFilter_1;
+	export type SubscriptionOrigin = SubscriptionOrigin_1;
+	export type Subscription = Subscription_1;
+	export type SubscriptionCallbacks = SubscriptionCallbacks_1;
+	export type SubscriptionManager = SubscriptionManager_1;
+	export type SubscriptionsListenRequest = SubscriptionsListenRequest_1;
+	export type SubscriptionsListenResult = SubscriptionsListenResult_1;
+	export type SubscriptionsAcknowledgedNotification =
+		SubscriptionsAcknowledgedNotification_1;
 	export type Icons = Icons_1;
 	export type Subscriptions = Record<SubscriptionsKeys, string[]>;
 	export type CallToolResult<TStructuredContent> =
@@ -513,6 +532,37 @@ declare module 'tmcp' {
 	export type CompleteResult = CompleteResult_1;
 
 	type AllSame<T, U> = [T] extends [U] ? true : false;
+
+	type SubscriptionOrigin_1 = string;
+
+	type Subscription_1 = {
+		id: RequestId;
+		origin: SubscriptionOrigin_1;
+		filters: SubscriptionFilter_1;
+	};
+
+	type SubscriptionCallbacks_1 = {
+		acknowledge: () => void | Promise<void>;
+		send: (notification: JSONRPCRequest) => void | Promise<void>;
+		close: (reason: 'closed' | 'cancelled') => void | Promise<void>;
+	};
+
+	type SubscriptionManager_1 = {
+		create(
+			subscription: Subscription_1,
+			callbacks: SubscriptionCallbacks_1,
+		): boolean | Promise<boolean>;
+		send(notification: JSONRPCRequest): void | Promise<void>;
+		close(
+			id: RequestId,
+			origin: SubscriptionOrigin_1,
+			reason: 'closed' | 'cancelled',
+		): boolean | Promise<boolean>;
+		closeAll(
+			origin?: SubscriptionOrigin_1,
+			reason?: 'closed' | 'cancelled',
+		): void | Promise<void>;
+	};
 
 	type Replayable = {
 		/**
@@ -705,8 +755,15 @@ declare module 'tmcp' {
 	type SubscriptionsKeys = SubscriptionsKeysObj['with_args'];
 
 	type McpEvents = {
-		send: (message: { request: JSONRPCRequest }) => void;
-		broadcast: (message: { request: JSONRPCRequest }) => void;
+		send: (message: {
+			request: JSONRPCRequest;
+			subscriptionId?: RequestId;
+			subscriptionOrigin?: SubscriptionOrigin_1;
+		}) => void;
+		broadcast: (message: {
+			request: JSONRPCRequest;
+			subscriptionOnly?: boolean;
+		}) => void;
 		initialize: (initialize_request: InitializeRequestParams) => void;
 		subscription: (subscriptions_request: {
 			uri: string;
@@ -779,6 +836,122 @@ declare module 'tmcp' {
 	export class McpError extends JSONRPCErrorException {
 		constructor(code: number, message: string, data?: unknown);
 	}
+	/**
+	 * A uniquely identifying ID for a request in JSON-RPC.
+	 */
+	const RequestIdSchema: v.UnionSchema<
+		[
+			v.StringSchema<undefined>,
+			v.SchemaWithPipe<
+				readonly [
+					v.NumberSchema<undefined>,
+					v.IntegerAction<number, undefined>,
+				]
+			>,
+		],
+		undefined
+	>;
+	/**
+	 * The severity of a log message.
+	 */
+	const LoggingLevelSchema: v.PicklistSchema<
+		[
+			'debug',
+			'info',
+			'notice',
+			'warning',
+			'error',
+			'critical',
+			'alert',
+			'emergency',
+		],
+		undefined
+	>;
+	/**
+	 * A request that expects a response.
+	 */
+	const JSONRPCRequestSchema: v.ObjectSchema<
+		{
+			readonly method: v.StringSchema<undefined>;
+			readonly params: v.OptionalSchema<
+				v.LooseObjectSchema<
+					{
+						readonly _meta: v.OptionalSchema<
+							v.LooseObjectSchema<
+								{
+									/**
+									 * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
+									 */
+									readonly progressToken: v.OptionalSchema<
+										v.UnionSchema<
+											[
+												v.StringSchema<undefined>,
+												v.SchemaWithPipe<
+													readonly [
+														v.NumberSchema<undefined>,
+														v.IntegerAction<
+															number,
+															undefined
+														>,
+													]
+												>,
+											],
+											undefined
+										>,
+										undefined
+									>;
+								},
+								undefined
+							>,
+							undefined
+						>;
+					},
+					undefined
+				>,
+				undefined
+			>;
+			readonly jsonrpc: v.LiteralSchema<'2.0', undefined>;
+			readonly id: v.UnionSchema<
+				[
+					v.StringSchema<undefined>,
+					v.SchemaWithPipe<
+						readonly [
+							v.NumberSchema<undefined>,
+							v.IntegerAction<number, undefined>,
+						]
+					>,
+				],
+				undefined
+			>;
+		},
+		undefined
+	>;
+	/**
+	 * A notification which does not expect a response.
+	 */
+	const JSONRPCNotificationSchema: v.ObjectSchema<
+		{
+			readonly method: v.StringSchema<undefined>;
+			readonly params: v.OptionalSchema<
+				v.LooseObjectSchema<
+					{
+						/**
+						 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+						 * for notes on _meta usage.
+						 */
+						readonly _meta: v.OptionalSchema<
+							v.LooseObjectSchema<{}, undefined>,
+							undefined
+						>;
+					},
+					undefined
+				>,
+				undefined
+			>;
+			readonly jsonrpc: v.LiteralSchema<'2.0', undefined>;
+		},
+		undefined
+	>;
 	const JSONRPCMessageSchema: v.UnionSchema<
 		[
 			v.ObjectSchema<
@@ -2031,6 +2204,342 @@ declare module 'tmcp' {
 		undefined
 	>;
 	/**
+	 * Notification types requested on a per-request subscription stream. Every field
+	 * is opt-in.
+	 */
+	const SubscriptionFilterSchema: v.ObjectSchema<
+		{
+			readonly toolsListChanged: v.OptionalSchema<
+				v.BooleanSchema<undefined>,
+				undefined
+			>;
+			readonly promptsListChanged: v.OptionalSchema<
+				v.BooleanSchema<undefined>,
+				undefined
+			>;
+			readonly resourcesListChanged: v.OptionalSchema<
+				v.BooleanSchema<undefined>,
+				undefined
+			>;
+			readonly resourceSubscriptions: v.OptionalSchema<
+				v.ArraySchema<v.StringSchema<undefined>, undefined>,
+				undefined
+			>;
+		},
+		undefined
+	>;
+	const SubscriptionsListenRequestSchema: v.ObjectSchema<
+		{
+			readonly method: v.LiteralSchema<'subscriptions/listen', undefined>;
+			readonly params: v.ObjectSchema<
+				{
+					readonly _meta: v.LooseObjectSchema<
+						{
+							readonly 'io.modelcontextprotocol/protocolVersion': v.StringSchema<undefined>;
+							readonly 'io.modelcontextprotocol/clientCapabilities': v.LooseObjectSchema<
+								{
+									/**
+									 * Experimental, non-standard capabilities that the client supports.
+									 */
+									readonly experimental: v.OptionalSchema<
+										v.LooseObjectSchema<{}, undefined>,
+										undefined
+									>;
+									/**
+									 * Present if the client supports sampling from an LLM.
+									 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
+									 */
+									readonly sampling: v.OptionalSchema<
+										v.LooseObjectSchema<{}, undefined>,
+										undefined
+									>;
+									/**
+									 * Present if the client supports eliciting user input.
+									 * Accepts both the legacy bare `{}` shape and the modern `{ form?, url? }` sub-shapes.
+									 */
+									readonly elicitation: v.OptionalSchema<
+										v.LooseObjectSchema<
+											{
+												readonly form: v.OptionalSchema<
+													v.LooseObjectSchema<
+														{},
+														undefined
+													>,
+													undefined
+												>;
+												readonly url: v.OptionalSchema<
+													v.LooseObjectSchema<
+														{},
+														undefined
+													>,
+													undefined
+												>;
+											},
+											undefined
+										>,
+										undefined
+									>;
+									/**
+									 * Extensions supported by the client, keyed by prefixed extension identifier.
+									 */
+									readonly extensions: v.OptionalSchema<
+										v.RecordSchema<
+											v.StringSchema<undefined>,
+											v.LooseObjectSchema<{}, undefined>,
+											undefined
+										>,
+										undefined
+									>;
+									/**
+									 * Present if the client supports listing roots.
+									 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
+									 */
+									readonly roots: v.OptionalSchema<
+										v.LooseObjectSchema<
+											{
+												/**
+												 * Whether the client supports issuing notifications for changes to the roots list.
+												 */
+												readonly listChanged: v.OptionalSchema<
+													v.BooleanSchema<undefined>,
+													undefined
+												>;
+											},
+											undefined
+										>,
+										undefined
+									>;
+								},
+								undefined
+							>;
+							readonly 'io.modelcontextprotocol/clientInfo': v.OptionalSchema<
+								v.ObjectSchema<
+									{
+										/**
+										 * Optional set of sized icons that the client can display in a user interface.
+										 *
+										 * Clients that support rendering icons MUST support at least the following MIME types:
+										 * - `image/png` - PNG images (safe, universal compatibility)
+										 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+										 *
+										 * Clients that support rendering icons SHOULD also support:
+										 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+										 * - `image/webp` - WebP images (modern, efficient format)
+										 */
+										readonly icons: v.OptionalSchema<
+											v.ArraySchema<
+												v.ObjectSchema<
+													{
+														/**
+														 * URL or data URI for the icon.
+														 */
+														readonly src: v.StringSchema<undefined>;
+														/**
+														 * Optional MIME type for the icon.
+														 */
+														readonly mimeType: v.OptionalSchema<
+															v.StringSchema<undefined>,
+															undefined
+														>;
+														/**
+														 * Optional array of strings that specify sizes at which the icon can be used.
+														 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+														 *
+														 * If not provided, the client should assume that the icon can be used at any size.
+														 */
+														readonly sizes: v.OptionalSchema<
+															v.ArraySchema<
+																v.StringSchema<undefined>,
+																undefined
+															>,
+															undefined
+														>;
+													},
+													undefined
+												>,
+												undefined
+											>,
+											undefined
+										>;
+										readonly version: v.StringSchema<undefined>;
+										readonly websiteUrl: v.OptionalSchema<
+											v.StringSchema<undefined>,
+											undefined
+										>;
+										/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+										readonly name: v.StringSchema<undefined>;
+										/**
+										 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+										 * even by those unfamiliar with domain-specific terminology.
+										 *
+										 * If not provided, the name should be used for display (except for Tool,
+										 * where `annotations.title` should be given precedence over using `name`,
+										 * if present).
+										 */
+										readonly title: v.OptionalSchema<
+											v.StringSchema<undefined>,
+											undefined
+										>;
+									},
+									undefined
+								>,
+								undefined
+							>;
+							readonly 'io.modelcontextprotocol/logLevel': v.OptionalSchema<
+								v.PicklistSchema<
+									[
+										'debug',
+										'info',
+										'notice',
+										'warning',
+										'error',
+										'critical',
+										'alert',
+										'emergency',
+									],
+									undefined
+								>,
+								undefined
+							>;
+							/**
+							 * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
+							 */
+							readonly progressToken: v.OptionalSchema<
+								v.UnionSchema<
+									[
+										v.StringSchema<undefined>,
+										v.SchemaWithPipe<
+											readonly [
+												v.NumberSchema<undefined>,
+												v.IntegerAction<
+													number,
+													undefined
+												>,
+											]
+										>,
+									],
+									undefined
+								>,
+								undefined
+							>;
+						},
+						undefined
+					>;
+					readonly notifications: v.ObjectSchema<
+						{
+							readonly toolsListChanged: v.OptionalSchema<
+								v.BooleanSchema<undefined>,
+								undefined
+							>;
+							readonly promptsListChanged: v.OptionalSchema<
+								v.BooleanSchema<undefined>,
+								undefined
+							>;
+							readonly resourcesListChanged: v.OptionalSchema<
+								v.BooleanSchema<undefined>,
+								undefined
+							>;
+							readonly resourceSubscriptions: v.OptionalSchema<
+								v.ArraySchema<
+									v.StringSchema<undefined>,
+									undefined
+								>,
+								undefined
+							>;
+						},
+						undefined
+					>;
+				},
+				undefined
+			>;
+		},
+		undefined
+	>;
+	/**
+	 * Returned when the server gracefully closes a subscription stream.
+	 */
+	const SubscriptionsListenResultSchema: v.LooseObjectSchema<
+		{
+			readonly resultType: v.LiteralSchema<'complete', undefined>;
+			readonly _meta: v.LooseObjectSchema<
+				{
+					readonly 'io.modelcontextprotocol/subscriptionId': v.UnionSchema<
+						[
+							v.StringSchema<undefined>,
+							v.SchemaWithPipe<
+								readonly [
+									v.NumberSchema<undefined>,
+									v.IntegerAction<number, undefined>,
+								]
+							>,
+						],
+						undefined
+					>;
+				},
+				undefined
+			>;
+		},
+		undefined
+	>;
+	/**
+	 * The first notification emitted for a per-request subscription stream.
+	 */
+	const SubscriptionsAcknowledgedNotificationSchema: v.ObjectSchema<
+		{
+			readonly method: v.LiteralSchema<
+				'notifications/subscriptions/acknowledged',
+				undefined
+			>;
+			readonly params: v.ObjectSchema<
+				{
+					readonly _meta: v.LooseObjectSchema<
+						{
+							readonly 'io.modelcontextprotocol/subscriptionId': v.UnionSchema<
+								[
+									v.StringSchema<undefined>,
+									v.SchemaWithPipe<
+										readonly [
+											v.NumberSchema<undefined>,
+											v.IntegerAction<number, undefined>,
+										]
+									>,
+								],
+								undefined
+							>;
+						},
+						undefined
+					>;
+					readonly notifications: v.ObjectSchema<
+						{
+							readonly toolsListChanged: v.OptionalSchema<
+								v.BooleanSchema<undefined>,
+								undefined
+							>;
+							readonly promptsListChanged: v.OptionalSchema<
+								v.BooleanSchema<undefined>,
+								undefined
+							>;
+							readonly resourcesListChanged: v.OptionalSchema<
+								v.BooleanSchema<undefined>,
+								undefined
+							>;
+							readonly resourceSubscriptions: v.OptionalSchema<
+								v.ArraySchema<
+									v.StringSchema<undefined>,
+									undefined
+								>,
+								undefined
+							>;
+						},
+						undefined
+					>;
+				},
+				undefined
+			>;
+		},
+		undefined
+	>;
+	/**
 	 * The server's response to a prompts/list request from the client.
 	 */
 	const ListPromptsResultSchema: v.ObjectSchema<
@@ -3085,22 +3594,6 @@ declare module 'tmcp' {
 		},
 		undefined
 	>;
-	/**
-	 * The severity of a log message.
-	 */
-	const LoggingLevelSchema: v.PicklistSchema<
-		[
-			'debug',
-			'info',
-			'notice',
-			'warning',
-			'error',
-			'critical',
-			'alert',
-			'emergency',
-		],
-		undefined
-	>;
 	const CreateMessageRequestParamsSchema: v.ObjectSchema<
 		{
 			readonly messages: v.ArraySchema<
@@ -3593,6 +4086,19 @@ declare module 'tmcp' {
 	type ListResourceTemplatesResult_1 = v.InferInput<
 		typeof ListResourceTemplatesResultSchema
 	>;
+	type RequestId = v.InferInput<typeof RequestIdSchema>;
+	type SubscriptionFilter_1 = v.InferInput<typeof SubscriptionFilterSchema>;
+	type SubscriptionsListenResult_1 = v.InferInput<
+		typeof SubscriptionsListenResultSchema
+	>;
+	type SubscriptionsListenRequest_1 = v.InferInput<
+		typeof JSONRPCRequestSchema
+	> &
+		v.InferInput<typeof SubscriptionsListenRequestSchema>;
+	type SubscriptionsAcknowledgedNotification_1 = v.InferInput<
+		typeof JSONRPCNotificationSchema
+	> &
+		v.InferInput<typeof SubscriptionsAcknowledgedNotificationSchema>;
 	/**
 	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
 	 * @import { JSONSchema7 } from "json-schema";

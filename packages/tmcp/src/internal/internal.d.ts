@@ -13,6 +13,8 @@ import {
 	ToolAnnotations,
 	Icons,
 	McpError,
+	SubscriptionFilter,
+	RequestId,
 } from '../validation/index.js';
 import { ExtractURITemplateVariables } from './uri-template.js';
 
@@ -41,6 +43,37 @@ export type MrtrState = {
 	input_error: McpError | undefined;
 	signal: Error;
 	signal_at_boundary: boolean;
+};
+
+export type SubscriptionOrigin = string;
+
+export type Subscription = {
+	id: RequestId;
+	origin: SubscriptionOrigin;
+	filters: SubscriptionFilter;
+};
+
+export type SubscriptionCallbacks = {
+	acknowledge: () => void | Promise<void>;
+	send: (notification: JSONRPCRequest) => void | Promise<void>;
+	close: (reason: 'closed' | 'cancelled') => void | Promise<void>;
+};
+
+export type SubscriptionManager = {
+	create(
+		subscription: Subscription,
+		callbacks: SubscriptionCallbacks,
+	): boolean | Promise<boolean>;
+	send(notification: JSONRPCRequest): void | Promise<void>;
+	close(
+		id: RequestId,
+		origin: SubscriptionOrigin,
+		reason: 'closed' | 'cancelled',
+	): boolean | Promise<boolean>;
+	closeAll(
+		origin?: SubscriptionOrigin,
+		reason?: 'closed' | 'cancelled',
+	): void | Promise<void>;
 };
 
 export type Replayable = {
@@ -266,8 +299,15 @@ type SubscriptionsKeysObj = {
 export type SubscriptionsKeys = SubscriptionsKeysObj['with_args'];
 
 export type McpEvents = {
-	send: (message: { request: JSONRPCRequest }) => void;
-	broadcast: (message: { request: JSONRPCRequest }) => void;
+	send: (message: {
+		request: JSONRPCRequest;
+		subscriptionId?: RequestId;
+		subscriptionOrigin?: SubscriptionOrigin;
+	}) => void;
+	broadcast: (message: {
+		request: JSONRPCRequest;
+		subscriptionOnly?: boolean;
+	}) => void;
 	initialize: (initialize_request: InitializeRequestParams) => void;
 	subscription: (subscriptions_request: {
 		uri: string;
