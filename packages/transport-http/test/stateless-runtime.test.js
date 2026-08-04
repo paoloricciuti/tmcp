@@ -407,6 +407,38 @@ describe('strict per-request HTTP runtime', () => {
 		);
 	});
 
+	it('sends progress before the final result on the request SSE stream', async () => {
+		const server = new McpServer(
+			{ name: 'strict-http', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		server.tool({ name: 'worker', description: 'worker' }, () => {
+			server.progress(1, 2, 'Halfway');
+			return { content: [] };
+		});
+		const transport = new HttpTransport(server, { path: '/mcp' });
+		const request = modern_message('tools/call', { name: 'worker' });
+		/** @type {Record<string, unknown>} */ (
+			request.params._meta
+		).progressToken = 'progress-1';
+		const response = await transport.respond(post_request(request));
+		const messages = await event_messages(
+			/** @type {Response} */ (response),
+		);
+
+		expect(messages).toHaveLength(2);
+		expect(messages[0]).toMatchObject({
+			method: 'notifications/progress',
+			params: {
+				progress: 1,
+				total: 2,
+				message: 'Halfway',
+				progressToken: 'progress-1',
+			},
+		});
+		expect(messages[1]).toMatchObject({ id: 1, result: {} });
+	});
+
 	it('validates annotated tool parameter headers before running the handler', async () => {
 		const execute = vi.fn(() => ({ content: [] }));
 		const server = /** @type {McpServer<HeaderSchema, undefined>} */ (

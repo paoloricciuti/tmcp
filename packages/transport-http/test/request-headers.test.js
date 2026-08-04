@@ -133,6 +133,20 @@ describe('tool parameter headers', () => {
 	});
 
 	it.each([
+		['negative integer', -7],
+		['maximum safe integer', Number.MAX_SAFE_INTEGER],
+		['minimum safe integer', Number.MIN_SAFE_INTEGER],
+	])('accepts a %s parameter header', (_name, count) => {
+		expect(() =>
+			validate_tool_parameter_headers(
+				new Headers({ 'Mcp-Param-Count': String(count) }),
+				schema,
+				{ count },
+			),
+		).not.toThrow();
+	});
+
+	it.each([
 		['missing', new Headers(), { region: 'west' }],
 		[
 			'mismatched',
@@ -148,6 +162,11 @@ describe('tool parameter headers', () => {
 			'unsafe integer',
 			new Headers({ 'Mcp-Param-Count': '9007199254740992' }),
 			{ count: 9007199254740992 },
+		],
+		[
+			'unsafe negative integer',
+			new Headers({ 'Mcp-Param-Count': '-9007199254740992' }),
+			{ count: -9007199254740992 },
 		],
 		[
 			'present null',
@@ -203,6 +222,49 @@ describe('tool parameter headers', () => {
 			),
 		).toThrow(TypeError);
 	});
+
+	it.each(['if', 'then', 'else'])(
+		'rejects an annotation behind the %s conditional keyword',
+		(keyword) => {
+			expect(() =>
+				validate_tool_parameter_headers(
+					new Headers(),
+					{
+						type: 'object',
+						[keyword]: {
+							properties: {
+								value: {
+									type: 'string',
+									'x-mcp-header': 'Conditional',
+								},
+							},
+						},
+					},
+					{},
+				),
+			).toThrow(TypeError);
+		},
+	);
+
+	it.each(['line1\nline2', 'line1\rline2', 'value\u0001'])(
+		'rejects a raw control character in a recognized header: %j',
+		(value) => {
+			const headers = /** @type {Headers} */ (
+				/** @type {unknown} */ ({
+					/** @param {string} name */
+					get: (name) =>
+						name.toLowerCase() === 'mcp-param-region'
+							? value
+							: null,
+				})
+			);
+			expect(() =>
+				validate_tool_parameter_headers(headers, schema, {
+					region: value,
+				}),
+			).toThrow(expect.objectContaining({ code: HEADER_MISMATCH }));
+		},
+	);
 
 	it('rejects case-insensitively duplicated names', () => {
 		expect(() =>
