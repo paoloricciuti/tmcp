@@ -11,7 +11,9 @@ import {
 	MISSING_REQUIRED_CLIENT_CAPABILITY,
 	UNSUPPORTED_PROTOCOL_VERSION,
 	McpError,
+	getPerRequestProtocolVersions,
 } from '../src/index.js';
+import { isPerRequestMethodAllowed } from '../src/method-policy.js';
 import { is_method_allowed } from '../src/validation/method-policy.js';
 
 const MODERN = '2026-07-28';
@@ -201,6 +203,14 @@ describe('stateless protocol (2026-07-28)', () => {
 	});
 
 	describe('method policy', () => {
+		it('reports every registered method without applying request policy', () => {
+			const server = create_server();
+			expect(server.hasMethod('tools/list')).toBe(true);
+			expect(server.hasMethod('server/discover')).toBe(true);
+			expect(server.hasMethod('ping')).toBe(true);
+			expect(server.hasMethod('missing/method')).toBe(false);
+		});
+
 		it('keeps progress notifications on session-negotiated connections', () => {
 			expect(is_method_allowed('notifications/progress', false)).toBe(
 				true,
@@ -208,6 +218,12 @@ describe('stateless protocol (2026-07-28)', () => {
 			expect(is_method_allowed('notifications/progress', true)).toBe(
 				false,
 			);
+		});
+
+		it('exposes per-request method policy independently from registration', () => {
+			expect(isPerRequestMethodAllowed('tools/list')).toBe(true);
+			expect(isPerRequestMethodAllowed('server/discover')).toBe(true);
+			expect(isPerRequestMethodAllowed('ping')).toBe(false);
 		});
 
 		it.each([
@@ -540,6 +556,22 @@ describe('stateless protocol (2026-07-28)', () => {
 	});
 
 	describe('session isolation', () => {
+		it('exposes a transport cancellation signal through ctx', async () => {
+			const server = create_server();
+			const controller = new AbortController();
+			/** @type {AbortSignal | undefined} */
+			let seen;
+			server.tool({ name: 'signal', description: 'signal' }, () => {
+				seen = server.ctx.signal;
+				return { content: [] };
+			});
+			await server.receive(
+				stateless_request('tools/call', { name: 'signal' }),
+				{ signal: controller.signal },
+			);
+			expect(seen).toBe(controller.signal);
+		});
+
 		it('does not leak legacy session capabilities into stateless requests', async () => {
 			const server = create_server();
 			server.tool({ name: 'probe', description: 'probe' }, () => ({
@@ -767,6 +799,110 @@ describe('stateless protocol (2026-07-28)', () => {
 	});
 
 	describe('schema loosening', () => {
+		it('validates a tool call against its converted JSON Schema without executing it', async () => {
+			const server = create_server();
+			const validate = vi.fn(async () => {});
+			const execute = vi.fn(() => ({ content: [] }));
+			const enabled = vi.fn(() => true);
+			/** @type {MockSchema<{ test: string }>} */
+			const schema = {
+				'~standard': {
+					validate: vi.fn(async (input) => ({ value: input })),
+					vendor: 'mock',
+					version: 1,
+				},
+			};
+			server.tool(
+				{
+					name: 'validated',
+					description: 'validated',
+					schema,
+					enabled,
+				},
+				execute,
+			);
+
+			await expect(
+				server.validateToolCall(
+					'validated',
+					{ test: 'value' },
+					validate,
+				),
+			).resolves.toBe(true);
+			expect(validate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: 'object',
+					properties: { test: { type: 'string' } },
+				}),
+				{ test: 'value' },
+			);
+			expect(schema['~standard'].validate).not.toHaveBeenCalled();
+			expect(enabled).not.toHaveBeenCalled();
+			expect(execute).not.toHaveBeenCalled();
+		});
+
+		it('awaits validators, propagates errors, and skips unknown tools', async () => {
+			const server = create_server();
+			server.tool(
+				{ name: 'schema-less', description: 'schema-less' },
+				() => ({
+					content: [],
+				}),
+			);
+			const gate = Promise.withResolvers();
+			const pending = server.validateToolCall(
+				'schema-less',
+				{},
+				async (schema) => {
+					expect(schema).toEqual({ type: 'object', properties: {} });
+					await gate.promise;
+				},
+			);
+			let settled = false;
+			void pending.then(() => {
+				settled = true;
+			});
+			await Promise.resolve();
+			expect(settled).toBe(false);
+			gate.resolve(undefined);
+			await expect(pending).resolves.toBe(true);
+
+			const validator = vi.fn();
+			await expect(
+				server.validateToolCall('missing', {}, validator),
+			).resolves.toBe(false);
+			expect(validator).not.toHaveBeenCalled();
+
+			const failure = new Error('validator failed');
+			await expect(
+				server.validateToolCall('schema-less', {}, () => {
+					throw failure;
+				}),
+			).rejects.toBe(failure);
+		});
+
+		it('propagates tool schema adapter errors', async () => {
+			const server = create_server();
+			/** @type {MockSchema<{ test: string }>} */
+			const schema = {
+				'~standard': {
+					validate: vi.fn(async (input) => ({ value: input })),
+					vendor: 'mock',
+					version: 1,
+				},
+			};
+			server.tool(
+				{ name: 'adapter-error', description: 'adapter error', schema },
+				() => ({ content: [] }),
+			);
+			const failure = new Error('adapter failed');
+			vi.spyOn(adapter, 'toJsonSchema').mockRejectedValueOnce(failure);
+
+			await expect(
+				server.validateToolCall('adapter-error', {}, vi.fn()),
+			).rejects.toBe(failure);
+		});
+
 		it('accepts non-object structuredContent', async () => {
 			const server = create_server();
 			server.tool({ name: 'scalar', description: 'x' }, () => ({
@@ -857,6 +993,13 @@ describe('stateless protocol (2026-07-28)', () => {
 	});
 
 	describe('version list consolidation', () => {
+		it('exports a defensive copy of the per-request version list', () => {
+			const versions = getPerRequestProtocolVersions();
+			expect(versions).toEqual([MODERN]);
+			versions.length = 0;
+			expect(getPerRequestProtocolVersions()).toEqual([MODERN]);
+		});
+
 		it('no longer advertises 2024-10-07', async () => {
 			const server = create_server();
 			const response = await server.receive({

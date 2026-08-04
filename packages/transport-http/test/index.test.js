@@ -909,6 +909,7 @@ describe('HTTP Transport', () => {
 			expect(response?.headers.get('content-type')).toBe(
 				'text/event-stream',
 			);
+			expect(response?.headers.get('x-accel-buffering')).toBe('no');
 			await response?.body?.cancel();
 		});
 

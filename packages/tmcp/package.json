@@ -47,6 +47,10 @@
 			"types": "./src/types/index.d.ts",
 			"default": "./src/adapter.js"
 		},
+		"./method-policy": {
+			"types": "./src/types/index.d.ts",
+			"default": "./src/method-policy.js"
+		},
 		"./utils": {
 			"types": "./src/types/index.d.ts",
 			"default": "./src/utils/index.js"

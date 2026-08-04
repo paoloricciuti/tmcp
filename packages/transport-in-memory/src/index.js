@@ -6,8 +6,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { JSONRPCErrorException } from 'json-rpc-2.0';
 import { InMemorySubscriptionManager } from '@tmcp/session-manager';
-
-const PER_REQUEST_PROTOCOL_VERSION = '2026-07-28';
+import { getPerRequestProtocolVersions } from 'tmcp';
 
 /**
  * @typedef {Object} StatelessClientOptions
@@ -764,7 +763,7 @@ export class InMemoryTransport {
 		let request_id = 0;
 		const metadata = {
 			'io.modelcontextprotocol/protocolVersion':
-				options.protocolVersion ?? PER_REQUEST_PROTOCOL_VERSION,
+				options.protocolVersion ?? getPerRequestProtocolVersions()[0],
 			'io.modelcontextprotocol/clientCapabilities':
 				options.clientCapabilities ?? {},
 			...(options.clientInfo

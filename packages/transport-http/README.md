@@ -1,6 +1,6 @@
 # @tmcp/transport-http
 
-An HTTP transport implementation for TMCP (TypeScript Model Context Protocol) servers. This package provides HTTP Streaming based communication for MCP servers over HTTP, enabling web-based clients to interact with your MCP server through standard HTTP requests.
+An HTTP transport implementation for TMCP (TypeScript Model Context Protocol) servers. It supports both initialization-based MCP sessions and the sessionless per-request protocol introduced in MCP `2026-07-28`.
 
 ## Installation
 
@@ -72,7 +72,7 @@ httpServer.listen(3000, () => {
 const transport = new HttpTransport(server, {
 	// Custom MCP endpoint path (default: '/mcp', use null to respond on every path)
 	path: '/api/mcp',
-	// Custom session ID generation
+	// Custom session ID generation for initialization-based clients
 	getSessionId: () => {
 		return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 	},
@@ -126,6 +126,8 @@ const response = await transport.respond(req, {
 });
 ```
 
+Handlers can also observe request cancellation through `server.ctx.signal`. The HTTP transport aborts this signal when the incoming request is aborted or the client closes its request-scoped SSE response. Cancellation is cooperative, so handlers should pass the signal to cancellable work or check `signal.aborted` at suitable boundaries.
+
 ### Session Management
 
 The HTTP transport supports custom session managers for different deployment scenarios:
@@ -175,13 +177,13 @@ const transport = new HttpTransport(server, {
 ## Features
 
 - **🌐 HTTP/SSE Communication**: Uses Server-Sent Events for real-time bidirectional communication
-- **🔄 Session Management**: Maintains client sessions with automatic session ID generation
+- **🔄 Dual Protocol Support**: Supports both initialization-based sessions and sessionless per-request calls
 - **📡 Streaming Responses**: Supports streaming responses through SSE
 - **🛤️ Configurable Path**: Customizable MCP endpoint path with automatic filtering (set `path` to `null` to respond everywhere)
 - **🔧 Framework Agnostic**: Works with any HTTP server framework (Fastify, Bun, Deno, etc.)
 - **⚡ Real-time Updates**: Server can push notifications and updates to connected clients
 - **🛡️ Error Handling**: Graceful error handling for malformed requests
-- **🔀 Multiple HTTP Methods**: Supports GET (notifications), POST (messages), and DELETE (disconnect)
+- **🔀 Multiple HTTP Methods**: Supports legacy GET/DELETE session behavior alongside POST-only per-request calls
 - **🧠 Session Metadata**: Automatically persists client capabilities, info, and log levels and exposes them via `server.ctx.sessionInfo`
 
 ## API
@@ -219,7 +221,7 @@ interface HttpTransportOptions {
 }
 ```
 
-If you omit `sessionManager` the transport creates `InMemoryStreamSessionManager` and `InMemoryInfoSessionManager` instances for you. You can override either field independently (for example, Redis streams with in-memory metadata during development).
+If you omit `sessionManager` the transport creates `InMemoryStreamSessionManager` and `InMemoryInfoSessionManager` instances for initialization-based clients. Per-request clients never create, read, or return session IDs. You can override either field independently (for example, Redis streams with in-memory metadata during development).
 
 If you omit `subscriptionManager`, the transport creates an `InMemorySubscriptionManager`. Supply a distributed implementation when `subscriptions/listen` requests and change publication may reach different server instances.
 
@@ -275,13 +277,28 @@ Cancel every active per-request subscription owned by this transport.
 
 ## Protocol Details
 
+### Per-Request Protocol (`2026-07-28`)
+
+Each request or notification uses its own POST. A conforming request includes:
+
+- `MCP-Protocol-Version`, matching `params._meta.io.modelcontextprotocol/protocolVersion`.
+- `Mcp-Method`, matching the JSON-RPC method.
+- `Mcp-Name` for `tools/call`, `prompts/get`, and `resources/read`, matching `params.name` or `params.uri`.
+- Any recognized `Mcp-Param-*` values declared by `x-mcp-header` annotations in a tool's input JSON Schema.
+
+`Mcp-Name` and parameter headers use the specification's `=?base64?...?=` sentinel when a value cannot be represented safely as plain ASCII. Header names are compared case-insensitively; values remain case-sensitive.
+
+Successful requests use request-scoped SSE and include `X-Accel-Buffering: no`. Accepted notifications return HTTP 202 without a body. Header mismatches and unsupported versions return HTTP 400; unknown or unavailable methods return HTTP 404. Per-request traffic ignores `Mcp-Session-Id` and `Last-Event-ID`, never returns a session ID, and returns HTTP 405 for GET and DELETE.
+
+Initialization-based clients continue to use the behavior documented below on the same transport. Their session header, GET stream, DELETE lifecycle, and JSON-RPC response POSTs remain supported.
+
 ### HTTP Methods
 
 The transport supports three HTTP methods:
 
 #### POST - Message Processing
 
-Clients send JSON-RPC messages via HTTP POST requests. Each POST accepts one JSON-RPC message; batch arrays are rejected with `-32600 Invalid Request`.
+Clients send JSON-RPC messages via HTTP POST requests. Each POST accepts one JSON-RPC message; batch arrays are rejected with `-32600 Invalid Request`. The following example shows initialization-based session behavior:
 
 ```http
 POST /mcp HTTP/1.1
@@ -346,7 +363,7 @@ HTTP/1.1 200 OK
 mcp-session-id: session-to-disconnect
 ```
 
-### Session Management
+### Legacy Session Management
 
 - **Session ID Header**: `mcp-session-id`
 - **Automatic Generation**: If no session ID is provided, one is generated automatically

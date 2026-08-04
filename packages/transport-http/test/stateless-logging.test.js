@@ -16,6 +16,9 @@ function tool_request(name, session_id) {
 		headers: {
 			'content-type': 'application/json',
 			'mcp-session-id': session_id,
+			'MCP-Protocol-Version': '2026-07-28',
+			'Mcp-Method': 'tools/call',
+			'Mcp-Name': name,
 		},
 		body: JSON.stringify({
 			jsonrpc: '2.0',

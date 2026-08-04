@@ -31,7 +31,7 @@
 
 /**
  * @typedef {{ promise: Promise<boolean>, resolve: (registered: boolean) => void }} SubscriptionRegistration
- * @typedef {{ controller?: ReadableStreamDefaultController, state: 'open' | 'cancelled' | 'disconnected', subscription?: { id: string | number, registration: SubscriptionRegistration } }} SubscriptionSink
+ * @typedef {{ controller?: ReadableStreamDefaultController, state: 'open' | 'cancelled' | 'disconnected', signal?: AbortSignal, subscription?: { id: string | number, registration: SubscriptionRegistration } }} SubscriptionSink
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -41,6 +41,23 @@ import {
 	InMemorySubscriptionManager,
 } from '@tmcp/session-manager';
 import { DEV } from 'esm-env';
+import {
+	getPerRequestProtocolVersions,
+	McpError,
+	UNSUPPORTED_PROTOCOL_VERSION,
+} from 'tmcp';
+import { isPerRequestMethodAllowed } from 'tmcp/method-policy';
+import {
+	validate_request_headers,
+	validate_tool_parameter_headers,
+} from './request-headers.js';
+
+const PER_REQUEST_METADATA_KEYS = [
+	'io.modelcontextprotocol/protocolVersion',
+	'io.modelcontextprotocol/clientCapabilities',
+	'io.modelcontextprotocol/clientInfo',
+	'io.modelcontextprotocol/logLevel',
+];
 
 /**
  * @template {Record<string, unknown> | undefined} [TCustom=undefined]
@@ -66,7 +83,7 @@ export class HttpTransport {
 	#path;
 
 	/**
-	 * @type {AsyncLocalStorage<ReadableStreamDefaultController | undefined>}
+	 * @type {AsyncLocalStorage<SubscriptionSink | undefined>}
 	 */
 	#controller_storage = new AsyncLocalStorage();
 
@@ -239,11 +256,16 @@ export class HttpTransport {
 					return;
 				}
 				// use the current controller if the request has an id (it means it's a request and not a notification)
-				const controller = this.#controller_storage.getStore();
-				if (!controller) return;
+				const sink = this.#controller_storage.getStore();
+				if (
+					!sink?.controller ||
+					sink.state !== 'open' ||
+					sink.signal?.aborted
+				)
+					return;
 
 				try {
-					controller.enqueue(
+					sink.controller.enqueue(
 						this.#text_encoder.encode(
 							'event: message\ndata: ' +
 								JSON.stringify(request) +
@@ -455,24 +477,47 @@ export class HttpTransport {
 	}
 
 	/**
-	 * @param {string} session_id
-	 * @param {string} data
-	 * @param {string | number | null} [id]
+	 * @param {number} status
+	 * @param {string | number | null} id
+	 * @param {number} code
+	 * @param {string} message
+	 * @param {unknown} [data]
+	 * @param {string} [session_id]
 	 */
-	#invalid_request(session_id, data, id = null) {
+	#json_rpc_error(status, id, code, message, data, session_id) {
 		return new Response(
 			JSON.stringify({
 				jsonrpc: '2.0',
 				id,
-				error: { code: -32600, message: 'Invalid Request', data },
+				error: {
+					code,
+					message,
+					...(data === undefined ? {} : { data }),
+				},
 			}),
 			{
-				status: 400,
+				status,
 				headers: {
 					'Content-Type': 'application/json',
-					'mcp-session-id': session_id,
+					...(session_id ? { 'mcp-session-id': session_id } : {}),
 				},
 			},
+		);
+	}
+
+	/**
+	 * @param {string | undefined} session_id
+	 * @param {string} data
+	 * @param {string | number | null} [id]
+	 */
+	#invalid_request(session_id, data, id = null) {
+		return this.#json_rpc_error(
+			400,
+			id,
+			-32600,
+			'Invalid Request',
+			data,
+			session_id,
 		);
 	}
 
@@ -533,6 +578,7 @@ export class HttpTransport {
 				'Content-Type': 'text/event-stream',
 				'Cache-Control': 'no-cache',
 				Connection: 'keep-alive',
+				'X-Accel-Buffering': 'no',
 				'mcp-session-id': session_id,
 			},
 			status: 200,
@@ -540,109 +586,255 @@ export class HttpTransport {
 	}
 
 	/**
-	 *
-	 * @param {string} session_id
+	 * @param {Request} request
+	 * @param {unknown} [body]
+	 */
+	#is_per_request(request, body) {
+		const header_version = request.headers.get('mcp-protocol-version');
+		if (
+			header_version !== null &&
+			getPerRequestProtocolVersions().includes(header_version)
+		) {
+			return true;
+		}
+		if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+			return false;
+		}
+		const params = /** @type {Record<string, any>} */ (body).params;
+		const meta = params?._meta;
+		return (
+			typeof meta === 'object' &&
+			meta !== null &&
+			!Array.isArray(meta) &&
+			PER_REQUEST_METADATA_KEYS.some((key) => Object.hasOwn(meta, key))
+		);
+	}
+
+	/**
+	 * @param {Record<string, any>} body
+	 * @param {Request} request
+	 * @param {string | number | null} id
+	 */
+	async #preflight_per_request(body, request, id) {
+		try {
+			validate_request_headers(request.headers, body);
+			const requested_version =
+				body.params?._meta?.['io.modelcontextprotocol/protocolVersion'];
+			const supported = getPerRequestProtocolVersions();
+			if (!supported.includes(requested_version)) {
+				return this.#json_rpc_error(
+					400,
+					id,
+					UNSUPPORTED_PROTOCOL_VERSION,
+					`Unsupported protocol version: ${String(requested_version)}`,
+					{ supported, requested: requested_version },
+				);
+			}
+			if (
+				!isPerRequestMethodAllowed(body.method) ||
+				!this.#server.hasMethod(body.method)
+			) {
+				return this.#json_rpc_error(
+					404,
+					id,
+					-32601,
+					`Method ${body.method} not found`,
+				);
+			}
+			if (
+				body.method === 'tools/call' &&
+				typeof body.params?.name === 'string'
+			) {
+				const args =
+					typeof body.params.arguments === 'object' &&
+					body.params.arguments !== null &&
+					!Array.isArray(body.params.arguments)
+						? body.params.arguments
+						: {};
+				await this.#server.validateToolCall(
+					body.params.name,
+					args,
+					(input_schema, tool_args) =>
+						validate_tool_parameter_headers(
+							request.headers,
+							input_schema,
+							tool_args,
+						),
+				);
+			}
+			return null;
+		} catch (error) {
+			if (error instanceof McpError) {
+				return this.#json_rpc_error(
+					400,
+					id,
+					error.code,
+					error.message,
+					error.data,
+				);
+			}
+			return this.#json_rpc_error(
+				500,
+				id,
+				-32603,
+				/** @type {Error} */ (error).message ?? 'Internal error',
+			);
+		}
+	}
+
+	/**
 	 * @param {Request} request
 	 * @param {AuthInfo | null} auth_info
 	 * @param {TCustom} [ctx]
 	 */
-	async #handle_post(session_id, request, auth_info, ctx) {
-		// Check Content-Type header
+	async #handle_post(request, auth_info, ctx) {
+		const header_is_per_request = this.#is_per_request(request);
 		const content_type = request.headers.get('content-type');
 		if (!content_type || !content_type.includes('application/json')) {
-			return new Response(
-				JSON.stringify({
-					jsonrpc: '2.0',
-					id: null,
-					error: {
-						code: -32600,
-						message: 'Invalid Request',
-						data: 'Content-Type must be application/json',
-					},
-				}),
-				{
-					status: 415,
-					headers: {
-						'Content-Type': 'application/json',
-						'mcp-session-id': session_id,
-					},
-				},
+			const session_id = header_is_per_request
+				? undefined
+				: request.headers.get('mcp-session-id') ||
+					this.#options.getSessionId();
+			return this.#json_rpc_error(
+				415,
+				null,
+				-32600,
+				'Invalid Request',
+				'Content-Type must be application/json',
+				session_id,
 			);
 		}
 
+		/** @type {unknown} */
+		let parsed_body;
 		try {
-			const body = await request.clone().json();
-			if (
-				Array.isArray(body) ||
-				typeof body !== 'object' ||
-				body === null
-			) {
-				return this.#invalid_request(
-					session_id,
-					Array.isArray(body)
-						? 'JSON-RPC batch requests are not supported'
-						: 'Expected a JSON-RPC message object',
-				);
-			}
-			const valid_id =
-				typeof body.id === 'string' || typeof body.id === 'number';
-			const request_message =
-				body.jsonrpc === '2.0' &&
-				typeof body.method === 'string' &&
-				(body.id === undefined || valid_id);
-			const has_result = Object.hasOwn(body, 'result');
-			const has_error = Object.hasOwn(body, 'error');
-			const response_message =
-				body.jsonrpc === '2.0' && valid_id && has_result !== has_error;
-			if (!request_message && !response_message) {
-				return this.#invalid_request(
-					session_id,
-					'Expected a valid JSON-RPC request, notification, or response',
-					valid_id ? body.id : null,
-				);
-			}
-			const messages = [body];
-			const subscription_id =
-				body.method === 'subscriptions/listen' && valid_id
-					? /** @type {string | number} */ (body.id)
-					: undefined;
-			const subscription_origin =
-				subscription_id === undefined
-					? session_id
-					: crypto.randomUUID();
-			/** @type {{ id: string | number, registration: SubscriptionRegistration } | undefined} */
-			let subscription;
-			if (subscription_id !== undefined) {
-				/** @type {(registered: boolean) => void} */
-				let resolve = () => {};
-				/** @type {Promise<boolean>} */
-				const promise = new Promise((ready) => {
+			parsed_body = await request.json();
+		} catch (error) {
+			const session_id = header_is_per_request
+				? undefined
+				: request.headers.get('mcp-session-id') ||
+					this.#options.getSessionId();
+			return this.#json_rpc_error(
+				400,
+				null,
+				-32700,
+				'Parse error',
+				/** @type {Error} */ (error).message,
+				session_id,
+			);
+		}
+
+		const per_request = this.#is_per_request(request, parsed_body);
+		const session_id = per_request
+			? undefined
+			: request.headers.get('mcp-session-id') ||
+				this.#options.getSessionId();
+		if (
+			Array.isArray(parsed_body) ||
+			typeof parsed_body !== 'object' ||
+			parsed_body === null
+		) {
+			return this.#invalid_request(
+				session_id,
+				Array.isArray(parsed_body)
+					? 'JSON-RPC batch requests are not supported'
+					: 'Expected a JSON-RPC message object',
+			);
+		}
+		const body = /** @type {Record<string, any>} */ (parsed_body);
+		const valid_id =
+			typeof body.id === 'string' || typeof body.id === 'number';
+		const request_message =
+			body.jsonrpc === '2.0' &&
+			typeof body.method === 'string' &&
+			(body.id === undefined || valid_id);
+		const has_result = Object.hasOwn(body, 'result');
+		const has_error = Object.hasOwn(body, 'error');
+		const response_message =
+			body.jsonrpc === '2.0' && valid_id && has_result !== has_error;
+		if (!request_message && !response_message) {
+			return this.#invalid_request(
+				session_id,
+				'Expected a valid JSON-RPC request, notification, or response',
+				valid_id ? body.id : null,
+			);
+		}
+		if (per_request && response_message) {
+			return this.#invalid_request(
+				undefined,
+				'Per-request clients must not send JSON-RPC responses',
+				body.id,
+			);
+		}
+		if (per_request && request_message) {
+			const preflight = await this.#preflight_per_request(
+				body,
+				request,
+				valid_id ? body.id : null,
+			);
+			if (preflight) return preflight;
+		}
+
+		const subscription_id =
+			body.method === 'subscriptions/listen' && valid_id
+				? /** @type {string | number} */ (body.id)
+				: undefined;
+		const subscription_origin =
+			subscription_id !== undefined || session_id === undefined
+				? crypto.randomUUID()
+				: session_id;
+		/** @type {{ id: string | number, registration: SubscriptionRegistration } | undefined} */
+		let subscription;
+		if (subscription_id !== undefined) {
+			/** @type {(registered: boolean) => void} */
+			let resolve = () => {};
+			const promise = /** @type {Promise<boolean>} */ (
+				new Promise((ready) => {
 					resolve = ready;
-				});
-				subscription = {
-					id: subscription_id,
-					registration: { promise, resolve },
-				};
-			}
-			/** @type {SubscriptionSink} */
-			const sink = {
-				/** @type {ReadableStreamDefaultController | undefined} */
-				controller: undefined,
-				state: 'open',
-				subscription,
+				})
+			);
+			subscription = {
+				id: subscription_id,
+				registration: { promise, resolve },
 			};
-			const manager = this.#subscription_manager;
-			const server_subscription_manager = this.#manager_for_sink(sink);
-			const register_sink = this.#register_subscription_sink.bind(this);
-			const delete_sink = this.#delete_subscription_sink.bind(this);
-			const release_sink = () => {
-				const current = sink.subscription;
-				if (!current) return;
-				current.registration.resolve(false);
-				delete_sink(subscription_origin, current.id, sink);
-			};
-			const cancel = async () => {
+		}
+		const abort_controller = new AbortController();
+		/** @type {SubscriptionSink} */
+		const sink = {
+			controller: undefined,
+			state: 'open',
+			signal: abort_controller.signal,
+			subscription,
+		};
+		const manager = this.#subscription_manager;
+		const server_subscription_manager = this.#manager_for_sink(sink);
+		const register_sink = this.#register_subscription_sink.bind(this);
+		const delete_sink = this.#delete_subscription_sink.bind(this);
+		let released = false;
+		const release_sink = () => {
+			if (released) return;
+			released = true;
+			request.signal.removeEventListener('abort', on_request_abort);
+			const current = sink.subscription;
+			if (!current) return;
+			current.registration.resolve(false);
+			delete_sink(subscription_origin, current.id, sink);
+		};
+		/** @type {Promise<void> | undefined} */
+		let disconnecting;
+		/** @param {boolean} close_stream */
+		const disconnect = (close_stream) => {
+			if (disconnecting) return disconnecting;
+			disconnecting = (async () => {
 				sink.state = 'disconnected';
+				abort_controller.abort();
+				if (close_stream) {
+					try {
+						sink.controller?.close();
+					} catch {
+						// The response body may already have been cancelled.
+					}
+				}
 				const current = sink.subscription;
 				if (
 					!current ||
@@ -661,130 +853,134 @@ export class HttpTransport {
 						'cancelled',
 					);
 				}
-			};
+			})();
+			return disconnecting;
+		};
+		const on_request_abort = () => {
+			void disconnect(true);
+		};
+		request.signal.addEventListener('abort', on_request_abort, {
+			once: true,
+		});
 
-			// Create a short-lived stream that closes after sending the response
-			const stream = new ReadableStream({
-				start(controller) {
-					sink.controller = controller;
-					if (subscription_id !== undefined) {
-						register_sink(
-							subscription_origin,
-							subscription_id,
-							sink,
-						);
-					}
-				},
-				cancel,
-			});
+		const stream = new ReadableStream({
+			start(controller) {
+				sink.controller = controller;
+				if (subscription_id !== undefined) {
+					register_sink(subscription_origin, subscription_id, sink);
+				}
+			},
+			cancel: () => disconnect(false),
+		});
+		if (request.signal.aborted) void disconnect(true);
 
-			const session_id_storage = this.#session_id_storage;
-
-			const handle = async () => {
-				const init_message = messages.find(
-					(/** @type {any} */ m) => m.method === 'initialize',
-				);
-
-				const client_capabilities = init_message
+		const handle = async () => {
+			if (abort_controller.signal.aborted) {
+				release_sink();
+				return;
+			}
+			const init_message =
+				body.method === 'initialize' ? body : undefined;
+			const client_capabilities = session_id
+				? init_message
 					? init_message.params?.capabilities
 					: await this.#options.sessionManager.info
 							.getClientCapabilities(session_id)
-							.catch(() => undefined);
-				const client_info = init_message
+							.catch(() => undefined)
+				: undefined;
+			const client_info = session_id
+				? init_message
 					? init_message.params?.clientInfo
 					: await this.#options.sessionManager.info
 							.getClientInfo(session_id)
-							.catch(() => undefined);
-				const log_level = init_message
+							.catch(() => undefined)
+				: undefined;
+			const log_level = session_id
+				? init_message
 					? undefined
 					: await this.#options.sessionManager.info
 							.getLogLevel(session_id)
-							.catch(() => undefined);
+							.catch(() => undefined)
+				: undefined;
+			if (abort_controller.signal.aborted) {
+				release_sink();
+				return;
+			}
 
-				const response = await this.#controller_storage.run(
-					sink.controller,
-					() =>
-						session_id_storage.run(session_id, () =>
-							this.#server.receive(body, {
-								sessionId: session_id,
-								auth: auth_info ?? undefined,
+			const receive = () =>
+				this.#server.receive(/** @type {any} */ (body), {
+					...(session_id ? { sessionId: session_id } : {}),
+					auth: auth_info ?? undefined,
+					...(session_id
+						? {
 								sessionInfo: {
 									clientCapabilities: client_capabilities,
 									clientInfo: client_info,
 									logLevel: log_level,
 								},
-								custom: ctx,
-								subscriptionOrigin: subscription_origin,
-								subscriptionManager:
-									server_subscription_manager,
-							}),
-						),
-				);
-
-				if (sink.state === 'open' && response != null) {
-					sink.controller?.enqueue(
-						this.#text_encoder.encode(
-							'event: message\ndata: ' +
-								JSON.stringify(response) +
-								'\n\n',
-						),
-					);
-				}
-				if (sink.state !== 'disconnected') sink.controller?.close();
-				release_sink();
-			};
-
-			void handle().catch((error) => {
-				if (sink.state !== 'disconnected')
-					sink.controller?.error(error);
-				release_sink();
-			});
-
-			const has_request = request_message && valid_id;
-
-			// Determine status code based on response type
-			// 202 Accepted for notifications/responses, 200 OK for standard requests
-			const status = !has_request ? 202 : 200;
-
-			const response = new Response(has_request ? stream : null, {
-				headers: has_request
-					? {
-							'Content-Type': 'text/event-stream',
-							'Cache-Control': 'no-cache',
-							connection: 'keep-alive',
-							'mcp-session-id': session_id,
-						}
-					: undefined,
-				status,
-			});
-			if (subscription_id !== undefined) {
-				this.#subscription_responses.set(response, {
-					id: subscription_id,
-					origin: subscription_origin,
+							}
+						: {}),
+					custom: ctx,
+					signal: abort_controller.signal,
+					subscriptionOrigin: subscription_origin,
+					subscriptionManager: server_subscription_manager,
 				});
-			}
-			return response;
-		} catch (error) {
-			// Handle JSON parsing errors
-			return new Response(
-				JSON.stringify({
-					jsonrpc: '2.0',
-					id: null,
-					error: {
-						code: -32700,
-						message: 'Parse error',
-						data: /** @type {Error} */ (error).message,
-					},
-				}),
-				{
-					status: 400,
-					headers: {
-						'Content-Type': 'application/json',
-						'mcp-session-id': session_id,
-					},
-				},
+			const response = await this.#controller_storage.run(sink, () =>
+				session_id
+					? this.#session_id_storage.run(session_id, receive)
+					: receive(),
 			);
+
+			if (
+				sink.state === 'open' &&
+				!abort_controller.signal.aborted &&
+				response != null
+			) {
+				sink.controller?.enqueue(
+					this.#text_encoder.encode(
+						'event: message\ndata: ' +
+							JSON.stringify(response) +
+							'\n\n',
+					),
+				);
+			}
+			if (sink.state !== 'disconnected') sink.controller?.close();
+			release_sink();
+		};
+
+		void handle().catch((error) => {
+			if (sink.state === 'open') {
+				sink.controller?.error(error);
+			} else if (sink.state === 'cancelled') {
+				try {
+					sink.controller?.close();
+				} catch {
+					// The cancellation may already have closed the stream.
+				}
+			}
+			release_sink();
+		});
+
+		const has_request = request_message && valid_id;
+		const response = new Response(has_request ? stream : null, {
+			headers: has_request
+				? {
+						'Content-Type': 'text/event-stream',
+						'Cache-Control': 'no-cache',
+						connection: 'keep-alive',
+						'X-Accel-Buffering': 'no',
+						...(session_id ? { 'mcp-session-id': session_id } : {}),
+					}
+				: undefined,
+			status: has_request ? 200 : 202,
+		});
+		if (subscription_id !== undefined) {
+			this.#subscription_responses.set(response, {
+				id: subscription_id,
+				origin: subscription_origin,
+			});
 		}
+		return response;
 	}
 
 	/**
@@ -828,9 +1024,10 @@ export class HttpTransport {
 	/**
 	 *
 	 * @param {string} method
+	 * @param {string} [allow]
 	 * @returns
 	 */
-	#handle_default(method) {
+	#handle_default(method, allow = 'GET, POST, DELETE, OPTIONS') {
 		return new Response(
 			JSON.stringify({
 				jsonrpc: '2.0',
@@ -844,7 +1041,7 @@ export class HttpTransport {
 				status: 405,
 				headers: {
 					'Content-Type': 'application/json',
-					Allow: 'GET, POST, DELETE, OPTIONS',
+					Allow: allow,
 				},
 			},
 		);
@@ -896,9 +1093,10 @@ export class HttpTransport {
 		}
 
 		const method = request.method;
-		const session_id =
-			request.headers.get('mcp-session-id') ||
-			this.#options.getSessionId();
+		const per_request_http_method =
+			getPerRequestProtocolVersions().includes(
+				request.headers.get('mcp-protocol-version') ?? '',
+			);
 
 		/**
 		 * @type {Response | null}
@@ -916,20 +1114,25 @@ export class HttpTransport {
 		}
 		// Handle DELETE request - disconnect session
 		else if (method === 'DELETE') {
-			response = await this.#handle_delete(session_id);
+			response = per_request_http_method
+				? this.#handle_default(method, 'POST, OPTIONS')
+				: await this.#handle_delete(
+						request.headers.get('mcp-session-id') ||
+							this.#options.getSessionId(),
+					);
 		}
 		// Handle GET request - establish long-lived connection for notifications
 		else if (method === 'GET') {
-			response = await this.#handle_get(session_id);
+			response = per_request_http_method
+				? this.#handle_default(method, 'POST, OPTIONS')
+				: await this.#handle_get(
+						request.headers.get('mcp-session-id') ||
+							this.#options.getSessionId(),
+					);
 		}
 		// Handle POST request - process message and respond through event stream
 		else if (method === 'POST') {
-			response = await this.#handle_post(
-				session_id,
-				request,
-				auth_info,
-				ctx,
-			);
+			response = await this.#handle_post(request, auth_info, ctx);
 		}
 		// Method not supported
 		else {

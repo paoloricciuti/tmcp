@@ -582,7 +582,7 @@ server.tool(
 
 ##### `ctx`
 
-Access the current request context, including session ID, auth info, client metadata, and custom context.
+Access the current request context, including session ID, auth info, client metadata, custom context, and cooperative cancellation.
 
 ```javascript
 server.tool(
@@ -591,7 +591,11 @@ server.tool(
 		description: 'Tool that uses request context',
 	},
 	async () => {
-		const { sessionId, auth, sessionInfo, custom } = server.ctx;
+		const { sessionId, auth, sessionInfo, custom, signal } = server.ctx;
+
+		if (signal?.aborted) {
+			throw new Error('Request cancelled');
+		}
 
 		if (!custom?.userId) {
 			throw new Error('User authentication required');
@@ -613,6 +617,24 @@ server.tool(
 );
 ```
 
+Transports may provide `ctx.signal`. The HTTP transport aborts it when the request is aborted or its SSE response is closed. Handlers remain responsible for stopping their own work.
+
+##### `validateToolCall(name, args, validator)`
+
+Run transport or integration validation against a registered tool's converted input JSON Schema without executing the tool:
+
+```javascript
+const found = await server.validateToolCall(
+	'tool-name',
+	args,
+	async (inputSchema, originalArgs) => {
+		// Inspect the JSON Schema and original arguments.
+	},
+);
+```
+
+The method returns `false` without invoking the validator when the tool is unknown. For a registered tool it converts the input schema with the configured adapter, awaits the validator, and returns `true`. It does not run the tool's `enabled` callback, Standard Schema validation, or handler. Adapter and validator errors are propagated.
+
 ##### `receive(request, context?)`
 
 Process an incoming MCP request with optional context.
@@ -632,6 +654,24 @@ const response = server.receive(jsonRpcRequest, {
 	},
 	custom: customContextData,
 });
+```
+
+##### `hasMethod(method)`
+
+Check whether a JSON-RPC method is registered without invoking it:
+
+```javascript
+if (server.hasMethod('tools/list')) {
+	// The method exists in this server's registry.
+}
+```
+
+This reports every registered method, including methods limited to initialization-based or per-request clients. Transports that need protocol-specific filtering can use the dedicated method-policy entry point:
+
+```javascript
+import { isPerRequestMethodAllowed } from 'tmcp/method-policy';
+
+const available = server.hasMethod(method) && isPerRequestMethodAllowed(method);
 ```
 
 ##### `request({ method, params })`

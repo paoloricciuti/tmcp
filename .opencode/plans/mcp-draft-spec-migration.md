@@ -6,9 +6,9 @@ This plan originally targeted a draft revision. **Update (2026-07-29): protocol 
 
 tmcp supports legacy, initialization-based versions through `2025-06-18`. It does not need to implement or recognize `2025-11-25` before adding the modern version. Unsupported versions are handled generically and only versions that actually work may be advertised.
 
-## Implementation status (2026-07-31)
+## Implementation status (2026-08-04)
 
-Phases 0–4 and the Phase 6 per-request logging and in-memory client paths are **implemented for process-local subscriptions**. Core, HTTP request routing, stdio delivery/concurrency, sessionless in-memory testing, and transport-owned subscription routing are covered. No bundled distributed `SubscriptionManager` adapter exists yet, so multi-replica subscription delivery remains incomplete. The remaining strict per-request HTTP runtime work is also still pending. Decisions taken during implementation:
+Phases 0–5 and the Phase 6 per-request logging and in-memory client paths are **implemented for process-local subscriptions**. Core, strict dual-profile HTTP request routing, stdio delivery/concurrency, sessionless in-memory testing, and transport-owned subscription routing are covered. No bundled distributed `SubscriptionManager` adapter exists yet, so multi-replica subscription delivery remains incomplete. Decisions taken during implementation:
 
 - **No opt-in flag.** The `unstableProtocolVersions` option from Phase 0 was implemented and then removed once the revision was published: per-request `2026-07-28` support is enabled by default. `LATEST_PROTOCOL_VERSION` stays `2025-06-18` for legacy negotiation. `KNOWN_PER_REQUEST_PROTOCOL_VERSIONS` in `validation/version.js` is the source of truth for per-request versions.
 - **Terminology**: the code deliberately avoids "modern vs legacy" / `era` naming (future revisions may add new exceptions). Requests are classified as _session-negotiated_ vs _per-request (stateless)_. The classification lives in exactly one place: an internal `stateless: boolean` flag on the existing `AsyncLocalStorage` store (same pattern as `progress_token`, stripped from the public `ctx` getter, transport-provided values discarded). `ctx.protocolVersion` is purely informational and NOT used for classification — legacy sessions also have a negotiated version and may expose it there later.
@@ -20,18 +20,18 @@ Phases 0–4 and the Phase 6 per-request logging and in-memory client paths are 
 - **Result encoding**: stateless results get `resultType: 'complete'` (handler-provided values preserved only when they are strings), serverInfo merged into `_meta` without clobbering app keys, and `ttlMs`/`cacheScope` on cacheable methods. The encoder ALWAYS overwrites cache fields from the configured `cache` option (`{ ttlMs?, cacheScope?, methods? }`, defaults `{ ttlMs: 0, cacheScope: 'private' }`) — profile-unaware handlers must not be able to opt results into public caching. Null/non-object stateless results are coerced to `{}` and decorated.
 - **MRTR**: `tools/call`, `prompts/get`, and `resources/read` can suspend stateless execution with keyed elicitation/sampling `inputRequests`; retries consume matching `inputResponses` and re-execute handlers from the top. Both form and URL elicitation are supported; URL mode uses `elicitation(message, url, { key? })` and the published action-only response flow. The per-registration `replayable: true` acknowledgment gates input calls and clearly documents duplicated-side-effect risk. Stable keys support conditional flow, concurrent input preparation is batched, and broad catch blocks must rethrow the private signal (detectable with `isInputRequired`). Session-negotiated input requests keep the existing awaitable path. Stateless input calls from any other method fail immediately instead of falling through to a server-to-client request that cannot complete. Clients only need to answer the latest `inputRequests`: tmcp carries responses already consumed by the handler in its `requestState` envelope, then merges them beneath newly supplied responses on retry. Elicitation carries the original wire response rather than the handler’s transformed schema output, so coercing/non-idempotent schemas are safely revalidated on later attempts.
 - **MRTR request-local state**: a fresh ALS value is created for each `receive()` attempt and discarded afterward. The keyed `pending` map owns both unfinished schema conversion promises and completed input requests; `used_keys` reserves answered and unanswered keys; `consumed_responses` records only validated answers actually used during this attempt; one `registration` object owns handler identity plus its replay flag; `outgoing_state !== undefined` is the only source of truth for handler state. There is no separate preparation set, outgoing-state flag, or split entity/replay flag.
-- **Phase 4 subscriptions**: `subscriptions/listen` is per-request-only and uses its typed JSON-RPC request ID as the subscription ID. Filters are validated, deduplicated, reduced against configured capabilities, and limited to registered static/template resource URIs before acknowledgment. `SubscriptionManager` and its in-memory implementation live in `@tmcp/session-manager`; HTTP accepts an injectable manager while stdio and in-memory transports own local managers. Core receives the active manager and stable origin through transport-only request context, reuses `send` for routed output, and reuses `broadcast` for change publication. HTTP creates an opaque origin for each listen POST instead of trusting the legacy `Mcp-Session-Id` header; graceful closure targets the exact returned `Response`. Concrete template updates carry `subscriptionOnly` so legacy broadcasts remain unchanged. Managers buffer until acknowledgment, preserve FIFO delivery and ID type identity, and retain registrations until close dispatch completes. HTTP cancellation is response-stream closure; stdio uses schema-valid, origin-scoped cancellation. Transport shutdown closes owned registrations. SSE remains session-negotiated-only. **Missing:** PostgreSQL, Redis, and Durable Objects implementations of `SubscriptionManager`; the bundled implementation is currently in-memory only.
+- **Phase 4 subscriptions**: `subscriptions/listen` is per-request-only and uses its typed JSON-RPC request ID as the subscription ID. Filters are validated, deduplicated, reduced against configured capabilities, and limited to registered static/template resource URIs before acknowledgment. `SubscriptionManager` and its in-memory implementation live in `@tmcp/session-manager`; HTTP accepts an injectable manager while stdio and in-memory transports own local managers. Core receives the active manager and stable origin through transport-only request context, reuses `send` for routed output, and reuses `broadcast` for change publication. HTTP creates an opaque origin for each listen POST instead of trusting the legacy `Mcp-Session-Id` header; graceful closure targets the exact returned `Response` and waits for a racing registration attempt. Concrete template updates carry `subscriptionOnly` so legacy broadcasts remain unchanged. Managers buffer until acknowledgment, preserve FIFO delivery and ID type identity, and retain registrations until close dispatch completes. HTTP cancellation is response-stream closure; stdio uses schema-valid, origin-scoped cancellation. Transport shutdown closes owned registrations. SSE remains session-negotiated-only. **Deliberately deferred:** PostgreSQL, Redis, and Durable Objects implementations of `SubscriptionManager`; the bundled implementation is currently in-memory only.
 - **Request state**: handlers can use `setRequestState()` / `ctx.requestState`; the pluggable codec defaults to plain JSON with explicit client-tampering warnings and encoded-size bounds. No cross-request state is retained in memory. Stateless roots fail clearly, low-level `request()` stays blocked, and session-negotiated requests reject MRTR-only `inputResponses`/`requestState` fields with `-32602`.
 - Result wire schemas were loosened `v.object` → `v.looseObject` (needed to preserve handler-provided `resultType`/extension fields). Side effect, documented in the changeset: unknown top-level handler fields now pass through instead of being stripped.
 - `structuredContent` is loosened at the type level too: the `CallToolResult` generic no longer constrains it to `Record<string, unknown>`, so non-object output schemas (e.g. a string) type-check. Pure widening — existing tools unaffected.
-- The Phase 1.3 HTTP status mapping (`-32020/-32021/-32022` → 400, `-32601` → 404) was **moved to Phase 5.1**: core exports the constants and produces correct error bodies; shipping only status codes without the modern header validation buys nothing. Until 5.1, these errors travel as JSON-RPC errors over HTTP 200.
+- **Strict per-request HTTP runtime**: POST bodies are classified before session allocation, so per-request traffic never reads, creates, or returns a session ID. The transport validates standard and annotated tool parameter headers before dispatch, returns `-32020/-32022` as HTTP 400 and unavailable methods as HTTP 404, keeps successful requests on ordered SSE, and exposes disconnects through `ctx.signal`. Handler-generated errors, including `-32021`, remain inside HTTP 200 SSE because streaming has already started.
 - Other packages need NO changes for phases 0–3. Verified after MRTR: stdio serializes `receive()` responses unchanged; HTTP and SSE stream the returned JSON-RPC response without inspecting `resultType`; the in-memory transport returns `response.result`; schema adapters already expose asynchronous `toJsonSchema()`; session managers, auth, and persistence are not involved because no MRTR state survives a request. Transport-level MRTR tests would only test transparent serialization and are optional, not a Phase 3 requirement.
 - **Phase 3 review/quality**: delayed concurrent schema conversion, simultaneous `receive()` isolation, latest-only sequential answers, three-attempt coercing-schema replay, prototype-like input keys (`constructor`, `toString`, `__proto__`), unrelated malformed responses, invalid elicitation/sampling response recovery, elicitation decline/cancel, request-state decode/envelope/encode/size failures, adapter preparation failures and recovery, adapter-specific schema keyword stripping, expected-signal logging, stateless roots, unsupported stateless input methods, unknown-method precedence, deterministic simultaneous duplicate keys, URL/form mode-specific elicitation capabilities, malformed session capabilities, URL wire requests plus handler/retry-state content stripping, invalid elicitation URLs, all published enum schema shapes, invalid nested form schemas, and un-awaited input calls all have regression coverage. Pending schema promises are resolved only when tmcp is building `InputRequiredResult`, so they cannot replace an unrelated handler result/error. Public comments/JSDoc explain concrete client/handler behavior rather than internal jargon. Redundant always-successful schema assertions were removed; focused validation tests only cover tmcp-specific restrictions that can regress.
-- **Current verification**: the full workspace suite passes 376/376 tests across thirteen files plus 40/40 conformance checks (416 total), including 216 core, 51 HTTP transport, 45 in-memory transport, five stdio transport, and five session-manager tests. Package source ESLint, touched-file Prettier, generated declarations, publint, full workspace typecheck, and `git diff --check` all pass. The root-wide lint/format commands also scan ignored generated docs output and unparseable create-tmcp templates, so they are not currently clean validation commands. The in-memory legacy elicitation tests now wait for asynchronous request preparation instead of assuming adapter conversion finishes within one microtask.
+- **Current verification**: the full workspace suite passes 429/429 Vitest tests plus 40/40 conformance checks (469 total), including 223 core, 97 HTTP transport, 45 in-memory transport, five stdio transport, five session-manager, and 54 auth tests. Package source ESLint, touched-file Prettier, generated declarations, publint, full workspace typecheck, and `git diff --check` all pass. The root-wide lint/format commands also scan ignored generated docs output and unparseable create-tmcp templates, so they are not currently clean validation commands. The in-memory legacy elicitation tests now wait for asynchronous request preparation instead of assuming adapter conversion finishes within one microtask.
 - **CI package manager**: the root manifest and package-level pins use pnpm 11.2.2. Every workflow lets `pnpm/action-setup` resolve that root pin instead of duplicating a version input. `pnpm install --frozen-lockfile` succeeds with that exact version, matching the lockfile generator.
 - **Phase 6 logging**: `server/discover` now advertises configured logging support. Stateless log notifications require the current request's explicit `io.modelcontextprotocol/logLevel`; server defaults, transport session levels, and earlier stateless requests cannot leak into the decision. Regression coverage includes request-over-transport precedence, stateless-to-session isolation, and an MRTR opt-in → omitted → opt-in sequence proving every retry round is evaluated independently in both directions. Session-negotiated logging remains unchanged.
-- **Phase 6 transport audit**: HTTP routes `send` notifications through the originating POST controller's `AsyncLocalStorage`; concurrent stateless requests prove logs stay on their own response streams. Stdio registers `send` immediately, so stateless logs work before legacy initialization, while legacy broadcasts and session-state listeners still wait for `initialize`. The listener also forwards standalone/background `send` events before initialization; this broader stdout behavior is intentional and changes servers that construct a transport but never initialize it. The in-memory transport now provides `stateless()` clients with discovery, explicit per-request metadata, strict JSON-RPC errors, automatic MRTR retries, and isolated concurrent notification capture. `Session` and `StatelessClient` inherit one shared set of compatible high-level MCP methods; stateless high-level calls reject input-required results and direct callers to `requestWithInput()` so their successful return types stay compatible. Separate transports sharing one server ignore `send` events outside their own request context. The internal `client_id` exists only to select each client's captured-message bucket; it is never protocol or session state. Subscription helpers remain coupled to Phase 4. HTTP's strict modern runtime remains Phase 5.1 work. SSE will not gain modern support. No schema adapter or session-manager changes are needed for logging.
-- **Release/worktree status**: Phase 3, its final review fixes, URL elicitation, the Phase 6 logging slice, HTTP coverage, stdio delivery, in-memory test synchronization, pnpm 11 CI alignment, and the sessionless in-memory client are committed through `4c0b6f8`. The Phase 4 core subscription slice and latest plan updates are unstaged. `.changeset/warm-onions-repeat.md` covers the overall `2026-07-28` protocol feature and Phase 6 logging; `.changeset/mrtr-input-required.md` covers Phase 3 MRTR behavior and follow-up fixes; `.changeset/quiet-stdio-logs.md` covers immediate stdio request-notification delivery; `.changeset/tidy-stateless-clients.md` covers the in-memory client API; `.changeset/calm-streams-listen.md` covers core subscriptions.
+- **Phase 6 transport audit**: HTTP routes `send` notifications through the originating POST controller's `AsyncLocalStorage`; concurrent stateless requests prove logs stay on their own response streams. Stdio registers `send` immediately, so stateless logs work before legacy initialization, while legacy broadcasts and session-state listeners still wait for `initialize`. The listener also forwards standalone/background `send` events before initialization; this broader stdout behavior is intentional and changes servers that construct a transport but never initialize it. The in-memory transport now provides `stateless()` clients with discovery, explicit per-request metadata, strict JSON-RPC errors, automatic MRTR retries, and isolated concurrent notification capture. `Session` and `StatelessClient` inherit one shared set of compatible high-level MCP methods; stateless high-level calls reject input-required results and direct callers to `requestWithInput()` so their successful return types stay compatible. Separate transports sharing one server ignore `send` events outside their own request context. The internal `client_id` exists only to select each client's captured-message bucket; it is never protocol or session state. Subscription helpers remain coupled to Phase 4. SSE will not gain modern support. No schema adapter or session-manager changes are needed for logging.
+- **Release/worktree status**: Phase 3, its final review fixes, URL elicitation, the Phase 6 logging slice, HTTP coverage, stdio delivery, in-memory test synchronization, pnpm 11 CI alignment, and the sessionless in-memory client are committed through `4c0b6f8`. The process-local Phase 4 subscription implementation and latest plan updates are unstaged. `.changeset/warm-onions-repeat.md` covers the overall `2026-07-28` protocol feature and Phase 6 logging; `.changeset/mrtr-input-required.md` covers Phase 3 MRTR behavior and follow-up fixes; `.changeset/quiet-stdio-logs.md` covers immediate stdio request-notification delivery; `.changeset/tidy-stateless-clients.md` covers the in-memory client API; `.changeset/calm-streams-listen.md` covers subscriptions.
 - `2024-10-07` was dropped when consolidating the two disagreeing version lists (`validation/version.js` won — it was never actually negotiable).
 - Deferred deliberately: `_meta` key-syntax/reserved-prefix enforcement and extension-advertisement validation for extension `resultType` values.
 
@@ -132,11 +132,11 @@ After a handler returns, a request-profile-aware encoder produces the wire resul
 - Keep transport-provided auth/custom context. Do not let transport-provided legacy client information fill missing modern fields.
 - Pass through OpenTelemetry `traceparent`, `tracestate`, and `baggage`; optionally expose them through a typed context field.
 
-### 1.3 Error model — DONE (core side; HTTP status mapping moved to 5.1)
+### 1.3 Error model — DONE
 
 - ~~Add constants and structured error helpers~~ Done: `HEADER_MISMATCH` (`-32020`), `MISSING_REQUIRED_CLIENT_CAPABILITY` (`-32021`), `UNSUPPORTED_PROTOCOL_VERSION` (`-32022`) exported from the package root, with internal helper constructors carrying the required `data` shapes (`{ supported, requested }`, `{ requiredCapabilities }`).
 - ~~Ensure the error abstraction preserves `code`/`data`~~ Done: `McpError` extends `json-rpc-2.0`'s `JSONRPCErrorException` (with a `Object.setPrototypeOf(this, new.target.prototype)` fix — the parent rewrites the prototype and breaks `instanceof`).
-- ~~Transport-level HTTP status mapping~~ **Moved to 5.1**: core exports the constants; the actual `-32020/-32021/-32022` → 400 / `-32601` → 404 mapping ships with the rest of the modern HTTP runtime, since compliant clients need the header validation anyway. Until then these errors travel as JSON-RPC errors over HTTP 200.
+- **Done in 5.1:** preflight `-32020/-32022` errors map to HTTP 400 and unavailable methods map to HTTP 404. Handler-generated errors, including `-32021`, remain in the already-open HTTP 200 SSE stream.
 - ~~Not-found error codes~~ Done: unknown prompt/resource now return `-32602` for BOTH eras (deliberate, changeset-documented bug fix). Tool execution failures remain successful `CallToolResult`s with `isError: true`.
 
 ### 1.4 Method policy — DONE
@@ -255,7 +255,7 @@ Decision: the exact implemented flag is `{ replayable: true }` on tool, prompt, 
 - Legacy requests are unaffected (they keep the awaitable JSON-RPC path).
 - This keeps the default-on posture safe: discovery, stateless requests, and result decoration are automatic; only input-requesting handlers need author action.
 
-## Phase 4: subscriptions
+## Phase 4: subscriptions — DONE for process-local managers
 
 ### 4.1 Core subscription model
 
@@ -265,7 +265,7 @@ Decision: the exact implemented flag is `{ replayable: true }` on tool, prompt, 
 - **Done:** send `notifications/subscriptions/acknowledged` as the first notification for that subscription ID.
 - **Done:** tag every subsequent listen-stream notification with the subscription ID.
 - **Done:** on graceful server closure, return an empty complete result whose `_meta` contains that same subscription ID.
-- **Done in core:** keep request-scoped progress/logging notifications on their originating request event path, never on a listen event. Transport-level isolation remains part of integration.
+- **Done:** keep request-scoped progress/logging notifications on their originating request event path, never on a listen event; existing transports have isolation coverage.
 
 ### 4.2 Dedicated manager
 
@@ -274,9 +274,9 @@ Decision: the exact implemented flag is `{ replayable: true }` on tool, prompt, 
 - **Done:** route list changes and resource updates only to matching subscriptions.
 - **Done:** keep `StreamSessionManager` and `InfoSessionManager` unchanged and legacy-only. Their public contracts were not repurposed.
 - **Done:** assign each HTTP listen stream an opaque transport-generated origin; caller-provided legacy session IDs never participate in modern subscription identity.
-- **Missing:** provide Redis, PostgreSQL, and Durable Objects `SubscriptionManager` adapters. The repository currently ships only `InMemorySubscriptionManager`; injecting the existing distributed stream/info managers does not distribute per-request subscriptions.
+- **Deliberately deferred:** provide Redis, PostgreSQL, and Durable Objects `SubscriptionManager` adapters. The repository currently ships only `InMemorySubscriptionManager`; injecting the existing distributed stream/info managers does not distribute per-request subscriptions.
 
-### 4.3 Distributed subscription managers — MISSING
+### 4.3 Distributed subscription managers — DELIBERATELY DEFERRED
 
 Each bundled distributed session-manager package needs a separate implementation of the new contract:
 
@@ -290,42 +290,34 @@ Until at least one of these adapters exists, HTTP's injectable manager supports 
 
 ### 4.4 Cancellation
 
-- HTTP: closing the response stream aborts the listen request, removes the subscription, and stops further writes.
-- Stdio: `notifications/cancelled` referencing the listen request ID closes that subscription. It must not be treated as a generic server-to-client cancellation mechanism.
+- **Done:** HTTP response-stream closure aborts the listen request, removes the subscription, and stops further writes; graceful closure by exact `Response` waits for pending registration.
+- **Done:** stdio `notifications/cancelled` referencing the listen request ID closes that subscription. It is not treated as a generic server-to-client cancellation mechanism.
 - **Done:** core handles `notifications/cancelled` for stdio listen requests; HTTP uses response-stream closure and does not route protocol cancellation POSTs. Transport-owned APIs provide graceful shutdown.
 
 ## Phase 5: transports
 
 ### 5.1 `@tmcp/transport-http`
 
-Status note: stateless requests already flow through the current transport (POSTs reach `McpServer.receive` unconditionally and core replaces `sessionInfo` for per-request profiles). Request-scoped `send` notifications, including logs and progress, use the originating POST controller through transport-local `AsyncLocalStorage`; concurrent stateless logging now has transport-level coverage. The remaining strict modern runtime behavior below is unimplemented.
+Status: implemented. Request-scoped `send` notifications, including logs and progress, use the originating POST sink through transport-local `AsyncLocalStorage`; cancellation changes the sink state before aborting handler context so no later messages are written.
+
+Detailed execution plan: [`strict-per-request-http-runtime.md`](./strict-per-request-http-runtime.md).
 
 Parse a single body message first, validate its headers, classify its era, then choose the runtime.
 
 #### Modern runtime
 
-- **(Moved here from 1.3)** Map modern protocol errors to required HTTP statuses; core already exports the constants and produces the correct JSON-RPC error bodies:
-    - HTTP 400 with `-32020` for missing, malformed, or mismatched required headers.
-    - HTTP 400 with `-32021` for missing required client capabilities.
-    - HTTP 400 with `-32022` for unsupported protocol versions.
-    - HTTP 404 with `-32601` for unknown RPC methods.
-- Accept one JSON-RPC request or notification per POST. Reject batches and client JSON-RPC responses.
-- Require and validate `MCP-Protocol-Version` against body `_meta`.
-- Require and validate `Mcp-Method` for all requests.
-- Require and validate `Mcp-Name` for `tools/call`, `prompts/get`, and `resources/read`.
-- Decode the Base64 sentinel format before comparing `Mcp-Name` and custom header values.
-- Validate recognized `Mcp-Param-*` headers generated by `x-mcp-header` annotations against tool arguments, including omission/null rules, primitive types, safe integers, annotation paths, and case-insensitive header names.
-- Return 202 with no body for accepted notifications.
-- Return either JSON or request-scoped SSE for requests. Add `X-Accel-Buffering: no` for SSE and optional keepalive comments for long-lived streams.
-- Treat response-stream closure as cancellation and stop writes/work.
-- Ignore `Mcp-Session-Id` and `Last-Event-ID`; do not mint or echo a session ID.
-- Return 405 for modern GET and DELETE.
-- Validate a present `Origin` against an explicit allowed-origin policy and return 403 when invalid. Do not confuse CORS response headers with origin security validation.
+- **Done:** map preflight protocol errors to required HTTP statuses: HTTP 400 with `-32020` for headers, HTTP 400 with `-32022` for versions, and HTTP 404 with `-32601` for unavailable methods. Handler-generated `-32021` errors stay in the already-open HTTP 200 SSE stream.
+- **Done:** accept one JSON-RPC request or notification per POST; reject batches and per-request client JSON-RPC responses.
+- **Done:** validate `MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name`, Base64 sentinel values, and recognized `Mcp-Param-*` headers against the body.
+- **Done:** return 202 with no body for accepted notifications and request-scoped SSE with `X-Accel-Buffering: no` for requests.
+- **Done:** treat response-stream closure as cooperative cancellation, abort `ctx.signal`, and stop writes after cancellation.
+- **Done:** ignore `Mcp-Session-Id` and `Last-Event-ID`, never mint or echo a per-request session ID, and return 405 for modern GET and DELETE.
+- **Done:** validate `Origin` independently from CORS response headers.
 
 #### Legacy runtime
 
-- Preserve existing initialize/session, GET stream, DELETE, and session-manager behavior for negotiated legacy clients.
-- Select legacy mode from `initialize` or established legacy transport state, not merely from the presence of a session header.
+- **Done:** preserve existing initialize/session, GET stream, DELETE, client-response, and session-manager behavior for negotiated legacy clients.
+- **Done:** classify from per-request metadata and protocol versions rather than treating a session header as modern state.
 
 #### CORS
 
@@ -336,7 +328,7 @@ Parse a single body message first, validate its headers, classify its era, then 
 
 Status note: stateless request/response, subscription routing, cancellation, and graceful closure are implemented. Per-request work runs concurrently so long-lived listens do not block later messages, while legacy requests remain serialized.
 
-- Wire `send` output immediately rather than waiting for `initialize`. **Done:** stateless logs and progress can be written before initialization. This forwards all standalone `send` events, including background notifications emitted without a request; that pre-initialize stdout behavior is accepted. Legacy `broadcast` output intentionally remains initialization-gated until modern list/resource changes use subscriptions.
+- **Done:** wire `send` output immediately rather than waiting for `initialize`. Stateless logs and progress can be written before initialization. This forwards all standalone `send` events, including background notifications emitted without a request; that pre-initialize stdout behavior is accepted. Legacy `broadcast` output remains intentionally initialization-gated, while per-request list/resource changes use subscriptions.
 - **Done:** register transport listeners once in the constructor so repeated `initialize` requests do not duplicate them.
 - **Done:** process per-request calls concurrently while preserving serialized execution for legacy requests.
 - **Done:** serialize stdout writes while request processing is concurrent.
@@ -358,9 +350,9 @@ Status note: stateless request/response, subscription routing, cancellation, and
 
 ### 5.5 Session managers
 
-- Keep all existing session-manager interfaces and adapters for legacy HTTP behavior.
-- Add a new subscription manager interface rather than changing the meaning of session IDs or existing stream managers.
-- Add bundled distributed implementations for PostgreSQL, Redis, and Durable Objects; this is still missing and is required before claiming built-in multi-replica subscription support.
+- **Done:** keep all existing session-manager interfaces and adapters unchanged for legacy HTTP behavior.
+- **Done:** add a separate subscription manager interface rather than changing the meaning of session IDs or existing stream managers.
+- **Deliberately deferred:** add bundled distributed implementations for PostgreSQL, Redis, and Durable Objects. They remain required before claiming built-in multi-replica subscription support.
 - Document server-minted handles passed as tool arguments as the modern pattern for application cross-call state. Consider a utility only after concrete repeated use appears.
 
 ## Phase 6: per-request logging and notification behavior
@@ -369,7 +361,7 @@ Status note: stateless request/response, subscription routing, cancellation, and
 - Use that request's level only; never fall back to a previous modern request or session default. **Done in core.**
 - For legacy requests, retain `logging/setLevel` and the existing session/default behavior. **Unchanged and covered by the existing session tests.**
 - Ensure progress and logging notifications are delivered only to the originating request response sink. **Done for existing transports:** HTTP has concurrent request-stream isolation coverage, stdio immediately writes `send` notifications to its single protocol stream, and in-memory sessionless clients isolate concurrent notification routes.
-- Keep legacy list/resource broadcasts unchanged while routing per-request changes through the subscription manager.
+- **Done:** keep legacy list/resource broadcasts unchanged while routing per-request changes through the subscription manager.
 
 ## Phase 7: auth (`@tmcp/auth`)
 
@@ -398,8 +390,8 @@ Add dual-era coverage for every shared method and transport:
 - Modern result decoration without changing handler return requirements.
 - Method policy for removed modern methods.
 - HTTP required/mismatched headers, Base64 values, custom parameter headers, status codes, batches, responses, Origin validation, and stream cancellation.
-- Subscription acknowledgment ordering, filtering, IDs, concurrent subscriptions, cancellation, and graceful closure.
-- Stdio concurrency while a subscription is open.
+- **Done:** subscription acknowledgment ordering, filtering, IDs, concurrent subscriptions, cancellation, and graceful closure.
+- **Done:** stdio concurrency and graceful closure while a subscription is open.
 - MRTR keyed replay, multiple rounds, conditional calls, capability failures, invalid responses, side-effect documentation examples, state tampering, expiry, principal binding, and request binding.
 - Legacy and modern clients operating concurrently against the same HTTP server.
 - Deterministic tool ordering, while avoiding assertions that imply dynamic/auth-specific lists are publicly cacheable.
@@ -447,4 +439,4 @@ Otherwise, defer the incompatible portion to the next major release.
 
 ## Open work
 
-- Implement the missing PostgreSQL, Redis, and Durable Objects `SubscriptionManager` adapters described in Phase 4.3. The core currently ships an in-memory default and a pub/sub-compatible contract only; serverless and multi-replica deployments must provide a custom adapter until bundled implementations exist.
+- Implement the deliberately deferred PostgreSQL, Redis, and Durable Objects `SubscriptionManager` adapters described in Phase 4.3. The core currently ships an in-memory default and a pub/sub-compatible contract only; serverless and multi-replica deployments must provide a custom adapter until bundled implementations exist.

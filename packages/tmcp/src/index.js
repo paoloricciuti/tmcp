@@ -114,6 +114,14 @@ export function isInputRequired(error) {
 }
 
 /**
+ * Return the per-request protocol versions supported by tmcp.
+ * @returns {string[]}
+ */
+export function getPerRequestProtocolVersions() {
+	return [...KNOWN_PER_REQUEST_PROTOCOL_VERSIONS];
+}
+
+/**
  * Information about a validated access token, provided to request handlers.
  * @typedef {Object} AuthInfo
  * @property {string} token - The access token.
@@ -133,6 +141,7 @@ export function isInputRequired(error) {
  * @property {{ clientCapabilities?: ClientCapabilitiesType, clientInfo?: ClientInfoType, logLevel?: LoggingLevel }} [sessionInfo]
  * @property {string} [protocolVersion] The exact per-request protocol version when the current request carries per-request protocol metadata; `undefined` for session-negotiated requests.
  * @property {unknown} [requestState] Data saved by the handler before asking the client for input, then returned by the client on the retry. It is `undefined` when no data was saved or when the request uses an open session. The default JSON converter lets the client read and change this value. Do not store secrets in it or use it to make authorization decisions. Configure `requestStateCodec` if the server must detect changes.
+ * @property {AbortSignal} [signal] Aborted when the transport observes that the current request was cancelled.
  * @property {AuthInfo} [auth]
  * @property {TCustom} [custom]
  */
@@ -1322,6 +1331,28 @@ export class McpServer {
 	}
 
 	/**
+	 * Run transport-specific validation against a registered tool's JSON
+	 * Schema without enabling, validating, or executing the tool.
+	 * @param {string} name
+	 * @param {Record<string, unknown>} args
+	 * @param {(input_schema: Record<string, unknown>, args: Record<string, unknown>)=>void | Promise<void>} validator
+	 * @returns {Promise<boolean>}
+	 */
+	async validateToolCall(name, args, validator) {
+		const tool = this.#tools.get(name);
+		if (!tool) return false;
+		const input_schema =
+			tool.schema && this.#options.adapter
+				? await this.#options.adapter.toJsonSchema(tool.schema)
+				: { type: 'object', properties: {} };
+		await validator(
+			/** @type {Record<string, unknown>} */ (input_schema),
+			args,
+		);
+		return true;
+	}
+
+	/**
 	 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
 	 * Use the description and title to help the user to understand what the prompt does and when to use it.
 	 *
@@ -1486,7 +1517,15 @@ export class McpServer {
 	 * @returns {string[]}
 	 */
 	#enabled_protocol_versions() {
-		return [...KNOWN_PER_REQUEST_PROTOCOL_VERSIONS];
+		return getPerRequestProtocolVersions();
+	}
+
+	/**
+	 * Check whether a JSON-RPC method is registered without invoking it.
+	 * @param {string} method
+	 */
+	hasMethod(method) {
+		return this.#server.hasMethod(method);
 	}
 
 	/**
@@ -1740,16 +1779,10 @@ export class McpServer {
 			}
 
 			const stateless = store.stateless === true;
-			if (!is_method_allowed(request_message.method, stateless)) {
-				return this.#error_response(
-					id,
-					new McpError(
-						-32601,
-						`Method ${request_message.method} not found`,
-					),
-				);
-			}
-			if (!this.#server.hasMethod(request_message.method)) {
+			if (
+				!is_method_allowed(request_message.method, stateless) ||
+				!this.hasMethod(request_message.method)
+			) {
 				return this.#error_response(
 					id,
 					new McpError(

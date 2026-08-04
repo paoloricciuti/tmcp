@@ -26,12 +26,23 @@ async function next_message(reader) {
  * @param {string} [origin]
  */
 function post(transport, body, origin = 'subscription-client') {
+	const message =
+		typeof body === 'object' && body !== null && !Array.isArray(body)
+			? /** @type {Record<string, any>} */ (body)
+			: undefined;
+	const version = message?.params?._meta?.[PROTOCOL_VERSION];
 	return transport.respond(
 		new Request('http://localhost/mcp', {
 			method: 'POST',
 			headers: {
 				'content-type': 'application/json',
 				'mcp-session-id': origin,
+				...(typeof version === 'string'
+					? {
+							'MCP-Protocol-Version': version,
+							'Mcp-Method': message?.method,
+						}
+					: {}),
 			},
 			body: JSON.stringify(body),
 		}),
@@ -132,6 +143,44 @@ describe('HTTP per-request subscriptions', () => {
 				_meta: { [SUBSCRIPTION_ID]: 2 },
 			},
 		});
+	});
+
+	it('cancels exactly once when the stream closes during registration', async () => {
+		const server = new McpServer(
+			{ name: 'http-subscriptions', version: '1.0.0' },
+			{ adapter: undefined, capabilities: {} },
+		);
+		const manager = new InMemorySubscriptionManager();
+		const create = manager.create.bind(manager);
+		const create_started = Promise.withResolvers();
+		const release_create = Promise.withResolvers();
+		vi.spyOn(manager, 'create').mockImplementation(
+			async (subscription, callbacks) => {
+				create_started.resolve(undefined);
+				await release_create.promise;
+				return create(subscription, callbacks);
+			},
+		);
+		const close = vi.spyOn(manager, 'close');
+		const transport = new HttpTransport(server, {
+			path: '/mcp',
+			subscriptionManager: manager,
+		});
+		const response = await post(transport, {
+			jsonrpc: '2.0',
+			id: 3,
+			method: 'subscriptions/listen',
+			params: { notifications: {}, _meta: metadata() },
+		});
+		if (!response?.body) throw new Error('Expected a subscription stream');
+		await create_started.promise;
+
+		const cancellation = response.body.cancel();
+		release_create.resolve(undefined);
+		await cancellation;
+
+		await vi.waitFor(() => expect(close).toHaveBeenCalledOnce());
+		expect(close).toHaveBeenCalledWith(3, expect.any(String), 'cancelled');
 	});
 
 	it('advertises configured subscription capabilities with the default manager', async () => {
@@ -359,6 +408,33 @@ describe('HTTP per-request subscriptions', () => {
 			true,
 		);
 		await next_message(second_reader);
+	});
+
+	it('closes a cancelled stream when receive rejects afterward', async () => {
+		const server = new McpServer(
+			{ name: 'http-subscriptions', version: '1.0.0' },
+			{ adapter: undefined, capabilities: {} },
+		);
+		const receive = server.receive.bind(server);
+		vi.spyOn(server, 'receive').mockImplementation(async (...args) => {
+			await receive(...args);
+			throw new Error('receive failed after cancellation');
+		});
+		const transport = new HttpTransport(server, { path: '/mcp' });
+		const response = await post(transport, {
+			jsonrpc: '2.0',
+			id: 16,
+			method: 'subscriptions/listen',
+			params: { notifications: {}, _meta: metadata() },
+		});
+		if (!response?.body) throw new Error('Expected a subscription stream');
+		const reader = response.body.getReader();
+		await expect(next_message(reader)).resolves.toMatchObject({
+			method: 'notifications/subscriptions/acknowledged',
+		});
+
+		await transport.close();
+		await expect(reader.read()).resolves.toMatchObject({ done: true });
 	});
 
 	it('accepts JSON-RPC responses without emitting an undefined SSE message', async () => {

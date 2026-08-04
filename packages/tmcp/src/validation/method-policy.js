@@ -44,6 +44,15 @@ export function is_method_allowed(method, stateless) {
 }
 
 /**
+ * Check whether a method may be called with per-request protocol metadata.
+ * @param {string} method
+ * @returns {boolean}
+ */
+export function is_per_request_method_allowed(method) {
+	return is_method_allowed(method, true);
+}
+
+/**
  * Methods whose responses tell the client how long they may be reused and
  * whether they may be shared.
  */

@@ -32,6 +32,10 @@ declare module 'tmcp' {
 	 * ```
 	 * */
 	export function isInputRequired(error: unknown): boolean;
+	/**
+	 * Return the per-request protocol versions supported by tmcp.
+	 * */
+	export function getPerRequestProtocolVersions(): string[];
 
 	export class McpServer<
 		StandardSchema extends StandardSchemaV1 | undefined = undefined,
@@ -243,6 +247,18 @@ declare module 'tmcp' {
 						  >,
 		): void;
 		/**
+		 * Run transport-specific validation against a registered tool's JSON
+		 * Schema without enabling, validating, or executing the tool.
+		 * */
+		validateToolCall(
+			name: string,
+			args: Record<string, unknown>,
+			validator: (
+				input_schema: Record<string, unknown>,
+				args: Record<string, unknown>,
+			) => void | Promise<void>,
+		): Promise<boolean>;
+		/**
 		 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
 		 * Use the description and title to help the user to understand what the prompt does and when to use it.
 		 *
@@ -312,6 +328,10 @@ declare module 'tmcp' {
 				params: Record<TVariables, string | string[]>,
 			) => Promise<ReadResourceResult> | ReadResourceResult,
 		): void;
+		/**
+		 * Check whether a JSON-RPC method is registered without invoking it.
+		 * */
+		hasMethod(method: string): boolean;
 		/**
 		 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 		 *
@@ -488,6 +508,10 @@ declare module 'tmcp' {
 		 * Data saved by the handler before asking the client for input, then returned by the client on the retry. It is `undefined` when no data was saved or when the request uses an open session. The default JSON converter lets the client read and change this value. Do not store secrets in it or use it to make authorization decisions. Configure `requestStateCodec` if the server must detect changes.
 		 */
 		requestState?: unknown;
+		/**
+		 * Aborted when the transport observes that the current request was cancelled.
+		 */
+		signal?: AbortSignal | undefined;
 		auth?: AuthInfo | undefined;
 		custom?: TCustom | undefined;
 	};
@@ -5809,6 +5833,15 @@ declare module 'tmcp/adapter' {
 	export class JsonSchemaAdapter<TSchema extends StandardSchemaV1> {
 		toJsonSchema(schema: TSchema): Promise<JSONSchema7>;
 	}
+
+	export {};
+}
+
+declare module 'tmcp/method-policy' {
+	/**
+	 * Check whether a method may be called with per-request protocol metadata.
+	 * */
+	export function isPerRequestMethodAllowed(method: string): boolean;
 
 	export {};
 }
