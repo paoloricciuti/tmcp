@@ -1,10 +1,12 @@
 # Subscription transport architecture
 
+Status: implemented and verified on 2026-08-05.
+
 ## Objective
 
 Implement MCP `2026-07-28` `subscriptions/listen` using the same ownership model as existing session-negotiated notifications: core owns protocol semantics, transports own connections and stream managers, and distributed managers keep response sinks local while routing serialized messages through pub/sub.
 
-This replaces the current work-in-progress design where one `SubscriptionManager` is configured globally on `McpServer`.
+This replaced the earlier work-in-progress design where one `SubscriptionManager` was configured globally on `McpServer`.
 
 ## Decisions
 
@@ -161,19 +163,19 @@ Concrete template URIs may use the modern subscription path, but must not change
 
 The transport closes all managers/streams it owns through the manager's required `closeAll()` operation; do not add a global manager to `McpServer` solely for shutdown.
 
-## Refactor from current WIP
+## Implemented refactor
 
-The current work-in-progress must be adjusted as follows:
+The transport-owned refactor completed the following:
 
-- Remove `subscriptionManager` from `McpServer` constructor options.
-- Remove global manager publication from `McpServer.changed()`.
-- Remove `subscriptionsend` and `subscriptionclose` events.
-- Extend the existing `send` event detail with optional subscription routing metadata.
-- Continue using the existing `broadcast` event for raw change notifications.
-- Pass the transport manager/coordinator through internal `ReceiveContext` for listen and cancellation requests.
-- Move `SubscriptionManager` and `InMemorySubscriptionManager` to `@tmcp/session-manager` if package dependency boundaries remain clean; otherwise keep the protocol-facing structural type in core and put concrete managers in the session-manager package.
-- Move graceful/cancel lifecycle ownership from global `McpServer.closeSubscription()`/`cancelSubscription()` APIs to the transport-owned manager unless a concrete non-transport use case requires those server methods.
-- Keep `matchesSubscription()` available to manager adapters or move it alongside the manager implementation.
+- Removed `subscriptionManager` from `McpServer` constructor options.
+- Removed global manager publication from `McpServer.changed()`.
+- Removed parallel `subscriptionsend` and `subscriptionclose` events.
+- Extended the existing `send` event detail with optional subscription routing metadata.
+- Continued using the existing `broadcast` event for raw change notifications.
+- Passed the transport manager through internal `ReceiveContext` for listen and cancellation requests.
+- Moved `SubscriptionManager`, `InMemorySubscriptionManager`, and `matchesSubscription()` to `@tmcp/session-manager`.
+- Kept graceful and cancellation lifecycle ownership in the transport-owned manager.
+- Added broker-only Redis, PostgreSQL, and Durable Objects managers without changing existing stream/info manager behavior.
 
 ## Required tests
 
@@ -190,29 +192,15 @@ The current work-in-progress must be adjusted as follows:
 - HTTP disconnect cancels and removes the registration.
 - Stdio handles other requests and cancellation while listen remains open.
 - Existing session-negotiated subscriptions and broadcasts remain unchanged.
-- Multiple server replicas sharing one distributed manager backend fan out to the owning instance.
+- Multiple server replicas sharing one broker fan notifications out to active replicas, where local filters select the owning streams.
 
-## Current baseline
+## Final verification
 
-Before this transport-owned refactor, the work-in-progress passes:
+- 459 Vitest tests pass, including focused Redis, PostgreSQL, Durable Objects, HTTP, stdio, and in-memory subscription coverage.
+- 40 MCP conformance checks pass.
+- Workspace typecheck, targeted ESLint and Prettier, generated declarations, publint, frozen installation, and `git diff --check` pass.
+- Final review found no blocking protocol, lifecycle, serialization, or broker-boundary issues.
 
-- 344 package tests, including 211 core tests.
-- 40 conformance checks.
-- Workspace typecheck, targeted ESLint/Prettier, generated declarations, publint, and `git diff --check`.
+## Completion
 
-The latest Fable review found no protocol or serialization violations in the manager contract, but identified these items to preserve during the refactor:
-
-- Prevent close/re-listen races for the same `(origin, id)`.
-- Preserve request ID type identity in distributed keys.
-- Add coverage for acknowledge failure, close during acknowledgment, notification-form listen without an ID, and FIFO under slow async sends.
-- Cancellation response suppression remains a hard transport responsibility.
-
-## Next implementation order
-
-1. Refactor core to use a transport manager from internal receive context and reuse `send`/`broadcast`.
-2. Relocate or split manager interfaces/implementations along package boundaries.
-3. Integrate HTTP with injectable in-memory/distributed manager support and stream cancellation.
-4. Integrate stdio concurrency, task-scoped cancellation suppression, and serialized output.
-5. Add in-memory transport subscription helpers.
-6. Re-enable subscription capability flags in `server/discover` only for transports that can deliver them.
-7. Run the complete dual-era workspace and conformance suites, then request another Fable review.
+All architecture, transport, manager, cancellation, capability, test, documentation, and release-file tasks in this plan are complete.

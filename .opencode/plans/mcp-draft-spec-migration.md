@@ -6,7 +6,7 @@ This plan originally targeted a draft revision. **Update (2026-07-29): protocol 
 
 tmcp supports legacy, initialization-based versions through `2025-06-18`. It does not need to implement or recognize `2025-11-25` before adding the modern version. Unsupported versions are handled generically and only versions that actually work may be advertised.
 
-## Implementation status (2026-08-04)
+## Implementation status (2026-08-05)
 
 Phases 0–7 are implemented, including distributed per-request subscriptions. Core, strict dual-profile HTTP request routing, stdio delivery/concurrency, sessionless in-memory testing, transport-owned subscription routing, Redis/PostgreSQL/Durable Objects subscription managers, and the optional authorization package are covered. Decisions taken during implementation:
 
@@ -39,7 +39,7 @@ Phases 0–7 are implemented, including distributed per-request subscriptions. C
 
 ## Standing maintainer constraints (apply to all remaining phases)
 
-- tmcp must run everywhere: stdio, long-running servers, serverless. Never keep per-client state in memory; if state is unavoidable, follow the existing pattern of making a persistent store pluggable from the transports (like the session managers).
+- tmcp must run everywhere: stdio, long-running servers, serverless. Never keep reconstructible per-client state in memory. Live response controllers and callbacks necessarily remain local to the transport process; distribute only serializable messages needed to reach them.
 - Do not add public API that exists only for tests or only for one transport; prefer solving transport needs inside `McpServer`.
 - Minimize version branching inside `McpServer` methods — old versions will be removed in a future major and the code should not need refactoring then. Ideal: methods totally unaware of version differences.
 - For sampling-with-tools (and its finnicky types), refer to the unmerged `new-protocol-version` branch, which targeted the previous revision.
@@ -259,7 +259,7 @@ Decision: the exact implemented flag is `{ replayable: true }` on tool, prompt, 
 - Legacy requests are unaffected (they keep the awaitable JSON-RPC path).
 - This keeps the default-on posture safe: discovery, stateless requests, and result decoration are automatic; only input-requesting handlers need author action.
 
-## Phase 4: subscriptions — DONE for process-local managers
+## Phase 4: subscriptions — DONE
 
 ### 4.1 Core subscription model
 
@@ -405,7 +405,7 @@ Add dual-era coverage for every shared method and transport:
 ### Docs
 
 - Add a dual-era architecture page and wire examples for both eras.
-- Document modern opt-in, handler replay/idempotency, cache safety, subscription lifecycle, and transport security.
+- Document automatic dual-era behavior, handler replay/idempotency, cache safety, subscription lifecycle, and transport security.
 - Update READMEs, `apps/docs`, and `create-tmcp` templates only after the compatibility APIs stabilize.
 - Clearly distinguish deprecated features from removed modern methods.
 
@@ -429,7 +429,7 @@ Otherwise, defer the incompatible portion to the next major release.
 2. ~~Add request profiles, structured errors, and central method policy~~ (done).
 3. ~~Add modern result encoding, exact `server/discover`, cache policy, capability schemas, and JSON Schema loosening~~ (done).
 4. ~~Implement and harden MRTR after stateless request plumbing is fully tested~~ (done; core-only, transports forward it unchanged).
-5. ~~Add the dedicated subscription manager, transport streaming, cancellation, and stdio concurrency~~ (done for process-local managers; distributed adapters remain open work).
+5. ~~Add the dedicated subscription manager, transport streaming, cancellation, stdio concurrency, and bundled broker adapters~~ (done).
 6. ~~Complete per-request logging/deprecation behavior and in-memory helpers~~ (done, including subscription helpers).
 7. Phase 5 transport hardening is complete without splitting core behavior into duplicated runtimes: strict HTTP validation/status handling and CORS separation are implemented, while HTTP+SSE needs no package-specific deprecation work.
 8. ~~Harden existing auth support independently~~ (done).
@@ -448,6 +448,12 @@ Otherwise, defer the incompatible portion to the next major release.
 - Extension-specific `resultType` values are owned by advertised extension implementations. Core preserves arbitrary string values rather than maintaining an extension registry.
 - JSON Schema dialect validation, local `$ref` resolution, and validation resource limits belong to schema libraries/adapters. tmcp never automatically fetches network references.
 
-## Open work
+## Completion
 
-- Implement the deliberately deferred PostgreSQL, Redis, and Durable Objects `SubscriptionManager` adapters described in Phase 4.3. The core currently ships an in-memory default and a pub/sub-compatible contract only; serverless and multi-replica deployments must provide a custom adapter until bundled implementations exist.
+No required implementation work remains for the `2026-07-28` migration.
+
+Separate optional follow-ups:
+
+- Broader documentation and template updates remain maintainer-owned release work, as decided in Phase 9.
+- Authorization hardening remains isolated in `auth-client-metadata-hardening.md`; it is not required protocol behavior.
+- The tasks extension remains an optional package-level project and does not block this migration.
