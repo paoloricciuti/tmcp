@@ -147,6 +147,7 @@ server.tool(
 	{
 		name: 'test_sampling',
 		description: 'A description',
+		replayable: true,
 		schema: v.object({
 			prompt: v.pipe(
 				v.string(),
@@ -175,6 +176,7 @@ server.tool(
 	{
 		name: 'test_elicitation',
 		description: 'A description',
+		replayable: true,
 		schema: v.object({
 			message: v.pipe(
 				v.string(),
@@ -203,6 +205,7 @@ server.tool(
 	{
 		name: 'test_elicitation_sep1034_defaults',
 		description: 'A description',
+		replayable: true,
 	},
 	async () => {
 		const response = await server.elicitation(
@@ -228,6 +231,7 @@ server.tool(
 	{
 		name: 'test_elicitation_sep1330_enums',
 		description: 'A description',
+		replayable: true,
 		enabled() {
 			// TODO: enable this when the new conformance version is live
 			return false;
