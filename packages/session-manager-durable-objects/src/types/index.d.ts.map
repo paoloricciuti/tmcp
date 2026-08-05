@@ -4,14 +4,17 @@
 	"names": [
 		"DurableObjectStreamSessionManager",
 		"KVInfoSessionManager",
-		"SyncLayer"
+		"SyncLayer",
+		"DurableObjectSubscriptionManager"
 	],
 	"sources": [
-		"../index.js"
+		"../index.js",
+		"../subscription.js"
 	],
 	"sourcesContent": [
+		null,
 		null
 	],
-	"mappings": ";;;cA+CaA,iCAAiCA;;;;;;;;;;;;;;cAyGjCC,oBAAoBA;;;;;;;;;;;;;;;;;;;;;;;;cAqLpBC,SAASA",
+	"mappings": ";;;cAiDaA,iCAAiCA;;;;;;;;;;;;;;cAyGjCC,oBAAoBA;;;;;;;;;;;;;;;;;;;;;;;;cAqLpBC,SAASA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cC1TTC,gCAAgCA",
 	"ignoreList": []
 }

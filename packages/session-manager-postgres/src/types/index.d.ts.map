@@ -3,14 +3,17 @@
 	"file": "index.d.ts",
 	"names": [
 		"PostgresStreamSessionManager",
-		"PostgresInfoSessionManager"
+		"PostgresInfoSessionManager",
+		"PostgresSubscriptionManager"
 	],
 	"sources": [
-		"../index.js"
+		"../index.js",
+		"../subscription.js"
 	],
 	"sourcesContent": [
+		null,
 		null
 	],
-	"mappings": ";;cAUaA,4BAA4BA;;;;;;;;;;;;;;;;;;cAiK5BC,0BAA0BA",
+	"mappings": ";;cAYaA,4BAA4BA;;;;;;;;;;;;;;;;;;cAiK5BC,0BAA0BA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cC5J1BC,2BAA2BA",
 	"ignoreList": []
 }

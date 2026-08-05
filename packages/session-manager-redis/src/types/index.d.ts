@@ -1,5 +1,5 @@
 declare module '@tmcp/session-manager-redis' {
-	import type { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
+	import type { StreamSessionManager, InfoSessionManager, SubscriptionManager } from '@tmcp/session-manager';
 	export class RedisStreamSessionManager implements StreamSessionManager {
 		
 		constructor(redis_url: string);
@@ -27,6 +27,19 @@ declare module '@tmcp/session-manager-redis' {
 		addSubscription(id: string, uri: string): void;
 		removeSubscription(id: string, uri: string): void;
 		delete(id: string): void;
+		#private;
+	}
+	/**
+	 * Broker-only per-request subscription fanout backed by Redis Pub/Sub.
+	 *
+	 */
+	export class RedisSubscriptionManager implements SubscriptionManager {
+
+		constructor(redis_url: string);
+		create(subscription: import("@tmcp/session-manager").Subscription, callbacks: import("@tmcp/session-manager").SubscriptionCallbacks): boolean | Promise<boolean>;
+		send(notification: import("json-rpc-2.0").JSONRPCRequest): void | Promise<void>;
+		close(id: string | number, origin: string, reason: "closed" | "cancelled"): boolean | Promise<boolean>;
+		closeAll(origin?: string, reason?: "closed" | "cancelled"): void | Promise<void>;
 		#private;
 	}
 

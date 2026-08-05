@@ -103,23 +103,22 @@ class SubscriptionManager {
 }
 ```
 
-Only `Subscription` is persisted. The callbacks passed to `create()` remain local to the process serving the response stream, exactly like the controller passed to `StreamSessionManager.create()`.
+Registrations and callbacks passed to `create()` remain local to the process serving the response stream, exactly like the controller passed to `StreamSessionManager.create()`.
 
 A Redis/Postgres/Durable Object implementation should:
 
-- Atomically persist/index the serializable descriptor.
-- Subscribe the owning process to a registration-specific channel.
-- Publish matching notifications from `send()` to those channels.
-- Publish close commands back to the owning process.
-- Preserve JSON-RPC ID type identity when encoding keys: numeric `1` and string `"1"` are distinct IDs.
-- Keep the registration occupied until close dispatch is complete, preventing close/re-listen races for the same `(origin, id)`.
+- Subscribe each active manager instance to a shared broker channel.
+- Publish notifications from `send()` to every active manager instance.
+- Let each instance's local in-memory manager filter and deliver matching notifications.
+- Keep `create()`, `close()`, and `closeAll()` local; the transport that owns the response sink also owns its lifecycle.
+- Persist no descriptors, claims, leases, or close commands.
 
 ## Listen flow
 
 1. The transport parses the request enough to establish its response sink and creates a stable origin. HTTP generates an opaque origin per listen POST; stdio reuses its process connection origin.
 2. The transport calls `server.receive(message, { subscriptionOrigin, subscriptionManager, ...context })`.
 3. Core validates and reduces the filter.
-4. Core calls the context manager's atomic `create()` with a serializable descriptor and local callbacks.
+4. Core calls the context manager's local `create()` with the subscription and callbacks.
 5. The manager registers before acknowledgment and buffers matching notifications until acknowledgment completes.
 6. Core's acknowledgment callback emits the existing `send` event with subscription routing metadata.
 7. The listen handler remains pending until the manager invokes its local close callback.
@@ -133,7 +132,7 @@ The manager must preserve acknowledgment-first and per-stream FIFO ordering even
 2. Core emits the existing legacy `broadcast` event exactly as today.
 3. Each transport listener preserves its existing legacy behavior.
 4. Modern-capable transports also call their manager's `send(request)`.
-5. A distributed manager matches serialized filters and publishes to owning instances.
+5. A distributed manager publishes to every active instance, which matches local filters.
 6. The owning callback asks core to tag the notification and emit the existing `send` event with explicit subscription routing fields.
 
 Concrete template URIs may use the modern subscription path, but must not change the existing legacy broadcast behavior. Literal template patterns must not be acknowledged as modern resource subscriptions.
@@ -144,7 +143,7 @@ Concrete template URIs may use the modern subscription path, but must not change
 
 - Response-stream cancellation calls `subscriptionManager.close(id, origin, 'cancelled')`.
 - The stream is already gone, so the eventual settled core response is discarded.
-- Distributed close publishes to the instance holding the response sink.
+- Closure remains on the transport instance holding the response sink.
 
 ### Stdio
 

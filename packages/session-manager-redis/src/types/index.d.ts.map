@@ -3,14 +3,17 @@
 	"file": "index.d.ts",
 	"names": [
 		"RedisStreamSessionManager",
-		"RedisInfoSessionManager"
+		"RedisInfoSessionManager",
+		"RedisSubscriptionManager"
 	],
 	"sources": [
-		"../index.js"
+		"../index.js",
+		"../subscription.js"
 	],
 	"sourcesContent": [
+		null,
 		null
 	],
-	"mappings": ";;cAUaA,yBAAyBA;;;;;;;;;;;;;;cAiHzBC,uBAAuBA",
+	"mappings": ";;cAWaA,yBAAyBA;;;;;;;;;;;;;;cAiHzBC,uBAAuBA;;;;;;;;;;;;;;;;;;;cCjHvBC,wBAAwBA",
 	"ignoreList": []
 }

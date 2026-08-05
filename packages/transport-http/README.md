@@ -158,6 +158,7 @@ For deployments across multiple servers or serverless environments where session
 import {
 	RedisStreamSessionManager,
 	RedisInfoSessionManager,
+	RedisSubscriptionManager,
 } from '@tmcp/session-manager-redis';
 
 const transport = new HttpTransport(server, {
@@ -165,6 +166,7 @@ const transport = new HttpTransport(server, {
 		streams: new RedisStreamSessionManager('redis://localhost:6379'),
 		info: new RedisInfoSessionManager('redis://localhost:6379'),
 	},
+	subscriptionManager: new RedisSubscriptionManager('redis://localhost:6379'),
 });
 ```
 

@@ -4,6 +4,8 @@
 
 import { createClient } from 'redis';
 
+export { RedisSubscriptionManager } from './subscription.js';
+
 /**
  * @implements {StreamSessionManager}
  */

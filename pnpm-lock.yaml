@@ -340,6 +340,9 @@ importers:
       publint:
         specifier: ^0.3.12
         version: 0.3.16
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.15(@types/node@25.0.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
 
   packages/session-manager-postgres:
     dependencies:
@@ -359,6 +362,9 @@ importers:
       publint:
         specifier: ^0.3.12
         version: 0.3.16
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.15(@types/node@25.0.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
 
   packages/session-manager-redis:
     dependencies:
@@ -375,6 +381,9 @@ importers:
       publint:
         specifier: ^0.3.12
         version: 0.3.16
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.15(@types/node@25.0.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
 
   packages/tmcp:
     dependencies:

@@ -65,7 +65,9 @@ export class StdioTransport {
 		);
 		this.#cleaners.add(
 			this.#server.on('broadcast', ({ request, subscriptionOnly }) => {
-				this.#subscription_manager.send(request);
+				void Promise.resolve(
+					this.#subscription_manager.send(request),
+				).catch(() => {});
 				if (!this.#initialized || subscriptionOnly) return;
 				if (
 					request.method === 'notifications/resources/updated' &&

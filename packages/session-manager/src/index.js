@@ -40,8 +40,8 @@ export function matchesSubscription(filters, notification) {
 
 /**
  * Routes notifications to long-lived per-request subscription streams.
- * Implementations persist only the serializable subscription descriptor;
- * callbacks remain local to the process serving the response stream.
+ * Callbacks remain local to the process serving the response stream. Brokered
+ * implementations can distribute notifications without persisting descriptors.
  * @abstract
  */
 export class SubscriptionManager {

@@ -1,6 +1,6 @@
 # @tmcp/session-manager-redis
 
-Redis-based session managers for TMCP (TypeScript Model Context Protocol) transport implementations. This package provides distributed implementations for both streaming session coordination and session metadata persistence backed by Redis, enabling multi-server and serverless deployments.
+Redis-based session and subscription managers for TMCP transport implementations. The package provides distributed implementations for streaming session coordination, session metadata persistence, and per-request subscription routing.
 
 ## Installation
 
@@ -10,7 +10,7 @@ pnpm add @tmcp/session-manager-redis redis
 
 ## Overview
 
-`RedisStreamSessionManager` uses Redis pub/sub to fan out MCP notifications across processes, while `RedisInfoSessionManager` keeps per-session metadata (client capabilities, client info, log level, resource subscriptions) in Redis so that stateless transports can hydrate the MCP context on every request.
+`RedisStreamSessionManager` uses Redis pub/sub to fan out session notifications across processes. `RedisInfoSessionManager` keeps initialization-based session metadata in Redis. `RedisSubscriptionManager` broadcasts per-request notifications to every active replica, which filters and delivers them to its local listen streams.
 
 **Key Features:**
 
@@ -28,12 +28,16 @@ pnpm add @tmcp/session-manager-redis redis
 import {
 	RedisStreamSessionManager,
 	RedisInfoSessionManager,
+	RedisSubscriptionManager,
 } from '@tmcp/session-manager-redis';
 
 const sessionManager = {
 	streams: new RedisStreamSessionManager('redis://localhost:6379'),
 	info: new RedisInfoSessionManager('redis://localhost:6379'),
 };
+const subscriptionManager = new RedisSubscriptionManager(
+	'redis://localhost:6379',
+);
 
 // You can point the two managers at different Redis instances if desired, but using the same URL is a convenient default.
 ```
@@ -69,13 +73,20 @@ import { HttpTransport } from '@tmcp/transport-http';
 import {
 	RedisStreamSessionManager,
 	RedisInfoSessionManager,
+	RedisSubscriptionManager,
 } from '@tmcp/session-manager-redis';
 
 const sessionManager = {
 	streams: new RedisStreamSessionManager('redis://localhost:6379'),
 	info: new RedisInfoSessionManager('redis://localhost:6379'),
 };
-const transport = new HttpTransport(server, { sessionManager });
+const subscriptionManager = new RedisSubscriptionManager(
+	'redis://localhost:6379',
+);
+const transport = new HttpTransport(server, {
+	sessionManager,
+	subscriptionManager,
+});
 ```
 
 #### SSE Transport
@@ -100,6 +111,8 @@ The Redis session managers use two Redis capabilities:
 
 1. **Pub/Sub Messaging**: `RedisStreamSessionManager` publishes JSON payloads to channels like `session:{id}` so that whichever process holds the streaming controller can forward the message.
 2. **Key-Value Storage & Sets**: `RedisInfoSessionManager` stores metadata under keys such as `tmcp:client_info:{id}`, `tmcp:client_capabilities:{id}`, `tmcp:log_level:{id}`, and tracks resource subscriptions in sets like `tmcp:subscriptions:{uri}`.
+
+`RedisSubscriptionManager` publishes serialized notifications on one shared channel. Every active manager receives the message and applies its local subscription filters. Registrations and response callbacks remain entirely in the process that owns the listen response.
 
 ### Session Lifecycle
 
@@ -129,6 +142,13 @@ When you deploy your MCP server to multiple servers (or in a serverless environm
 - `setLogLevel(id, level)` / `getLogLevel(id)` – string stored under `tmcp:log_level:{id}`
 - `addSubscription(id, uri)` / `getSubscriptions(uri)` – maintain membership in `tmcp:subscriptions:{uri}`
 - `delete(id)` – clears all metadata and removes the session from every subscription set
+
+### `RedisSubscriptionManager`
+
+- `new RedisSubscriptionManager(redisUrl: string)` – connects command and pub/sub clients
+- Pass the instance as `HttpTransport`'s `subscriptionManager` option
+- `send()` fans notifications out through Redis; `create`, `close`, and `closeAll` remain local
+- Process exit automatically drops that process's registrations because no descriptors are persisted
 
 ## Related Packages
 

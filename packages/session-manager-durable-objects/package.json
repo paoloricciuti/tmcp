@@ -4,6 +4,9 @@
 	"license": "MIT",
 	"description": "",
 	"main": "src/index.js",
+	"files": [
+		"src/"
+	],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/paoloricciuti/tmcp.git",
@@ -11,7 +14,8 @@
 	},
 	"scripts": {
 		"generate:types": "dts-buddy && publint",
-		"prepublish": "pnpm generate:types"
+		"prepublish": "pnpm generate:types",
+		"test": "vitest --run"
 	},
 	"keywords": [
 		"tmcp",
@@ -38,6 +42,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20241218.0",
 		"dts-buddy": "^0.6.2",
-		"publint": "^0.3.12"
+		"publint": "^0.3.12",
+		"vitest": "^4.0.0"
 	}
 }

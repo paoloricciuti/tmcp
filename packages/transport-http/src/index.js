@@ -203,7 +203,9 @@ export class HttpTransport {
 		this.#server.on(
 			'broadcast',
 			async ({ request, subscriptionOnly: subscription_only }) => {
-				this.#subscription_manager.send(request);
+				void Promise.resolve(
+					this.#subscription_manager.send(request),
+				).catch(() => {});
 				if (subscription_only) return;
 				let sessions = undefined;
 				if (request.method === 'notifications/resources/updated') {
