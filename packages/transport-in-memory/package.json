@@ -35,7 +35,7 @@
 	"packageManager": "pnpm@11.2.2",
 	"type": "module",
 	"peerDependencies": {
-		"tmcp": "^1.20.0"
+		"tmcp": "^1.20.0-next.0 || ^1.20.0"
 	},
 	"publishConfig": {
 		"access": "public"

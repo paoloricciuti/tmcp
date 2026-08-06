@@ -39,11 +39,12 @@ export class RedisSubscriptionManager {
 	}
 
 	/** @type {SubscriptionManager['create']} */
-	create(subscription, callbacks) {
+	async create(subscription, callbacks) {
+		await this.#ready;
 		return this.#subscriptions.create(subscription, callbacks);
 	}
 
-	/** @type {SubscriptionManager['send']} */
+	/** @param {Parameters<SubscriptionManager['send']>[0]} notification */
 	async send(notification) {
 		await this.#ready;
 		await this.#client.publish(

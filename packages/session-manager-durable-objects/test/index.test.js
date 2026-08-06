@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const cloudflare = vi.hoisted(() => {
 	const env = {};
 	const owners = new Set();
+	let fetch_delay;
 
 	class Socket {
 		#listeners = new Map();
@@ -20,6 +21,8 @@ const cloudflare = vi.hoisted(() => {
 
 	const stub = {
 		async fetch() {
+			fetch_delay?.started.resolve();
+			await fetch_delay?.release.promise;
 			const socket = new Socket();
 			owners.add(socket);
 			return { status: 101, webSocket: socket };
@@ -39,8 +42,15 @@ const cloudflare = vi.hoisted(() => {
 
 	return {
 		env,
+		delayFetch() {
+			const started = Promise.withResolvers();
+			const release = Promise.withResolvers();
+			fetch_delay = { started, release };
+			return fetch_delay;
+		},
 		reset() {
 			owners.clear();
+			fetch_delay = undefined;
 			env.TMCP_DURABLE_OBJECT = namespace;
 		},
 		DurableObject: class {
@@ -62,6 +72,22 @@ import { DurableObjectSubscriptionManager } from '../src/index.js';
 
 describe('DurableObjectSubscriptionManager', () => {
 	beforeEach(() => cloudflare.reset());
+
+	it('waits for the broker connection before acknowledging', async () => {
+		const delay = cloudflare.delayFetch();
+		const listener = new DurableObjectSubscriptionManager();
+		const acknowledge = vi.fn();
+		const creating = listener.create(
+			{ id: 1, origin: 'listener', filters: {} },
+			{ acknowledge, send() {}, close() {} },
+		);
+
+		await delay.started.promise;
+		expect(acknowledge).not.toHaveBeenCalled();
+		delay.release.resolve();
+		await expect(creating).resolves.toBe(true);
+		expect(acknowledge).toHaveBeenCalledOnce();
+	});
 
 	it('fans out notifications and filters them on each replica', async () => {
 		const listener = new DurableObjectSubscriptionManager();

@@ -178,10 +178,9 @@ export class StdioTransport {
 			for (const task of this.#listen_tasks.values()) {
 				task.cancelled = true;
 			}
-			await this.#subscription_manager.closeAll(
-				this.#subscription_origin,
-				'cancelled',
-			);
+			await this.#subscription_manager
+				.closeAll(this.#subscription_origin, 'cancelled')
+				.catch(() => {});
 			/** @type {ReturnType<typeof setTimeout> | undefined} */
 			let timeout;
 			const drained = await Promise.race([
@@ -199,9 +198,15 @@ export class StdioTransport {
 			clearTimeout(timeout);
 			if (!drained) this.#writes_enabled = false;
 			await this.#write_queue;
-			for (const cleaner of this.#cleaners) cleaner();
+			for (const cleaner of this.#cleaners) {
+				try {
+					cleaner();
+				} catch {
+					// Continue removing the remaining process listeners.
+				}
+			}
 			this.#cleaners.clear();
-		})();
+		})().catch(() => {});
 		return this.#closing;
 	}
 
@@ -266,18 +271,14 @@ export class StdioTransport {
 			}
 		};
 
-		const on_end = () => {
+		const exit_after_shutdown = () => {
 			void this.#shutdown().then(() => process.exit(0));
 		};
+		const on_end = exit_after_shutdown;
 
 		// Handle process termination
-		const on_sigint = () => {
-			void this.#shutdown().then(() => process.exit(0));
-		};
-
-		const on_sigterm = () => {
-			void this.#shutdown().then(() => process.exit(0));
-		};
+		const on_sigint = exit_after_shutdown;
+		const on_sigterm = exit_after_shutdown;
 
 		process.stdin.on('data', on_data);
 		process.stdin.on('end', on_end);

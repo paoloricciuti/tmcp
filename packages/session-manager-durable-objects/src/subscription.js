@@ -1,9 +1,16 @@
-/** @import { SubscriptionManager } from '@tmcp/session-manager'; */
+/* eslint-disable jsdoc/no-undefined-types */
+/**
+ * @import { SubscriptionManager } from '@tmcp/session-manager';
+ * @import { SyncLayer } from './index.js';
+ */
 
 import { InMemorySubscriptionManager } from '@tmcp/session-manager';
 import { env } from 'cloudflare:workers';
 
-/** @param {unknown} namespace */
+/**
+ * @param {unknown} namespace
+ * @returns {namespace is DurableObjectNamespace<SyncLayer>}
+ */
 function is_durable_object_namespace(namespace) {
 	return (
 		typeof namespace === 'object' &&
@@ -23,6 +30,7 @@ export class DurableObjectSubscriptionManager {
 	#subscriptions = new InMemorySubscriptionManager();
 	#binding;
 	#ready;
+	/** @type {WebSocket | undefined} */
 	#socket;
 
 	/** @param {string} [binding] */
@@ -96,7 +104,8 @@ export class DurableObjectSubscriptionManager {
 	}
 
 	/** @type {SubscriptionManager['create']} */
-	create(subscription, callbacks) {
+	async create(subscription, callbacks) {
+		await this.#ready;
 		return this.#subscriptions.create(subscription, callbacks);
 	}
 

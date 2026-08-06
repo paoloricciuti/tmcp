@@ -117,7 +117,7 @@ const client = transport.stateless({
 
 const discovery = await client.discover();
 const tools = await client.listTools();
-const result = await client.callTool('greet', { name: 'World' });
+const result = await client.callTool('greet');
 ```
 
 The shared high-level methods are `request()`, `listTools()`, `callTool()`, `listPrompts()`, `getPrompt()`, `listResources()`, `listResourceTemplates()`, `readResource()`, and `complete()`. Their argument and successful-result types match `Session`. Stateless-only methods are `discover()`, `requestWithInput()`, and `listen()`; session lifecycle, logging-level, legacy resource-subscription, and server-response methods remain on `Session`.

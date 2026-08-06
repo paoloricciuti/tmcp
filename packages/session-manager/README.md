@@ -133,7 +133,7 @@ Transport-owned manager for `subscriptions/listen` registrations.
 - `close(id, origin, reason)` – close one registration without conflating numeric and string IDs
 - `closeAll(origin?, reason?)` – close all registrations, optionally for one transport origin
 
-Only the descriptor is suitable for persistence. Callback functions remain on the instance serving the response stream; distributed implementations should use pub/sub to deliver notifications and close commands to that instance.
+Only the descriptor is suitable for persistence. Callback functions remain on the instance serving the response stream; distributed implementations should use pub/sub only to fan notifications out to that instance. Registration and closure stay local to the process that owns the response stream.
 
 ### `StreamSessionManager` (Abstract Base Class)
 

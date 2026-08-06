@@ -4,6 +4,7 @@ const postgres = vi.hoisted(() => {
 	const messages = new Map();
 	const clients = new Set();
 	const notify_payloads = [];
+	let listen_delay;
 
 	class Client {
 		#listeners = new Map();
@@ -26,9 +27,13 @@ const postgres = vi.hoisted(() => {
 
 		async query(sql, parameters = []) {
 			const normalized = sql.replaceAll(/\s+/g, ' ').trim();
+			if (normalized.startsWith('LISTEN')) {
+				listen_delay?.started.resolve();
+				await listen_delay?.release.promise;
+				return { rows: [], rowCount: 0 };
+			}
 			if (
 				normalized.startsWith('CREATE TABLE') ||
-				normalized.startsWith('LISTEN') ||
 				normalized.startsWith('DELETE FROM')
 			) {
 				return { rows: [], rowCount: 0 };
@@ -65,10 +70,17 @@ const postgres = vi.hoisted(() => {
 		get notifyPayloads() {
 			return notify_payloads;
 		},
+		delayListen() {
+			const started = Promise.withResolvers();
+			const release = Promise.withResolvers();
+			listen_delay = { started, release };
+			return listen_delay;
+		},
 		reset() {
 			messages.clear();
 			clients.clear();
 			notify_payloads.length = 0;
+			listen_delay = undefined;
 		},
 	};
 });
@@ -79,6 +91,24 @@ import { PostgresSubscriptionManager } from '../src/index.js';
 
 describe('PostgresSubscriptionManager', () => {
 	beforeEach(() => postgres.reset());
+
+	it('waits for LISTEN before acknowledging', async () => {
+		const delay = postgres.delayListen();
+		const listener = new PostgresSubscriptionManager({
+			connectionString: 'postgresql://test',
+		});
+		const acknowledge = vi.fn();
+		const creating = listener.create(
+			{ id: 1, origin: 'listener', filters: {} },
+			{ acknowledge, send() {}, close() {} },
+		);
+
+		await delay.started.promise;
+		expect(acknowledge).not.toHaveBeenCalled();
+		delay.release.resolve();
+		await expect(creating).resolves.toBe(true);
+		expect(acknowledge).toHaveBeenCalledOnce();
+	});
 
 	it('fans out inline notifications and filters locally', async () => {
 		const options = { connectionString: 'postgresql://test' };

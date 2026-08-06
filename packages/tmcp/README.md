@@ -714,7 +714,7 @@ const response = await server.request({
 Handle the resolved payload like any other JSON-RPC response—cast or (better) validate
 as needed when using this escape hatch.
 
-##### `elicitation(message, schema)`
+##### `elicitation(message, schema | url, options?)`
 
 Request client elicitation with schema validation.
 
@@ -723,6 +723,23 @@ const result = await server.elicitation(
 	'Please provide the requested data',
 	schema,
 );
+```
+
+Pass a URL instead of a schema to request URL elicitation:
+
+```javascript
+const result = await server.elicitation(
+	'Authorize access',
+	'https://example.com/authorize',
+);
+```
+
+Per-request input calls use an ordinal key by default. If conditional control flow can change the call order between retries, pass a stable key:
+
+```javascript
+const result = await server.elicitation('Confirm?', schema, {
+	key: 'confirm',
+});
 ```
 
 ##### `message(request)`

@@ -1,4 +1,5 @@
 import process from 'node:process';
+import { InMemorySubscriptionManager } from '@tmcp/session-manager';
 import { McpServer } from 'tmcp';
 import { describe, expect, it, vi } from 'vitest';
 import { StdioTransport } from '../src/index.js';
@@ -381,6 +382,23 @@ describe('StdioTransport', () => {
 			release();
 			await transport.close();
 			write.mockRestore();
+		}
+	});
+
+	it('finishes shutdown when subscription cleanup fails', async () => {
+		const close_all = vi
+			.spyOn(InMemorySubscriptionManager.prototype, 'closeAll')
+			.mockRejectedValueOnce(new Error('cleanup failed'));
+		const server = new McpServer(
+			{ name: 'test-server', version: '1.0.0' },
+			{ adapter: undefined },
+		);
+		const transport = new StdioTransport(server);
+
+		try {
+			await expect(transport.close()).resolves.toBeUndefined();
+		} finally {
+			close_all.mockRestore();
 		}
 	});
 });

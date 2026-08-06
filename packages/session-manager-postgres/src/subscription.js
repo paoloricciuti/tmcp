@@ -110,7 +110,8 @@ export class PostgresSubscriptionManager {
 	}
 
 	/** @type {SubscriptionManager['create']} */
-	create(subscription, callbacks) {
+	async create(subscription, callbacks) {
+		await this.#ready;
 		return this.#subscriptions.create(subscription, callbacks);
 	}
 
