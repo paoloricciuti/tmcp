@@ -444,6 +444,8 @@ server.prompt(
 
 const transport = new HttpTransport(server, {
 	path: '/mcp',
+	allowedOrigins: true,
+	cors: true,
 });
 
 const ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', '::1'];
