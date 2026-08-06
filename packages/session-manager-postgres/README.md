@@ -1,6 +1,6 @@
 # @tmcp/session-manager-postgres
 
-PostgreSQL-based session managers for TMCP (TypeScript Model Context Protocol) transport implementations. This package provides distributed implementations that use PostgreSQL for both streaming session coordination and durable session metadata, enabling multi-server and serverless deployments.
+PostgreSQL-based session and subscription managers for TMCP transport implementations. The package uses PostgreSQL for streaming session coordination, durable session metadata, and per-request subscription routing.
 
 ## Installation
 
@@ -10,7 +10,7 @@ pnpm add @tmcp/session-manager-postgres
 
 ## Overview
 
-`PostgresStreamSessionManager` uses LISTEN/NOTIFY to route MCP notifications to whichever process owns the streaming response, while `PostgresInfoSessionManager` persists client capabilities, client info, log levels, and resource subscriptions in regular Postgres tables so transports can restore context on every request.
+`PostgresStreamSessionManager` uses LISTEN/NOTIFY to route session notifications to the process that owns a streaming response. `PostgresInfoSessionManager` persists initialization-based session metadata. `PostgresSubscriptionManager` broadcasts per-request notifications to every active replica, which filters and delivers them to its local listen streams.
 
 LISTEN/NOTIFY have some trade-off and do require some setup to properly work so you might want to read [their documentation](https://www.postgresql.org/docs/current/sql-listen.html) or this [guide from neon](https://neon.com/guides/pub-sub-listen-notify) to learn about them.
 
@@ -31,6 +31,7 @@ LISTEN/NOTIFY have some trade-off and do require some setup to properly work so 
 import {
 	PostgresStreamSessionManager,
 	PostgresInfoSessionManager,
+	PostgresSubscriptionManager,
 } from '@tmcp/session-manager-postgres';
 
 const sessionManager = {
@@ -41,6 +42,9 @@ const sessionManager = {
 		connectionString: 'postgresql://localhost:5432/mydb',
 	}),
 };
+const subscriptionManager = new PostgresSubscriptionManager({
+	connectionString: 'postgresql://localhost:5432/mydb',
+});
 
 Both managers can share the same database connection string, or you can point them at different databases if you need to scale metadata separately from streaming state.
 ```
@@ -115,6 +119,7 @@ import { HttpTransport } from '@tmcp/transport-http';
 import {
 	PostgresStreamSessionManager,
 	PostgresInfoSessionManager,
+	PostgresSubscriptionManager,
 } from '@tmcp/session-manager-postgres';
 
 const sessionManager = {
@@ -125,7 +130,13 @@ const sessionManager = {
 		connectionString: 'postgresql://localhost:5432/mydb',
 	}),
 };
-const transport = new HttpTransport(server, { sessionManager });
+const subscriptionManager = new PostgresSubscriptionManager({
+	connectionString: 'postgresql://localhost:5432/mydb',
+});
+const transport = new HttpTransport(server, {
+	sessionManager,
+	subscriptionManager,
+});
 ```
 
 #### SSE Transport
@@ -198,6 +209,12 @@ CREATE TABLE IF NOT EXISTS tmcp_session_subscriptions (
     id TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS tmcp_subscription_messages (
+    id TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
 ```
 
 ## API
@@ -218,6 +235,14 @@ CREATE TABLE IF NOT EXISTS tmcp_session_subscriptions (
 - `setLogLevel(id, level)` / `getLogLevel(id)` – string stored in the `logLevel` table
 - `addSubscription(id, uri)` / `getSubscriptions(uri)` – rows stored in the `subscriptions` table
 - `delete(id)` – removes all metadata rows for the session and clears subscriptions
+
+### `PostgresSubscriptionManager`
+
+- `new PostgresSubscriptionManager({ connectionString, tableName, create })`
+- Pass the instance as `HttpTransport`'s `subscriptionManager` option
+- Sends ordinary notifications inline through LISTEN/NOTIFY
+- Stores oversized notifications temporarily and sends only their row ID through NOTIFY
+- Keeps registrations and closure local to the process holding each response stream
 
 ## Related Packages
 

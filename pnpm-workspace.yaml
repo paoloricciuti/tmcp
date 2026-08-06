@@ -1,8 +1,9 @@
 packages:
-    - packages/*
-    - apps/*
+  - packages/*
+  - apps/*
 
 patchedDependencies:
-    dts-buddy: patches/dts-buddy.patch
-onlyBuiltDependencies:
-    - esbuild
+  dts-buddy: patches/dts-buddy.patch
+allowBuilds:
+  esbuild: true
+  sharp: true

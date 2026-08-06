@@ -4,6 +4,9 @@
 	"license": "MIT",
 	"description": "",
 	"main": "src/index.js",
+	"files": [
+		"src/"
+	],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/paoloricciuti/tmcp.git",
@@ -11,7 +14,8 @@
 	},
 	"scripts": {
 		"generate:types": "dts-buddy && node scripts/abstractify.js && publint",
-		"prepublish": "pnpm generate:types"
+		"prepublish": "pnpm generate:types",
+		"test": "vitest --run"
 	},
 	"keywords": [
 		"tmcp",
@@ -27,10 +31,10 @@
 			"import": "./src/index.js"
 		}
 	},
-	"packageManager": "pnpm@10.27.0",
+	"packageManager": "pnpm@11.2.2",
 	"type": "module",
 	"peerDependencies": {
-		"tmcp": "^1.16.3"
+		"tmcp": "^1.20.0-next.0 || ^1.20.0"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -39,6 +43,10 @@
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^",
-		"@tmcp/internal-ts-helpers": "workspace:^"
+		"@tmcp/internal-ts-helpers": "workspace:^",
+		"vitest": "^4.0.0"
+	},
+	"dependencies": {
+		"json-rpc-2.0": "^1.7.1"
 	}
 }

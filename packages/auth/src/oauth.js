@@ -17,6 +17,7 @@ import {
 } from './errors.js';
 import {
 	OAuthClientMetadataSchema,
+	ClientIdMetadataDocumentSchema,
 	ClientAuthenticatedRequestSchema,
 	ClientAuthorizationParamsSchema,
 	RequestAuthorizationParamsSchema,
@@ -101,6 +102,37 @@ import { verifyChallenge } from 'pkce-challenge';
  */
 
 const BUILT = Symbol('built');
+/**
+ * @param {string} client_id
+ */
+function parse_client_metadata_url(client_id) {
+	const url = new URL(client_id);
+	if (url.protocol !== 'https:' || url.username || url.password || url.hash) {
+		throw new Error('Invalid Client ID Metadata Document URL');
+	}
+
+	const authority_start = client_id.indexOf('//') + 2;
+	const path_start = client_id.indexOf('/', authority_start);
+	const query_start = client_id.indexOf('?', authority_start);
+	if (path_start === -1 || (query_start !== -1 && query_start < path_start)) {
+		throw new Error('Client ID Metadata Document URL must contain a path');
+	}
+
+	const path_end = query_start === -1 ? client_id.length : query_start;
+	for (const segment of client_id.slice(path_start, path_end).split('/')) {
+		let decoded_segment;
+		try {
+			decoded_segment = decodeURIComponent(segment);
+		} catch {
+			throw new Error('Invalid Client ID Metadata Document URL');
+		}
+		if (decoded_segment === '.' || decoded_segment === '..') {
+			throw new Error('Client ID Metadata Document URL has dot segments');
+		}
+	}
+
+	return url;
+}
 
 /**
  * @template {"you need to call `build` for the provider to take effect" | "built"} [T='you need to call `build` for the provider to take effect']
@@ -461,7 +493,9 @@ export class OAuth {
 			response_types_supported: ['code'],
 			grant_types_supported: ['authorization_code', 'refresh_token'],
 			code_challenge_methods_supported: ['S256'],
+			client_id_metadata_document_supported: true,
 			token_endpoint_auth_methods_supported: [
+				'none',
 				'client_secret_basic',
 				'client_secret_post',
 			],
@@ -478,6 +512,7 @@ export class OAuth {
 		if (this.#handlers?.revoke) {
 			metadata.revocation_endpoint = `${this.#issuer_url}/revoke`;
 			metadata.revocation_endpoint_auth_methods_supported = [
+				'none',
 				'client_secret_basic',
 				'client_secret_post',
 			];
@@ -519,26 +554,31 @@ export class OAuth {
 	 */
 	async #get_client_or_try_url(client_id) {
 		let client = await this.#client_store.getClient(client_id);
-		if (!client) {
-			try {
-				const url = new URL(client_id);
-				client = /** @type {OAuthClientInformationFull} */ (
-					await fetch(url).then((res) => res.json())
-				);
-			} catch {
-				throw new InvalidClientError('Invalid client');
+		if (client) return client;
+
+		try {
+			parse_client_metadata_url(client_id);
+			const response = await fetch(client_id);
+			if (!response.ok) {
+				throw new Error('Client metadata request failed');
 			}
-			if (!client) {
-				throw new InvalidClientError('Invalid client');
+
+			const parse_result = v.safeParse(
+				ClientIdMetadataDocumentSchema,
+				await response.json(),
+			);
+			if (
+				!parse_result.success ||
+				parse_result.output.client_id !== client_id
+			) {
+				throw new Error('Invalid Client ID Metadata Document');
 			}
-			if (client.client_id !== client_id) {
-				throw new InvalidClientError(
-					'Client Metadata client_id does not match the requested client_id',
-				);
-			}
+
+			client = parse_result.output;
 			return client;
+		} catch {
+			throw new InvalidClientError('Invalid client');
 		}
-		return client;
 	}
 
 	/**

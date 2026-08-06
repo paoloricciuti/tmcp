@@ -1,6 +1,6 @@
 # @tmcp/session-manager-durable-objects
 
-Cloudflare Durable Objects and KV-based session managers for TMCP (TypeScript Model Context Protocol) transport implementations. This package provides distributed managers that use Durable Objects with WebSocket hibernation for streaming traffic and Cloudflare KV for session metadata, making it perfect for serverless edge deployments.
+Cloudflare Durable Objects and KV-based session and subscription managers for TMCP transport implementations. Durable Objects route streaming and per-request subscription traffic, while KV stores initialization-based session metadata.
 
 ## Installation
 
@@ -10,7 +10,7 @@ pnpm add @tmcp/session-manager-durable-objects
 
 ## Overview
 
-`DurableObjectStreamSessionManager` keeps long-lived EventSource/WebSocket style connections inside a Durable Object and leverages hibernation so the object can be evicted when idle. `KVInfoSessionManager` stores client capabilities, info, log levels, and resource subscriptions inside a Cloudflare KV namespace so each stateless POST can hydrate the MCP context.
+`DurableObjectStreamSessionManager` keeps long-lived EventSource/WebSocket style connections inside a Durable Object and supports hibernation. `KVInfoSessionManager` stores session metadata in KV. `DurableObjectSubscriptionManager` broadcasts per-request notifications to connected Workers, which filter and deliver them to their local listen streams.
 
 ## Setup
 
@@ -48,6 +48,7 @@ import { McpServer } from 'tmcp';
 import { HttpTransport } from '@tmcp/transport-http';
 import {
 	DurableObjectStreamSessionManager,
+	DurableObjectSubscriptionManager,
 	KVInfoSessionManager,
 	SyncLayer,
 } from '@tmcp/session-manager-durable-objects';
@@ -69,7 +70,13 @@ const sessionManager = {
 	streams: new DurableObjectStreamSessionManager('TMCP_DURABLE_OBJECT'),
 	info: new KVInfoSessionManager('TMCP_SESSION_INFO'),
 };
-const transport = new HttpTransport(server, { sessionManager });
+const subscriptionManager = new DurableObjectSubscriptionManager(
+	'TMCP_DURABLE_OBJECT',
+);
+const transport = new HttpTransport(server, {
+	sessionManager,
+	subscriptionManager,
+});
 
 
 // Export the Durable Object class
@@ -118,6 +125,8 @@ The info manager persists metadata in Cloudflare KV:
 2. **Log Levels**: Tracks per-session logging level without needing the Durable Object to be awake
 3. **Resource Subscriptions**: Maintains lightweight sets allowing broadcast notifications to resolve the correct sessions
 
+The subscription manager shares the `SyncLayer` Durable Object binding with the stream manager. The object acts only as a broker: registrations, filters, acknowledgement state, and close callbacks remain in the Worker that owns the HTTP response stream.
+
 ## API
 
 ### `DurableObjectStreamSessionManager`
@@ -136,6 +145,13 @@ The info manager persists metadata in Cloudflare KV:
 - `setLogLevel(id, level)` / `getLogLevel(id)` – store the active log level per session
 - `addSubscription(id, uri)` / `getSubscriptions(uri)` – maintain subscription membership keyed by URI
 - `delete(id)` – remove all KV entries related to the session
+
+### `DurableObjectSubscriptionManager`
+
+- `new DurableObjectSubscriptionManager(binding?: string)` – binding defaults to `TMCP_DURABLE_OBJECT`
+- Pass the instance as `HttpTransport`'s `subscriptionManager` option
+- Reuses the exported `SyncLayer`; no additional Durable Object class is required
+- Does not persist subscription descriptors; disconnected Workers require no registration cleanup
 
 ### `SyncLayer` (Durable Object)
 

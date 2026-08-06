@@ -51,6 +51,29 @@ export const OAuthClientInformationFullSchema = v.object({
 });
 
 /**
+ * Schema for an OAuth Client ID Metadata Document.
+ */
+export const ClientIdMetadataDocumentSchema = v.pipe(
+	v.looseObject({
+		client_id: v.pipe(v.string(), v.url()),
+		client_name: v.pipe(v.string(), v.minLength(1)),
+		redirect_uris: v.pipe(
+			v.array(v.pipe(v.string(), v.url())),
+			v.minLength(1),
+		),
+		token_endpoint_auth_method: v.optional(v.string()),
+	}),
+	v.check(
+		(metadata) =>
+			!('client_secret' in metadata) &&
+			!('client_secret_expires_at' in metadata) &&
+			(metadata.token_endpoint_auth_method === undefined ||
+				metadata.token_endpoint_auth_method === 'none'),
+		'Client ID Metadata Documents cannot use shared-secret authentication',
+	),
+);
+
+/**
  * Schema for OAuth token response
  */
 export const OAuthTokensSchema = v.object({

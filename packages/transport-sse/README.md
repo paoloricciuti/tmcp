@@ -1,5 +1,7 @@
 # @tmcp/transport-sse
 
+> Deprecated: use `@tmcp/transport-http` for new servers. This package remains available for legacy HTTP+SSE clients.
+
 A Server-Sent Events (SSE) transport implementation for TMCP (TypeScript Model Context Protocol) servers. This package provides SSE-based communication for MCP servers, enabling efficient real-time bidirectional communication between clients and servers through standard HTTP with Server-Sent Events.
 
 ## Installation
@@ -179,6 +181,8 @@ const transport = new SseTransport(server, {
 
 No matter which backend you choose, the transport stores client capabilities, client info, and log level so you can access them later via `server.ctx.sessionInfo`.
 
+Requests without an `Origin` header and same-origin browser requests are accepted. Cross-origin browser requests are rejected with `403` unless explicitly listed in `allowedOrigins`. This request security policy is intentionally independent from `cors`, which only controls response headers.
+
 ## API
 
 ### `SseTransport`
@@ -204,6 +208,8 @@ interface SseTransportOptions {
 	path?: string | null; // SSE endpoint path (default: '/sse', null responds on every path)
 	endpoint?: string; // Message endpoint path (default: '/message')
 	oauth?: OAuth; // an oauth provider generated from @tmcp/auth
+	cors?: CorsConfig | boolean; // CORS response configuration
+	allowedOrigins?: string | string[]; // Cross-origin request security policy
 	sessionManager?: {
 		streams?: StreamSessionManager;
 		info?: InfoSessionManager;
@@ -308,7 +314,7 @@ mcp-session-id: session-to-disconnect
 Response:
 
 ```http
-HTTP/1.1 204 No Content
+HTTP/1.1 200 OK
 mcp-session-id: session-to-disconnect
 ```
 

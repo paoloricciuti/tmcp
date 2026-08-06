@@ -1,6 +1,6 @@
 # @tmcp/transport-http
 
-An HTTP transport implementation for TMCP (TypeScript Model Context Protocol) servers. This package provides HTTP Streaming based communication for MCP servers over HTTP, enabling web-based clients to interact with your MCP server through standard HTTP requests.
+An HTTP transport implementation for TMCP (TypeScript Model Context Protocol) servers. It supports both initialization-based MCP sessions and the sessionless per-request protocol introduced in MCP `2026-07-28`.
 
 ## Installation
 
@@ -54,14 +54,12 @@ const transport = new HttpTransport(server);
 import * as http from 'node:http';
 import { createRequestListener } from '@remix-run/node-fetch-server';
 
-let httpServer = http.createServer(createRequestListener((request)=>{
-	const response = await transport.respond(request);
-	if(response){
-		return response;
-	}
-	return new Response(null, { status: 404 });
-}));
-
+const httpServer = http.createServer(
+	createRequestListener(async (request) => {
+		const response = await transport.respond(request);
+		return response ?? new Response(null, { status: 404 });
+	}),
+);
 
 httpServer.listen(3000, () => {
 	console.log('MCP HTTP server listening on port 3000');
@@ -74,15 +72,15 @@ httpServer.listen(3000, () => {
 const transport = new HttpTransport(server, {
 	// Custom MCP endpoint path (default: '/mcp', use null to respond on every path)
 	path: '/api/mcp',
-	// Custom session ID generation
+	// Custom session ID generation for initialization-based clients
 	getSessionId: () => {
 		return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 	},
 });
+```
 
 > [!NOTE]
 > When the transport runs in development mode and you omit the `path` option, a warning is emitted. Future releases will treat an `undefined` path as "respond on every path", so set the property explicitly (for example `path: '/mcp'` or `path: null`) to lock in the behavior you want today.
-```
 
 ### With Custom Context
 
@@ -128,6 +126,8 @@ const response = await transport.respond(req, {
 });
 ```
 
+Handlers can also observe request cancellation through `server.ctx.signal`. The HTTP transport aborts this signal when the incoming request is aborted or the client closes its request-scoped SSE response. Cancellation is cooperative, so handlers should pass the signal to cancellable work or check `signal.aborted` at suitable boundaries.
+
 ### Session Management
 
 The HTTP transport supports custom session managers for different deployment scenarios:
@@ -138,6 +138,7 @@ The HTTP transport supports custom session managers for different deployment sce
 import {
 	InMemoryStreamSessionManager,
 	InMemoryInfoSessionManager,
+	InMemorySubscriptionManager,
 } from '@tmcp/session-manager';
 
 const transport = new HttpTransport(server, {
@@ -145,6 +146,7 @@ const transport = new HttpTransport(server, {
 		streams: new InMemoryStreamSessionManager(),
 		info: new InMemoryInfoSessionManager(),
 	},
+	subscriptionManager: new InMemorySubscriptionManager(),
 });
 ```
 
@@ -156,6 +158,7 @@ For deployments across multiple servers or serverless environments where session
 import {
 	RedisStreamSessionManager,
 	RedisInfoSessionManager,
+	RedisSubscriptionManager,
 } from '@tmcp/session-manager-redis';
 
 const transport = new HttpTransport(server, {
@@ -163,6 +166,7 @@ const transport = new HttpTransport(server, {
 		streams: new RedisStreamSessionManager('redis://localhost:6379'),
 		info: new RedisInfoSessionManager('redis://localhost:6379'),
 	},
+	subscriptionManager: new RedisSubscriptionManager('redis://localhost:6379'),
 });
 ```
 
@@ -175,13 +179,13 @@ const transport = new HttpTransport(server, {
 ## Features
 
 - **🌐 HTTP/SSE Communication**: Uses Server-Sent Events for real-time bidirectional communication
-- **🔄 Session Management**: Maintains client sessions with automatic session ID generation
+- **🔄 Dual Protocol Support**: Supports both initialization-based sessions and sessionless per-request calls
 - **📡 Streaming Responses**: Supports streaming responses through SSE
 - **🛤️ Configurable Path**: Customizable MCP endpoint path with automatic filtering (set `path` to `null` to respond everywhere)
 - **🔧 Framework Agnostic**: Works with any HTTP server framework (Fastify, Bun, Deno, etc.)
 - **⚡ Real-time Updates**: Server can push notifications and updates to connected clients
 - **🛡️ Error Handling**: Graceful error handling for malformed requests
-- **🔀 Multiple HTTP Methods**: Supports GET (notifications), POST (messages), and DELETE (disconnect)
+- **🔀 Multiple HTTP Methods**: Supports legacy GET/DELETE session behavior alongside POST-only per-request calls
 - **🧠 Session Metadata**: Automatically persists client capabilities, info, and log levels and exposes them via `server.ctx.sessionInfo`
 
 ## API
@@ -205,18 +209,25 @@ Creates a new HTTP transport instance.
 
 ```typescript
 interface HttpTransportOptions {
-	getSessionId: () => string; // Custom session ID generator
+	getSessionId?: () => string; // Custom session ID generator
 	path?: string | null; // MCP endpoint path (default: '/mcp', null responds on every path)
 	oauth?: OAuth; // an oauth provider generated from @tmcp/auth
+	cors?: CorsConfig | boolean; // CORS configuration
+	allowedOrigins?: string | string[] | true; // Cross-origin request security policy
 	sessionManager?: {
 		streams?: StreamSessionManager;
 		info?: InfoSessionManager;
 	}; // Provide custom managers; defaults to in-memory implementations
+	subscriptionManager?: SubscriptionManager; // Per-request subscription routing
 	disableSse?: boolean; // Disable SSE stream endpoint (GET returns 405)
 }
 ```
 
-If you omit `sessionManager` the transport creates `InMemoryStreamSessionManager` and `InMemoryInfoSessionManager` instances for you. You can override either field independently (for example, Redis streams with in-memory metadata during development).
+If you omit `sessionManager` the transport creates `InMemoryStreamSessionManager` and `InMemoryInfoSessionManager` instances for initialization-based clients. Per-request clients never create, read, or return session IDs. You can override either field independently (for example, Redis streams with in-memory metadata during development).
+
+If you omit `subscriptionManager`, the transport creates an `InMemorySubscriptionManager`. Supply a distributed implementation when `subscriptions/listen` requests and change publication may reach different server instances.
+
+Requests without an `Origin` header and same-origin browser requests are accepted. When `allowedOrigins` is omitted, cross-origin requests are also accepted and the transport warns on the first one. Set an explicit origin or origin list to restrict access, `[]` to reject every cross-origin request, or `true` to explicitly allow every origin without a warning. This request security policy is intentionally independent from `cors`, which only controls response headers.
 
 ### Disabling SSE Streams
 
@@ -228,7 +239,7 @@ const transport = new HttpTransport(server, {
 });
 ```
 
-When `disableSse` is `true`, GET requests to the MCP endpoint will return a `405 Method Not Allowed` response. Clients can still communicate via POST requests, but won't receive server-initiated notifications.
+When `disableSse` is `true`, GET requests to the MCP endpoint return `405 Method Not Allowed`, so legacy session-negotiated clients cannot receive server-initiated notifications through a GET stream. Per-request clients can still open modern `subscriptions/listen` streams through POST.
 
 #### Methods
 
@@ -251,7 +262,37 @@ Processes an HTTP request and returns a Response with Server-Sent Events, or nul
 - **GET**: Establishes long-lived connections for server notifications
 - **DELETE**: Disconnects sessions and cleans up resources
 
+##### `closeSubscription(response)`
+
+Gracefully complete the per-request subscription represented by the exact `Response` returned from `respond()`:
+
+```javascript
+const response = await transport.respond(listen_request);
+await transport.closeSubscription(response);
+```
+
+Each listen POST receives an opaque internal routing origin. `Mcp-Session-Id` is never used as modern subscription identity, even when the caller provides it. Closing the response body cancels the stream; HTTP clients do not send `notifications/cancelled` for `2026-07-28` subscriptions.
+
+##### `close()`
+
+Cancel every active per-request subscription owned by this transport.
+
 ## Protocol Details
+
+### Per-Request Protocol (`2026-07-28`)
+
+Each request or notification uses its own POST. A conforming request includes:
+
+- `MCP-Protocol-Version`, matching `params._meta.io.modelcontextprotocol/protocolVersion`.
+- `Mcp-Method`, matching the JSON-RPC method.
+- `Mcp-Name` for `tools/call`, `prompts/get`, and `resources/read`, matching `params.name` or `params.uri`.
+- Any recognized `Mcp-Param-*` values declared by `x-mcp-header` annotations in a tool's input JSON Schema.
+
+`Mcp-Name` and parameter headers use the specification's `=?base64?...?=` sentinel when a value cannot be represented safely as plain ASCII. Header names are compared case-insensitively; values remain case-sensitive.
+
+Successful requests use request-scoped SSE and include `X-Accel-Buffering: no`. Accepted notifications return HTTP 202 without a body. Header mismatches and unsupported versions return HTTP 400; unknown or unavailable methods return HTTP 404. Per-request traffic ignores `Mcp-Session-Id` and `Last-Event-ID`, never returns a session ID, and returns HTTP 405 for GET and DELETE.
+
+Initialization-based clients continue to use the behavior documented below on the same transport. Their session header, GET stream, DELETE lifecycle, and JSON-RPC response POSTs remain supported.
 
 ### HTTP Methods
 
@@ -259,7 +300,7 @@ The transport supports three HTTP methods:
 
 #### POST - Message Processing
 
-Clients send JSON-RPC messages via HTTP POST requests:
+Clients send JSON-RPC messages via HTTP POST requests. Each POST accepts one JSON-RPC message; batch arrays are rejected with `-32600 Invalid Request`. The following example shows initialization-based session behavior:
 
 ```http
 POST /mcp HTTP/1.1
@@ -320,11 +361,11 @@ mcp-session-id: session-to-disconnect
 Response:
 
 ```http
-HTTP/1.1 204 No Content
+HTTP/1.1 200 OK
 mcp-session-id: session-to-disconnect
 ```
 
-### Session Management
+### Legacy Session Management
 
 - **Session ID Header**: `mcp-session-id`
 - **Automatic Generation**: If no session ID is provided, one is generated automatically

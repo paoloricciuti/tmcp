@@ -1,7 +1,7 @@
 /* eslint-disable jsdoc/no-undefined-types */
 /* eslint-disable no-undef */
 /**
- * @import { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
+ * @import { StreamSessionManager, InfoSessionManager, SubscriptionManager } from '@tmcp/session-manager';
  */
 
 import { DurableObject, env, waitUntil } from 'cloudflare:workers';
@@ -41,6 +41,8 @@ function is_kv_namespace(namespace) {
 		typeof namespace.delete === 'function'
 	);
 }
+
+export { DurableObjectSubscriptionManager } from './subscription.js';
 
 /**
  * @implements {StreamSessionManager}
@@ -340,6 +342,9 @@ export class SyncLayer extends DurableObject {
 	 */
 	#sessions;
 
+	/** @type {Map<string, WebSocket>} */
+	#subscription_owners;
+
 	/**
 	 * Creates a new WebSocketHibernationServer instance
 	 *
@@ -350,6 +355,7 @@ export class SyncLayer extends DurableObject {
 		super(ctx, env);
 
 		this.#sessions = new Map();
+		this.#subscription_owners = new Map();
 
 		// As part of constructing the Durable Object,
 		// we wake up any hibernating WebSockets and
@@ -358,12 +364,30 @@ export class SyncLayer extends DurableObject {
 		// Get all WebSocket connections from the DO
 		this.ctx.getWebSockets().forEach((ws) => {
 			let id = ws.deserializeAttachment();
-			if (id) {
+			if (
+				typeof id === 'object' &&
+				id !== null &&
+				id.type === 'subscription' &&
+				typeof id.owner === 'string'
+			) {
+				this.#subscription_owners.set(id.owner, ws);
+			} else if (id) {
 				// If we previously attached state to our WebSocket,
 				// let's add it to `sessions` map to restore the state of the connection.
 				this.#sessions.set(id, ws);
 			}
 		});
+	}
+
+	/** @param {Parameters<SubscriptionManager['send']>[0]} notification */
+	async sendSubscription(notification) {
+		for (const [owner, socket] of this.#subscription_owners) {
+			try {
+				socket.send(JSON.stringify({ type: 'send', notification }));
+			} catch {
+				this.#subscription_owners.delete(owner);
+			}
+		}
 	}
 
 	/**
@@ -430,6 +454,19 @@ export class SyncLayer extends DurableObject {
 		// (run the `constructor`) and deliver the message to the appropriate handler.
 		this.ctx.acceptWebSocket(server);
 
+		const subscription_owner = url.searchParams.get('subscription_owner');
+		if (subscription_owner) {
+			server.serializeAttachment({
+				type: 'subscription',
+				owner: subscription_owner,
+			});
+			this.#subscription_owners.set(subscription_owner, server);
+			return new Response(null, {
+				status: 101,
+				webSocket: client,
+			});
+		}
+
 		// Generate a random UUID for the session.
 		const id = url.searchParams.get('session_id') || crypto.randomUUID();
 
@@ -444,5 +481,18 @@ export class SyncLayer extends DurableObject {
 			status: 101,
 			webSocket: client,
 		});
+	}
+
+	/** @param {WebSocket} ws */
+	async webSocketClose(ws) {
+		const attachment = ws.deserializeAttachment();
+		if (
+			typeof attachment === 'object' &&
+			attachment !== null &&
+			attachment.type === 'subscription' &&
+			typeof attachment.owner === 'string'
+		) {
+			this.#subscription_owners.delete(attachment.owner);
+		}
 	}
 }

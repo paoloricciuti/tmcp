@@ -1,9 +1,10 @@
-/* eslint-disable jsdoc/no-undefined-types */
 /**
  * @import { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
  */
 
 import { createClient } from 'redis';
+
+export { RedisSubscriptionManager } from './subscription.js';
 
 /**
  * @implements {StreamSessionManager}

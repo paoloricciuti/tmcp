@@ -1,11 +1,18 @@
 declare module '@tmcp/transport-sse' {
 	import type { McpServer } from 'tmcp';
 	import type { OAuth } from '@tmcp/auth';
-	import type { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
-	export class SseTransport<TCustom extends Record<string, unknown> | undefined = undefined> {
-		
-		constructor(server: McpServer<any, TCustom>, options?: SseTransportOptions);
-		
+	import type {
+		StreamSessionManager,
+		InfoSessionManager,
+	} from '@tmcp/session-manager';
+	export class SseTransport<
+		TCustom extends Record<string, unknown> | undefined = undefined,
+	> {
+		constructor(
+			server: McpServer<any, TCustom>,
+			options?: SseTransportOptions,
+		);
+
 		respond(request: Request, ctx?: TCustom): Promise<Response | null>;
 		/**
 		 * Close all active sessions
@@ -25,8 +32,9 @@ declare module '@tmcp/transport-sse' {
 		getSessionId?: () => string;
 		path?: string | null;
 		endpoint?: string;
-		oauth?: OAuth<"built">;
+		oauth?: OAuth<'built'>;
 		cors?: CorsConfig | boolean;
+		allowedOrigins?: string | string[];
 		sessionManager?: {
 			streams?: StreamSessionManager;
 			info?: OptionalizeSessionManager<InfoSessionManager>;
@@ -34,7 +42,10 @@ declare module '@tmcp/transport-sse' {
 	};
 	type ToOmit = 'removeSubscription';
 
-	type OptionalizeSessionManager<TInfoSessionManager extends InfoSessionManager> = Omit<TInfoSessionManager, ToOmit> & Partial<Pick<TInfoSessionManager, ToOmit>>;
+	type OptionalizeSessionManager<
+		TInfoSessionManager extends InfoSessionManager,
+	> = Omit<TInfoSessionManager, ToOmit> &
+		Partial<Pick<TInfoSessionManager, ToOmit>>;
 
 	export {};
 }
