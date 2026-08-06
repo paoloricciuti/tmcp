@@ -1,5 +1,21 @@
 # @tmcp/session-manager-postgres
 
+## 0.3.0-next.0
+
+### Minor Changes
+
+- 149b730: feat: add subscription managers
+
+    Add distributed per-request subscription managers for Redis, PostgreSQL, and Cloudflare Durable Objects.
+
+    The managers fan notifications out through their shared broker while each replica keeps registration, filtering, acknowledgement ordering, and closure local to the process holding the response stream.
+
+### Patch Changes
+
+- Updated dependencies [a6b9606]
+- Updated dependencies [149b730]
+    - @tmcp/session-manager@0.3.0-next.0
+
 ## 0.2.2
 
 ### Patch Changes

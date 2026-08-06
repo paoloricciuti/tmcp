@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/session-manager-durable-objects",
-	"version": "0.2.3",
+	"version": "0.3.0-next.0",
 	"license": "MIT",
 	"description": "",
 	"main": "src/index.js",

@@ -1,5 +1,24 @@
 # @tmcp/transport-stdio
 
+## 0.5.0-next.0
+
+### Minor Changes
+
+- a6b9606: feat: add the core per-request subscription model
+
+    Implement `subscriptions/listen` for MCP `2026-07-28`, including capability-based filter acknowledgment, subscription-ID metadata, independent concurrent streams, change filtering, cancellation, and graceful completion. Subscription managers are transport-owned, with an in-memory default and a distributed pub/sub-compatible create/send/close contract in `@tmcp/session-manager`. HTTP assigns every listen stream an opaque internal origin instead of trusting `Mcp-Session-Id`; stdio and in-memory transports own equivalent local routing. Existing session-negotiated resource subscriptions and broadcasts remain unchanged.
+    HTTP transports accept all origins by default with a warning on the first implicit cross-origin request. Configure an explicit allowlist to restrict access, or `true` to intentionally allow every origin without a warning. This request policy remains independent from CORS response configuration. The legacy SSE transport remains deprecated and receives only lifecycle compatibility changes.
+
+### Patch Changes
+
+- 2117694: fix: forward standalone server notifications before initialization
+
+    Register the stdio `send` listener when the transport is created so per-request protocol logs and progress can be written before a legacy `initialize` request. This also forwards standalone notifications emitted outside a request before initialization; legacy broadcast and session-state listeners still start after initialization.
+
+- Updated dependencies [a6b9606]
+- Updated dependencies [149b730]
+    - @tmcp/session-manager@0.3.0-next.0
+
 ## 0.4.3
 
 ### Patch Changes
