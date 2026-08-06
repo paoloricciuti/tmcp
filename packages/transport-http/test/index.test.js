@@ -1049,4 +1049,211 @@ describe('HTTP Transport', () => {
 			await local_transport.close();
 		});
 	});
+
+	describe('client disconnect handling', () => {
+		it('does not log errors when the client disconnects mid-response', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+			try {
+				/** @type {() => void} */
+				let resolve_barrier;
+				const barrier = new Promise((r) => {
+					resolve_barrier = r;
+				});
+
+				const { mcp_server: local_mcp_server } = new_server({
+					capabilities: { tools: { listChanged: true } },
+				}).setup((server) => {
+					server.tool(
+						{ name: 'slow-tool', description: 'A slow tool' },
+						async () => {
+							await barrier;
+							return { content: [{ type: 'text', text: 'done' }] };
+						},
+					);
+				});
+
+				const local_transport = new HttpTransport(local_mcp_server, {
+					path: '/mcp',
+					getSessionId: () => 'disconnect-test-session',
+				});
+
+				const response = await local_transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json',
+							'mcp-session-id': 'disconnect-test-session',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'tools/call',
+							id: 1,
+							params: { name: 'slow-tool', arguments: {} },
+						}),
+					}),
+				);
+
+				await response.body.cancel();
+				resolve_barrier();
+				await new Promise((r) => setTimeout(r, 50));
+
+				expect(consoleError).not.toHaveBeenCalled();
+			} finally {
+				consoleError.mockRestore();
+			}
+		});
+
+		it('logs unexpected errors via console.error', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+			try {
+				const boom = Object.assign(new Error('unexpected failure'), { code: 'ERR_CUSTOM' });
+				const mock_server = {
+					on: () => {},
+					receive: async () => { throw boom; },
+				};
+
+				const local_transport = new HttpTransport(/** @type {any} */ (mock_server), {
+					path: '/mcp',
+					getSessionId: () => 'error-test-session',
+				});
+
+				await local_transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json',
+							'mcp-session-id': 'error-test-session',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'tools/call',
+							id: 1,
+							params: { name: 'any-tool', arguments: {} },
+						}),
+					}),
+				);
+
+				await new Promise((r) => setTimeout(r, 50));
+				expect(consoleError).toHaveBeenCalledWith(boom);
+			} finally {
+				consoleError.mockRestore();
+			}
+		});
+
+		it('does not log Node.js ERR_INVALID_STATE errors', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+			try {
+				const invalid_state = Object.assign(new Error('stream already closed'), { code: 'ERR_INVALID_STATE' });
+				const mock_server = {
+					on: () => {},
+					receive: async () => { throw invalid_state; },
+				};
+
+				const local_transport = new HttpTransport(/** @type {any} */ (mock_server), {
+					path: '/mcp',
+					getSessionId: () => 'invalid-state-session',
+				});
+
+				await local_transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json',
+							'mcp-session-id': 'invalid-state-session',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'tools/call',
+							id: 1,
+							params: { name: 'any-tool', arguments: {} },
+						}),
+					}),
+				);
+
+				await new Promise((r) => setTimeout(r, 50));
+				expect(consoleError).not.toHaveBeenCalled();
+			} finally {
+				consoleError.mockRestore();
+			}
+		});
+
+		it('does not log WHATWG stream-closed TypeErrors', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+			try {
+				const whatwg_closed = new TypeError('Cannot enqueue into a closed ReadableStream');
+				const mock_server = {
+					on: () => {},
+					receive: async () => { throw whatwg_closed; },
+				};
+
+				const local_transport = new HttpTransport(/** @type {any} */ (mock_server), {
+					path: '/mcp',
+					getSessionId: () => 'whatwg-closed-session',
+				});
+
+				await local_transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json',
+							'mcp-session-id': 'whatwg-closed-session',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'tools/call',
+							id: 1,
+							params: { name: 'any-tool', arguments: {} },
+						}),
+					}),
+				);
+
+				await new Promise((r) => setTimeout(r, 50));
+				expect(consoleError).not.toHaveBeenCalled();
+			} finally {
+				consoleError.mockRestore();
+			}
+		});
+
+		it('logs TypeErrors unrelated to stream closure', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+			try {
+				const unrelated = new TypeError('Cannot read properties of undefined');
+				const mock_server = {
+					on: () => {},
+					receive: async () => { throw unrelated; },
+				};
+
+				const local_transport = new HttpTransport(/** @type {any} */ (mock_server), {
+					path: '/mcp',
+					getSessionId: () => 'unrelated-error-session',
+				});
+
+				await local_transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json',
+							'mcp-session-id': 'unrelated-error-session',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'tools/call',
+							id: 1,
+							params: { name: 'any-tool', arguments: {} },
+						}),
+					}),
+				);
+
+				await new Promise((r) => setTimeout(r, 50));
+				expect(consoleError).toHaveBeenCalledWith(unrelated);
+			} finally {
+				consoleError.mockRestore();
+			}
+		});
+	});
 });
