@@ -23,5 +23,14 @@
     "@tmcp/transport-sse": "0.5.5",
     "@tmcp/transport-stdio": "0.4.3"
   },
-  "changesets": []
+  "changesets": [
+    "calm-streams-listen",
+    "distributed-subscriptions",
+    "modern-auth-clients",
+    "mrtr-input-required",
+    "quiet-stdio-logs",
+    "strict-http-requests",
+    "tidy-stateless-clients",
+    "warm-onions-repeat"
+  ]
 }
