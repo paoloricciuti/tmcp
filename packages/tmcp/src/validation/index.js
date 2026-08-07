@@ -1839,7 +1839,7 @@ export const ServerResultSchema = v.pipe(
  */
 /**
  * @template TStructuredContent
- * @typedef {Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? { structuredContent?: undefined, isError?: boolean } : ({ structuredContent: TStructuredContent, isError?: false } | { isError: true, structuredContent?: TStructuredContent }))} CallToolResult
+ * @typedef {v.InferInput<v.LooseObjectSchema<Omit<typeof CallToolResultSchema["entries"], "structuredContent" | "isError">, undefined>> & (undefined extends TStructuredContent ? { structuredContent?: undefined, isError?: boolean } : ({ structuredContent: TStructuredContent, isError?: false } | { isError: true, structuredContent?: TStructuredContent }))} CallToolResult
  */
 /**
  * @typedef {v.InferInput<typeof ReadResourceResultSchema>} ReadResourceResult
