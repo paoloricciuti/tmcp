@@ -26,6 +26,7 @@
   "changesets": [
     "calm-streams-listen",
     "distributed-subscriptions",
+    "good-apes-shave",
     "modern-auth-clients",
     "mrtr-input-required",
     "quiet-stdio-logs",

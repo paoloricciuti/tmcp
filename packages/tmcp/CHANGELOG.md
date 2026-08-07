@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.20.0-next.1
+
+### Patch Changes
+
+- 1a9b90e: fix: tool result type
+
 ## 1.20.0-next.0
 
 ### Minor Changes
