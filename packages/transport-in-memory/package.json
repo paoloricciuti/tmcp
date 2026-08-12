@@ -32,7 +32,7 @@
 			"import": "./src/index.js"
 		}
 	},
-	"packageManager": "pnpm@10.27.0",
+	"packageManager": "pnpm@10.34.5",
 	"type": "module",
 	"peerDependencies": {
 		"tmcp": "^1.17.0"
