@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/transport-sse",
-	"version": "0.5.5",
+	"version": "0.6.0-next.0",
 	"license": "MIT",
 	"description": "Transport for TMCP using Server-Sent Events",
 	"type": "module",
@@ -18,8 +18,8 @@
 		"./package.json": "./package.json"
 	},
 	"peerDependencies": {
-		"tmcp": "^1.18.0",
-		"@tmcp/auth": "^0.3.3 || ^0.4.0"
+		"tmcp": "^1.20.0-next.0 || ^1.20.0",
+		"@tmcp/auth": "^0.3.3 || ^0.4.0 || ^0.5.0-next.0"
 	},
 	"peerDependenciesMeta": {
 		"@tmcp/auth": {

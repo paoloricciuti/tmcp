@@ -1,14 +1,14 @@
 declare module '@tmcp/session-manager-durable-objects' {
-	import type { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
+	import type { StreamSessionManager, InfoSessionManager, SubscriptionManager } from '@tmcp/session-manager';
 	import type { DurableObject } from 'cloudflare:workers';
 	export class DurableObjectStreamSessionManager implements StreamSessionManager {
-		
+
 		constructor(binding?: string);
-		
+
 		create(id: string, controller: ReadableStreamDefaultController): Promise<void>;
-		
+
 		delete(id: string): Promise<void>;
-		
+
 		has(id: string): Promise<boolean>;
 		
 		send(sessions: undefined | string[], data: unknown): Promise<void>;
@@ -47,6 +47,8 @@ declare module '@tmcp/session-manager-durable-objects' {
 		 * @param env - Environment variables and bindings
 		 */
 		constructor(ctx: DurableObjectState, env: Cloudflare.Env);
+
+		sendSubscription(notification: Parameters<SubscriptionManager["send"]>[0]): Promise<void>;
 		
 		has(id: string): Promise<boolean>;
 		
@@ -60,6 +62,21 @@ declare module '@tmcp/session-manager-durable-objects' {
 		 * @returns Response with WebSocket upgrade or error
 		 */
 		fetch(request: Request): Promise<Response>;
+
+		webSocketClose(ws: WebSocket): Promise<void>;
+		#private;
+	}
+	/**
+	 * Broker-only per-request subscription fanout backed by a Durable Object.
+	 *
+	 */
+	export class DurableObjectSubscriptionManager implements SubscriptionManager {
+
+		constructor(binding?: string);
+		create(subscription: import("@tmcp/session-manager").Subscription, callbacks: import("@tmcp/session-manager").SubscriptionCallbacks): boolean | Promise<boolean>;
+		send(notification: import("json-rpc-2.0").JSONRPCRequest): void | Promise<void>;
+		close(id: string | number, origin: string, reason: "closed" | "cancelled"): boolean | Promise<boolean>;
+		closeAll(origin?: string, reason?: "closed" | "cancelled"): void | Promise<void>;
 		#private;
 	}
 

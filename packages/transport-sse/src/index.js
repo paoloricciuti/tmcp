@@ -29,6 +29,7 @@ import { DEV } from 'esm-env';
  * 	endpoint?: string
  * 	oauth?: OAuth<"built">
  * 	cors?: CorsConfig | boolean
+ * 	allowedOrigins?: string | string[]
  * 	sessionManager?: { streams?: StreamSessionManager, info?: OptionalizeSessionManager<InfoSessionManager> }
  * }} SseTransportOptions
  */
@@ -47,7 +48,7 @@ export class SseTransport {
 	#server;
 
 	/**
-	 * @type {Required<Omit<SseTransportOptions, 'oauth' | 'cors' | 'sessionManager'>> & { cors?: CorsConfig | boolean, sessionManager: SessionManager }}
+	 * @type {Required<Omit<SseTransportOptions, 'oauth' | 'cors' | 'allowedOrigins' | 'sessionManager'>> & { cors?: CorsConfig | boolean, allowedOrigins?: string | string[], sessionManager: SessionManager }}
 	 */
 	#options;
 
@@ -85,6 +86,7 @@ export class SseTransport {
 			endpoint = '/message',
 			oauth,
 			cors,
+			allowedOrigins,
 			sessionManager: _sessionManager = {
 				streams: new InMemoryStreamSessionManager(),
 				info: new InMemoryInfoSessionManager(),
@@ -118,6 +120,7 @@ export class SseTransport {
 			path,
 			endpoint,
 			cors,
+			allowedOrigins,
 			sessionManager,
 		};
 		this.#path = this.#options.path;
@@ -158,7 +161,8 @@ export class SseTransport {
 			this.#options.sessionManager.info.setLogLevel(sessionId, level);
 		});
 
-		this.#server.on('broadcast', async ({ request }) => {
+		this.#server.on('broadcast', async ({ request, subscriptionOnly }) => {
+			if (subscriptionOnly) return;
 			let sessions = undefined;
 			if (request.method === 'notifications/resources/updated') {
 				sessions =
@@ -173,7 +177,8 @@ export class SseTransport {
 		});
 
 		// Listen for server send events
-		this.#server.on('send', async ({ request }) => {
+		this.#server.on('send', async ({ request, subscriptionOrigin }) => {
+			if (subscriptionOrigin !== undefined) return;
 			const session_id = this.#session_id_storage.getStore();
 			if (!session_id) return;
 			await this.#options.sessionManager.streams.send(
@@ -181,6 +186,16 @@ export class SseTransport {
 				`event: message\ndata: ${JSON.stringify(request)}\n\n`,
 			);
 		});
+	}
+
+	/** @param {Request} request */
+	#allows_origin(request) {
+		const origin = request.headers.get('origin');
+		if (!origin) return true;
+		if (origin === new URL(request.url).origin) return true;
+		const allowed = this.#options.allowedOrigins;
+		if (typeof allowed === 'string') return allowed === origin;
+		return Array.isArray(allowed) && allowed.includes(origin);
 	}
 
 	/**
@@ -483,6 +498,17 @@ export class SseTransport {
 	 */
 	async respond(request, ctx) {
 		const url = new URL(request.url);
+		const path_matches =
+			this.#path === null ||
+			(request.method === 'POST'
+				? url.pathname === this.#endpoint
+				: request.method === 'OPTIONS'
+					? url.pathname === this.#path ||
+						url.pathname === this.#endpoint
+					: url.pathname === this.#path);
+		if (path_matches && !this.#allows_origin(request)) {
+			return new Response('Forbidden origin', { status: 403 });
+		}
 
 		/**
 		 * @type {AuthInfo | null}
@@ -512,11 +538,7 @@ export class SseTransport {
 		}
 
 		// Check if the request path matches the configured SSE path
-		if (
-			request.method === 'GET'
-				? url.pathname !== this.#path && this.#path !== null
-				: url.pathname !== this.#endpoint
-		) {
+		if (!path_matches) {
 			return null;
 		}
 

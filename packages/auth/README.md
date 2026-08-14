@@ -15,6 +15,7 @@ OAuth 2.1 authorization helper for MCP with simplified fluent API and valibot va
 - **Bearer Authentication**: Integrated Bearer token validation
 - **Proxy Support**: Built-in proxy provider for upstream OAuth servers
 - **Memory Store**: In-memory client storage for development
+- **Client ID Metadata Documents**: Secure-by-default support for URL-based clients
 
 ## Installation
 
@@ -216,6 +217,16 @@ The OAuth provider automatically handles these endpoints:
 
 - `GET /.well-known/oauth-authorization-server` - Authorization server metadata
 - `GET /.well-known/oauth-protected-resource` - Protected resource metadata
+
+### Client Registration
+
+Client ID Metadata Documents are enabled and advertised. Documents must use an HTTPS client ID with a path, include matching `client_id`, `client_name`, and `redirect_uris` fields, and use unauthenticated public-client authentication. `private_key_jwt` is not currently implemented.
+
+Metadata-document fields are controlled by the remote client. Authorization handlers should treat names, URIs, and logos from URL client IDs as untrusted. Consent interfaces must clearly display the `client_id` hostname and redirect URI hostname.
+
+Dynamic Client Registration remains available through `.registration()` for backwards compatibility, but MCP `2026-07-28` deprecates it in favor of Client ID Metadata Documents. DCR clients must send an appropriate `application_type`, normally `"native"` or `"web"`.
+
+Clients persisting pre-registered or dynamically registered credentials must key them by the authorization server's exact metadata `issuer` and must not reuse them after the issuer changes. This is client-side storage behavior and is not maintained by `@tmcp/auth`.
 
 ## Configuration Methods
 

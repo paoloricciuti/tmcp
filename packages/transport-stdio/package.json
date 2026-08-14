@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/transport-stdio",
-	"version": "0.4.3",
+	"version": "0.5.0-next.0",
 	"license": "MIT",
 	"description": "Transport for TMCP using STDIO",
 	"type": "module",
@@ -8,7 +8,8 @@
 	"types": "src/types/index.d.ts",
 	"scripts": {
 		"generate:types": "dts-buddy && publint",
-		"prepublish": "pnpm generate:types"
+		"prepublish": "pnpm generate:types",
+		"test": "vitest --run"
 	},
 	"exports": {
 		".": {
@@ -17,8 +18,11 @@
 		},
 		"./package.json": "./package.json"
 	},
+	"files": [
+		"src/**/*"
+	],
 	"peerDependencies": {
-		"tmcp": "^1.16.3"
+		"tmcp": "^1.20.0-next.0 || ^1.20.0"
 	},
 	"keywords": [
 		"tmcp",
@@ -30,11 +34,15 @@
 		"url": "git+https://github.com/paoloricciuti/tmcp.git",
 		"directory": "packages/transport-stdio"
 	},
+	"dependencies": {
+		"@tmcp/session-manager": "workspace:^"
+	},
 	"devDependencies": {
 		"@types/node": "^24.0.13",
 		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
-		"tmcp": "workspace:^"
+		"tmcp": "workspace:^",
+		"vitest": "^4.0.0"
 	},
 	"publishConfig": {
 		"access": "public"

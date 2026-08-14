@@ -5,6 +5,8 @@
 
 import { Client } from 'pg';
 
+export { PostgresSubscriptionManager } from './subscription.js';
+
 /**
  * @implements {StreamSessionManager}
  */

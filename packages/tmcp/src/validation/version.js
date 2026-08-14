@@ -1,14 +1,34 @@
 import * as v from 'valibot';
 
 /**
- * Supported MCP protocol versions in order of preference (newest first)
+ * Supported MCP protocol versions in order of preference (newest first).
+ *
+ * This is the single source of truth for the session-negotiated (legacy
+ * `initialize`) protocol versions. Note: `2024-10-07` was previously listed in
+ * `validation/index.js` but was never actually negotiable, so it has been
+ * deliberately dropped.
  */
-const SUPPORTED_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
+export const SUPPORTED_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
 /**
  * Latest stable protocol version
  */
 export const LATEST_PROTOCOL_VERSION = SUPPORTED_VERSIONS[0];
+
+/**
+ * The modern, per-request-metadata protocol version.
+ *
+ * Pinned to the upstream MCP specification tag `2026-07-28`
+ * (modelcontextprotocol/modelcontextprotocol commit
+ * `5f5440bb26a62e2cf3440b92da5a667efa03b267`).
+ */
+export const MODERN_PROTOCOL_VERSION = '2026-07-28';
+
+/**
+ * Protocol versions that tmcp knows how to serve through per-request
+ * `_meta` protocol handling (as opposed to legacy `initialize` negotiation).
+ */
+export const KNOWN_PER_REQUEST_PROTOCOL_VERSIONS = [MODERN_PROTOCOL_VERSION];
 
 /**
  * Validate MCP protocol version format (YYYY-MM-DD)
@@ -129,6 +149,9 @@ const feature_versions = {
 
 /**
  * Get the minimum version required for a feature
+ * @deprecated Use the declarative per-method policy in
+ * `validation/method-policy.js` instead. This minimum-version mechanism cannot
+ * express methods that were removed in later protocol revisions.
  * @param {string} feature - The feature name
  * @returns {string|null} The minimum version required, or null if unknown
  */
@@ -138,6 +161,8 @@ export function get_minimum_version_for_feature(feature) {
 
 /**
  * Check if a feature is supported in a given protocol version
+ * @deprecated Use the declarative per-method policy in
+ * `validation/method-policy.js` instead.
  * @param {string} feature - The feature name
  * @param {string} version - The protocol version to check
  * @returns {boolean} True if the feature is supported

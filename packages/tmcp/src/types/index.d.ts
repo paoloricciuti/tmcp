@@ -4,9 +4,33 @@ const created_resource: unique symbol;
 const created_template: unique symbol;
 declare module 'tmcp' {
 	import type { StandardSchemaV1 } from '@standard-schema/spec';
-	import type { JSONRPCServer, JSONRPCClient, JSONRPCParams, JSONRPCRequest } from 'json-rpc-2.0';
+	import type { JSONRPCServer, JSONRPCClient, JSONRPCParams, JSONRPCRequest, JSONRPCErrorException } from 'json-rpc-2.0';
 	import type { JSONSchema7 } from 'json-schema';
 	import * as v from 'valibot';
+	/**
+	 * Check whether an error means that tmcp is waiting for client input.
+	 *
+	 * When there is no open connection to the client, `elicitation()` and
+	 * `message()` ask the client to retry the original request with the answer.
+	 * They stop the current handler by throwing a private error. A broad `catch`
+	 * in the handler must rethrow that error, or tmcp cannot ask for the retry.
+	 * Use this helper to distinguish it from errors your handler should process:
+	 *
+	 * ```js
+	 * try {
+	 *   const answer = await server.elicitation(msg, schema);
+	 * } catch (error) {
+	 *   if (isInputRequired(error)) throw error;
+	 *   // handle the real error
+	 * }
+	 * ```
+	 * */
+	export function isInputRequired(error: unknown): boolean;
+	/**
+	 * Return the per-request protocol versions supported by tmcp.
+	 * */
+	export function getPerRequestProtocolVersions(): string[];
+
 	export class McpServer<StandardSchema extends StandardSchemaV1 | undefined = undefined, CustomContext extends Record<string, unknown> | undefined = undefined> {
 		
 		constructor(server_info: ServerInfo, options: ServerOptions<StandardSchema>);
@@ -45,12 +69,32 @@ declare module 'tmcp' {
 		 * @deprecated Use `server.ctx.sessionInfo.clientCapabilities` instead.
 		 */
 		currentClientCapabilities(): ({
-			experimental?: {} | undefined;
-			sampling?: {} | undefined;
-			elicitation?: {} | undefined;
-			roots?: {
-				listChanged?: boolean | undefined;
+			experimental?: ({} & {
+				[key: string]: unknown;
+			}) | undefined;
+			sampling?: ({} & {
+				[key: string]: unknown;
+			}) | undefined;
+			elicitation?: ({
+				form?: ({} & {
+					[key: string]: unknown;
+				}) | undefined;
+				url?: ({} & {
+					[key: string]: unknown;
+				}) | undefined;
+			} & {
+				[key: string]: unknown;
+			}) | undefined;
+			extensions?: {
+				[x: string]: {} & {
+					[key: string]: unknown;
+				};
 			} | undefined;
+			roots?: ({
+				listChanged?: boolean | undefined;
+			} & {
+				[key: string]: unknown;
+			}) | undefined;
 		} & {
 			[key: string]: unknown;
 		}) | undefined;
@@ -88,6 +132,11 @@ declare module 'tmcp' {
 		 * Tools will be invoked by the LLM when it thinks it needs to use them, you can use the annotations to provide additional information about the tool, like what it does, how to use it, etc.
 		 * */
 		tool<TSchema extends StandardSchema | undefined = undefined, TOutputSchema extends StandardSchema | undefined = undefined>(tool_or_options: ToolOptions<TSchema, TOutputSchema>, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): void;
+		/**
+		 * Run transport-specific validation against a registered tool's JSON
+		 * Schema without enabling, validating, or executing the tool.
+		 * */
+		validateToolCall(name: string, args: Record<string, unknown>, validator: (input_schema: Record<string, unknown>, args: Record<string, unknown>) => void | Promise<void>): Promise<boolean>;
 		/**
 		 * Add a prompt to the server. Prompts are used to provide the user with pre-defined messages that adds context to the LLM.
 		 * Use the description and title to help the user to understand what the prompt does and when to use it.
@@ -131,10 +180,14 @@ declare module 'tmcp' {
 		 * */
 		template<TUri extends string, TVariables extends ExtractURITemplateVariables<TUri>>(template_or_options: TemplateOptions<TUri>, execute: (uri: string, params: Record<TVariables, string | string[]>) => Promise<ReadResourceResult> | ReadResourceResult): void;
 		/**
+		 * Check whether a JSON-RPC method is registered without invoking it.
+		 * */
+		hasMethod(method: string): boolean;
+		/**
 		 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 		 *
 		 * */
-		receive(message: JSONRPCMessage, ctx?: Context<CustomContext>): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
+		receive(message: JSONRPCMessage, ctx?: ReceiveContext<CustomContext>): ReturnType<JSONRPCServer["receive"]> | ReturnType<JSONRPCClient["receive"] | undefined>;
 		/**
 		 * Lower level api to send a request to the client, mostly useful to call client methods that not yet supported by the server or
 		 * if you want to send requests with json schema that is not expressible with your validation library.
@@ -148,9 +201,34 @@ declare module 'tmcp' {
 		 * */
 		changed<TWhat extends keyof ChangedArgs>(what: TWhat, ...args: ChangedArgs[TWhat]): void;
 		/**
-		 * Refresh roots list from client
+		 * Refresh the roots list when the server has an open client session.
+		 *
+		 * This throws when handling a standalone request because roots are no
+		 * longer supported by protocol version `2026-07-28`.
 		 */
 		refreshRoots(): Promise<void>;
+		/**
+		 * Save data that the handler will need when the client retries this
+		 * request. tmcp turns it into text, sends it to the client, and restores it
+		 * as `server.ctx.requestState` on the retry.
+		 * Passing `undefined` clears previously set state.
+		 *
+		 * This does nothing when the server has an open client session or when the
+		 * request finishes without asking for input.
+		 *
+		 * SECURITY: the default JSON converter lets the client read and change this
+		 * data. Do not put secrets in it or use it for authorization. Configure a
+		 * protected `requestStateCodec` if the server must detect changes.
+		 * */
+		setRequestState(state: unknown): void;
+		/**
+		 * Ask the user to complete an interaction at a URL. The client will open
+		 * the URL out of band and return the user's action without form content.
+		 *
+		 * */
+		elicitation(message: string, url: string, options?: {
+			key?: string;
+		} | undefined): Promise<Omit<ElicitResult, "content">>;
 		/**
 		 * Emit an elicitation request to the client. Elicitations are used to ask the user for input in a structured way, the client will show a UI to the user to fill the input.
 		 * The schema should be a valid Standard Schema V1 schema and should be an Object with the properties you need.
@@ -158,14 +236,31 @@ declare module 'tmcp' {
 		 *
 		 * If the client doesn't support elicitation, it will throw an error.
 		 *
+		 * When there is no open client session, tmcp returns the question to the
+		 * client and asks it to retry the original request with the answer. The
+		 * handler then starts again from the beginning, so its definition must set
+		 * `replayable: true`. Always await this call. If a surrounding `catch`
+		 * handles errors, use `isInputRequired()` and rethrow tmcp's private error.
+		 *
 		 * */
-		elicitation<TSchema extends StandardSchema extends undefined ? never : StandardSchema>(message: string, schema: TSchema): Promise<ElicitResult & {
+		elicitation<TSchema extends StandardSchema extends undefined ? never : StandardSchema>(message: string, schema: TSchema, options?: {
+			key?: string;
+		} | undefined): Promise<ElicitResult & {
 			content?: StandardSchemaV1.InferOutput<TSchema>;
 		}>;
 		/**
-		 * Request language model sampling from the client
+		 * Request language model sampling from the client.
+		 *
+		 * When there is no open client session, tmcp returns the sampling request
+		 * to the client and asks it to retry the original request with the answer.
+		 * The handler then starts again from the beginning, so its definition must
+		 * set `replayable: true`. Always await this call. If a surrounding `catch`
+		 * handles errors, use `isInputRequired()` and rethrow tmcp's private error.
+		 * @param options `key` names this request so tmcp can match its answer on a retry. By default tmcp uses `"1"`, `"2"`, and so on. Set a name when the handler may make different requests on different runs. When mixing named and numbered requests, use non-numeric names.
 		 * */
-		message(request: CreateMessageRequestParams): Promise<CreateMessageResult>;
+		message(request: CreateMessageRequestParams, options?: {
+			key?: string;
+		}): Promise<CreateMessageResult>;
 		/**
 		 * Send a progress notification to the client. This is useful for long-running operations where you want to inform the user about the progress.
 		 *
@@ -220,12 +315,40 @@ declare module 'tmcp' {
 			clientInfo?: ClientInfo_1;
 			logLevel?: LoggingLevel;
 		} | undefined;
+		/**
+		 * The exact per-request protocol version when the current request carries per-request protocol metadata; `undefined` for session-negotiated requests.
+		 */
+		protocolVersion?: string | undefined;
+		/**
+		 * Data saved by the handler before asking the client for input, then returned by the client on the retry. It is `undefined` when no data was saved or when the request uses an open session. The default JSON converter lets the client read and change this value. Do not store secrets in it or use it to make authorization decisions. Configure `requestStateCodec` if the server must detect changes.
+		 */
+		requestState?: unknown;
+		/**
+		 * Aborted when the transport observes that the current request was cancelled.
+		 */
+		signal?: AbortSignal | undefined;
 		auth?: AuthInfo | undefined;
 		custom?: TCustom | undefined;
 	};
+	/**
+	 * Context accepted by `receive()`. Subscription routing fields are
+	 * transport-only and are deliberately omitted from `server.ctx`.
+	 */
+	export type ReceiveContext<TCustom extends Record<string, unknown> | undefined = undefined> = Context<TCustom> & {
+		subscriptionOrigin?: SubscriptionOrigin_1;
+		subscriptionManager?: SubscriptionManager_1;
+	};
+	export type SubscriptionFilter = SubscriptionFilter_1;
+	export type SubscriptionOrigin = SubscriptionOrigin_1;
+	export type Subscription = Subscription_1;
+	export type SubscriptionCallbacks = SubscriptionCallbacks_1;
+	export type SubscriptionManager = SubscriptionManager_1;
+	export type SubscriptionsListenRequest = SubscriptionsListenRequest_1;
+	export type SubscriptionsListenResult = SubscriptionsListenResult_1;
+	export type SubscriptionsAcknowledgedNotification = SubscriptionsAcknowledgedNotification_1;
 	export type Icons = Icons_1;
 	export type Subscriptions = Record<SubscriptionsKeys, string[]>;
-	export type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = CallToolResult_1<TStructuredContent>;
+	export type CallToolResult<TStructuredContent> = CallToolResult_1<TStructuredContent>;
 	export type ReadResourceResult = ReadResourceResult_1;
 	export type GetPromptResult = GetPromptResult_1;
 	export type ClientCapabilities = ClientCapabilities_1;
@@ -245,55 +368,166 @@ declare module 'tmcp' {
 				
 	type AllSame<T, U> = [T] extends [U] ? true : false;
 
-	type PromptOptions<TSchema extends StandardSchemaV1 | undefined = undefined> = { 
-		name: string; 
-		description: string; 
-		title?: string; 
-		enabled?: ()=>boolean | Promise<boolean>; 
-		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-		complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> 
-	} & Icons_1
+	type SubscriptionOrigin_1 = string;
 
-	type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
+	type Subscription_1 = {
+		id: RequestId;
+		origin: SubscriptionOrigin_1;
+		filters: SubscriptionFilter_1;
+	};
+
+	type SubscriptionCallbacks_1 = {
+		acknowledge: () => void | Promise<void>;
+		send: (notification: JSONRPCRequest) => void | Promise<void>;
+		close: (reason: 'closed' | 'cancelled') => void | Promise<void>;
+	};
+
+	type SubscriptionManager_1 = {
+		create(
+			subscription: Subscription_1,
+			callbacks: SubscriptionCallbacks_1,
+		): boolean | Promise<boolean>;
+		send(notification: JSONRPCRequest): void | Promise<void>;
+		close(
+			id: RequestId,
+			origin: SubscriptionOrigin_1,
+			reason: 'closed' | 'cancelled',
+		): boolean | Promise<boolean>;
+		closeAll(
+			origin?: SubscriptionOrigin_1,
+			reason?: 'closed' | 'cancelled',
+		): void | Promise<void>;
+	};
+
+	type Replayable = {
+		/**
+		 * Allow tmcp to run this handler again after asking the client for input.
+		 *
+		 * For standalone requests, the server cannot pause and wait for the client.
+		 * It returns the questions to the client, which then retries the original
+		 * request with the answers. The handler starts again FROM THE TOP on every
+		 * retry. This means work done before an input call, such as database writes,
+		 * emails, or payments, may happen more than once. Set `replayable: true`
+		 * only when that work is safe to repeat or is delayed until all answers are
+		 * available.
+		 *
+		 * Without this flag, tmcp returns an error rather than risk repeating work.
+		 * This is a tmcp safety check, not an MCP requirement. Requests using an
+		 * open client session are unaffected because their handlers do not restart.
+		 */
+		replayable?: boolean;
+	};
+
+	type PromptOptions<
+		TSchema extends StandardSchemaV1 | undefined = undefined,
+	> = {
+		name: string;
+		description: string;
+		title?: string;
+		enabled?: () => boolean | Promise<boolean>;
+		schema?: StandardSchemaV1.InferInput<
+			TSchema extends undefined ? never : TSchema
+		> extends Record<string, unknown>
+			? TSchema
+			: never;
+		complete?: NoInfer<
+			TSchema extends undefined
+				? never
+				: Partial<
+						Record<
+							keyof StandardSchemaV1.InferInput<
+								TSchema extends undefined ? never : TSchema
+							>,
+							Completion
+						>
+					>
+		>;
+	} & Icons_1 &
+		Replayable;
+
+	type ToolOptions<
+		TSchema extends StandardSchemaV1 | undefined = undefined,
+		TOutputSchema extends StandardSchemaV1 | undefined = undefined,
+	> = {
 		name: string;
 		_meta?: Record<string, any>;
 		description: string;
 		title?: string;
 		enabled?: () => boolean | Promise<boolean>;
-		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-		outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
+		schema?: StandardSchemaV1.InferInput<
+			TSchema extends undefined ? never : TSchema
+		> extends Record<string, unknown>
+			? TSchema
+			: never;
+		outputSchema?: StandardSchemaV1.InferOutput<
+			TOutputSchema extends undefined ? never : TOutputSchema
+		> extends Record<string, unknown>
+			? TOutputSchema
+			: never;
 		annotations?: ToolAnnotations;
-	} & Icons_1;
+	} & Icons_1 &
+		Replayable;
 
-	type ResourceOptions = { 
+	type ResourceOptions = {
 		name: string;
-		description: string; 
-		title?: string; 
+		description: string;
+		title?: string;
 		uri: string;
 		mimeType?: string;
-		enabled?: ()=>boolean | Promise<boolean>; 
-	} & Icons_1
+		enabled?: () => boolean | Promise<boolean>;
+	} & Icons_1 &
+		Replayable;
 
-	type TemplateOptions<TUri extends string = string, TVariables extends ExtractURITemplateVariables<TUri> = ExtractURITemplateVariables<TUri>> = { 
+	type TemplateOptions<
+		TUri extends string = string,
+		TVariables extends ExtractURITemplateVariables<TUri> =
+			ExtractURITemplateVariables<TUri>,
+	> = {
 		name: string;
 		description: string;
 		title?: string;
 		mimeType?: string;
-		enabled?: ()=>boolean | Promise<boolean>;
+		enabled?: () => boolean | Promise<boolean>;
 		uri: TUri;
-		complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
-		list?: () => Promise<Array<Resource_1>> | Array<Resource_1> 
-	} & Icons_1
+		complete?: NoInfer<
+			TVariables extends never
+				? never
+				: Partial<Record<TVariables, Completion>>
+		>;
+		list?: () => Promise<Array<Resource_1>> | Array<Resource_1>;
+	} & Icons_1 &
+		Replayable;
 
-	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
-	type CreatedPrompt<TSchema extends StandardSchemaV1 | undefined = undefined> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
-	type CreatedResource = ResourceOptions & { [created_resource]: created_resource };
-	type CreatedTemplate<TUri extends string = string> = TemplateOptions<TUri> & { [created_template]: created_template };
+	type CreatedTool<
+		TSchema extends StandardSchemaV1 | undefined = undefined,
+		TOutputSchema extends StandardSchemaV1 | undefined = undefined,
+	> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
+	type CreatedPrompt<
+		TSchema extends StandardSchemaV1 | undefined = undefined,
+	> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
+	type CreatedResource = ResourceOptions & {
+		[created_resource]: created_resource;
+	};
+	type CreatedTemplate<TUri extends string = string> =
+		TemplateOptions<TUri> & { [created_template]: created_template };
 
 	type Completion = (
 		query: string,
 		context: { arguments: Record<string, string> },
 	) => CompleteResult_1 | Promise<CompleteResult_1>;
+
+	type CachePolicy = {
+		/**
+		 * Time-to-live in milliseconds for cacheable results (>= 0). Defaults to 0 (no caching).
+		 */
+		ttlMs?: number;
+		/**
+		 * Cache scope for cacheable results. Defaults to 'private'. `public` must be
+		 * explicitly opted into: `enabled` callbacks, auth context, and dynamic
+		 * resource/template listings can make otherwise identical lists user-specific.
+		 */
+		cacheScope?: 'public' | 'private';
+	};
 
 	type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 		capabilities?: ServerCapabilities;
@@ -306,31 +540,71 @@ declare module 'tmcp' {
 		};
 		logging?: {
 			default: LoggingLevel_1;
-		}
+		};
+		/**
+		 * Cache policy for per-request protocol cacheable results
+		 * (`server/discover`, `tools/list`, `prompts/list`, `resources/list`,
+		 * `resources/read`, `resources/templates/list`). Defaults to
+		 * `{ ttlMs: 0, cacheScope: 'private' }`. Per-method overrides win over
+		 * the top-level defaults.
+		 */
+		cache?: CachePolicy & {
+			methods?: Record<string, CachePolicy>;
+		};
+		/**
+		 * Convert tmcp's retry data to text before sending it to the client, and
+		 * restore that data when the client retries the request. The value includes
+		 * data saved by the handler and validated answers needed to restart it from
+		 * the beginning. Treat the value passed to `encode` as tmcp-owned data; its
+		 * internal shape may grow in future protocol versions.
+		 *
+		 * SECURITY: the default uses plain JSON, so the client can read, change, or
+		 * replace the saved data. Do not store secrets in it or use it to make
+		 * authorization decisions. Use a protected converter if the server must
+		 * detect changes. That converter should also tie the data to the current
+		 * user, the original request, and a short expiry time.
+		 *
+		 * tmcp limits the text length before calling `decode`. `decode` may be
+		 * asynchronous. Custom converters should also limit the restored value if
+		 * needed, because tmcp cannot measure every application-specific value.
+		 */
+		requestStateCodec?: {
+			encode: (state: unknown) => string | Promise<string>;
+			decode: (encoded: string) => unknown | Promise<unknown>;
+		};
 	};
 
 	type ChangedArgs = {
-		'resource': [id: string];
-		'tools': [];
-		'prompts': [];
-		'resources': [];
-	}
-
-	type SubscriptionsKeysObj = {
-		[K in keyof ChangedArgs as ChangedArgs[K]["length"] extends 0 ? "without_args" : "with_args"]: K
+		resource: [id: string];
+		tools: [];
+		prompts: [];
+		resources: [];
 	};
 
-	type SubscriptionsKeys = SubscriptionsKeysObj["with_args"];
+	type SubscriptionsKeysObj = {
+		[K in keyof ChangedArgs as ChangedArgs[K]['length'] extends 0
+			? 'without_args'
+			: 'with_args']: K;
+	};
+
+	type SubscriptionsKeys = SubscriptionsKeysObj['with_args'];
 
 	type McpEvents = {
 		send: (message: {
 			request: JSONRPCRequest;
+			subscriptionId?: RequestId;
+			subscriptionOrigin?: SubscriptionOrigin_1;
 		}) => void;
 		broadcast: (message: {
 			request: JSONRPCRequest;
+			subscriptionOnly?: boolean;
 		}) => void;
 		initialize: (initialize_request: InitializeRequestParams) => void;
-		subscription: (subscriptions_request: { uri: string, action?: "add" | "remove" }) => void;
+		discover: (discover_request: DiscoverRequestParams) => void;
+		subscription: (subscriptions_request: {
+			uri: string;
+			action?: 'add' | 'remove';
+		}) => void;
 		loglevelchange: (change: { level: LoggingLevel_1 }) => void;
 	};
 	// Helper type to remove whitespace
@@ -378,6 +652,62 @@ declare module 'tmcp' {
 	// Main exported type
 	type ExtractURITemplateVariables<T extends string> =
 		ExtractVariablesFromTemplate<T>;
+	/**
+	 * A required header was missing, malformed, or mismatched the request body.
+	 */
+	export const HEADER_MISMATCH: -32020;
+	/**
+	 * The request requires a client capability that was not declared.
+	 * `error.data` contains `{ requiredCapabilities }`.
+	 */
+	export const MISSING_REQUIRED_CLIENT_CAPABILITY: -32021;
+	/**
+	 * The requested per-request protocol version is not supported.
+	 * `error.data` contains `{ supported, requested }`.
+	 */
+	export const UNSUPPORTED_PROTOCOL_VERSION: -32022;
+	export class McpError extends JSONRPCErrorException {
+		
+		constructor(code: number, message: string, data?: unknown);
+	}
+	/**
+	 * A uniquely identifying ID for a request in JSON-RPC.
+	 */
+	const RequestIdSchema: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
+	/**
+	 * The severity of a log message.
+	 */
+	const LoggingLevelSchema: v.PicklistSchema<["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"], undefined>;
+	/**
+	 * A request that expects a response.
+	 */
+	const JSONRPCRequestSchema: v.ObjectSchema<{
+		readonly method: v.StringSchema<undefined>;
+		readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{
+				/**
+				 * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
+				 */
+				readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
+			}, undefined>, undefined>;
+		}, undefined>, undefined>;
+		readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+		readonly id: v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
+	}, undefined>;
+	/**
+	 * A notification which does not expect a response.
+	 */
+	const JSONRPCNotificationSchema: v.ObjectSchema<{
+		readonly method: v.StringSchema<undefined>;
+		readonly params: v.OptionalSchema<v.LooseObjectSchema<{
+			/**
+			 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
+			 * for notes on _meta usage.
+			 */
+			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, undefined>;
+		readonly jsonrpc: v.LiteralSchema<"2.0", undefined>;
+	}, undefined>;
 	const JSONRPCMessageSchema: v.UnionSchema<[v.ObjectSchema<{
 		readonly method: v.StringSchema<undefined>;
 		readonly params: v.OptionalSchema<v.LooseObjectSchema<{
@@ -511,19 +841,29 @@ declare module 'tmcp' {
 		/**
 		 * Experimental, non-standard capabilities that the client supports.
 		 */
-		readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the client supports sampling from an LLM.
+		 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 		 */
-		readonly sampling: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the client supports eliciting user input.
+		 * Accepts both the legacy bare `{}` shape and the modern `{ form?, url? }` sub-shapes.
 		 */
-		readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{
+			readonly form: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			readonly url: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		}, undefined>, undefined>;
+		/**
+		 * Extensions supported by the client, keyed by prefixed extension identifier.
+		 */
+		readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
 		/**
 		 * Present if the client supports listing roots.
+		 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 		 */
-		readonly roots: v.OptionalSchema<v.ObjectSchema<{
+		readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
 			/**
 			 * Whether the client supports issuing notifications for changes to the roots list.
 			 */
@@ -539,19 +879,29 @@ declare module 'tmcp' {
 			/**
 			 * Experimental, non-standard capabilities that the client supports.
 			 */
-			readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			/**
 			 * Present if the client supports sampling from an LLM.
+			 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 			 */
-			readonly sampling: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 			/**
 			 * Present if the client supports eliciting user input.
+			 * Accepts both the legacy bare `{}` shape and the modern `{ form?, url? }` sub-shapes.
 			 */
-			readonly elicitation: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{
+				readonly form: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				readonly url: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+			}, undefined>, undefined>;
+			/**
+			 * Extensions supported by the client, keyed by prefixed extension identifier.
+			 */
+			readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
 			/**
 			 * Present if the client supports listing roots.
+			 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 			 */
-			readonly roots: v.OptionalSchema<v.ObjectSchema<{
+			readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
 				/**
 				 * Whether the client supports issuing notifications for changes to the roots list.
 				 */
@@ -618,8 +968,13 @@ declare module 'tmcp' {
 		readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 		/**
 		 * Present if the server supports sending log messages to the client.
+		 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 		 */
 		readonly logging: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+		/**
+		 * Extensions supported by the server, keyed by prefixed extension identifier.
+		 */
+		readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
 		/**
 		 * Present if the server supports sending completions to the client.
 		 */
@@ -671,8 +1026,13 @@ declare module 'tmcp' {
 			readonly experimental: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
 			/**
 			 * Present if the server supports sending log messages to the client.
+			 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
 			 */
 			readonly logging: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
+			/**
+			 * Extensions supported by the server, keyed by prefixed extension identifier.
+			 */
+			readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
 			/**
 			 * Present if the server supports sending completions to the client.
 			 */
@@ -980,7 +1340,7 @@ declare module 'tmcp' {
 	/**
 	 * The server's response to a resources/read request from the client.
 	 */
-	const ReadResourceResultSchema: v.ObjectSchema<{
+	const ReadResourceResultSchema: v.LooseObjectSchema<{
 		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
 			/**
 			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
@@ -1023,6 +1383,223 @@ declare module 'tmcp' {
 		 * for notes on _meta usage.
 		 */
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+	}, undefined>;
+	/**
+	 * Notification types requested on a per-request subscription stream. Every field
+	 * is opt-in.
+	 */
+	const SubscriptionFilterSchema: v.ObjectSchema<{
+		readonly toolsListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+		readonly promptsListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+		readonly resourcesListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+		readonly resourceSubscriptions: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+	}, undefined>;
+	const DiscoverRequestParamsSchema: v.LooseObjectSchema<{
+		readonly _meta: v.LooseObjectSchema<{
+			readonly 'io.modelcontextprotocol/protocolVersion': v.StringSchema<undefined>;
+			readonly 'io.modelcontextprotocol/clientCapabilities': v.LooseObjectSchema<{
+				/**
+				 * Experimental, non-standard capabilities that the client supports.
+				 */
+				readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				/**
+				 * Present if the client supports sampling from an LLM.
+				 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
+				 */
+				readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				/**
+				 * Present if the client supports eliciting user input.
+				 * Accepts both the legacy bare `{}` shape and the modern `{ form?, url? }` sub-shapes.
+				 */
+				readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{
+					readonly form: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+					readonly url: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				}, undefined>, undefined>;
+				/**
+				 * Extensions supported by the client, keyed by prefixed extension identifier.
+				 */
+				readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
+				/**
+				 * Present if the client supports listing roots.
+				 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
+				 */
+				readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
+					/**
+					 * Whether the client supports issuing notifications for changes to the roots list.
+					 */
+					readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+				}, undefined>, undefined>;
+			}, undefined>;
+			readonly 'io.modelcontextprotocol/clientInfo': v.OptionalSchema<v.ObjectSchema<{
+				/**
+				 * Optional set of sized icons that the client can display in a user interface.
+				 *
+				 * Clients that support rendering icons MUST support at least the following MIME types:
+				 * - `image/png` - PNG images (safe, universal compatibility)
+				 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+				 *
+				 * Clients that support rendering icons SHOULD also support:
+				 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+				 * - `image/webp` - WebP images (modern, efficient format)
+				 */
+				readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+					/**
+					 * URL or data URI for the icon.
+					 */
+					readonly src: v.StringSchema<undefined>;
+					/**
+					 * Optional MIME type for the icon.
+					 */
+					readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+					/**
+					 * Optional array of strings that specify sizes at which the icon can be used.
+					 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+					 *
+					 * If not provided, the client should assume that the icon can be used at any size.
+					 */
+					readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+				}, undefined>, undefined>, undefined>;
+				readonly version: v.StringSchema<undefined>;
+				readonly websiteUrl: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+				/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+				readonly name: v.StringSchema<undefined>;
+				/**
+				 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+				 * even by those unfamiliar with domain-specific terminology.
+				 *
+				 * If not provided, the name should be used for display (except for Tool,
+				 * where `annotations.title` should be given precedence over using `name`,
+				 * if present).
+				 */
+				readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			}, undefined>, undefined>;
+			readonly 'io.modelcontextprotocol/logLevel': v.OptionalSchema<v.PicklistSchema<["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"], undefined>, undefined>;
+			/**
+			 * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
+			 */
+			readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
+		}, undefined>;
+	}, undefined>;
+	const SubscriptionsListenRequestSchema: v.ObjectSchema<{
+		readonly method: v.LiteralSchema<"subscriptions/listen", undefined>;
+		readonly params: v.ObjectSchema<{
+			readonly _meta: v.LooseObjectSchema<{
+				readonly 'io.modelcontextprotocol/protocolVersion': v.StringSchema<undefined>;
+				readonly 'io.modelcontextprotocol/clientCapabilities': v.LooseObjectSchema<{
+					/**
+					 * Experimental, non-standard capabilities that the client supports.
+					 */
+					readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+					/**
+					 * Present if the client supports sampling from an LLM.
+					 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
+					 */
+					readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+					/**
+					 * Present if the client supports eliciting user input.
+					 * Accepts both the legacy bare `{}` shape and the modern `{ form?, url? }` sub-shapes.
+					 */
+					readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{
+						readonly form: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+						readonly url: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+					}, undefined>, undefined>;
+					/**
+					 * Extensions supported by the client, keyed by prefixed extension identifier.
+					 */
+					readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
+					/**
+					 * Present if the client supports listing roots.
+					 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
+					 */
+					readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
+						/**
+						 * Whether the client supports issuing notifications for changes to the roots list.
+						 */
+						readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+					}, undefined>, undefined>;
+				}, undefined>;
+				readonly 'io.modelcontextprotocol/clientInfo': v.OptionalSchema<v.ObjectSchema<{
+					/**
+					 * Optional set of sized icons that the client can display in a user interface.
+					 *
+					 * Clients that support rendering icons MUST support at least the following MIME types:
+					 * - `image/png` - PNG images (safe, universal compatibility)
+					 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+					 *
+					 * Clients that support rendering icons SHOULD also support:
+					 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+					 * - `image/webp` - WebP images (modern, efficient format)
+					 */
+					readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+						/**
+						 * URL or data URI for the icon.
+						 */
+						readonly src: v.StringSchema<undefined>;
+						/**
+						 * Optional MIME type for the icon.
+						 */
+						readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+						/**
+						 * Optional array of strings that specify sizes at which the icon can be used.
+						 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+						 *
+						 * If not provided, the client should assume that the icon can be used at any size.
+						 */
+						readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+					}, undefined>, undefined>, undefined>;
+					readonly version: v.StringSchema<undefined>;
+					readonly websiteUrl: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+					/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+					readonly name: v.StringSchema<undefined>;
+					/**
+					 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+					 * even by those unfamiliar with domain-specific terminology.
+					 *
+					 * If not provided, the name should be used for display (except for Tool,
+					 * where `annotations.title` should be given precedence over using `name`,
+					 * if present).
+					 */
+					readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+				}, undefined>, undefined>;
+				readonly 'io.modelcontextprotocol/logLevel': v.OptionalSchema<v.PicklistSchema<["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"], undefined>, undefined>;
+				/**
+				 * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
+				 */
+				readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
+			}, undefined>;
+			readonly notifications: v.ObjectSchema<{
+				readonly toolsListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+				readonly promptsListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+				readonly resourcesListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+				readonly resourceSubscriptions: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+			}, undefined>;
+		}, undefined>;
+	}, undefined>;
+	/**
+	 * Returned when the server gracefully closes a subscription stream.
+	 */
+	const SubscriptionsListenResultSchema: v.LooseObjectSchema<{
+		readonly resultType: v.LiteralSchema<"complete", undefined>;
+		readonly _meta: v.LooseObjectSchema<{
+			readonly "io.modelcontextprotocol/subscriptionId": v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
+		}, undefined>;
+	}, undefined>;
+	/**
+	 * The first notification emitted for a per-request subscription stream.
+	 */
+	const SubscriptionsAcknowledgedNotificationSchema: v.ObjectSchema<{
+		readonly method: v.LiteralSchema<"notifications/subscriptions/acknowledged", undefined>;
+		readonly params: v.ObjectSchema<{
+			readonly _meta: v.LooseObjectSchema<{
+				readonly "io.modelcontextprotocol/subscriptionId": v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>;
+			}, undefined>;
+			readonly notifications: v.ObjectSchema<{
+				readonly toolsListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+				readonly promptsListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+				readonly resourcesListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+				readonly resourceSubscriptions: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+			}, undefined>;
+		}, undefined>;
 	}, undefined>;
 	/**
 	 * The server's response to a prompts/list request from the client.
@@ -1109,7 +1686,7 @@ declare module 'tmcp' {
 	/**
 	 * The server's response to a prompts/get request from the client.
 	 */
-	const GetPromptResultSchema: v.ObjectSchema<{
+	const GetPromptResultSchema: v.LooseObjectSchema<{
 		/**
 		 * An optional description for the prompt.
 		 */
@@ -1357,20 +1934,18 @@ declare module 'tmcp' {
 			readonly description: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 			/**
 			 * A JSON Schema object defining the expected parameters for the tool.
+			 * Any JSON Schema 2020-12 keywords are allowed alongside the required `type: "object"` root.
 			 */
-			readonly inputSchema: v.ObjectSchema<{
+			readonly inputSchema: v.LooseObjectSchema<{
+				readonly $schema: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 				readonly type: v.LiteralSchema<"object", undefined>;
-				readonly properties: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
-				readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
 			}, undefined>;
 			/**
 			 * An optional JSON Schema object defining the structure of the tool's output returned in
-			 * the structuredContent field of a CallToolResult.
+			 * the structuredContent field of a CallToolResult. Any JSON Schema 2020-12 keywords are allowed.
 			 */
-			readonly outputSchema: v.OptionalSchema<v.ObjectSchema<{
-				readonly type: v.LiteralSchema<"object", undefined>;
-				readonly properties: v.OptionalSchema<v.ObjectSchema<{}, undefined>, undefined>;
-				readonly required: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+			readonly outputSchema: v.OptionalSchema<v.LooseObjectSchema<{
+				readonly $schema: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
 			}, undefined>, undefined>;
 			/**
 			 * Optional additional tool information.
@@ -1445,7 +2020,7 @@ declare module 'tmcp' {
 	/**
 	 * The server's response to a tool call.
 	 */
-	const CallToolResultSchema: v.ObjectSchema<{
+	const CallToolResultSchema: v.LooseObjectSchema<{
 		/**
 		 * A list of content objects that represent the result of the tool call.
 		 *
@@ -1599,11 +2174,11 @@ declare module 'tmcp' {
 			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>, undefined>, readonly []>;
 		/**
-		 * An object containing structured tool output.
+		 * Structured tool output. May be ANY JSON value, not only objects.
 		 *
-		 * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
+		 * If the Tool defines an outputSchema, this field MUST be present in the result and match the schema.
 		 */
-		readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		readonly structuredContent: v.OptionalSchema<v.UnknownSchema, undefined>;
 		/**
 		 * Whether the tool call ended in an error.
 		 *
@@ -1625,10 +2200,6 @@ declare module 'tmcp' {
 		 */
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
-	/**
-	 * The severity of a log message.
-	 */
-	const LoggingLevelSchema: v.PicklistSchema<["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"], undefined>;
 	const CreateMessageRequestParamsSchema: v.ObjectSchema<{
 		readonly messages: v.ArraySchema<v.ObjectSchema<{
 			readonly role: v.PicklistSchema<["user", "assistant"], undefined>;
@@ -1808,7 +2379,7 @@ declare module 'tmcp' {
 	/**
 	 * The server's response to a completion/complete request
 	 */
-	const CompleteResultSchema: v.ObjectSchema<{
+	const CompleteResultSchema: v.LooseObjectSchema<{
 		readonly completion: v.ObjectSchema<{
 			/**
 			 * An array of completion values. Must not exceed 100 items.
@@ -1837,7 +2408,8 @@ declare module 'tmcp' {
 		description?: string;
 	};
 	type InitializeRequestParams = v.InferInput<typeof InitializeRequestParamsSchema>;
-	type CallToolResult_1<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
+	type DiscoverRequestParams = v.InferInput<typeof DiscoverRequestParamsSchema>;
+	type CallToolResult_1<TStructuredContent> = v.InferInput<v.LooseObjectSchema<Omit<(typeof CallToolResultSchema)["entries"], "structuredContent" | "isError">, undefined>> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;
 		isError?: boolean;
 	} : ({
@@ -1862,6 +2434,11 @@ declare module 'tmcp' {
 	type ListPromptsResult_1 = v.InferInput<typeof ListPromptsResultSchema>;
 	type ListResourcesResult_1 = v.InferInput<typeof ListResourcesResultSchema>;
 	type ListResourceTemplatesResult_1 = v.InferInput<typeof ListResourceTemplatesResultSchema>;
+	type RequestId = v.InferInput<typeof RequestIdSchema>;
+	type SubscriptionFilter_1 = v.InferInput<typeof SubscriptionFilterSchema>;
+	type SubscriptionsListenResult_1 = v.InferInput<typeof SubscriptionsListenResultSchema>;
+	type SubscriptionsListenRequest_1 = v.InferInput<typeof JSONRPCRequestSchema> & v.InferInput<typeof SubscriptionsListenRequestSchema>;
+	type SubscriptionsAcknowledgedNotification_1 = v.InferInput<typeof JSONRPCNotificationSchema> & v.InferInput<typeof SubscriptionsAcknowledgedNotificationSchema>;
 	/**
 	 * @import { StandardSchemaV1 } from "@standard-schema/spec";
 	 * @import { JSONSchema7 } from "json-schema";
@@ -1888,20 +2465,54 @@ declare module 'tmcp/tool' {
 	 *
 	 * */
 	export function defineTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined>(options: ToolOptions<TSchema, TOutputSchema>, execute: TSchema extends undefined ? (() => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>) : ((input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>> | CallToolResult<TOutputSchema extends undefined ? undefined : StandardSchemaV1.InferInput<TOutputSchema extends undefined ? never : TOutputSchema>>)): CreatedTool<TSchema, TOutputSchema>;
-	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = CallToolResult_1<TStructuredContent>;
+	type CallToolResult<TStructuredContent> = CallToolResult_1<TStructuredContent>;
 	
-	type ToolOptions<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = {
+	type Replayable = {
+		/**
+		 * Allow tmcp to run this handler again after asking the client for input.
+		 *
+		 * For standalone requests, the server cannot pause and wait for the client.
+		 * It returns the questions to the client, which then retries the original
+		 * request with the answers. The handler starts again FROM THE TOP on every
+		 * retry. This means work done before an input call, such as database writes,
+		 * emails, or payments, may happen more than once. Set `replayable: true`
+		 * only when that work is safe to repeat or is delayed until all answers are
+		 * available.
+		 *
+		 * Without this flag, tmcp returns an error rather than risk repeating work.
+		 * This is a tmcp safety check, not an MCP requirement. Requests using an
+		 * open client session are unaffected because their handlers do not restart.
+		 */
+		replayable?: boolean;
+	};
+
+	type ToolOptions<
+		TSchema extends StandardSchemaV1 | undefined = undefined,
+		TOutputSchema extends StandardSchemaV1 | undefined = undefined,
+	> = {
 		name: string;
 		_meta?: Record<string, any>;
 		description: string;
 		title?: string;
 		enabled?: () => boolean | Promise<boolean>;
-		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-		outputSchema?: StandardSchemaV1.InferOutput<TOutputSchema extends undefined ? never : TOutputSchema> extends Record<string, unknown> ? TOutputSchema : never;
+		schema?: StandardSchemaV1.InferInput<
+			TSchema extends undefined ? never : TSchema
+		> extends Record<string, unknown>
+			? TSchema
+			: never;
+		outputSchema?: StandardSchemaV1.InferOutput<
+			TOutputSchema extends undefined ? never : TOutputSchema
+		> extends Record<string, unknown>
+			? TOutputSchema
+			: never;
 		annotations?: ToolAnnotations;
-	} & Icons;
+	} & Icons &
+		Replayable;
 
-	type CreatedTool<TSchema extends StandardSchemaV1 | undefined = undefined, TOutputSchema extends StandardSchemaV1 | undefined = undefined> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
+	type CreatedTool<
+		TSchema extends StandardSchemaV1 | undefined = undefined,
+		TOutputSchema extends StandardSchemaV1 | undefined = undefined,
+	> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
 	const IconsSchema: v.ObjectSchema<{
 		/**
 		 * Optional set of sized icons that the client can display in a user interface.
@@ -1984,7 +2595,7 @@ declare module 'tmcp/tool' {
 	/**
 	 * The server's response to a tool call.
 	 */
-	const CallToolResultSchema: v.ObjectSchema<{
+	const CallToolResultSchema: v.LooseObjectSchema<{
 		/**
 		 * A list of content objects that represent the result of the tool call.
 		 *
@@ -2138,11 +2749,11 @@ declare module 'tmcp/tool' {
 			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>, undefined>, readonly []>;
 		/**
-		 * An object containing structured tool output.
+		 * Structured tool output. May be ANY JSON value, not only objects.
 		 *
-		 * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
+		 * If the Tool defines an outputSchema, this field MUST be present in the result and match the schema.
 		 */
-		readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		readonly structuredContent: v.OptionalSchema<v.UnknownSchema, undefined>;
 		/**
 		 * Whether the tool call ended in an error.
 		 *
@@ -2165,7 +2776,7 @@ declare module 'tmcp/tool' {
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
 	type Icons = v.InferInput<typeof IconsSchema>;
-	type CallToolResult_1<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
+	type CallToolResult_1<TStructuredContent> = v.InferInput<v.LooseObjectSchema<Omit<(typeof CallToolResultSchema)["entries"], "structuredContent" | "isError">, undefined>> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;
 		isError?: boolean;
 	} : ({
@@ -2195,15 +2806,54 @@ declare module 'tmcp/prompt' {
 	 * */
 	export function definePrompt<TSchema extends StandardSchemaV1 | undefined = undefined>(options: PromptOptions<TSchema>, execute: TSchema extends undefined ? (() => Promise<GetPromptResult> | GetPromptResult) : (input: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>) => Promise<GetPromptResult> | GetPromptResult): CreatedPrompt<TSchema>;
 	
-	type PromptOptions<TSchema extends StandardSchemaV1 | undefined = undefined> = { 
-		name: string; 
-		description: string; 
-		title?: string; 
-		enabled?: ()=>boolean | Promise<boolean>; 
-		schema?: StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema> extends Record<string, unknown> ? TSchema : never;
-		complete?: NoInfer<TSchema extends undefined ? never : Partial<Record<keyof (StandardSchemaV1.InferInput<TSchema extends undefined ? never : TSchema>), Completion>>> 
-	} & Icons
-	type CreatedPrompt<TSchema extends StandardSchemaV1 | undefined = undefined> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
+	type Replayable = {
+		/**
+		 * Allow tmcp to run this handler again after asking the client for input.
+		 *
+		 * For standalone requests, the server cannot pause and wait for the client.
+		 * It returns the questions to the client, which then retries the original
+		 * request with the answers. The handler starts again FROM THE TOP on every
+		 * retry. This means work done before an input call, such as database writes,
+		 * emails, or payments, may happen more than once. Set `replayable: true`
+		 * only when that work is safe to repeat or is delayed until all answers are
+		 * available.
+		 *
+		 * Without this flag, tmcp returns an error rather than risk repeating work.
+		 * This is a tmcp safety check, not an MCP requirement. Requests using an
+		 * open client session are unaffected because their handlers do not restart.
+		 */
+		replayable?: boolean;
+	};
+
+	type PromptOptions<
+		TSchema extends StandardSchemaV1 | undefined = undefined,
+	> = {
+		name: string;
+		description: string;
+		title?: string;
+		enabled?: () => boolean | Promise<boolean>;
+		schema?: StandardSchemaV1.InferInput<
+			TSchema extends undefined ? never : TSchema
+		> extends Record<string, unknown>
+			? TSchema
+			: never;
+		complete?: NoInfer<
+			TSchema extends undefined
+				? never
+				: Partial<
+						Record<
+							keyof StandardSchemaV1.InferInput<
+								TSchema extends undefined ? never : TSchema
+							>,
+							Completion
+						>
+					>
+		>;
+	} & Icons &
+		Replayable;
+	type CreatedPrompt<
+		TSchema extends StandardSchemaV1 | undefined = undefined,
+	> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
 
 	type Completion = (
 		query: string,
@@ -2242,7 +2892,7 @@ declare module 'tmcp/prompt' {
 	/**
 	 * The server's response to a prompts/get request from the client.
 	 */
-	const GetPromptResultSchema: v.ObjectSchema<{
+	const GetPromptResultSchema: v.LooseObjectSchema<{
 		/**
 		 * An optional description for the prompt.
 		 */
@@ -2405,7 +3055,7 @@ declare module 'tmcp/prompt' {
 	/**
 	 * The server's response to a completion/complete request
 	 */
-	const CompleteResultSchema: v.ObjectSchema<{
+	const CompleteResultSchema: v.LooseObjectSchema<{
 		readonly completion: v.ObjectSchema<{
 			/**
 			 * An array of completion values. Must not exceed 100 items.
@@ -2446,15 +3096,37 @@ declare module 'tmcp/resource' {
 	 * */
 	export function defineResource(options: ResourceOptions, execute: (uri: string) => Promise<ReadResourceResult> | ReadResourceResult): CreatedResource;
 	
-	type ResourceOptions = { 
+	type Replayable = {
+		/**
+		 * Allow tmcp to run this handler again after asking the client for input.
+		 *
+		 * For standalone requests, the server cannot pause and wait for the client.
+		 * It returns the questions to the client, which then retries the original
+		 * request with the answers. The handler starts again FROM THE TOP on every
+		 * retry. This means work done before an input call, such as database writes,
+		 * emails, or payments, may happen more than once. Set `replayable: true`
+		 * only when that work is safe to repeat or is delayed until all answers are
+		 * available.
+		 *
+		 * Without this flag, tmcp returns an error rather than risk repeating work.
+		 * This is a tmcp safety check, not an MCP requirement. Requests using an
+		 * open client session are unaffected because their handlers do not restart.
+		 */
+		replayable?: boolean;
+	};
+
+	type ResourceOptions = {
 		name: string;
-		description: string; 
-		title?: string; 
+		description: string;
+		title?: string;
 		uri: string;
 		mimeType?: string;
-		enabled?: ()=>boolean | Promise<boolean>; 
-	} & Icons
-	type CreatedResource = ResourceOptions & { [created_resource]: created_resource };
+		enabled?: () => boolean | Promise<boolean>;
+	} & Icons &
+		Replayable;
+	type CreatedResource = ResourceOptions & {
+		[created_resource]: created_resource;
+	};
 	const IconsSchema: v.ObjectSchema<{
 		/**
 		 * Optional set of sized icons that the client can display in a user interface.
@@ -2488,7 +3160,7 @@ declare module 'tmcp/resource' {
 	/**
 	 * The server's response to a resources/read request from the client.
 	 */
-	const ReadResourceResultSchema: v.ObjectSchema<{
+	const ReadResourceResultSchema: v.LooseObjectSchema<{
 		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
 			/**
 			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
@@ -2600,17 +3272,46 @@ declare module 'tmcp/template' {
 	type ExtractURITemplateVariables<T extends string> =
 		ExtractVariablesFromTemplate<T>;
 	
-	type TemplateOptions<TUri extends string = string, TVariables extends ExtractURITemplateVariables<TUri> = ExtractURITemplateVariables<TUri>> = { 
+	type Replayable = {
+		/**
+		 * Allow tmcp to run this handler again after asking the client for input.
+		 *
+		 * For standalone requests, the server cannot pause and wait for the client.
+		 * It returns the questions to the client, which then retries the original
+		 * request with the answers. The handler starts again FROM THE TOP on every
+		 * retry. This means work done before an input call, such as database writes,
+		 * emails, or payments, may happen more than once. Set `replayable: true`
+		 * only when that work is safe to repeat or is delayed until all answers are
+		 * available.
+		 *
+		 * Without this flag, tmcp returns an error rather than risk repeating work.
+		 * This is a tmcp safety check, not an MCP requirement. Requests using an
+		 * open client session are unaffected because their handlers do not restart.
+		 */
+		replayable?: boolean;
+	};
+
+	type TemplateOptions<
+		TUri extends string = string,
+		TVariables extends ExtractURITemplateVariables<TUri> =
+			ExtractURITemplateVariables<TUri>,
+	> = {
 		name: string;
 		description: string;
 		title?: string;
 		mimeType?: string;
-		enabled?: ()=>boolean | Promise<boolean>;
+		enabled?: () => boolean | Promise<boolean>;
 		uri: TUri;
-		complete?: NoInfer<TVariables extends never ? never : Partial<Record<TVariables, Completion>>>;
-		list?: () => Promise<Array<Resource>> | Array<Resource> 
-	} & Icons
-	type CreatedTemplate<TUri extends string = string> = TemplateOptions<TUri> & { [created_template]: created_template };
+		complete?: NoInfer<
+			TVariables extends never
+				? never
+				: Partial<Record<TVariables, Completion>>
+		>;
+		list?: () => Promise<Array<Resource>> | Array<Resource>;
+	} & Icons &
+		Replayable;
+	type CreatedTemplate<TUri extends string = string> =
+		TemplateOptions<TUri> & { [created_template]: created_template };
 
 	type Completion = (
 		query: string,
@@ -2712,7 +3413,7 @@ declare module 'tmcp/template' {
 	/**
 	 * The server's response to a resources/read request from the client.
 	 */
-	const ReadResourceResultSchema: v.ObjectSchema<{
+	const ReadResourceResultSchema: v.LooseObjectSchema<{
 		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
 			/**
 			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
@@ -2759,7 +3460,7 @@ declare module 'tmcp/template' {
 	/**
 	 * The server's response to a completion/complete request
 	 */
-	const CompleteResultSchema: v.ObjectSchema<{
+	const CompleteResultSchema: v.LooseObjectSchema<{
 		readonly completion: v.ObjectSchema<{
 			/**
 			 * An array of completion values. Must not exceed 100 items.
@@ -2804,6 +3505,15 @@ declare module 'tmcp/adapter' {
 	export {};
 }
 
+declare module 'tmcp/method-policy' {
+	/**
+	 * Check whether a method may be called with per-request protocol metadata.
+	 * */
+	export function isPerRequestMethodAllowed(method: string): boolean;
+
+	export {};
+}
+
 declare module 'tmcp/utils' {
 	import * as v from 'valibot';
 	export namespace tool {
@@ -2825,7 +3535,7 @@ declare module 'tmcp/utils' {
 		
 		function media(type: "audio" | "image", data: string, mime_type: string): {
 			content: {
-				type: "image" | "audio";
+				type: "audio" | "image";
 				data: string;
 				mimeType: string;
 			}[];
@@ -2858,25 +3568,25 @@ declare module 'tmcp/utils' {
 				description?: string | undefined;
 				title?: string | undefined;
 				uri: string;
+				_meta?: ({} & {
+					[key: string]: unknown;
+				}) | undefined;
+				mimeType?: string | undefined;
 				icons?: {
 					src: string;
 					mimeType?: string | undefined;
 					sizes?: string[] | undefined;
 				}[] | undefined;
-				mimeType?: string | undefined;
-				_meta?: ({} & {
-					[key: string]: unknown;
-				}) | undefined;
 				type: "resource_link";
 			}[];
 		};
 		
 		function structured<T extends Record<string, unknown>>(obj: T): {
-			readonly content: [{
-				readonly type: "text";
-				readonly text: string;
-			}];
-			readonly structuredContent: T;
+			content: {
+				type: "text";
+				text: string;
+			}[];
+			structuredContent: T;
 		};
 		
 		function mix<T extends Record<string, unknown> | undefined = undefined>(results: Array<CallToolResult<undefined>>, obj?: T): CallToolResult<T>;
@@ -2945,7 +3655,7 @@ declare module 'tmcp/utils' {
 			messages: {
 				role: "user";
 				content: {
-					type: "image" | "audio";
+					type: "audio" | "image";
 					data: string;
 					mimeType: string;
 				};
@@ -2984,15 +3694,15 @@ declare module 'tmcp/utils' {
 					description?: string | undefined;
 					title?: string | undefined;
 					uri: string;
+					_meta?: ({} & {
+						[key: string]: unknown;
+					}) | undefined;
+					mimeType?: string | undefined;
 					icons?: {
 						src: string;
 						mimeType?: string | undefined;
 						sizes?: string[] | undefined;
 					}[] | undefined;
-					mimeType?: string | undefined;
-					_meta?: ({} & {
-						[key: string]: unknown;
-					}) | undefined;
 					type: "resource_link";
 				};
 			}[];
@@ -3148,7 +3858,7 @@ declare module 'tmcp/utils' {
 	/**
 	 * The server's response to a resources/read request from the client.
 	 */
-	const ReadResourceResultSchema: v.ObjectSchema<{
+	const ReadResourceResultSchema: v.LooseObjectSchema<{
 		readonly contents: v.ArraySchema<v.UnionSchema<[v.ObjectSchema<{
 			/**
 			 * The text of the item. This must only be set if the item can actually be represented as text (not binary data).
@@ -3309,7 +4019,7 @@ declare module 'tmcp/utils' {
 	/**
 	 * The server's response to a prompts/get request from the client.
 	 */
-	const GetPromptResultSchema: v.ObjectSchema<{
+	const GetPromptResultSchema: v.LooseObjectSchema<{
 		/**
 		 * An optional description for the prompt.
 		 */
@@ -3472,7 +4182,7 @@ declare module 'tmcp/utils' {
 	/**
 	 * The server's response to a tool call.
 	 */
-	const CallToolResultSchema: v.ObjectSchema<{
+	const CallToolResultSchema: v.LooseObjectSchema<{
 		/**
 		 * A list of content objects that represent the result of the tool call.
 		 *
@@ -3626,11 +4336,11 @@ declare module 'tmcp/utils' {
 			readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 		}, undefined>], undefined>, undefined>, readonly []>;
 		/**
-		 * An object containing structured tool output.
+		 * Structured tool output. May be ANY JSON value, not only objects.
 		 *
-		 * If the Tool defines an outputSchema, this field MUST be present in the result, and contain a JSON object that matches the schema.
+		 * If the Tool defines an outputSchema, this field MUST be present in the result and match the schema.
 		 */
-		readonly structuredContent: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+		readonly structuredContent: v.OptionalSchema<v.UnknownSchema, undefined>;
 		/**
 		 * Whether the tool call ended in an error.
 		 *
@@ -3652,7 +4362,7 @@ declare module 'tmcp/utils' {
 		 */
 		readonly _meta: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
 	}, undefined>;
-	type CallToolResult<TStructuredContent extends Record<string, unknown> | undefined> = Omit<v.InferInput<typeof CallToolResultSchema>, "structuredContent" | "isError"> & (undefined extends TStructuredContent ? {
+	type CallToolResult<TStructuredContent> = v.InferInput<v.LooseObjectSchema<Omit<(typeof CallToolResultSchema)["entries"], "structuredContent" | "isError">, undefined>> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;
 		isError?: boolean;
 	} : ({

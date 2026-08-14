@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { McpServer } from 'tmcp';
+import { describe, it, expect, vi } from 'vitest';
+import { McpServer, UNSUPPORTED_PROTOCOL_VERSION } from 'tmcp';
+import { JSONRPCErrorException } from 'json-rpc-2.0';
 import { InMemoryTransport } from '../src/index.js';
 import { ValibotJsonSchemaAdapter } from '@tmcp/adapter-valibot';
 import * as v from 'valibot';
@@ -1564,20 +1565,18 @@ describe('InMemoryTransport', () => {
 			);
 
 			const tool_call = session.callTool('response_tool');
-			let tool_call_response:
-				| Awaited<ReturnType<typeof session.callTool>>
-				| undefined;
-
-			// await a tick to ensure the tool call is processed and request is sent
-			await Promise.resolve();
-
-			if (session.lastRequest?.id) {
-				await session.response(session.lastRequest.id, {
-					action: 'accept',
-					content: { name: 'Test User' },
-				});
-				tool_call_response = await tool_call;
+			await vi.waitFor(() => {
+				expect(session.lastRequest).toBeDefined();
+			});
+			const request_id = session.lastRequest?.id;
+			if (request_id == undefined) {
+				throw new Error('Expected an elicitation request');
 			}
+			await session.response(request_id, {
+				action: 'accept',
+				content: { name: 'Test User' },
+			});
+			const tool_call_response = await tool_call;
 
 			expect(tool_call_response).toEqual({
 				content: [
@@ -1783,26 +1782,420 @@ describe('InMemoryTransport', () => {
 
 			session.callTool('response_tool');
 
-			// await a tick to ensure the tool call is processed and request is sent
-			await Promise.resolve();
-			expect(session.lastRequest).toStrictEqual({
-				id: 1,
-				jsonrpc: '2.0',
-				method: 'elicitation/create',
-				params: {
-					message: 'send a response',
-					requestedSchema: {
-						$schema: 'http://json-schema.org/draft-07/schema#',
-						properties: {
-							name: {
-								type: 'string',
+			await vi.waitFor(() => {
+				expect(session.lastRequest).toStrictEqual({
+					id: 1,
+					jsonrpc: '2.0',
+					method: 'elicitation/create',
+					params: {
+						message: 'send a response',
+						requestedSchema: {
+							$schema: 'http://json-schema.org/draft-07/schema#',
+							properties: {
+								name: {
+									type: 'string',
+								},
 							},
+							required: ['name'],
+							type: 'object',
 						},
-						required: ['name'],
-						type: 'object',
+					},
+				});
+			});
+		});
+	});
+});
+
+describe('StatelessClient', () => {
+	it('discovers and sends explicit metadata without initializing a session', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: { tools: {} },
+		});
+		let session_info;
+		let session_id;
+		server.tool(
+			{ name: 'context', description: 'Capture request context' },
+			() => {
+				session_info = server.ctx.sessionInfo;
+				session_id = server.ctx.sessionId;
+				return { content: [] };
+			},
+		);
+		const transport = new InMemoryTransport(server);
+		const client = transport.stateless({
+			clientCapabilities: { elicitation: {} },
+			clientInfo: client_info,
+		});
+
+		const discovery = await client.discover();
+		const result = await client.callTool('context');
+		const compatible_client: Pick<
+			ReturnType<typeof transport.session>,
+			| 'request'
+			| 'listTools'
+			| 'callTool'
+			| 'listPrompts'
+			| 'getPrompt'
+			| 'listResources'
+			| 'listResourceTemplates'
+			| 'readResource'
+			| 'complete'
+		> = client;
+
+		expect(discovery).toMatchObject({
+			resultType: 'complete',
+			supportedVersions: ['2026-07-28'],
+			capabilities: { tools: {} },
+		});
+		expect(result).toMatchObject({ resultType: 'complete' });
+		expect(compatible_client).toBe(client);
+		expect(session_info).toMatchObject({
+			clientCapabilities: { elicitation: {} },
+			clientInfo: client_info,
+		});
+		expect(session_id).toBeUndefined();
+	});
+
+	it('throws JSON-RPC errors with their MCP code and data', async () => {
+		const server = new McpServer(server_config, { adapter });
+		const transport = new InMemoryTransport(server);
+		const client = transport.stateless({
+			protocolVersion: '2025-11-25',
+		});
+
+		const request = client.discover();
+
+		await expect(request).rejects.toBeInstanceOf(JSONRPCErrorException);
+		await expect(request).rejects.toMatchObject({
+			code: UNSUPPORTED_PROTOCOL_VERSION,
+			data: {
+				requested: '2025-11-25',
+				supported: ['2026-07-28'],
+			},
+		});
+	});
+
+	it('preserves application metadata and owns reserved metadata', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: { tools: {} },
+		});
+		const receive = vi.spyOn(server, 'receive');
+		const transport = new InMemoryTransport(server);
+		const client = transport.stateless({
+			clientCapabilities: { elicitation: {} },
+			clientInfo: client_info,
+		});
+
+		await client.request('tools/list', {
+			_meta: {
+				application: 'kept',
+				'io.modelcontextprotocol/protocolVersion': 'overwritten',
+				'io.modelcontextprotocol/clientCapabilities': {},
+			},
+		});
+
+		expect(receive).toHaveBeenCalledWith(
+			expect.objectContaining({
+				params: expect.objectContaining({
+					_meta: {
+						application: 'kept',
+						'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+						'io.modelcontextprotocol/clientCapabilities': {
+							elicitation: {},
+						},
+						'io.modelcontextprotocol/clientInfo': client_info,
+					},
+				}),
+			}),
+			expect.anything(),
+		);
+	});
+
+	it('resolves MRTR input requests until the original request completes', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: { tools: {} },
+		});
+		let executions = 0;
+		server.tool(
+			{
+				name: 'ask',
+				description: 'Ask for a name',
+				replayable: true,
+			},
+			async () => {
+				executions += 1;
+				const answer = await server.elicitation(
+					'What is your name?',
+					v.object({ name: v.string() }),
+					{ key: 'name' },
+				);
+				return {
+					content: [
+						{
+							type: 'text',
+							text: String(answer.content?.name),
+						},
+					],
+				};
+			},
+		);
+		const transport = new InMemoryTransport(server);
+		const client = transport.stateless({
+			clientCapabilities: { elicitation: {} },
+		});
+		const respond = vi.fn((request, key) => {
+			expect(key).toBe('name');
+			expect(request.method).toBe('elicitation/create');
+			return { action: 'accept', content: { name: 'Ada' } };
+		});
+
+		await expect(client.callTool('ask')).rejects.toThrow(
+			'use requestWithInput() to complete MRTR requests',
+		);
+		const result = await client.requestWithInput<{
+			resultType: string;
+			content: Array<{ type: string; text: string }>;
+		}>('tools/call', { name: 'ask' }, respond);
+
+		expect(result).toMatchObject({
+			resultType: 'complete',
+			content: [{ type: 'text', text: 'Ada' }],
+		});
+		expect(respond).toHaveBeenCalledOnce();
+		expect(executions).toBe(3);
+	});
+
+	it('validates and enforces the MRTR round limit', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: { tools: {} },
+		});
+		let executions = 0;
+		server.tool(
+			{ name: 'ask', description: 'Ask for input', replayable: true },
+			async () => {
+				executions += 1;
+				await server.elicitation(
+					'Continue?',
+					v.object({ answer: v.string() }),
+				);
+				return { content: [] };
+			},
+		);
+		const transport = new InMemoryTransport(server);
+		const client = transport.stateless({
+			clientCapabilities: { elicitation: {} },
+		});
+		const respond = vi.fn(() => ({
+			action: 'accept',
+			content: { answer: 'yes' },
+		}));
+
+		await expect(
+			client.requestWithInput('tools/call', { name: 'ask' }, respond, {
+				maxRounds: 0,
+			}),
+		).rejects.toThrow('maxRounds must be a positive integer');
+		expect(executions).toBe(0);
+
+		await expect(
+			client.requestWithInput('tools/call', { name: 'ask' }, respond, {
+				maxRounds: 1,
+			}),
+		).rejects.toThrow('Request did not complete within 1 MRTR rounds');
+		expect(executions).toBe(1);
+		expect(respond).toHaveBeenCalledOnce();
+	});
+
+	it('resumes an MRTR exchange from initial request state and responses', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: { tools: {} },
+		});
+		const seen_states: unknown[] = [];
+		server.tool(
+			{ name: 'resume', description: 'Resume input', replayable: true },
+			async () => {
+				seen_states.push(server.ctx.requestState);
+				server.setRequestState({ saved: true });
+				const answer = await server.elicitation(
+					'Continue?',
+					v.object({ answer: v.string() }),
+					{ key: 'answer' },
+				);
+				return {
+					content: [
+						{ type: 'text', text: String(answer.content?.answer) },
+					],
+				};
+			},
+		);
+		const transport = new InMemoryTransport(server);
+		const client = transport.stateless({
+			clientCapabilities: { elicitation: {} },
+		});
+		const first_response = await server.receive({
+			jsonrpc: '2.0',
+			id: 1,
+			method: 'tools/call',
+			params: {
+				name: 'resume',
+				_meta: {
+					'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+					'io.modelcontextprotocol/clientCapabilities': {
+						elicitation: {},
 					},
 				},
-			});
+			},
+		});
+		if (!first_response || !('result' in first_response)) {
+			throw new Error('Expected an input-required result');
+		}
+		const first = first_response.result as {
+			resultType: 'input_required';
+			requestState: string;
+		};
+		const respond = vi.fn();
+
+		const result = await client.requestWithInput<{
+			resultType: string;
+			content: Array<{ type: string; text: string }>;
+		}>(
+			'tools/call',
+			{
+				name: 'resume',
+				requestState: first.requestState,
+				inputResponses: {
+					answer: {
+						action: 'accept',
+						content: { answer: 'resumed' },
+					},
+				},
+			},
+			respond,
+		);
+
+		expect(first.resultType).toBe('input_required');
+		expect(result).toMatchObject({
+			resultType: 'complete',
+			content: [{ type: 'text', text: 'resumed' }],
+		});
+		expect(seen_states).toEqual([undefined, { saved: true }]);
+		expect(respond).not.toHaveBeenCalled();
+	});
+
+	it('keeps concurrent stateless and session notifications on their routes', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: { logging: {}, tools: {} },
+		});
+		server.tool(
+			{
+				name: 'log',
+				description: 'Write one log',
+				schema: v.object({ label: v.string() }),
+			},
+			async ({ label }) => {
+				await Promise.resolve();
+				server.log('info', label);
+				return { content: [] };
+			},
+		);
+		const transport = new InMemoryTransport(server);
+		const second_transport = new InMemoryTransport(server);
+		const first = transport.stateless({ logLevel: 'info' });
+		const second = second_transport.stateless({ logLevel: 'info' });
+		const session = transport.session('legacy');
+		await session.initialize('2025-06-18', {}, client_info);
+		await session.setLogLevel('info');
+
+		await Promise.all([
+			first.callTool('log', { label: 'first' }),
+			second.callTool('log', { label: 'second' }),
+			session.callTool('log', { label: 'legacy' }),
+		]);
+
+		expect(first.sentMessages).toHaveLength(1);
+		expect(first.sentMessages[0]?.params).toMatchObject({ data: 'first' });
+		expect(second.sentMessages).toHaveLength(1);
+		expect(second.sentMessages[0]?.params).toMatchObject({
+			data: 'second',
+		});
+		expect(session.sentMessages).toHaveLength(1);
+		expect(session.sentMessages[0]?.params).toMatchObject({
+			data: 'legacy',
+		});
+	});
+
+	it('opens, delivers, and gracefully closes per-request subscriptions', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: { tools: { listChanged: true } },
+		});
+		const transport = new InMemoryTransport(server);
+		const client = transport.stateless();
+
+		const discovery = await client.discover();
+		expect(discovery.capabilities).toEqual({
+			tools: { listChanged: true },
+		});
+		const subscription = await client.listen({ toolsListChanged: true });
+		expect(subscription.acknowledgement).toMatchObject({
+			method: 'notifications/subscriptions/acknowledged',
+			params: {
+				notifications: { toolsListChanged: true },
+				_meta: {
+					'io.modelcontextprotocol/subscriptionId': subscription.id,
+				},
+			},
+		});
+
+		server.changed('tools');
+		await vi.waitFor(() =>
+			expect(subscription.notifications).toContainEqual(
+				expect.objectContaining({
+					method: 'notifications/tools/list_changed',
+				}),
+			),
+		);
+		await expect(subscription.close()).resolves.toMatchObject({
+			resultType: 'complete',
+			_meta: {
+				'io.modelcontextprotocol/subscriptionId': subscription.id,
+			},
+		});
+	});
+
+	it('cancels active subscriptions when a stateless client closes', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: {},
+		});
+		const transport = new InMemoryTransport(server);
+		const client = transport.stateless();
+		const subscription = await client.listen({});
+
+		await client.close();
+		await expect(subscription.close()).resolves.toMatchObject({
+			resultType: 'complete',
+		});
+	});
+
+	it('waits for active subscriptions when the transport closes', async () => {
+		const server = new McpServer(server_config, {
+			adapter,
+			capabilities: {},
+		});
+		const transport = new InMemoryTransport(server);
+		const subscription = await transport.stateless().listen({});
+
+		await transport.close();
+
+		await expect(subscription.close()).resolves.toMatchObject({
+			resultType: 'complete',
 		});
 	});
 });

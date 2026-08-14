@@ -582,7 +582,7 @@ server.tool(
 
 ##### `ctx`
 
-Access the current request context, including session ID, auth info, client metadata, and custom context.
+Access the current request context, including session ID, auth info, client metadata, custom context, and cooperative cancellation.
 
 ```javascript
 server.tool(
@@ -591,7 +591,11 @@ server.tool(
 		description: 'Tool that uses request context',
 	},
 	async () => {
-		const { sessionId, auth, sessionInfo, custom } = server.ctx;
+		const { sessionId, auth, sessionInfo, custom, signal } = server.ctx;
+
+		if (signal?.aborted) {
+			throw new Error('Request cancelled');
+		}
 
 		if (!custom?.userId) {
 			throw new Error('User authentication required');
@@ -613,6 +617,24 @@ server.tool(
 );
 ```
 
+Transports may provide `ctx.signal`. The HTTP transport aborts it when the request is aborted or its SSE response is closed. Handlers remain responsible for stopping their own work.
+
+##### `validateToolCall(name, args, validator)`
+
+Run transport or integration validation against a registered tool's converted input JSON Schema without executing the tool:
+
+```javascript
+const found = await server.validateToolCall(
+	'tool-name',
+	args,
+	async (inputSchema, originalArgs) => {
+		// Inspect the JSON Schema and original arguments.
+	},
+);
+```
+
+The method returns `false` without invoking the validator when the tool is unknown. For a registered tool it converts the input schema with the configured adapter, awaits the validator, and returns `true`. It does not run the tool's `enabled` callback, Standard Schema validation, or handler. Adapter and validator errors are propagated.
+
 ##### `receive(request, context?)`
 
 Process an incoming MCP request with optional context.
@@ -632,6 +654,24 @@ const response = server.receive(jsonRpcRequest, {
 	},
 	custom: customContextData,
 });
+```
+
+##### `hasMethod(method)`
+
+Check whether a JSON-RPC method is registered without invoking it:
+
+```javascript
+if (server.hasMethod('tools/list')) {
+	// The method exists in this server's registry.
+}
+```
+
+This reports every registered method, including methods limited to initialization-based or per-request clients. Transports that need protocol-specific filtering can use the dedicated method-policy entry point:
+
+```javascript
+import { isPerRequestMethodAllowed } from 'tmcp/method-policy';
+
+const available = server.hasMethod(method) && isPerRequestMethodAllowed(method);
 ```
 
 ##### `request({ method, params })`
@@ -674,12 +714,32 @@ const response = await server.request({
 Handle the resolved payload like any other JSON-RPC response—cast or (better) validate
 as needed when using this escape hatch.
 
-##### `elicitation(schema)`
+##### `elicitation(message, schema | url, options?)`
 
 Request client elicitation with schema validation.
 
 ```javascript
-const result = await server.elicitation(schema);
+const result = await server.elicitation(
+	'Please provide the requested data',
+	schema,
+);
+```
+
+Pass a URL instead of a schema to request URL elicitation:
+
+```javascript
+const result = await server.elicitation(
+	'Authorize access',
+	'https://example.com/authorize',
+);
+```
+
+Per-request input calls use an ordinal key by default. If conditional control flow can change the call order between retries, pass a stable key:
+
+```javascript
+const result = await server.elicitation('Confirm?', schema, {
+	key: 'confirm',
+});
 ```
 
 ##### `message(request)`
@@ -708,11 +768,13 @@ console.log(server.roots); // Access current roots
 
 ##### `changed(type, id)`
 
-Send notifications for subscriptions. When you call `changed('resource', uri)` the server now emits a broadcast notification, and the built-in transports look up which sessions subscribed to that URI before delivering it.
+Send change notifications. Session-negotiated clients keep the existing broadcast and `resources/subscribe` behavior. Per-request clients receive only changes matching the filter on their open `subscriptions/listen` request.
 
 ```javascript
 server.changed('resource', 'file://path/to/resource');
 ```
+
+Per-request subscription lifecycle belongs to the active transport. HTTP, stdio, and in-memory transports provide a stable connection origin and a `SubscriptionManager`; core validates filters, acknowledges the stream, and tags matching change notifications. Managers and their in-memory implementation are exported by `@tmcp/session-manager`, not configured on `McpServer`.
 
 ##### `progress(progress, total?, message?)`
 
@@ -782,8 +844,8 @@ Listen to server events.
 Available events:
 
 - `initialize` – fired after the client handshake with the parsed initialize payload
-- `send` – emitted for point-to-point responses/notifications destined for the active session
-- `broadcast` – emitted for fan-out notifications (for example `notifications/resources/updated`)
+- `send` – emitted for point-to-point responses/notifications; subscription messages include `subscriptionId` and `subscriptionOrigin` routing fields
+- `broadcast` – emitted for fan-out notifications; concrete template updates intended only for per-request subscribers include `subscriptionOnly: true`
 - `subscription` – raised when the client subscribes to a resource URI
 - `loglevelchange` – fired when the client requests a different log level
 
@@ -896,6 +958,7 @@ server.prompt(
 ```javascript
 // Elicitation - Request structured data from client
 const userData = await server.elicitation(
+	'Please provide your profile',
 	z.object({
 		name: z.string(),
 		age: z.number(),
@@ -1382,6 +1445,7 @@ server.prompt(
 	},
 	async (input) => {
 		const username = await server.elicitation(
+			'Which username should be used?',
 			v.object({
 				value: v.string(),
 			}),

@@ -1,6 +1,6 @@
 {
 	"name": "everything-server",
-	"version": "0.0.1",
+	"version": "0.0.2-next.0",
 	"description": "",
 	"private": true,
 	"main": "index.js",
@@ -13,7 +13,7 @@
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
-	"packageManager": "pnpm@10.27.0",
+	"packageManager": "pnpm@11.2.2",
 	"type": "module",
 	"dependencies": {
 		"@tmcp/adapter-valibot": "workspace:^",
@@ -24,7 +24,7 @@
 		"valibot": "^1.1.0"
 	},
 	"devDependencies": {
-		"@modelcontextprotocol/conformance": "^0.1.6",
+		"@modelcontextprotocol/conformance": "0.2.0-alpha.10",
 		"start-server-and-test": "^2.1.2"
 	}
 }

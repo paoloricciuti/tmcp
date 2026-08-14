@@ -1,9 +1,12 @@
 {
 	"name": "@tmcp/session-manager-postgres",
-	"version": "0.2.2",
+	"version": "0.3.0-next.0",
 	"license": "MIT",
 	"description": "",
 	"main": "src/index.js",
+	"files": [
+		"src/"
+	],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/paoloricciuti/tmcp.git",
@@ -11,7 +14,8 @@
 	},
 	"scripts": {
 		"generate:types": "dts-buddy && publint",
-		"prepublish": "pnpm generate:types"
+		"prepublish": "pnpm generate:types",
+		"test": "vitest --run"
 	},
 	"keywords": [
 		"tmcp",
@@ -27,7 +31,7 @@
 			"import": "./src/index.js"
 		}
 	},
-	"packageManager": "pnpm@10.27.0",
+	"packageManager": "pnpm@11.2.2",
 	"type": "module",
 	"publishConfig": {
 		"access": "public"
@@ -39,6 +43,7 @@
 	"devDependencies": {
 		"@types/pg": "^8.15.5",
 		"dts-buddy": "^0.6.2",
-		"publint": "^0.3.12"
+		"publint": "^0.3.12",
+		"vitest": "^4.0.0"
 	}
 }

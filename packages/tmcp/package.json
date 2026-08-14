@@ -1,6 +1,6 @@
 {
 	"name": "tmcp",
-	"version": "1.19.4",
+	"version": "1.20.0-next.2",
 	"description": "The main tmcp library",
 	"main": "src/index.js",
 	"type": "module",
@@ -46,6 +46,10 @@
 		"./adapter": {
 			"types": "./src/types/index.d.ts",
 			"default": "./src/adapter.js"
+		},
+		"./method-policy": {
+			"types": "./src/types/index.d.ts",
+			"default": "./src/method-policy.js"
 		},
 		"./utils": {
 			"types": "./src/types/index.d.ts",

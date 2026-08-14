@@ -3,6 +3,7 @@
 	"version": "1.0.0",
 	"description": "A monorepo for the tmcp project",
 	"private": true,
+	"packageManager": "pnpm@11.2.2",
 	"type": "module",
 	"scripts": {
 		"test": "pnpm -r test",

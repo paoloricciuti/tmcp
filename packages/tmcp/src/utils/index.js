@@ -81,15 +81,15 @@ export const tool = {
 	 * @param {T} obj
 	 */
 	structured(obj) {
-		return /** @type {const} */ ({
+		return {
 			content: [
 				{
-					type: 'text',
+					type: /** @type {const} */ ('text'),
 					text: JSON.stringify(obj),
 				},
 			],
 			structuredContent: obj,
-		});
+		};
 	},
 	/**
 	 * @template {Record<string, unknown> | undefined} [T=undefined]

@@ -2,8 +2,12 @@
 	"version": 3,
 	"file": "index.d.ts",
 	"names": [
+		"StatelessSubscription",
+		"StatelessClient",
 		"Session",
-		"InMemoryTransport"
+		"InMemoryTransport",
+		"InputRequest",
+		"Client"
 	],
 	"sources": [
 		"../index.js"
@@ -11,6 +15,6 @@
 	"sourcesContent": [
 		null
 	],
-	"mappings": ";;;cAUaA,OAAOA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cAqXPC,iBAAiBA",
+	"mappings": ";;;;cA+JaA,qBAAqBA;;;;;;;;;;;;;;;;;;;;;;;;;;;cAsErBC,eAAeA;;;;;;;;;;;;;;;;;;;;;;;;;cAsIfC,OAAOA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;cA2PPC,iBAAiBA;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;aAjkBsCC,YAAYA;;;;;;;;;;;;;;OAW1EC,MAAMA",
 	"ignoreList": []
 }
