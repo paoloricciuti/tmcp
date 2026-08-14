@@ -1,0 +1,17 @@
+{
+	"version": 3,
+	"file": "index.d.ts",
+	"names": [
+		"CliTransport",
+		"OutputMode",
+		"ToolOptions"
+	],
+	"sources": [
+		"../index.js"
+	],
+	"sourcesContent": [
+		null
+	],
+	"mappings": ";;;cA4VaA,YAAYA;;;;;;;aAjVgCC,UAAUA;aAIZC,WAAWA",
+	"ignoreList": []
+}
