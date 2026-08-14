@@ -743,6 +743,10 @@ const PerRequestMetaSchema = v.looseObject({
 	'io.modelcontextprotocol/logLevel': v.optional(LoggingLevelSchema),
 });
 
+export const DiscoverRequestParamsSchema = v.looseObject({
+	_meta: PerRequestMetaSchema,
+});
+
 /**
  * Open a long-lived stream for server notifications.
  */
@@ -1836,6 +1840,9 @@ export const ServerResultSchema = v.pipe(
  */
 /**
  * @typedef {v.InferInput<typeof InitializeRequestParamsSchema>} InitializeRequestParams
+ */
+/**
+ * @typedef {v.InferInput<typeof DiscoverRequestParamsSchema>} DiscoverRequestParams
  */
 /**
  * @template TStructuredContent

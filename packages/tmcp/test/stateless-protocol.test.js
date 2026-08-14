@@ -262,6 +262,22 @@ describe('stateless protocol (2026-07-28)', () => {
 	});
 
 	describe('server/discover', () => {
+		it('emits a discover event with the request params', async () => {
+			const server = create_server();
+			const listener = vi.fn();
+			server.on('discover', (discover_request) => {
+				expect(discover_request._meta[PV]).toBe(MODERN);
+				expect(discover_request._meta[CC]).toEqual({});
+				listener(discover_request);
+			});
+			const discovery_request = stateless_request('server/discover');
+
+			await server.receive(discovery_request);
+
+			expect(listener).toHaveBeenCalledOnce();
+			expect(listener).toHaveBeenCalledWith(discovery_request.params);
+		});
+
 		it('returns the DiscoverResult shape', async () => {
 			const server = create_server({
 				instructions: 'use it wisely',

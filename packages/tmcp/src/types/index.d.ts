@@ -600,6 +600,7 @@ declare module 'tmcp' {
 			subscriptionOnly?: boolean;
 		}) => void;
 		initialize: (initialize_request: InitializeRequestParams) => void;
+		discover: (discover_request: DiscoverRequestParams) => void;
 		subscription: (subscriptions_request: {
 			uri: string;
 			action?: 'add' | 'remove';
@@ -1392,6 +1393,92 @@ declare module 'tmcp' {
 		readonly promptsListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		readonly resourcesListChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
 		readonly resourceSubscriptions: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+	}, undefined>;
+	const DiscoverRequestParamsSchema: v.LooseObjectSchema<{
+		readonly _meta: v.LooseObjectSchema<{
+			readonly 'io.modelcontextprotocol/protocolVersion': v.StringSchema<undefined>;
+			readonly 'io.modelcontextprotocol/clientCapabilities': v.LooseObjectSchema<{
+				/**
+				 * Experimental, non-standard capabilities that the client supports.
+				 */
+				readonly experimental: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				/**
+				 * Present if the client supports sampling from an LLM.
+				 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
+				 */
+				readonly sampling: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				/**
+				 * Present if the client supports eliciting user input.
+				 * Accepts both the legacy bare `{}` shape and the modern `{ form?, url? }` sub-shapes.
+				 */
+				readonly elicitation: v.OptionalSchema<v.LooseObjectSchema<{
+					readonly form: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+					readonly url: v.OptionalSchema<v.LooseObjectSchema<{}, undefined>, undefined>;
+				}, undefined>, undefined>;
+				/**
+				 * Extensions supported by the client, keyed by prefixed extension identifier.
+				 */
+				readonly extensions: v.OptionalSchema<v.RecordSchema<v.StringSchema<undefined>, v.LooseObjectSchema<{}, undefined>, undefined>, undefined>;
+				/**
+				 * Present if the client supports listing roots.
+				 * @deprecated in the per-request (2026-07-28) protocol; still fully supported for session-negotiated clients.
+				 */
+				readonly roots: v.OptionalSchema<v.LooseObjectSchema<{
+					/**
+					 * Whether the client supports issuing notifications for changes to the roots list.
+					 */
+					readonly listChanged: v.OptionalSchema<v.BooleanSchema<undefined>, undefined>;
+				}, undefined>, undefined>;
+			}, undefined>;
+			readonly 'io.modelcontextprotocol/clientInfo': v.OptionalSchema<v.ObjectSchema<{
+				/**
+				 * Optional set of sized icons that the client can display in a user interface.
+				 *
+				 * Clients that support rendering icons MUST support at least the following MIME types:
+				 * - `image/png` - PNG images (safe, universal compatibility)
+				 * - `image/jpeg` (and `image/jpg`) - JPEG images (safe, universal compatibility)
+				 *
+				 * Clients that support rendering icons SHOULD also support:
+				 * - `image/svg+xml` - SVG images (scalable but requires security precautions)
+				 * - `image/webp` - WebP images (modern, efficient format)
+				 */
+				readonly icons: v.OptionalSchema<v.ArraySchema<v.ObjectSchema<{
+					/**
+					 * URL or data URI for the icon.
+					 */
+					readonly src: v.StringSchema<undefined>;
+					/**
+					 * Optional MIME type for the icon.
+					 */
+					readonly mimeType: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+					/**
+					 * Optional array of strings that specify sizes at which the icon can be used.
+					 * Each string should be in WxH format (e.g., `"48x48"`, `"96x96"`) or `"any"` for scalable formats like SVG.
+					 *
+					 * If not provided, the client should assume that the icon can be used at any size.
+					 */
+					readonly sizes: v.OptionalSchema<v.ArraySchema<v.StringSchema<undefined>, undefined>, undefined>;
+				}, undefined>, undefined>, undefined>;
+				readonly version: v.StringSchema<undefined>;
+				readonly websiteUrl: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+				/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
+				readonly name: v.StringSchema<undefined>;
+				/**
+				 * Intended for UI and end-user contexts — optimized to be human-readable and easily understood,
+				 * even by those unfamiliar with domain-specific terminology.
+				 *
+				 * If not provided, the name should be used for display (except for Tool,
+				 * where `annotations.title` should be given precedence over using `name`,
+				 * if present).
+				 */
+				readonly title: v.OptionalSchema<v.StringSchema<undefined>, undefined>;
+			}, undefined>, undefined>;
+			readonly 'io.modelcontextprotocol/logLevel': v.OptionalSchema<v.PicklistSchema<["debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"], undefined>, undefined>;
+			/**
+			 * If specified, the caller is requesting out-of-band progress notifications for this request (as represented by notifications/progress). The value of this parameter is an opaque token that will be attached to any subsequent notifications. The receiver is not obligated to provide these notifications.
+			 */
+			readonly progressToken: v.OptionalSchema<v.UnionSchema<[v.StringSchema<undefined>, v.SchemaWithPipe<readonly [v.NumberSchema<undefined>, v.IntegerAction<number, undefined>]>], undefined>, undefined>;
+		}, undefined>;
 	}, undefined>;
 	const SubscriptionsListenRequestSchema: v.ObjectSchema<{
 		readonly method: v.LiteralSchema<"subscriptions/listen", undefined>;
@@ -2321,6 +2408,7 @@ declare module 'tmcp' {
 		description?: string;
 	};
 	type InitializeRequestParams = v.InferInput<typeof InitializeRequestParamsSchema>;
+	type DiscoverRequestParams = v.InferInput<typeof DiscoverRequestParamsSchema>;
 	type CallToolResult_1<TStructuredContent> = v.InferInput<v.LooseObjectSchema<Omit<(typeof CallToolResultSchema)["entries"], "structuredContent" | "isError">, undefined>> & (undefined extends TStructuredContent ? {
 		structuredContent?: undefined;
 		isError?: boolean;

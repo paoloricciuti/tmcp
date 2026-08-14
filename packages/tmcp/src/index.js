@@ -4,7 +4,7 @@
  * @import SqidsType from "sqids";
  * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType, SubscriptionFilter as SubscriptionFilterType, SubscriptionsListenRequest as SubscriptionsListenRequestType, SubscriptionsListenResult as SubscriptionsListenResultType, SubscriptionsAcknowledgedNotification as SubscriptionsAcknowledgedNotificationType } from "./validation/index.js";
+ * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType, SubscriptionFilter as SubscriptionFilterType, SubscriptionsListenRequest as SubscriptionsListenRequestType, SubscriptionsListenResult as SubscriptionsListenResultType, SubscriptionsAcknowledgedNotification as SubscriptionsAcknowledgedNotificationType, DiscoverRequestParams } from "./validation/index.js";
  * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents, AllSame, TemplateOptions, MrtrState, Subscription as SubscriptionType, SubscriptionCallbacks as SubscriptionCallbacksType, SubscriptionManager as SubscriptionManagerType, SubscriptionOrigin as SubscriptionOriginType } from "./internal/internal.js";
  * @import { CreatedTool, ToolOptions, CreatedPrompt, PromptOptions, CreatedResource, CreatedTemplate, ResourceOptions } from "./internal/internal.js";
  */
@@ -441,9 +441,15 @@ export class McpServer {
 		this.#server.addMethod('notifications/initialized', () => {
 			return null;
 		});
-		this.#server.addMethod('server/discover', () => {
+		this.#server.addMethod('server/discover', (discover_request) => {
 			// only reachable for per-request (stateless) requests thanks to
 			// the method policy guard in `receive`
+			this.#event_target.dispatchEvent(
+				event(
+					'discover',
+					/** @type {DiscoverRequestParams} */ (discover_request),
+				),
+			);
 			return {
 				supportedVersions: this.#enabled_protocol_versions(),
 				capabilities: this.#discover_capabilities(),
