@@ -1,5 +1,26 @@
 # @tmcp/transport-http
 
+## 0.9.0
+
+### Minor Changes
+
+- a6b9606: feat: add the core per-request subscription model
+
+    Implement `subscriptions/listen` for MCP `2026-07-28`, including capability-based filter acknowledgment, subscription-ID metadata, independent concurrent streams, change filtering, cancellation, and graceful completion. Subscription managers are transport-owned, with an in-memory default and a distributed pub/sub-compatible create/send/close contract in `@tmcp/session-manager`. HTTP assigns every listen stream an opaque internal origin instead of trusting `Mcp-Session-Id`; stdio and in-memory transports own equivalent local routing. Existing session-negotiated resource subscriptions and broadcasts remain unchanged.
+    HTTP transports accept all origins by default with a warning on the first implicit cross-origin request. Configure an explicit allowlist to restrict access, or `true` to intentionally allow every origin without a warning. This request policy remains independent from CORS response configuration. The legacy SSE transport remains deprecated and receives only lifecycle compatibility changes.
+
+- 79e445e: feat: implement strict MCP 2026-07-28 HTTP requests
+
+    Classify sessionless requests before accessing session state, require and validate the protocol, method, name, and annotated tool parameter headers, and return protocol errors with their required HTTP status before opening SSE. Successful requests remain request-scoped SSE streams, now with proxy buffering disabled and cooperative cancellation exposed through `server.ctx.signal`. Initialization-based session behavior remains available on the same transport.
+
+    Add `McpServer.hasMethod()`, `McpServer.validateToolCall()`, the `tmcp/method-policy` entry point, and `getPerRequestProtocolVersions()` so transports can reuse core registration, method policy, schema, and version behavior without executing handlers. The in-memory transport now uses the same exported per-request version list.
+
+### Patch Changes
+
+- Updated dependencies [a6b9606]
+- Updated dependencies [149b730]
+    - @tmcp/session-manager@0.3.0
+
 ## 0.9.0-next.0
 
 ### Minor Changes

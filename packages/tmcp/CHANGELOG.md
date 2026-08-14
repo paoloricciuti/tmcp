@@ -1,5 +1,55 @@
 # tmcp
 
+## 1.20.0
+
+### Minor Changes
+
+- a6b9606: feat: add the core per-request subscription model
+
+    Implement `subscriptions/listen` for MCP `2026-07-28`, including capability-based filter acknowledgment, subscription-ID metadata, independent concurrent streams, change filtering, cancellation, and graceful completion. Subscription managers are transport-owned, with an in-memory default and a distributed pub/sub-compatible create/send/close contract in `@tmcp/session-manager`. HTTP assigns every listen stream an opaque internal origin instead of trusting `Mcp-Session-Id`; stdio and in-memory transports own equivalent local routing. Existing session-negotiated resource subscriptions and broadcasts remain unchanged.
+    HTTP transports accept all origins by default with a warning on the first implicit cross-origin request. Configure an explicit allowlist to restrict access, or `true` to intentionally allow every origin without a warning. This request policy remains independent from CORS response configuration. The legacy SSE transport remains deprecated and receives only lifecycle compatibility changes.
+
+- f81f7ca: feat: MRTR for the per-request (stateless) `2026-07-28` protocol
+
+    `server.elicitation()` and `server.message()` now work on per-request (stateless) requests. Since there is no server→client JSON-RPC channel, an input call without a matching response ends the request with a successful `InputRequiredResult` (`resultType: 'input_required'`, keyed `inputRequests`, optional opaque `requestState`); the client fulfills the requests and retries the original request with `inputResponses` (and the echoed `requestState`) in the params. Only `tools/call`, `prompts/get` and `resources/read` participate. Session-negotiated requests are unaffected by MRTR and keep the awaitable path.
+    - **Replay acknowledgment gate**: on a stateless retry the handler re-executes FROM THE TOP, so side effects before an input call run once per attempt. A stateless request that reaches `elicitation()`/`message()` fails with a structured error unless the tool/prompt/resource/template definition sets the new `replayable: true` flag, which asserts that code before the handler's input points is idempotent or deferred. This gate is a tmcp safety measure, not a spec requirement.
+    - **Keys**: input requests/responses are keyed maps. Default keys are per-execution ordinals (`"1"`, `"2"`, … reset each attempt) so straight-line handlers work unchanged; handlers with conditional control flow can pass a stable key via the new additive options argument: `elicitation(message, schema, { key })` / `message(request, { key })`. Responses are validated per key; unrelated extra entries are ignored per spec.
+    - **`requestState`**: tmcp carries validated answers forward so clients only need to answer the latest `inputRequests`; handlers can also persist their own data with `server.setRequestState(state)` and read it back via `server.ctx.requestState`. Both are serialized through the new pluggable `requestStateCodec` server option. ⚠️ The default codec is plain `JSON.stringify`/`JSON.parse` with NO integrity protection — round-tripped state is attacker-controlled; plug a signed/encrypted codec if you need to trust it. Encoded state is size-bounded in both directions.
+    - **`isInputRequired(error)`**: new exported helper. The stateless input flow works by throwing an internal signal that must reach the dispatch boundary; broad `catch` blocks in handlers must rethrow it (a swallowed signal is detected and fails the request with a descriptive error).
+    - `inputResponses`/`requestState` params on non-MRTR methods are rejected with `-32602`; input-required results never carry cache fields (`ttlMs`/`cacheScope`).
+    - Roots are never emitted as input requests (deprecated in `2026-07-28`); the low-level `request()` stays blocked on stateless requests.
+    - Elicitation decline and cancel responses now bypass content-schema validation because those valid responses carry no content.
+    - Stateless input calls outside `tools/call`, `prompts/get`, and `resources/read` now fail immediately instead of falling through to an unavailable server-to-client channel. Stateless roots requests are rejected for the same reason, and MRTR-only retry fields are rejected on session-negotiated requests.
+    - Carried elicitation answers retain their original wire values, so schemas that coerce or transform input are applied exactly once per handler attempt. Form elicitation also requires the client’s `elicitation.form` capability (an empty elicitation capability remains backward-compatible form support), and outgoing form schemas are checked against MCP’s flat primitive-field restrictions.
+    - URL elicitation also participates in stateless retries through `elicitation(message, url, { key? })`; its keyed `inputRequest` uses `{ mode: 'url', message, url }` and accepts an action-only response without applying form validation. Client-supplied form content is removed from URL responses before handlers or retry state can observe it.
+    - Failed input-request preparation no longer leaves a stale pending request or reserved key, so handlers can catch an invalid URL/schema error and either return a fallback or retry the key safely.
+    - Invalid elicitation and sampling answers are removed before their validation errors reach the handler, allowing recovery code to ask again with the same key instead of re-consuming the bad answer or triggering a duplicate-key error.
+
+- 79e445e: feat: implement strict MCP 2026-07-28 HTTP requests
+
+    Classify sessionless requests before accessing session state, require and validate the protocol, method, name, and annotated tool parameter headers, and return protocol errors with their required HTTP status before opening SSE. Successful requests remain request-scoped SSE streams, now with proxy buffering disabled and cooperative cancellation exposed through `server.ctx.signal`. Initialization-based session behavior remains available on the same transport.
+
+    Add `McpServer.hasMethod()`, `McpServer.validateToolCall()`, the `tmcp/method-policy` entry point, and `getPerRequestProtocolVersions()` so transports can reuse core registration, method policy, schema, and version behavior without executing handlers. The in-memory transport now uses the same exported per-request version list.
+
+- a449bc9: feat: support `2026-07-28` protocol version
+
+    Add support for the per-request (stateless) MCP protocol version `2026-07-28` (Phases 0–2), plus a few deliberate fixes:
+    - Per-request protocol handling is enabled by default for version `2026-07-28` (pinned to upstream spec tag `2026-07-28`, commit `5f5440bb26a62e2cf3440b92da5a667efa03b267`) and advertised via the new `server/discover` method. Requests carrying `_meta` protocol metadata with any other version receive `-32022 UNSUPPORTED_PROTOCOL_VERSION`. Legacy `initialize` negotiation is unchanged and `LATEST_PROTOCOL_VERSION` stays `2025-06-18`.
+    - New `cache` server option (`{ ttlMs?, cacheScope?, methods? }`, defaults `{ ttlMs: 0, cacheScope: 'private' }`) controlling the `ttlMs`/`cacheScope` fields required on cacheable per-request results.
+    - Per-request results are decorated at the wire boundary (`resultType`, `_meta['io.modelcontextprotocol/serverInfo']`, cache fields); handler return types are unchanged.
+    - New exported error constants `HEADER_MISMATCH` (-32020), `MISSING_REQUIRED_CLIENT_CAPABILITY` (-32021) and `UNSUPPORTED_PROTOCOL_VERSION` (-32022), and `McpError` is now exported from the package root.
+    - **Bug fix**: `McpError` now carries its real `code` (and optional `data`) onto JSON-RPC error responses. Previously every thrown `McpError` collapsed to `-32603` on the wire.
+    - **Bug fix (legacy-visible, deliberate)**: unknown prompt (`prompts/get`) and unknown resource (`resources/read`) names now return `-32602` (Invalid params) instead of the incorrect `-32601` (Method not found), for both session-negotiated and per-request profiles.
+    - **Bug fix**: the advertised supported protocol version list no longer includes `2024-10-07` — it appeared in one of two disagreeing internal lists and was never actually negotiable. `validation/version.js` is now the single source of truth.
+    - Client/server capability schemas now accept `extensions` maps and the modern elicitation `{ form?, url? }` sub-shapes (legacy bare `{}` still means form support). URL elicitation is available through `server.elicitation(message, url, options?)` and sends the published `{ mode: 'url', message, url }` request shape; form and URL capabilities are checked independently, malformed transport-provided capability values fail cleanly, and form validation supports the complete published primitive/single-select/multi-select schema subset. Extra JSON Schema keywords emitted by adapters are removed from outgoing elicitation requests instead of rejecting the request or sending unsupported fields. Tool `inputSchema`/`outputSchema` wire schemas accept any JSON Schema 2020-12 keywords, and `structuredContent` may be any JSON value — both at runtime and at the type level (the `CallToolResult` generic no longer constrains `structuredContent` to objects; a widening, so existing tools are unaffected).
+    - Stateless logging is advertised through `server/discover` and follows the request's explicit `io.modelcontextprotocol/logLevel`. Requests that omit it receive no log notifications and never inherit a server default, transport session level, or earlier request level; session-negotiated logging behavior is unchanged.
+    - Result wire schemas were loosened (`v.object` → `v.looseObject`), so unknown top-level fields returned by handlers are now passed through to the client instead of being silently stripped. This is intentional: it is needed to preserve `resultType` extension values and forward-compatible result fields.
+
+### Patch Changes
+
+- f48b2eb: feat: add `discover` event emitted when a client calls `server/discover`
+- 1a9b90e: fix: tool result type
+
 ## 1.20.0-next.2
 
 ### Patch Changes
