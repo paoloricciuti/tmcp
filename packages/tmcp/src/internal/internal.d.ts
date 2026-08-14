@@ -15,6 +15,7 @@ import {
 	McpError,
 	SubscriptionFilter,
 	RequestId,
+	DiscoverRequestParams,
 } from '../validation/index.js';
 import { ExtractURITemplateVariables } from './uri-template.js';
 
@@ -309,6 +310,7 @@ export type McpEvents = {
 		subscriptionOnly?: boolean;
 	}) => void;
 	initialize: (initialize_request: InitializeRequestParams) => void;
+	discover: (discover_request: DiscoverRequestParams) => void;
 	subscription: (subscriptions_request: {
 		uri: string;
 		action?: 'add' | 'remove';
