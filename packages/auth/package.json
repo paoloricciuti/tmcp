@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/auth",
-	"version": "0.5.0-next.0",
+	"version": "0.5.0",
 	"license": "MIT",
 	"description": "OAuth 2.1 authorization helper for TMCP with MCP specification compliance",
 	"type": "module",

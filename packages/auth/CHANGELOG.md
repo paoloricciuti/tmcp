@@ -1,5 +1,11 @@
 # @tmcp/auth
 
+## 0.5.0
+
+### Minor Changes
+
+- e22828a: Conform authorization helpers to MCP `2026-07-28` by advertising and validating Client ID Metadata Documents and documenting Dynamic Client Registration deprecation.
+
 ## 0.5.0-next.0
 
 ### Minor Changes

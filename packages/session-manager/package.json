@@ -1,6 +1,6 @@
 {
 	"name": "@tmcp/session-manager",
-	"version": "0.3.0-next.0",
+	"version": "0.3.0",
 	"license": "MIT",
 	"description": "",
 	"main": "src/index.js",
