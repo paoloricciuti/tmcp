@@ -1,5 +1,11 @@
 # tmcp
 
+## 1.20.0-next.2
+
+### Patch Changes
+
+- f48b2eb: feat: add `discover` event emitted when a client calls `server/discover`
+
 ## 1.20.0-next.1
 
 ### Patch Changes
