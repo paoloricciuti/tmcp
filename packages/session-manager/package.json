@@ -5,7 +5,9 @@
 	"description": "",
 	"main": "src/index.js",
 	"files": [
-		"src/"
+		"src/",
+		"types/",
+		"!src/**/*.d.ts"
 	],
 	"repository": {
 		"type": "git",
@@ -13,7 +15,7 @@
 		"directory": "packages/session-manager"
 	},
 	"scripts": {
-		"generate:types": "dts-buddy && node scripts/abstractify.js && publint",
+		"generate:types": "generate-types && publint",
 		"prepublish": "pnpm generate:types",
 		"test": "vitest --run"
 	},
@@ -24,10 +26,10 @@
 		"session",
 		"manager"
 	],
-	"types": "./src/types/index.d.ts",
+	"types": "./types/index.d.ts",
 	"exports": {
 		".": {
-			"types": "./src/types/index.d.ts",
+			"types": "./types/index.d.ts",
 			"import": "./src/index.js"
 		}
 	},
@@ -40,10 +42,9 @@
 		"access": "public"
 	},
 	"devDependencies": {
-		"dts-buddy": "^0.6.2",
+		"@tmcp/internal-ts-helpers": "workspace:^",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^",
-		"@tmcp/internal-ts-helpers": "workspace:^",
 		"vitest": "^4.0.0"
 	},
 	"dependencies": {

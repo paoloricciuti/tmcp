@@ -5,7 +5,9 @@
 	"description": "",
 	"main": "src/index.js",
 	"files": [
-		"src/"
+		"src/",
+		"types/",
+		"!src/**/*.d.ts"
 	],
 	"repository": {
 		"type": "git",
@@ -13,7 +15,7 @@
 		"directory": "packages/session-manager-postgres"
 	},
 	"scripts": {
-		"generate:types": "dts-buddy && publint",
+		"generate:types": "generate-types && publint",
 		"prepublish": "pnpm generate:types",
 		"test": "vitest --run"
 	},
@@ -24,10 +26,10 @@
 		"session",
 		"manager"
 	],
-	"types": "./src/types/index.d.ts",
+	"types": "./types/index.d.ts",
 	"exports": {
 		".": {
-			"types": "./src/types/index.d.ts",
+			"types": "./types/index.d.ts",
 			"import": "./src/index.js"
 		}
 	},
@@ -38,12 +40,17 @@
 	},
 	"dependencies": {
 		"@tmcp/session-manager": "workspace:^",
+		"json-rpc-2.0": "^1.7.1",
 		"pg": "^8.16.3"
 	},
+	"peerDependencies": {
+		"tmcp": "^1.20.0-next.0 || ^1.20.0"
+	},
 	"devDependencies": {
+		"@tmcp/internal-ts-helpers": "workspace:^",
 		"@types/pg": "^8.15.5",
-		"dts-buddy": "^0.6.2",
 		"publint": "^0.3.12",
+		"tmcp": "workspace:^",
 		"vitest": "^4.0.0"
 	}
 }

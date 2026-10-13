@@ -1,3 +1,6 @@
+/**
+ * @import { SimplifiedHandlers } from '../src/types.js'
+ */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OAuth } from '../src/index.js';
 
@@ -6,6 +9,10 @@ const redirect_uri = 'https://client.example/callback';
 
 afterEach(() => vi.unstubAllGlobals());
 
+/**
+ * @param {SimplifiedHandlers['authorize']} authorize
+ * @returns {SimplifiedHandlers}
+ */
 function create_handlers(authorize) {
 	return {
 		authorize,

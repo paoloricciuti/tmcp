@@ -18,11 +18,16 @@ import {
 	DiscoverRequestParams,
 } from '../validation/index.js';
 import { ExtractURITemplateVariables } from './uri-template.js';
+import type { ChangedArgs } from '../index.js';
 
-declare const created_tool: unique symbol;
-declare const created_prompt: unique symbol;
-declare const created_resource: unique symbol;
-declare const created_template: unique symbol;
+// Global, as they were with the previous bundled declarations: the
+// declarations of already published libraries reference them by name.
+declare global {
+	const created_tool: unique symbol;
+	const created_prompt: unique symbol;
+	const created_resource: unique symbol;
+	const created_template: unique symbol;
+}
 
 export type AllSame<T, U> = [T] extends [U] ? true : false;
 
@@ -158,8 +163,7 @@ export type ResourceOptions = {
 
 export type TemplateOptions<
 	TUri extends string = string,
-	TVariables extends ExtractURITemplateVariables<TUri> =
-		ExtractURITemplateVariables<TUri>,
+	TVariables extends string = ExtractURITemplateVariables<TUri>,
 > = {
 	name: string;
 	description: string;
@@ -176,26 +180,13 @@ export type TemplateOptions<
 } & Icons &
 	Replayable;
 
-export type CreatedTool<
-	TSchema extends StandardSchemaV1 | undefined = undefined,
-	TOutputSchema extends StandardSchemaV1 | undefined = undefined,
-> = ToolOptions<TSchema, TOutputSchema> & { [created_tool]: created_tool };
-export type CreatedPrompt<
-	TSchema extends StandardSchemaV1 | undefined = undefined,
-> = PromptOptions<TSchema> & { [created_prompt]: created_prompt };
-export type CreatedResource = ResourceOptions & {
-	[created_resource]: created_resource;
-};
-export type CreatedTemplate<TUri extends string = string> =
-	TemplateOptions<TUri> & { [created_template]: created_template };
-
 export type Tool<
 	TSchema extends StandardSchemaV1 = StandardSchemaV1<any>,
 	TOutputSchema extends StandardSchemaV1 = StandardSchemaV1<any>,
 > = ToolOptions<TSchema, TOutputSchema> & {
 	execute: (
 		input?: StandardSchemaV1.InferInput<TSchema>,
-	) => Promise<CallToolResult> | CallToolResult;
+	) => Promise<CallToolResult<any>> | CallToolResult<any>;
 };
 
 export type Completion = (
@@ -242,7 +233,7 @@ export type CachePolicy = {
 export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	capabilities?: ServerCapabilities;
 	instructions?: string;
-	adapter: JsonSchemaAdapter<TSchema> | undefined;
+	adapter: JsonSchemaAdapter<NonNullable<TSchema>> | undefined;
 	pagination?: {
 		tools?: { size?: number };
 		resources?: { size?: number };
@@ -284,12 +275,6 @@ export type ServerOptions<TSchema extends StandardSchemaV1 | undefined> = {
 	};
 };
 
-export type ChangedArgs = {
-	resource: [id: string];
-	tools: [];
-	prompts: [];
-	resources: [];
-};
 
 type SubscriptionsKeysObj = {
 	[K in keyof ChangedArgs as ChangedArgs[K]['length'] extends 0

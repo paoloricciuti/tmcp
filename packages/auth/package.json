@@ -5,21 +5,23 @@
 	"description": "OAuth 2.1 authorization helper for TMCP with MCP specification compliance",
 	"type": "module",
 	"main": "src/index.js",
-	"types": "src/types/index.d.ts",
+	"types": "./types/index.d.ts",
 	"scripts": {
-		"generate:types": "dts-buddy && publint",
+		"generate:types": "generate-types && publint",
 		"prepublish": "pnpm generate:types",
 		"test": "vitest --run"
 	},
 	"exports": {
 		".": {
-			"types": "./src/types/index.d.ts",
+			"types": "./types/index.d.ts",
 			"default": "./src/index.js"
 		},
 		"./package.json": "./package.json"
 	},
 	"files": [
-		"src/**/*"
+		"src/**/*",
+		"types/**/*",
+		"!src/**/*.d.ts"
 	],
 	"peerDependencies": {
 		"tmcp": "^1.17.0 || ^1.20.0-next.0"
@@ -44,9 +46,8 @@
 		"directory": "packages/auth"
 	},
 	"devDependencies": {
-		"@types/node": "^24.0.15",
 		"@tmcp/internal-ts-helpers": "workspace:^",
-		"dts-buddy": "^0.6.2",
+		"@types/node": "^24.0.15",
 		"publint": "^0.3.12",
 		"tmcp": "workspace:^",
 		"vitest": "^4.0.0"

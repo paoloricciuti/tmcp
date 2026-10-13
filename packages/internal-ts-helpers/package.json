@@ -2,11 +2,14 @@
 	"name": "@tmcp/internal-ts-helpers",
 	"private": true,
 	"version": "1.0.0",
-	"main": "src/index.js",
 	"exports": {
-		".": {
-			"import": "./src/index.js"
-		}
+		"./check-consumer": "./src/check-consumer.js"
+	},
+	"bin": {
+		"generate-types": "src/cli.js"
+	},
+	"scripts": {
+		"test": "vitest --run"
 	},
 	"keywords": [],
 	"author": "",
@@ -15,6 +18,7 @@
 	"type": "module",
 	"devDependencies": {
 		"@types/node": "^24.1.0",
-		"typescript": "^5.8.3"
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.0"
 	}
 }

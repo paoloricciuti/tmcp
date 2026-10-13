@@ -1,6 +1,6 @@
 /**
  * @import { AuthInfo, OAuthTokens, OAuthClientInformationFull } from './types.js'
- * @import { ExchangeRequest, AuthorizeRequest, SimplifiedHandlers, ExchangeAuthorizationCodeRequest, ExchangeRefreshTokenRequest } from './oauth.js'
+ * @import { ExchangeRequest, AuthorizeRequest, SimplifiedHandlers, ExchangeAuthorizationCodeRequest, ExchangeRefreshTokenRequest } from './types.js'
  */
 
 import { AccessDeniedError, InvalidTokenError } from './errors.js';

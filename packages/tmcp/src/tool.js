@@ -1,6 +1,13 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
- * @import { ToolOptions, CreatedTool } from "./internal/internal.js";
+ * @import { ToolOptions } from "./internal/internal.js";
+ */
+
+/**
+ * A tool created with `defineTool`.
+ * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
+ * @template {StandardSchemaV1 | undefined} [TOutputSchema=undefined]
+ * @typedef {ToolOptions<TSchema, TOutputSchema> & { [created_tool]: typeof created_tool }} CreatedTool
  */
 
 /**

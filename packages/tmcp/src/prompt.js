@@ -1,7 +1,13 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
- * @import { PromptOptions, CreatedPrompt } from "./internal/internal.js";
+ * @import { PromptOptions } from "./internal/internal.js";
  * @import { GetPromptResult } from "./validation/index.js"
+ */
+
+/**
+ * A prompt created with `definePrompt`.
+ * @template {StandardSchemaV1 | undefined} [TSchema=undefined]
+ * @typedef {PromptOptions<TSchema> & { [created_prompt]: typeof created_prompt }} CreatedPrompt
  */
 
 /**

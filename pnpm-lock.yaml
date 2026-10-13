@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  dts-buddy: 07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b
-
 importers:
 
   .:
@@ -146,12 +143,12 @@ importers:
         specifier: ^2.0.0
         version: 2.1.29
     devDependencies:
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       '@types/node':
         specifier: ^24.0.13
         version: 24.10.4
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -168,9 +165,9 @@ importers:
         specifier: ^7.0.15
         version: 7.0.15
     devDependencies:
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       effect:
         specifier: ^3.16.12
         version: 3.19.12
@@ -193,9 +190,9 @@ importers:
         specifier: ^1.1.0
         version: 1.2.0(typescript@5.9.3)
     devDependencies:
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -215,9 +212,9 @@ importers:
         specifier: ^4.0.5
         version: 4.1.12
     devDependencies:
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -240,9 +237,9 @@ importers:
         specifier: ^3.24.6
         version: 3.25.0(zod@3.25.76)
     devDependencies:
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -271,9 +268,6 @@ importers:
       '@types/node':
         specifier: ^24.0.15
         version: 24.10.4
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -300,8 +294,11 @@ importers:
         specifier: ^24.1.0
         version: 24.10.4
       typescript:
-        specifier: ^5.8.3
+        specifier: ^5.9.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.0.0
+        version: 4.0.15(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
 
   packages/session-manager:
     dependencies:
@@ -312,9 +309,6 @@ importers:
       '@tmcp/internal-ts-helpers':
         specifier: workspace:^
         version: link:../internal-ts-helpers
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -330,16 +324,22 @@ importers:
       '@tmcp/session-manager':
         specifier: workspace:^
         version: link:../session-manager
+      json-rpc-2.0:
+        specifier: ^1.7.1
+        version: 1.7.1
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20241218.0
         version: 4.20251213.0
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       publint:
         specifier: ^0.3.12
         version: 0.3.16
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
       vitest:
         specifier: ^4.0.0
         version: 4.0.15(@types/node@25.0.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
@@ -349,19 +349,25 @@ importers:
       '@tmcp/session-manager':
         specifier: workspace:^
         version: link:../session-manager
+      json-rpc-2.0:
+        specifier: ^1.7.1
+        version: 1.7.1
       pg:
         specifier: ^8.16.3
         version: 8.16.3
     devDependencies:
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       '@types/pg':
         specifier: ^8.15.5
         version: 8.16.0
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.16
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
       vitest:
         specifier: ^4.0.0
         version: 4.0.15(@types/node@25.0.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
@@ -375,12 +381,15 @@ importers:
         specifier: ^5.8.2
         version: 5.10.0
     devDependencies:
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       publint:
         specifier: ^0.3.12
         version: 0.3.16
+      tmcp:
+        specifier: workspace:^
+        version: link:../tmcp
       vitest:
         specifier: ^4.0.0
         version: 4.0.15(@types/node@25.0.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
@@ -390,6 +399,9 @@ importers:
       '@standard-schema/spec':
         specifier: ^1.0.0
         version: 1.0.0
+      '@types/json-schema':
+        specifier: ^7.0.15
+        version: 7.0.15
       json-rpc-2.0:
         specifier: ^1.7.1
         version: 1.7.1
@@ -403,15 +415,12 @@ importers:
         specifier: ^1.1.0
         version: 1.2.0(typescript@5.9.3)
     devDependencies:
-      '@types/json-schema':
-        specifier: ^7.0.15
-        version: 7.0.15
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       '@types/node':
         specifier: ^24.0.13
         version: 24.10.4
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -440,12 +449,12 @@ importers:
       '@tmcp/auth':
         specifier: workspace:^
         version: link:../auth
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       '@types/node':
         specifier: ^24.0.15
         version: 24.10.4
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -471,12 +480,12 @@ importers:
       '@tmcp/adapter-valibot':
         specifier: workspace:^
         version: link:../adapter-valibot
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       '@types/node':
         specifier: ^24.9.2
         version: 24.10.4
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -502,12 +511,12 @@ importers:
       '@tmcp/auth':
         specifier: workspace:^
         version: link:../auth
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       '@types/node':
         specifier: ^24.9.1
         version: 24.10.4
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -521,12 +530,12 @@ importers:
         specifier: workspace:^
         version: link:../session-manager
     devDependencies:
+      '@tmcp/internal-ts-helpers':
+        specifier: workspace:^
+        version: link:../internal-ts-helpers
       '@types/node':
         specifier: ^24.0.13
         version: 24.10.4
-      dts-buddy:
-        specifier: ^0.6.2
-        version: 0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3)
       publint:
         specifier: ^0.3.12
         version: 0.3.16
@@ -2410,12 +2419,6 @@ packages:
     resolution: {integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==}
     engines: {node: '>=8'}
 
-  dts-buddy@0.6.2:
-    resolution: {integrity: sha512-KUmYrRKpVpjmnqM/JY93p1PWezMXodKCiMd5CFvfLtRCRc5i2GZiojrkVQXO2Dd8HeaU1C3sgTKDWxCEK5cyXA==}
-    hasBin: true
-    peerDependencies:
-      typescript: '>=5.0.4 <5.9'
-
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
     engines: {node: '>= 0.4'}
@@ -2523,6 +2526,7 @@ packages:
   eslint@9.39.2:
     resolution: {integrity: sha512-LEyamqS7W5HB3ujJyvi0HQK/dtVINZvd5mAAp9eT5S/ujByGjiZLCzPcHVzuXbpJDJF/cxwHlfceVUDZ2lnSTw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -4177,12 +4181,6 @@ packages:
 
   trough@2.2.0:
     resolution: {integrity: sha512-tmMpK00BjZiUyVyvrBK7knerNgmgvcV/KLVyuma/SC+TQN167GrMRciANTz09+k3zW8L8t60jWO1GpfkZdjTaw==}
-
-  ts-api-utils@1.4.3:
-    resolution: {integrity: sha512-i3eMG77UTMD0hZhgRS562pv83RC6ukSAC2GMNWc+9dieh/+jDM5u5YG+NHX6VNDRHQcHwmsTHctP9LhbC3WxVw==}
-    engines: {node: '>=16'}
-    peerDependencies:
-      typescript: '>=4.2.0'
 
   ts-node@10.9.2:
     resolution: {integrity: sha512-f0FFpIdcHgn8zcPSbf1dRevwt047YMnaiJM3u2w2RewrB+fob/zePZcrOyQoLMMO7aBIddLcQIEK5dYjkLnGrQ==}
@@ -6328,18 +6326,6 @@ snapshots:
   dir-glob@3.0.1:
     dependencies:
       path-type: 4.0.0
-
-  dts-buddy@0.6.2(patch_hash=07f8be04259d076d0f945b74969e6db1b33e74f59bb6ab476216dbb7c8dcd68b)(typescript@5.9.3):
-    dependencies:
-      '@jridgewell/source-map': 0.3.11
-      '@jridgewell/sourcemap-codec': 1.5.5
-      kleur: 4.1.5
-      locate-character: 3.0.0
-      magic-string: 0.30.21
-      sade: 1.8.1
-      tinyglobby: 0.2.15
-      ts-api-utils: 1.4.3(typescript@5.9.3)
-      typescript: 5.9.3
 
   dunder-proto@1.0.1:
     dependencies:
@@ -8558,10 +8544,6 @@ snapshots:
   trim-lines@3.0.1: {}
 
   trough@2.2.0: {}
-
-  ts-api-utils@1.4.3(typescript@5.9.3):
-    dependencies:
-      typescript: 5.9.3
 
   ts-node@10.9.2(@types/node@24.10.4)(typescript@5.9.3):
     dependencies:

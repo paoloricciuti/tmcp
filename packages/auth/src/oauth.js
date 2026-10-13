@@ -1,5 +1,5 @@
 /**
- * @import { AuthInfo, OAuthTokens, OAuthClientInformationFull, AuthorizationParams, OAuthTokenRevocationRequest, OAuthMetadata, OAuthProtectedResourceMetadata, RateLimitConfig } from './types.js'
+ * @import { AuthInfo, OAuthTokens, OAuthClientInformationFull, AuthorizationParams, OAuthTokenRevocationRequest, OAuthMetadata, OAuthProtectedResourceMetadata, RateLimitConfig, SimplifiedHandlers } from './types.js'
  * @import { OAuthRegisteredClientsStore } from './internal.js'
  */
 
@@ -28,48 +28,6 @@ import {
 } from './schemas.js';
 import { MemoryClientStore } from './memory-store.js';
 import { verifyChallenge } from 'pkce-challenge';
-
-/**
- * @typedef {Object} ExchangeAuthorizationCodeRequest
- * @property {OAuthClientInformationFull} client - Client information
- * @property {'authorization_code'} type - Grant type
- * @property {string} code - Authorization code (for authorization_code grants)
- * @property {string} [verifier] - PKCE code verifier (for authorization_code grants)
- * @property {string} [redirectUri] - Redirect URI (for authorization_code grants)
- * @property {string[]} [scopes] - Requested scopes
- * @property {URL} [resource] - Resource parameter
- */
-
-/**
- * @typedef {Object} ExchangeRefreshTokenRequest
- * @property {OAuthClientInformationFull} client - Client information
- * @property {'refresh_token'} type - Grant type
- * @property {string} refreshToken - Refresh token (for refresh_token grants)
- * @property {string[]} [scopes] - Requested scopes
- * @property {URL} [resource] - Resource parameter
- */
-
-/**
- * @typedef {ExchangeAuthorizationCodeRequest | ExchangeRefreshTokenRequest} ExchangeRequest
- */
-
-/**
- * @typedef {Object} AuthorizeRequest
- * @property {OAuthClientInformationFull} client - Client information
- * @property {string} redirectUri - Redirect URI
- * @property {string} [codeChallenge] - PKCE code challenge
- * @property {string} [state] - OAuth state parameter
- * @property {string[]} [scopes] - Requested scopes
- * @property {URL} [resource] - Resource parameter
- */
-
-/**
- * @typedef {Object} SimplifiedHandlers
- * @property {(authorize_request: AuthorizeRequest, http_request: Request) => Promise<Response>} authorize - Handle authorization requests
- * @property {(request: ExchangeRequest, http_request: Request) => Promise<OAuthTokens>} exchange - Handle token exchange
- * @property {(token: string, http_request: Request) => Promise<AuthInfo>} verify - Verify access tokens
- * @property {(client: OAuthClientInformationFull, data: {token: string, tokenType?: string}, http_request: Request) => Promise<void>} [revoke] - Revoke tokens
- */
 
 /**
  * @typedef {"GET" | "POST"} Methods
@@ -135,8 +93,8 @@ function parse_client_metadata_url(client_id) {
 }
 
 /**
- * @template {"you need to call `build` for the provider to take effect" | "built"} [T='you need to call `build` for the provider to take effect']
  * Main OAuth provider class - handles OAuth 2.1 requests with a clean fluent API
+ * @template {"you need to call `build` for the provider to take effect" | "built"} [T='you need to call `build` for the provider to take effect']
  */
 export class OAuth {
 	/**

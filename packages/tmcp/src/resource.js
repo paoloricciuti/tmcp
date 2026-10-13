@@ -1,6 +1,11 @@
 /**
- * @import { ResourceOptions, CreatedResource } from "./internal/internal.js";
+ * @import { ResourceOptions } from "./internal/internal.js";
  * @import { ReadResourceResult } from "./validation/index.js";
+ */
+
+/**
+ * A resource created with `defineResource`.
+ * @typedef {ResourceOptions & { [created_resource]: typeof created_resource }} CreatedResource
  */
 
 /**

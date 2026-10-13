@@ -1,8 +1,14 @@
 /* eslint-disable jsdoc/no-undefined-types */
 /**
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
- * @import { TemplateOptions, CreatedTemplate } from "./internal/internal.js";
+ * @import { TemplateOptions } from "./internal/internal.js";
  * @import { ReadResourceResult } from "./validation/index.js";
+ */
+
+/**
+ * A resource template created with `defineTemplate`.
+ * @template {string} [TUri=string]
+ * @typedef {TemplateOptions<TUri> & { [created_template]: typeof created_template }} CreatedTemplate
  */
 
 /**

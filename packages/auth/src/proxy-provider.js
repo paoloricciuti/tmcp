@@ -122,12 +122,12 @@ export class ProxyOAuthServerProvider {
 
 	/**
 	 * Get OAuth handlers for use with the new OAuth API
-	 * @returns {import('./oauth.js').SimplifiedHandlers}
+	 * @returns {import('./types.js').SimplifiedHandlers}
 	 */
 	handlers() {
 		return {
 			/**
-			 * @param {import('./oauth.js').AuthorizeRequest} request
+			 * @param {import('./types.js').AuthorizeRequest} request
 			 * @returns {Promise<Response>}
 			 */
 			authorize: async (request) => {
@@ -137,9 +137,11 @@ export class ProxyOAuthServerProvider {
 					client_id: request.client.client_id,
 					response_type: 'code',
 					redirect_uri: request.redirectUri,
-					code_challenge: request.codeChallenge,
-					code_challenge_method: 'S256',
 				});
+				if (request.codeChallenge) {
+					search_params.set('code_challenge', request.codeChallenge);
+					search_params.set('code_challenge_method', 'S256');
+				}
 
 				// Add optional parameters
 				if (request.state) search_params.set('state', request.state);
@@ -160,7 +162,7 @@ export class ProxyOAuthServerProvider {
 			},
 
 			/**
-			 * @param {import('./oauth.js').ExchangeRequest} request
+			 * @param {import('./types.js').ExchangeRequest} request
 			 * @returns {Promise<OAuthTokens>}
 			 */
 			exchange: async (request) => {
