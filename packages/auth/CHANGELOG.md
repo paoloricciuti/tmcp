@@ -1,5 +1,25 @@
 # @tmcp/auth
 
+## 0.5.1
+
+### Patch Changes
+
+- 0bb36e8: fix: export the types that appear in inferred types
+
+    Projects that emit declarations can export values created with `defineTool`, `definePrompt`, `defineResource` and `defineTemplate`, `OAuth` handlers and verifiers, and bound server methods without TS2742 errors. `tmcp/tool`, `tmcp/prompt`, `tmcp/resource` and `tmcp/template` now export `CreatedTool`, `CreatedPrompt`, `CreatedResource` and `CreatedTemplate`, and `tmcp` exports `McpEvents` and `ChangedArgs`. `@tmcp/auth` now exports `AuthInfo`, `SimplifiedHandlers` and the other types of its handlers and options.
+
+    The `tmcp` subpath entry points also resolve with `moduleResolution: "node"` again.
+
+- 0bb36e8: chore: generate the type declarations with `tsc`
+
+    The declarations are now in `types/`, one file per module, instead of a single bundled `src/types/index.d.ts`. The exported names are unchanged. `InMemorySubscriptionManager`, `InMemoryStreamSessionManager` and `InMemoryInfoSessionManager` can now be subclassed, and `tmcp` lists `@types/json-schema` as a dependency, since its declarations import it.
+
+    The bundled declarations hid that the packages are ESM-only: CommonJS projects using `module: "node16"`, or `module: "nodenext"` with TypeScript older than 5.8, now get TS1479 when importing them.
+
+- 0bb36e8: fix: don't send `code_challenge=undefined` from `ProxyOAuthServerProvider`
+
+    When the authorization request has no PKCE code challenge, the proxied authorization URL no longer contains `code_challenge=undefined&code_challenge_method=S256`: both parameters are omitted.
+
 ## 0.5.0
 
 ### Minor Changes
