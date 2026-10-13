@@ -50,5 +50,5 @@ export {
 	OAuthErrorResponseSchema,
 } from './schemas.js';
 
-// Type definitions (JSDoc imports)
-export {} from './types.js';
+// Type definitions
+export * from './types.js';

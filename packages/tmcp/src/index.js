@@ -2,11 +2,15 @@
 /**
  * @import { StandardSchemaV1 } from "@standard-schema/spec";
  * @import SqidsType from "sqids";
- * @import { JSONRPCRequest, JSONRPCParams } from "json-rpc-2.0";
+ * @import { JSONRPCRequest, JSONRPCParams, JSONRPCErrorResponse } from "json-rpc-2.0";
  * @import { ExtractURITemplateVariables } from "./internal/uri-template.js";
  * @import { CallToolResult as CallToolResultType, ReadResourceResult as ReadResourceResultType, GetPromptResult as GetPromptResultType, ServerInfo as ServerInfoType, ClientCapabilities as ClientCapabilitiesType, JSONRPCRequest as JSONRPCRequestType, JSONRPCResponse, CreateMessageRequestParams as CreateMessageRequestParamsType, CreateMessageResult as CreateMessageResultType, Resource as ResourceType, LoggingLevel as LoggingLevelType, ToolAnnotations, ClientInfo as ClientInfoType, ElicitResult as ElicitResultType, Icons as IconsType, JSONRPCMessage, InitializeResult as InitializeResultType, ListToolsResult as ListToolsResultType, ListPromptsResult as ListPromptsResultType, ListResourceTemplatesResult as ListResourceTemplatesResultType, ListResourcesResult as ListResourcesResultType, CompleteResult as CompleteResultType, SubscriptionFilter as SubscriptionFilterType, SubscriptionsListenRequest as SubscriptionsListenRequestType, SubscriptionsListenResult as SubscriptionsListenResultType, SubscriptionsAcknowledgedNotification as SubscriptionsAcknowledgedNotificationType, DiscoverRequestParams } from "./validation/index.js";
- * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, ChangedArgs, McpEvents, AllSame, TemplateOptions, MrtrState, Subscription as SubscriptionType, SubscriptionCallbacks as SubscriptionCallbacksType, SubscriptionManager as SubscriptionManagerType, SubscriptionOrigin as SubscriptionOriginType } from "./internal/internal.js";
- * @import { CreatedTool, ToolOptions, CreatedPrompt, PromptOptions, CreatedResource, CreatedTemplate, ResourceOptions } from "./internal/internal.js";
+ * @import { Tool, Completion, Prompt, StoredResource, ServerOptions, SubscriptionsKeys, McpEvents as McpEventsType, AllSame, TemplateOptions, MrtrState, Subscription as SubscriptionType, SubscriptionCallbacks as SubscriptionCallbacksType, SubscriptionManager as SubscriptionManagerType, SubscriptionOrigin as SubscriptionOriginType } from "./internal/internal.js";
+ * @import { ToolOptions, PromptOptions, ResourceOptions } from "./internal/internal.js";
+ * @import { CreatedTool } from "./tool.js";
+ * @import { CreatedPrompt } from "./prompt.js";
+ * @import { CreatedResource } from "./resource.js";
+ * @import { CreatedTemplate } from "./template.js";
  */
 import {
 	createJSONRPCErrorResponse,
@@ -153,6 +157,11 @@ export function getPerRequestProtocolVersions() {
  * @typedef {Context<TCustom> & { subscriptionOrigin?: SubscriptionOriginType, subscriptionManager?: SubscriptionManagerType }} ReceiveContext
  */
 
+/** @typedef {McpEventsType} McpEvents */
+/**
+ * The arguments of `McpServer.changed` for each kind of change.
+ * @typedef {{ resource: [id: string], tools: [], prompts: [], resources: [] }} ChangedArgs
+ */
 /** @typedef {SubscriptionFilterType} SubscriptionFilter */
 /** @typedef {SubscriptionOriginType} SubscriptionOrigin */
 /** @typedef {SubscriptionType} Subscription */
@@ -1620,6 +1629,7 @@ export class McpServer {
 	 * notification (which cannot receive a response).
 	 * @param {string | number | undefined} id
 	 * @param {McpError} error
+	 * @returns {Promise<JSONRPCErrorResponse | null>}
 	 */
 	#error_response(id, error) {
 		if (id === undefined) return Promise.resolve(null);
@@ -1634,12 +1644,16 @@ export class McpServer {
 		});
 	}
 
+	// TODO: on the next major remove `@returns {any}` so the real return type is
+	// inferred. Since 1.5.0 a misplaced `| undefined` in the annotation
+	// (`ReturnType<JSONRPCClient['receive'] | undefined>`) made it `any`, and
+	// changing it now would break users that rely on it.
 	/**
 	 * The main function that receive a JSONRpc message and either dispatch a `send` event or process the request.
 	 *
 	 * @param {JSONRPCMessage} message
 	 * @param {ReceiveContext<CustomContext>} [ctx]
-	 * @returns {ReturnType<JSONRPCServer['receive']> | ReturnType<JSONRPCClient['receive'] | undefined>}
+	 * @returns {any}
 	 */
 	receive(message, ctx) {
 		// Validate the message first

@@ -171,7 +171,7 @@ describe('OAuth', () => {
 
 		it('builds successfully with handlers', () => {
 			/**
-			 * @type {import('../src/oauth.js').SimplifiedHandlers}
+			 * @type {import('../src/types.js').SimplifiedHandlers}
 			 */
 			const handlers = {
 				async authorize(request) {
@@ -215,7 +215,7 @@ describe('OAuth', () => {
 
 		beforeEach(() => {
 			/**
-			 * @type {import('../src/oauth.js').SimplifiedHandlers}
+			 * @type {import('../src/types.js').SimplifiedHandlers}
 			 */
 			const handlers = {
 				async authorize(request) {

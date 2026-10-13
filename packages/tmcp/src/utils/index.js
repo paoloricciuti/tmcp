@@ -1,5 +1,6 @@
 /**
- * @import { EmbeddedResource, ResourceLink, CallToolResult, ReadResourceResult, GetPromptResult,  CompleteResult } from "../validation/index.js";
+ * @import { EmbeddedResource, ResourceLink, ReadResourceResult, GetPromptResult,  CompleteResult } from "../validation/index.js";
+ * @import { CallToolResult } from "../index.js";
  */
 
 /**

@@ -1,22 +1,8 @@
 import { JSONRPCErrorException } from 'json-rpc-2.0';
 import * as v from 'valibot';
-import {
-	LATEST_PROTOCOL_VERSION,
-	MODERN_PROTOCOL_VERSION,
-	SUPPORTED_VERSIONS,
-} from './version.js';
 
-export { LATEST_PROTOCOL_VERSION, MODERN_PROTOCOL_VERSION };
-export const DEFAULT_NEGOTIATED_PROTOCOL_VERSION = '2025-03-26';
-/**
- * Supported session-negotiated protocol versions. Re-exported from
- * `validation/version.js`, which is the single source of truth.
- * Note: `2024-10-07` was dropped from this list — it was never actually
- * negotiable.
- */
-export const SUPPORTED_PROTOCOL_VERSIONS = SUPPORTED_VERSIONS;
 /* JSON-RPC types */
-export const JSONRPC_VERSION = '2.0';
+const JSONRPC_VERSION = '2.0';
 
 /* Modern protocol error codes (2026-07-28) */
 
@@ -59,6 +45,7 @@ export class McpError extends JSONRPCErrorException {
 /**
  * Create a `MISSING_REQUIRED_CLIENT_CAPABILITY` (-32021) error.
  * @param {Record<string, unknown>} required_capabilities
+ * @internal
  */
 export function missing_required_client_capability_error(
 	required_capabilities,
@@ -74,6 +61,7 @@ export function missing_required_client_capability_error(
  * Create an `UNSUPPORTED_PROTOCOL_VERSION` (-32022) error.
  * @param {string[]} supported
  * @param {string} requested
+ * @internal
  */
 export function unsupported_protocol_version_error(supported, requested) {
 	return new McpError(
@@ -84,20 +72,9 @@ export function unsupported_protocol_version_error(supported, requested) {
 }
 
 /**
- * Create a `HEADER_MISMATCH` (-32020) error.
- * @param {string} message
- */
-export function header_mismatch_error(message) {
-	return new McpError(HEADER_MISMATCH, message);
-}
-
-/**
  * A uniquely identifying ID for a request in JSON-RPC.
  */
-export const RequestIdSchema = v.union([
-	v.string(),
-	v.pipe(v.number(), v.integer()),
-]);
+const RequestIdSchema = v.union([v.string(), v.pipe(v.number(), v.integer())]);
 
 /**
  * The severity of a log message.
@@ -116,7 +93,7 @@ export const LoggingLevelSchema = v.picklist([
 /**
  * A progress token, used to associate progress notifications with the original request.
  */
-export const ProgressTokenSchema = v.union([
+const ProgressTokenSchema = v.union([
 	v.string(),
 	v.pipe(v.number(), v.integer()),
 ]);
@@ -124,7 +101,7 @@ export const ProgressTokenSchema = v.union([
 /**
  * An opaque token used to represent a cursor for pagination.
  */
-export const CursorSchema = v.string();
+const CursorSchema = v.string();
 
 const RequestMetaSchema = v.looseObject({
 	/**
@@ -137,7 +114,7 @@ const BaseRequestParamsSchema = v.looseObject({
 	_meta: v.optional(RequestMetaSchema),
 });
 
-export const RequestSchema = v.object({
+const RequestSchema = v.object({
 	method: v.string(),
 	params: v.optional(BaseRequestParamsSchema),
 });
@@ -158,11 +135,11 @@ const BaseNotificationParamsSchema = v.looseObject({
 const SubscriptionNotificationParamsSchema = v.looseObject({
 	_meta: v.optional(SubscriptionNotificationMetaSchema),
 });
-export const NotificationSchema = v.object({
+const NotificationSchema = v.object({
 	method: v.string(),
 	params: v.optional(BaseNotificationParamsSchema),
 });
-export const ResultSchema = v.looseObject({
+const ResultSchema = v.looseObject({
 	/**
 	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
 	 * for notes on _meta usage.
@@ -198,6 +175,7 @@ export const JSONRPCResponseSchema = v.strictObject({
 
 /**
  * A response to a request that indicates an error occurred.
+ * @internal
  */
 export const JSONRPCErrorSchema = v.strictObject({
 	jsonrpc: v.literal(JSONRPC_VERSION),
@@ -230,7 +208,7 @@ export const JSONRPCMessageSchema = v.union([
 /**
  * A response that indicates success but carries no data.
  */
-export const EmptyResultSchema = v.strictObject({ ...ResultSchema.entries });
+const EmptyResultSchema = v.strictObject({ ...ResultSchema.entries });
 /* Cancellation */
 
 /**
@@ -241,6 +219,7 @@ export const EmptyResultSchema = v.strictObject({ ...ResultSchema.entries });
  * This notification indicates that the result will be unused, so any associated processing SHOULD cease.
  *
  * A client MUST NOT attempt to cancel its `initialize` request.
+ * @internal
  */
 export const CancelledNotificationSchema = v.object({
 	...NotificationSchema.entries,
@@ -266,7 +245,7 @@ export const CancelledNotificationSchema = v.object({
 /**
  * Base metadata interface for common properties across resources, tools, prompts, and implementations.
  */
-export const BaseMetadataSchema = v.object({
+const BaseMetadataSchema = v.object({
 	/** Intended for programmatic or logical use, but used as a display name in past specs or fallback */
 	name: v.string(),
 
@@ -284,7 +263,7 @@ export const BaseMetadataSchema = v.object({
 /**
  * Icon schema for use in tools, prompts, resources, and implementations.
  */
-export const IconSchema = v.object({
+const IconSchema = v.object({
 	/**
 	 * URL or data URI for the icon.
 	 */
@@ -302,7 +281,7 @@ export const IconSchema = v.object({
 	sizes: v.optional(v.array(v.string())),
 });
 
-export const IconsSchema = v.object({
+const IconsSchema = v.object({
 	/**
 	 * Optional set of sized icons that the client can display in a user interface.
 	 *
@@ -386,18 +365,9 @@ export const InitializeRequestParamsSchema = v.object({
 });
 
 /**
- * This request is sent from the client to the server when it first connects, asking it to begin initialization.
- */
-export const InitializeRequestSchema = v.object({
-	...RequestSchema.entries,
-	method: v.literal('initialize'),
-	params: InitializeRequestParamsSchema,
-});
-
-/**
  * Capabilities that a server may support. Known capabilities are defined here, in this schema, but this is not a closed set: any server can define its own, additional capabilities.
  */
-export const ServerCapabilitiesSchema = v.object({
+const ServerCapabilitiesSchema = v.object({
 	/**
 	 * Experimental, non-standard capabilities that the server supports.
 	 */
@@ -464,7 +434,7 @@ export const ServerCapabilitiesSchema = v.object({
 /**
  * After receiving an initialize request from the client, the server sends this response.
  */
-export const InitializeResultSchema = v.object({
+const InitializeResultSchema = v.object({
 	...ResultSchema.entries,
 
 	/**
@@ -481,73 +451,7 @@ export const InitializeResultSchema = v.object({
 	 */
 	instructions: v.optional(v.string()),
 });
-
-/**
- * This notification is sent from the client to the server after initialization has finished.
- */
-export const InitializedNotificationSchema = v.object({
-	...NotificationSchema.entries,
-	method: v.literal('notifications/initialized'),
-});
-/* Ping */
-
-/**
- * A ping, issued by either the server or the client, to check that the other party is still alive. The receiver must promptly respond, or else may be disconnected.
- */
-export const PingRequestSchema = v.object({
-	...RequestSchema.entries,
-	method: v.literal('ping'),
-});
-/* Progress notifications */
-export const ProgressSchema = v.object({
-	/**
-	 * The progress thus far. This should increase every time progress is made, even if the total is unknown.
-	 */
-	progress: v.number(),
-
-	/**
-	 * Total number of items to process (or total progress required), if known.
-	 */
-	total: v.optional(v.number()),
-
-	/**
-	 * An optional message describing the current progress.
-	 */
-	message: v.optional(v.string()),
-});
-
-/**
- * An out-of-band notification used to inform the receiver of a progress update for a long-running request.
- */
-export const ProgressNotificationSchema = v.object({
-	...NotificationSchema.entries,
-	method: v.literal('notifications/progress'),
-	params: v.object({
-		...BaseNotificationParamsSchema.entries,
-		...ProgressSchema.entries,
-
-		/**
-		 * The progress token which was given in the initial request, used to associate this notification with the request that is proceeding.
-		 */
-		progressToken: ProgressTokenSchema,
-	}),
-});
-/* Pagination */
-export const PaginatedRequestSchema = v.object({
-	...RequestSchema.entries,
-	params: v.optional(
-		v.object({
-			...BaseRequestParamsSchema.entries,
-
-			/**
-			 * An opaque token representing the current pagination position.
-			 * If provided, the server should return results starting after this cursor.
-			 */
-			cursor: v.optional(CursorSchema),
-		}),
-	),
-});
-export const PaginatedResultSchema = v.object({
+const PaginatedResultSchema = v.object({
 	...ResultSchema.entries,
 
 	/**
@@ -561,7 +465,7 @@ export const PaginatedResultSchema = v.object({
 /**
  * The contents of a specific resource or sub-resource.
  */
-export const ResourceContentsSchema = v.object({
+const ResourceContentsSchema = v.object({
 	/**
 	 * The URI of this resource.
 	 */
@@ -578,7 +482,7 @@ export const ResourceContentsSchema = v.object({
 	 */
 	_meta: v.optional(v.looseObject({})),
 });
-export const TextResourceContentsSchema = v.object({
+const TextResourceContentsSchema = v.object({
 	...ResourceContentsSchema.entries,
 
 	/**
@@ -586,7 +490,7 @@ export const TextResourceContentsSchema = v.object({
 	 */
 	text: v.string(),
 });
-export const BlobResourceContentsSchema = v.object({
+const BlobResourceContentsSchema = v.object({
 	...ResourceContentsSchema.entries,
 
 	/**
@@ -598,7 +502,7 @@ export const BlobResourceContentsSchema = v.object({
 /**
  * A known resource that the server is capable of reading.
  */
-export const ResourceSchema = v.object({
+const ResourceSchema = v.object({
 	...BaseMetadataSchema.entries,
 
 	/**
@@ -629,7 +533,7 @@ export const ResourceSchema = v.object({
 /**
  * A template description for resources available on the server.
  */
-export const ResourceTemplateSchema = v.object({
+const ResourceTemplateSchema = v.object({
 	...BaseMetadataSchema.entries,
 
 	/**
@@ -658,51 +562,19 @@ export const ResourceTemplateSchema = v.object({
 });
 
 /**
- * Sent from the client to request a list of resources the server has.
- */
-export const ListResourcesRequestSchema = v.object({
-	...PaginatedRequestSchema.entries,
-	method: v.literal('resources/list'),
-});
-
-/**
  * The server's response to a resources/list request from the client.
  */
-export const ListResourcesResultSchema = v.object({
+const ListResourcesResultSchema = v.object({
 	...PaginatedResultSchema.entries,
 	resources: v.array(ResourceSchema),
 });
 
 /**
- * Sent from the client to request a list of resource templates the server has.
- */
-export const ListResourceTemplatesRequestSchema = v.object({
-	...PaginatedRequestSchema.entries,
-	method: v.literal('resources/templates/list'),
-});
-
-/**
  * The server's response to a resources/templates/list request from the client.
  */
-export const ListResourceTemplatesResultSchema = v.object({
+const ListResourceTemplatesResultSchema = v.object({
 	...PaginatedResultSchema.entries,
 	resourceTemplates: v.array(ResourceTemplateSchema),
-});
-
-/**
- * Sent from the client to the server, to read a specific resource URI.
- */
-export const ReadResourceRequestSchema = v.object({
-	...RequestSchema.entries,
-	method: v.literal('resources/read'),
-	params: v.object({
-		...BaseRequestParamsSchema.entries,
-
-		/**
-		 * The URI of the resource to read. The URI can use any protocol; it is up to the server how to interpret it.
-		 */
-		uri: v.string(),
-	}),
 });
 
 /**
@@ -717,6 +589,7 @@ export const ReadResourceResultSchema = v.looseObject({
 
 /**
  * An optional notification from the server to the client, informing it that the list of resources it can read from has changed. This may be issued by servers without any previous subscription from the client.
+ * @internal
  */
 export const ResourceListChangedNotificationSchema = v.object({
 	...NotificationSchema.entries,
@@ -728,7 +601,7 @@ export const ResourceListChangedNotificationSchema = v.object({
  * Notification types requested on a per-request subscription stream. Every field
  * is opt-in.
  */
-export const SubscriptionFilterSchema = v.object({
+const SubscriptionFilterSchema = v.object({
 	toolsListChanged: v.optional(v.boolean()),
 	promptsListChanged: v.optional(v.boolean()),
 	resourcesListChanged: v.optional(v.boolean()),
@@ -749,6 +622,7 @@ export const DiscoverRequestParamsSchema = v.looseObject({
 
 /**
  * Open a long-lived stream for server notifications.
+ * @internal
  */
 export const SubscriptionsListenRequestParamsSchema = v.object({
 	...BaseRequestParamsSchema.entries,
@@ -789,39 +663,8 @@ export const SubscriptionsAcknowledgedNotificationSchema = v.object({
 });
 
 /**
- * Sent from the client to request resources/updated notifications from the server whenever a particular resource changes.
- */
-export const SubscribeRequestSchema = v.object({
-	...RequestSchema.entries,
-	method: v.literal('resources/subscribe'),
-	params: v.object({
-		...BaseRequestParamsSchema.entries,
-
-		/**
-		 * The URI of the resource to subscribe to. The URI can use any protocol; it is up to the server how to interpret it.
-		 */
-		uri: v.string(),
-	}),
-});
-
-/**
- * Sent from the client to request cancellation of resources/updated notifications from the server. This should follow a previous resources/subscribe request.
- */
-export const UnsubscribeRequestSchema = v.object({
-	...RequestSchema.entries,
-	method: v.literal('resources/unsubscribe'),
-	params: v.object({
-		...BaseRequestParamsSchema.entries,
-
-		/**
-		 * The URI of the resource to unsubscribe from.
-		 */
-		uri: v.string(),
-	}),
-});
-
-/**
  * A notification from the server to the client, informing it that a resource has changed and may need to be read again. This should only be sent if the client previously sent a resources/subscribe request.
+ * @internal
  */
 export const ResourceUpdatedNotificationSchema = v.object({
 	...NotificationSchema.entries,
@@ -840,7 +683,7 @@ export const ResourceUpdatedNotificationSchema = v.object({
 /**
  * Describes an argument that a prompt can accept.
  */
-export const PromptArgumentSchema = v.object({
+const PromptArgumentSchema = v.object({
 	/**
 	 * The name of the argument.
 	 */
@@ -860,7 +703,7 @@ export const PromptArgumentSchema = v.object({
 /**
  * A prompt or prompt template that the server offers.
  */
-export const PromptSchema = v.object({
+const PromptSchema = v.object({
 	...BaseMetadataSchema.entries,
 
 	/**
@@ -882,46 +725,17 @@ export const PromptSchema = v.object({
 });
 
 /**
- * Sent from the client to request a list of prompts and prompt templates the server has.
- */
-export const ListPromptsRequestSchema = v.object({
-	...PaginatedRequestSchema.entries,
-	method: v.literal('prompts/list'),
-});
-
-/**
  * The server's response to a prompts/list request from the client.
  */
-export const ListPromptsResultSchema = v.object({
+const ListPromptsResultSchema = v.object({
 	...PaginatedResultSchema.entries,
 	prompts: v.array(PromptSchema),
 });
 
 /**
- * Used by the client to get a prompt provided by the server.
- */
-export const GetPromptRequestSchema = v.object({
-	...RequestSchema.entries,
-	method: v.literal('prompts/get'),
-	params: v.object({
-		...BaseRequestParamsSchema.entries,
-
-		/**
-		 * The name of the prompt or prompt template.
-		 */
-		name: v.string(),
-
-		/**
-		 * Arguments to use for templating the prompt.
-		 */
-		arguments: v.optional(v.record(v.string(), v.string())),
-	}),
-});
-
-/**
  * Text provided to or from an LLM.
  */
-export const TextContentSchema = v.object({
+const TextContentSchema = v.object({
 	type: v.literal('text'),
 
 	/**
@@ -939,7 +753,7 @@ export const TextContentSchema = v.object({
 /**
  * An image provided to or from an LLM.
  */
-export const ImageContentSchema = v.object({
+const ImageContentSchema = v.object({
 	type: v.literal('image'),
 
 	/**
@@ -962,7 +776,7 @@ export const ImageContentSchema = v.object({
 /**
  * An Audio provided to or from an LLM.
  */
-export const AudioContentSchema = v.object({
+const AudioContentSchema = v.object({
 	type: v.literal('audio'),
 
 	/**
@@ -985,7 +799,7 @@ export const AudioContentSchema = v.object({
 /**
  * The contents of a resource, embedded into a prompt or tool call result.
  */
-export const EmbeddedResourceSchema = v.object({
+const EmbeddedResourceSchema = v.object({
 	type: v.literal('resource'),
 	resource: v.union([TextResourceContentsSchema, BlobResourceContentsSchema]),
 
@@ -1001,7 +815,7 @@ export const EmbeddedResourceSchema = v.object({
  *
  * Note: resource links returned by tools are not guaranteed to appear in the results of `resources/list` requests.
  */
-export const ResourceLinkSchema = v.object({
+const ResourceLinkSchema = v.object({
 	...ResourceSchema.entries,
 	type: v.literal('resource_link'),
 });
@@ -1009,7 +823,7 @@ export const ResourceLinkSchema = v.object({
 /**
  * A content block that can be used in prompts and tool results.
  */
-export const ContentBlockSchema = v.union([
+const ContentBlockSchema = v.union([
 	TextContentSchema,
 	ImageContentSchema,
 	AudioContentSchema,
@@ -1020,7 +834,7 @@ export const ContentBlockSchema = v.union([
 /**
  * Describes a message returned as part of a prompt.
  */
-export const PromptMessageSchema = v.object({
+const PromptMessageSchema = v.object({
 	role: v.picklist(['user', 'assistant']),
 	content: ContentBlockSchema,
 });
@@ -1040,6 +854,7 @@ export const GetPromptResultSchema = v.looseObject({
 
 /**
  * An optional notification from the server to the client, informing it that the list of prompts it offers has changed. This may be issued by servers without any previous subscription from the client.
+ * @internal
  */
 export const PromptListChangedNotificationSchema = v.object({
 	...NotificationSchema.entries,
@@ -1058,7 +873,7 @@ export const PromptListChangedNotificationSchema = v.object({
  * Clients should never make tool use decisions based on ToolAnnotations
  * received from untrusted servers.
  */
-export const ToolAnnotationsSchema = v.object({
+const ToolAnnotationsSchema = v.object({
 	/**
 	 * A human-readable title for the tool.
 	 */
@@ -1105,7 +920,7 @@ export const ToolAnnotationsSchema = v.object({
 /**
  * Definition for a tool the client can call.
  */
-export const ToolSchema = v.object({
+const ToolSchema = v.object({
 	...BaseMetadataSchema.entries,
 
 	/**
@@ -1146,17 +961,9 @@ export const ToolSchema = v.object({
 });
 
 /**
- * Sent from the client to request a list of tools the server has.
- */
-export const ListToolsRequestSchema = v.object({
-	...PaginatedRequestSchema.entries,
-	method: v.literal('tools/list'),
-});
-
-/**
  * The server's response to a tools/list request from the client.
  */
-export const ListToolsResultSchema = v.object({
+const ListToolsResultSchema = v.object({
 	...PaginatedResultSchema.entries,
 	tools: v.array(ToolSchema),
 });
@@ -1200,83 +1007,20 @@ export const CallToolResultSchema = v.looseObject({
 });
 
 /**
- * CallToolResultSchema extended with backwards compatibility to protocol version 2024-10-07.
- */
-export const CompatibilityCallToolResultSchema = v.union([
-	CallToolResultSchema,
-	v.object({ ...ResultSchema.entries, toolResult: v.unknown() }),
-]);
-
-/**
- * Used by the client to invoke a tool provided by the server.
- */
-export const CallToolRequestSchema = v.object({
-	...RequestSchema.entries,
-	method: v.literal('tools/call'),
-	params: v.object({
-		...BaseRequestParamsSchema.entries,
-		name: v.string(),
-		arguments: v.optional(v.record(v.string(), v.unknown())),
-	}),
-});
-
-/**
  * An optional notification from the server to the client, informing it that the list of tools it offers has changed. This may be issued by servers without any previous subscription from the client.
+ * @internal
  */
 export const ToolListChangedNotificationSchema = v.object({
 	...NotificationSchema.entries,
 	method: v.literal('notifications/tools/list_changed'),
 	params: v.optional(SubscriptionNotificationParamsSchema),
 });
-/* Logging */
-
-/**
- * A request from the client to the server, to enable or adjust logging.
- */
-export const SetLevelRequestSchema = v.object({
-	...RequestSchema.entries,
-	method: v.literal('logging/setLevel'),
-	params: v.object({
-		...BaseRequestParamsSchema.entries,
-
-		/**
-		 * The level of logging that the client wants to receive from the server. The server should send all logs at this level and higher (i.e., more severe) to the client as notifications/logging/message.
-		 */
-		level: LoggingLevelSchema,
-	}),
-});
-
-/**
- * Notification of a log message passed from server to client. Per-request clients opt in through `io.modelcontextprotocol/logLevel`; session-negotiated clients use `logging/setLevel` or the server default.
- */
-export const LoggingMessageNotificationSchema = v.object({
-	...NotificationSchema.entries,
-	method: v.literal('notifications/message'),
-	params: v.object({
-		...BaseNotificationParamsSchema.entries,
-
-		/**
-		 * The severity of this log message.
-		 */
-		level: LoggingLevelSchema,
-
-		/**
-		 * An optional name of the logger issuing this message.
-		 */
-		logger: v.optional(v.string()),
-
-		/**
-		 * The data to be logged, such as a string message or an object. Any JSON serializable type is allowed here.
-		 */
-		data: v.unknown(),
-	}),
-});
 /* Sampling */
 
 /**
  * Hints to use for model selection.
  */
-export const ModelHintSchema = v.object({
+const ModelHintSchema = v.object({
 	/**
 	 * A hint for a model name.
 	 */
@@ -1286,7 +1030,7 @@ export const ModelHintSchema = v.object({
 /**
  * The server's preferences for model selection, requested of the client during sampling.
  */
-export const ModelPreferencesSchema = v.object({
+const ModelPreferencesSchema = v.object({
 	/**
 	 * Optional hints to use for model selection.
 	 */
@@ -1313,7 +1057,7 @@ export const ModelPreferencesSchema = v.object({
 /**
  * Describes a message issued to or received from an LLM API.
  */
-export const SamplingMessageSchema = v.object({
+const SamplingMessageSchema = v.object({
 	role: v.picklist(['user', 'assistant']),
 	content: v.union([
 		TextContentSchema,
@@ -1359,7 +1103,7 @@ export const CreateMessageRequestParamsSchema = v.object({
 /**
  * A request from the server to sample an LLM via the client. The client has full discretion over which model to select. The client should also inform the user before beginning sampling, to allow them to inspect the request (human in the loop) and decide whether to approve it.
  */
-export const CreateMessageRequestSchema = v.object({
+const CreateMessageRequestSchema = v.object({
 	...RequestSchema.entries,
 	method: v.literal('sampling/createMessage'),
 	params: CreateMessageRequestParamsSchema,
@@ -1397,7 +1141,7 @@ export const CreateMessageResultSchema = v.object({
 /**
  * Primitive schema definition for boolean fields.
  */
-export const BooleanSchemaSchema = v.object({
+const BooleanSchemaSchema = v.object({
 	type: v.literal('boolean'),
 	title: v.optional(v.string()),
 	description: v.optional(v.string()),
@@ -1407,7 +1151,7 @@ export const BooleanSchemaSchema = v.object({
 /**
  * Primitive schema definition for string fields.
  */
-export const StringSchemaSchema = v.object({
+const StringSchemaSchema = v.object({
 	type: v.literal('string'),
 	title: v.optional(v.string()),
 	description: v.optional(v.string()),
@@ -1420,7 +1164,7 @@ export const StringSchemaSchema = v.object({
 /**
  * Primitive schema definition for number fields.
  */
-export const NumberSchemaSchema = v.object({
+const NumberSchemaSchema = v.object({
 	type: v.picklist(['number', 'integer']),
 	title: v.optional(v.string()),
 	description: v.optional(v.string()),
@@ -1490,7 +1234,7 @@ const LegacyTitledEnumSchema = v.object({
 /**
  * Schema definition for single- and multi-select enum fields.
  */
-export const EnumSchemaSchema = v.union([
+const EnumSchemaSchema = v.union([
 	LegacyTitledEnumSchema,
 	UntitledSingleSelectEnumSchema,
 	TitledSingleSelectEnumSchema,
@@ -1501,7 +1245,7 @@ export const EnumSchemaSchema = v.union([
 /**
  * Union of all primitive schema definitions.
  */
-export const PrimitiveSchemaDefinitionSchema = v.union([
+const PrimitiveSchemaDefinitionSchema = v.union([
 	BooleanSchemaSchema,
 	NumberSchemaSchema,
 	EnumSchemaSchema,
@@ -1539,6 +1283,7 @@ const ElicitRequestURLParamsSchema = v.object({
 	url: v.pipe(v.string(), v.url()),
 });
 
+/** @internal */
 export const ElicitRequestSchema = v.object({
 	...RequestSchema.entries,
 	method: v.literal('elicitation/create'),
@@ -1564,71 +1309,6 @@ export const ElicitResultSchema = v.object({
 	 */
 	content: v.optional(v.record(v.string(), v.unknown())),
 });
-/* Autocomplete */
-
-/**
- * A reference to a resource or resource template definition.
- */
-export const ResourceTemplateReferenceSchema = v.object({
-	type: v.literal('ref/resource'),
-
-	/**
-	 * The URI or URI template of the resource.
-	 */
-	uri: v.string(),
-});
-
-/**
- * @deprecated Use ResourceTemplateReferenceSchema instead
- */
-export const ResourceReferenceSchema = ResourceTemplateReferenceSchema;
-
-/**
- * Identifies a prompt.
- */
-export const PromptReferenceSchema = v.object({
-	type: v.literal('ref/prompt'),
-
-	/**
-	 * The name of the prompt or prompt template
-	 */
-	name: v.string(),
-});
-
-/**
- * A request from the client to the server, to ask for completion options.
- */
-export const CompleteRequestSchema = v.object({
-	...RequestSchema.entries,
-	method: v.literal('completion/complete'),
-	params: v.object({
-		...BaseRequestParamsSchema.entries,
-		ref: v.union([PromptReferenceSchema, ResourceTemplateReferenceSchema]),
-
-		/**
-		 * The argument's information
-		 */
-		argument: v.object({
-			/**
-			 * The name of the argument
-			 */
-			name: v.string(),
-
-			/**
-			 * The value of the argument to use for completion matching.
-			 */
-			value: v.string(),
-		}),
-		context: v.optional(
-			v.object({
-				/**
-				 * Previously-resolved variables in a URI template or prompt.
-				 */
-				arguments: v.optional(v.record(v.string(), v.string())),
-			}),
-		),
-	}),
-});
 
 /**
  * The server's response to a completion/complete request
@@ -1652,51 +1332,13 @@ export const CompleteResultSchema = v.looseObject({
 		hasMore: v.optional(v.boolean()),
 	}),
 });
-/* Roots */
-
-/**
- * Represents a root directory or file that the server can operate on.
- */
-export const RootSchema = v.object({
-	/**
-	 * The URI identifying the root. This *must* start with file:// for now.
-	 */
-	uri: v.pipe(v.string(), v.startsWith('file://')),
-
-	/**
-	 * An optional name for the root.
-	 */
-	name: v.optional(v.string()),
-
-	/**
-	 * See [MCP specification](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/47339c03c143bb4ec01a26e721a1b8fe66634ebe/docs/specification/draft/basic/index.mdx#general-fields)
-	 * for notes on _meta usage.
-	 */
-	_meta: v.optional(v.looseObject({})),
-});
 
 /**
  * Sent from the server to request a list of root URIs from the client.
  */
-export const ListRootsRequestSchema = v.object({
+const ListRootsRequestSchema = v.object({
 	...RequestSchema.entries,
 	method: v.literal('roots/list'),
-});
-
-/**
- * The client's response to a roots/list request from the server.
- */
-export const ListRootsResultSchema = v.object({
-	...ResultSchema.entries,
-	roots: v.array(RootSchema),
-});
-
-/**
- * A notification from the client to the server, informing it that the list of roots has changed.
- */
-export const RootsListChangedNotificationSchema = v.object({
-	...NotificationSchema.entries,
-	method: v.literal('notifications/roots/list_changed'),
 });
 /* Asking the client for input before finishing a request. */
 
@@ -1705,7 +1347,7 @@ export const RootsListChangedNotificationSchema = v.object({
  * request. MCP includes `roots/list` here, but tmcp never asks for roots this
  * way.
  */
-export const InputRequestSchema = v.union([
+const InputRequestSchema = v.union([
 	ElicitRequestSchema,
 	CreateMessageRequestSchema,
 	ListRootsRequestSchema,
@@ -1714,7 +1356,7 @@ export const InputRequestSchema = v.union([
 /**
  * Questions or tasks the client must complete, stored by name.
  */
-export const InputRequestsSchema = v.record(v.string(), InputRequestSchema);
+const InputRequestsSchema = v.record(v.string(), InputRequestSchema);
 
 /**
  * Answers returned by the client. Each name matches one from `inputRequests`.
@@ -1752,52 +1394,7 @@ export const InputRequiredResultSchema = v.pipe(
 		'InputRequiredResult requires inputRequests or requestState',
 	),
 );
-/* Client messages */
-export const ClientRequestSchema = v.union([
-	PingRequestSchema,
-	InitializeRequestSchema,
-	CompleteRequestSchema,
-	SetLevelRequestSchema,
-	GetPromptRequestSchema,
-	ListPromptsRequestSchema,
-	ListResourcesRequestSchema,
-	ListResourceTemplatesRequestSchema,
-	ReadResourceRequestSchema,
-	SubscriptionsListenRequestSchema,
-	SubscribeRequestSchema,
-	UnsubscribeRequestSchema,
-	CallToolRequestSchema,
-	ListToolsRequestSchema,
-]);
-export const ClientNotificationSchema = v.union([
-	CancelledNotificationSchema,
-	ProgressNotificationSchema,
-	InitializedNotificationSchema,
-	RootsListChangedNotificationSchema,
-]);
-export const ClientResultSchema = v.union([
-	EmptyResultSchema,
-	CreateMessageResultSchema,
-	ElicitResultSchema,
-	ListRootsResultSchema,
-]);
-/* Server messages */
-export const ServerRequestSchema = v.union([
-	PingRequestSchema,
-	CreateMessageRequestSchema,
-	ElicitRequestSchema,
-	ListRootsRequestSchema,
-]);
-export const ServerNotificationSchema = v.union([
-	CancelledNotificationSchema,
-	ProgressNotificationSchema,
-	LoggingMessageNotificationSchema,
-	SubscriptionsAcknowledgedNotificationSchema,
-	ResourceUpdatedNotificationSchema,
-	ResourceListChangedNotificationSchema,
-	ToolListChangedNotificationSchema,
-	PromptListChangedNotificationSchema,
-]);
+/** @internal */
 export const ServerResultSchema = v.pipe(
 	v.union([
 		InputRequiredResultSchema,

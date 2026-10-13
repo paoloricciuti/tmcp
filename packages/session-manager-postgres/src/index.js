@@ -1,4 +1,3 @@
-/* eslint-disable jsdoc/no-undefined-types */
 /**
  * @import { StreamSessionManager, InfoSessionManager } from '@tmcp/session-manager';
  */

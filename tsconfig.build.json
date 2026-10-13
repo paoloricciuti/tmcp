@@ -1,0 +1,12 @@
+{
+	"compilerOptions": {
+		"noEmit": false,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"declarationMap": true,
+		"rootDir": "${configDir}/src",
+		"outDir": "${configDir}/types"
+	},
+	"include": ["${configDir}/src/**/*"],
+	"exclude": ["${configDir}/node_modules"]
+}

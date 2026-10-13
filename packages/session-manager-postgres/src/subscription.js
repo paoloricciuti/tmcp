@@ -64,9 +64,10 @@ export class PostgresSubscriptionManager {
 				typeof message.payload !== 'string'
 			)
 				return;
+			const payload = message.payload;
 			this.#delivery_queue = this.#delivery_queue
 				.then(async () => {
-					const envelope = JSON.parse(message.payload);
+					const envelope = JSON.parse(payload);
 					if (envelope.notification !== undefined) {
 						await this.#subscriptions.send(envelope.notification);
 						return;

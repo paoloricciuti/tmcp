@@ -161,7 +161,7 @@ describe('OAuth (Fluent Builder)', () => {
 	describe('Handler configuration', () => {
 		it('accepts simplified handlers', () => {
 			/**
-			 * @type {import('../src/oauth.js').SimplifiedHandlers}
+			 * @type {import('../src/types.js').SimplifiedHandlers}
 			 */
 			const handlers = {
 				async authorize(request) {
