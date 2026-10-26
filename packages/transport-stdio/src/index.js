@@ -6,6 +6,25 @@ import { InMemorySubscriptionManager } from '@tmcp/session-manager';
 
 const PROCESSING_DRAIN_TIMEOUT_MS = 1000;
 
+/** @param {Record<string, any>} message */
+function is_valid_cancellation(message) {
+	const params = message.params;
+	return (
+		message.jsonrpc === '2.0' &&
+		!('id' in message) &&
+		typeof params === 'object' &&
+		params !== null &&
+		!Array.isArray(params) &&
+		(typeof params.requestId === 'string' ||
+			Number.isInteger(params.requestId)) &&
+		(params.reason === undefined || typeof params.reason === 'string') &&
+		(params._meta === undefined ||
+			(typeof params._meta === 'object' &&
+				params._meta !== null &&
+				!Array.isArray(params._meta)))
+	);
+}
+
 /**
  * @template {Record<string, unknown> | undefined} [TCustom=undefined]
  */
@@ -37,6 +56,8 @@ export class StdioTransport {
 	#initialized = false;
 	/** @type {Map<string | number, { cancelled: boolean }>} */
 	#listen_tasks = new Map();
+	/** @type {Map<string | number, AbortController>} */
+	#request_controllers = new Map();
 	#write_queue = Promise.resolve();
 	#legacy_queue = Promise.resolve();
 	/** @type {Set<Promise<void>>} */
@@ -138,18 +159,18 @@ export class StdioTransport {
 				? { cancelled: false }
 				: undefined;
 		if (task) this.#listen_tasks.set(message.id, task);
+		// Client responses to `server.request()` number their ids separately and may
+		// reuse the id of a queued client request, so they never touch its controller.
+		const controller =
+			typeof message.method === 'string'
+				? this.#request_controllers.get(message.id)
+				: undefined;
 
 		if (message.method === 'notifications/cancelled') {
-			const request_id = message.params?.requestId;
-			if (
-				(typeof request_id === 'string' ||
-					typeof request_id === 'number') &&
-				(message.params?.reason === undefined ||
-					typeof message.params.reason === 'string')
-			) {
-				const cancelled = this.#listen_tasks.get(request_id);
-				if (cancelled) cancelled.cancelled = true;
-			}
+			const { requestId: request_id, reason } = message.params;
+			const cancelled = this.#listen_tasks.get(request_id);
+			if (cancelled) cancelled.cancelled = true;
+			this.#request_controllers.get(request_id)?.abort(reason);
 		}
 
 		try {
@@ -160,14 +181,24 @@ export class StdioTransport {
 					sessionInfo: /** @type {Context["sessionInfo"]} */ (
 						session_info
 					),
+					signal: controller?.signal,
 					subscriptionOrigin: this.#subscription_origin,
 					subscriptionManager: this.#subscription_manager,
 				},
 			);
-			if (response && !task?.cancelled) await this.#write(response);
+			// The spec says a cancelled request gets no response.
+			if (response && !task?.cancelled && !controller?.signal.aborted) {
+				await this.#write(response);
+			}
 		} finally {
 			if (task && this.#listen_tasks.get(message.id) === task) {
 				this.#listen_tasks.delete(message.id);
+			}
+			if (
+				controller &&
+				this.#request_controllers.get(message.id) === controller
+			) {
+				this.#request_controllers.delete(message.id);
 			}
 		}
 	}
@@ -234,6 +265,27 @@ export class StdioTransport {
 				if (line.trim()) {
 					try {
 						const message = JSON.parse(line);
+						// Validate before touching controllers or subscriptions: receive()
+						// rejects malformed messages too late to undo cancellation.
+						if (
+							message.method === 'notifications/cancelled' &&
+							!is_valid_cancellation(message)
+						) {
+							continue;
+						}
+						// Created on arrival, not when the queue gets to the request:
+						// a cancellation may come while the request is still queued.
+						if (
+							typeof message.method === 'string' &&
+							(typeof message.id === 'string' ||
+								typeof message.id === 'number') &&
+							!this.#request_controllers.has(message.id)
+						) {
+							this.#request_controllers.set(
+								message.id,
+								new AbortController(),
+							);
+						}
 						const per_request =
 							typeof message.params?._meta?.[
 								'io.modelcontextprotocol/protocolVersion'

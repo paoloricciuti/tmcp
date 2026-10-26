@@ -60,6 +60,16 @@ import { verifyChallenge } from 'pkce-challenge';
  */
 
 const BUILT = Symbol('built');
+
+/**
+ * Keeps a quoted value of `WWW-Authenticate` to the characters RFC 6750 3 allows:
+ * a header can't carry non-ASCII, and a `"` or `\` would end the value early.
+ * @param {string} value
+ */
+function auth_param(value) {
+	return value.replace(/[^\x20\x21\x23-\x5b\x5d-\x7e]/g, '?');
+}
+
 /**
  * @param {string} client_id
  */
@@ -880,7 +890,7 @@ export class OAuth {
 	 */
 	#create_unauthorized_response(error) {
 		const bearerConfig = this.#features.bearer;
-		let wwwAuth = `Bearer error="invalid_token", error_description="${error}"`;
+		let wwwAuth = `Bearer error="invalid_token", error_description="${auth_param(error)}"`;
 
 		if (typeof bearerConfig === 'object' && bearerConfig.resourceUrl) {
 			wwwAuth += `, resource_metadata="${bearerConfig.resourceUrl}"`;
@@ -908,7 +918,7 @@ export class OAuth {
 	 */
 	#create_forbidden_response(error) {
 		const bearerConfig = this.#features.bearer;
-		let wwwAuth = `Bearer error="insufficient_scope", error_description="${error}"`;
+		let wwwAuth = `Bearer error="insufficient_scope", error_description="${auth_param(error)}"`;
 
 		if (typeof bearerConfig === 'object' && bearerConfig.resourceUrl) {
 			wwwAuth += `, resource_metadata="${bearerConfig.resourceUrl}"`;

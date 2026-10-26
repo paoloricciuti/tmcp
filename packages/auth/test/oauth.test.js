@@ -3,7 +3,12 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { OAuth, SimpleProvider, MemoryClientStore } from '../src/index.js';
+import {
+	OAuth,
+	SimpleProvider,
+	MemoryClientStore,
+	InvalidTokenError,
+} from '../src/index.js';
 
 /**
  * Helper function to create basic storage callbacks using Maps
@@ -313,6 +318,37 @@ describe('OAuth', () => {
 				token_endpoint_auth_method: 'client_secret_post',
 			});
 			expect(confidential.client_secret).toMatch(/^cs_[0-9a-f]{64}$/);
+		});
+
+		it('answers 401 when the token error text has non-ASCII or quotes', async () => {
+			const oauth = OAuth.create('https://auth.example.com')
+				.memory([testClient])
+				.bearer(true)
+				.handlers({
+					async authorize() {
+						return new Response(null, { status: 500 });
+					},
+					async exchange() {
+						throw new Error('Not used');
+					},
+					async verify() {
+						throw new InvalidTokenError('Токен "истёк" \\ expired');
+					},
+				})
+				.build();
+
+			const response = await oauth.respond(
+				new Request('https://auth.example.com/mcp', {
+					headers: { Authorization: 'Bearer garbage' },
+				}),
+			);
+
+			expect(response?.status).toBe(401);
+			expect(response?.headers.get('WWW-Authenticate')).toBe(
+				'Bearer error="invalid_token", error_description="????? ??????? ? expired"',
+			);
+			const body = await response?.json();
+			expect(body.error_description).toBe('Токен "истёк" \\ expired');
 		});
 
 		it('returns null for non-matching requests', async () => {
