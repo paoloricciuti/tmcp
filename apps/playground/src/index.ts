@@ -11,7 +11,7 @@ import * as v from 'valibot';
 import * as z from 'zod';
 import { defineResource } from 'tmcp/resource';
 
-const server = new McpServer(
+export const server = new McpServer(
 	{
 		name: 'playground',
 		version: '1.0.0',
