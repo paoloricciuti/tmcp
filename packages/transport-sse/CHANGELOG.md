@@ -1,5 +1,18 @@
 # @tmcp/transport-sse
 
+## 0.6.1
+
+### Patch Changes
+
+- 0bb36e8: chore: generate the type declarations with `tsc`
+
+    The declarations are now in `types/`, one file per module, instead of a single bundled `src/types/index.d.ts`. The exported names are unchanged. `InMemorySubscriptionManager`, `InMemoryStreamSessionManager` and `InMemoryInfoSessionManager` can now be subclassed, and `tmcp` lists `@types/json-schema` as a dependency, since its declarations import it.
+
+    The bundled declarations hid that the packages are ESM-only: CommonJS projects using `module: "node16"`, or `module: "nodenext"` with TypeScript older than 5.8, now get TS1479 when importing them.
+
+- Updated dependencies [0bb36e8]
+    - @tmcp/session-manager@0.3.1
+
 ## 0.6.0
 
 ### Minor Changes
