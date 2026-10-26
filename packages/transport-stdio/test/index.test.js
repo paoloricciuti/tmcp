@@ -327,6 +327,85 @@ describe('StdioTransport', () => {
 		}
 	});
 
+	it('aborts the signal of a legacy request on notifications/cancelled', async () => {
+		const server = new McpServer(
+			{ name: 'test-server', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		/** @type {unknown} */
+		let reason;
+		server.tool(
+			{ name: 'slow', description: 'Waits until cancelled' },
+			async () => {
+				const signal = server.ctx.signal;
+				if (!signal)
+					throw new Error('Expected a signal in the context');
+				reason = await new Promise((resolve) => {
+					if (signal.aborted) resolve(signal.reason);
+					signal.addEventListener('abort', () =>
+						resolve(signal.reason),
+					);
+				});
+				return { content: [] };
+			},
+		);
+		const transport = new StdioTransport(server);
+		const writes = [];
+		const write = vi
+			.spyOn(process.stdout, 'write')
+			.mockImplementation((value) => {
+				writes.push(JSON.parse(String(value)));
+				return true;
+			});
+
+		try {
+			transport.listen();
+			process.stdin.emit(
+				'data',
+				JSON.stringify({
+					jsonrpc: '2.0',
+					id: 0,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-06-18',
+						capabilities: {},
+						clientInfo: { name: 'test-client', version: '1.0.0' },
+					},
+				}) + '\n',
+			);
+			await vi.waitFor(() =>
+				expect(writes).toContainEqual(
+					expect.objectContaining({ id: 0 }),
+				),
+			);
+
+			process.stdin.emit(
+				'data',
+				JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'tools/call',
+					params: { name: 'slow', arguments: {} },
+				}) +
+					'\n' +
+					JSON.stringify({
+						jsonrpc: '2.0',
+						method: 'notifications/cancelled',
+						params: { requestId: 1, reason: 'user cancelled' },
+					}) +
+					'\n',
+			);
+			await vi.waitFor(() => expect(reason).toBe('user cancelled'));
+			await transport.close();
+			expect(writes).not.toContainEqual(
+				expect.objectContaining({ id: 1 }),
+			);
+		} finally {
+			await transport.close();
+			write.mockRestore();
+		}
+	});
+
 	it('drains queued legacy work before closing', async () => {
 		/** @type {(value?: void) => void} */
 		let release = () => {};

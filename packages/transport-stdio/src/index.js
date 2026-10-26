@@ -37,6 +37,8 @@ export class StdioTransport {
 	#initialized = false;
 	/** @type {Map<string | number, { cancelled: boolean }>} */
 	#listen_tasks = new Map();
+	/** @type {Map<string | number, AbortController>} */
+	#request_controllers = new Map();
 	#write_queue = Promise.resolve();
 	#legacy_queue = Promise.resolve();
 	/** @type {Set<Promise<void>>} */
@@ -138,6 +140,7 @@ export class StdioTransport {
 				? { cancelled: false }
 				: undefined;
 		if (task) this.#listen_tasks.set(message.id, task);
+		const controller = this.#request_controllers.get(message.id);
 
 		if (message.method === 'notifications/cancelled') {
 			const request_id = message.params?.requestId;
@@ -149,6 +152,9 @@ export class StdioTransport {
 			) {
 				const cancelled = this.#listen_tasks.get(request_id);
 				if (cancelled) cancelled.cancelled = true;
+				this.#request_controllers
+					.get(request_id)
+					?.abort(message.params?.reason);
 			}
 		}
 
@@ -160,14 +166,24 @@ export class StdioTransport {
 					sessionInfo: /** @type {Context["sessionInfo"]} */ (
 						session_info
 					),
+					signal: controller?.signal,
 					subscriptionOrigin: this.#subscription_origin,
 					subscriptionManager: this.#subscription_manager,
 				},
 			);
-			if (response && !task?.cancelled) await this.#write(response);
+			// The spec says a cancelled request gets no response.
+			if (response && !task?.cancelled && !controller?.signal.aborted) {
+				await this.#write(response);
+			}
 		} finally {
 			if (task && this.#listen_tasks.get(message.id) === task) {
 				this.#listen_tasks.delete(message.id);
+			}
+			if (
+				controller &&
+				this.#request_controllers.get(message.id) === controller
+			) {
+				this.#request_controllers.delete(message.id);
 			}
 		}
 	}
@@ -234,6 +250,19 @@ export class StdioTransport {
 				if (line.trim()) {
 					try {
 						const message = JSON.parse(line);
+						// Created on arrival, not when the queue gets to the request:
+						// a cancellation may come while the request is still queued.
+						if (
+							typeof message.method === 'string' &&
+							(typeof message.id === 'string' ||
+								typeof message.id === 'number') &&
+							!this.#request_controllers.has(message.id)
+						) {
+							this.#request_controllers.set(
+								message.id,
+								new AbortController(),
+							);
+						}
 						const per_request =
 							typeof message.params?._meta?.[
 								'io.modelcontextprotocol/protocolVersion'
