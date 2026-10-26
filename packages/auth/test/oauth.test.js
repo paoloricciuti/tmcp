@@ -273,6 +273,53 @@ describe('OAuth', () => {
 				.build();
 		});
 
+		it('registers a public client without a secret', async () => {
+			const oauth = OAuth.create('https://auth.example.com')
+				.memory()
+				.registration()
+				.handlers({
+					async authorize() {
+						return new Response(null, { status: 500 });
+					},
+					async exchange() {
+						throw new Error('Not used');
+					},
+					async verify() {
+						throw new Error('Not used');
+					},
+				})
+				.build();
+			/** @param {Record<string, unknown>} metadata */
+			const register = async (metadata) => {
+				const response = await oauth.respond(
+					new Request('https://auth.example.com/register', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							redirect_uris: ['https://example.com/callback'],
+							...metadata,
+						}),
+					}),
+				);
+				expect(response?.status).toBe(201);
+				return response?.json();
+			};
+
+			const public_client = await register({
+				token_endpoint_auth_method: 'none',
+			});
+			expect(public_client.client_id).toEqual(expect.any(String));
+			expect(public_client).not.toHaveProperty('client_secret');
+			expect(public_client).not.toHaveProperty(
+				'client_secret_expires_at',
+			);
+
+			const confidential = await register({
+				token_endpoint_auth_method: 'client_secret_post',
+			});
+			expect(confidential.client_secret).toMatch(/^cs_[0-9a-f]{64}$/);
+		});
+
 		it('answers 401 when the token error text has non-ASCII or quotes', async () => {
 			const oauth = OAuth.create('https://auth.example.com')
 				.memory([testClient])
