@@ -124,11 +124,15 @@ describe('McpServer', () => {
 	describe('message handling', () => {
 		it('should not leak server options into the initialize result', async () => {
 			const server = new McpServer(server_info, {
-				adapter: undefined,
+				adapter,
 				capabilities: { tools: {} },
 				instructions: 'Use the tools',
 				pagination: { tools: { size: 10 } },
 				logging: { default: 'info' },
+				requestStateCodec: {
+					encode: JSON.stringify,
+					decode: JSON.parse,
+				},
 			});
 
 			const result = await server.receive(
@@ -145,7 +149,7 @@ describe('McpServer', () => {
 				{ sessionId: 'session-1' },
 			);
 
-			expect(result).toEqual({
+			expect(result).toStrictEqual({
 				jsonrpc: '2.0',
 				id: 1,
 				result: {
