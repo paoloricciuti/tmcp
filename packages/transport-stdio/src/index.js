@@ -6,6 +6,25 @@ import { InMemorySubscriptionManager } from '@tmcp/session-manager';
 
 const PROCESSING_DRAIN_TIMEOUT_MS = 1000;
 
+/** @param {Record<string, any>} message */
+function is_valid_cancellation(message) {
+	const params = message.params;
+	return (
+		message.jsonrpc === '2.0' &&
+		!('id' in message) &&
+		typeof params === 'object' &&
+		params !== null &&
+		!Array.isArray(params) &&
+		(typeof params.requestId === 'string' ||
+			Number.isInteger(params.requestId)) &&
+		(params.reason === undefined || typeof params.reason === 'string') &&
+		(params._meta === undefined ||
+			(typeof params._meta === 'object' &&
+				params._meta !== null &&
+				!Array.isArray(params._meta)))
+	);
+}
+
 /**
  * @template {Record<string, unknown> | undefined} [TCustom=undefined]
  */
@@ -148,19 +167,10 @@ export class StdioTransport {
 				: undefined;
 
 		if (message.method === 'notifications/cancelled') {
-			const request_id = message.params?.requestId;
-			if (
-				(typeof request_id === 'string' ||
-					typeof request_id === 'number') &&
-				(message.params?.reason === undefined ||
-					typeof message.params.reason === 'string')
-			) {
-				const cancelled = this.#listen_tasks.get(request_id);
-				if (cancelled) cancelled.cancelled = true;
-				this.#request_controllers
-					.get(request_id)
-					?.abort(message.params?.reason);
-			}
+			const { requestId: request_id, reason } = message.params;
+			const cancelled = this.#listen_tasks.get(request_id);
+			if (cancelled) cancelled.cancelled = true;
+			this.#request_controllers.get(request_id)?.abort(reason);
 		}
 
 		try {
@@ -255,6 +265,14 @@ export class StdioTransport {
 				if (line.trim()) {
 					try {
 						const message = JSON.parse(line);
+						// Validate before touching controllers or subscriptions: receive()
+						// rejects malformed messages too late to undo cancellation.
+						if (
+							message.method === 'notifications/cancelled' &&
+							!is_valid_cancellation(message)
+						) {
+							continue;
+						}
 						// Created on arrival, not when the queue gets to the request:
 						// a cancellation may come while the request is still queued.
 						if (
