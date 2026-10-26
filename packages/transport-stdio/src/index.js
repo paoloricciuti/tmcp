@@ -140,7 +140,12 @@ export class StdioTransport {
 				? { cancelled: false }
 				: undefined;
 		if (task) this.#listen_tasks.set(message.id, task);
-		const controller = this.#request_controllers.get(message.id);
+		// Client responses to `server.request()` number their ids separately and may
+		// reuse the id of a queued client request, so they never touch its controller.
+		const controller =
+			typeof message.method === 'string'
+				? this.#request_controllers.get(message.id)
+				: undefined;
 
 		if (message.method === 'notifications/cancelled') {
 			const request_id = message.params?.requestId;

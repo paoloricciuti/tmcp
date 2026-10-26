@@ -406,6 +406,106 @@ describe('StdioTransport', () => {
 		}
 	});
 
+	it('keeps a queued request cancellable when a client response reuses its id', async () => {
+		const server = new McpServer(
+			{ name: 'test-server', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		server.tool(
+			{ name: 'round-trip', description: 'Request client data' },
+			async () => {
+				await server.request({ method: 'client/answer' });
+				return { content: [] };
+			},
+		);
+		/** @type {unknown} */
+		let reason;
+		server.tool(
+			{ name: 'slow', description: 'Waits until cancelled' },
+			async () => {
+				const signal = server.ctx.signal;
+				if (!signal)
+					throw new Error('Expected a signal in the context');
+				reason = await new Promise((resolve) => {
+					if (signal.aborted) resolve(signal.reason);
+					signal.addEventListener('abort', () =>
+						resolve(signal.reason),
+					);
+				});
+				return { content: [] };
+			},
+		);
+		const transport = new StdioTransport(server);
+		/** @type {any[]} */
+		const writes = [];
+		const write = vi
+			.spyOn(process.stdout, 'write')
+			.mockImplementation((value) => {
+				writes.push(JSON.parse(String(value)));
+				return true;
+			});
+		/** @param {unknown} message */
+		const send = (message) =>
+			process.stdin.emit('data', JSON.stringify(message) + '\n');
+
+		try {
+			transport.listen();
+			send({
+				jsonrpc: '2.0',
+				id: 0,
+				method: 'initialize',
+				params: {
+					protocolVersion: '2025-06-18',
+					capabilities: {},
+					clientInfo: { name: 'test-client', version: '1.0.0' },
+				},
+			});
+			await vi.waitFor(() =>
+				expect(writes).toContainEqual(
+					expect.objectContaining({ id: 0 }),
+				),
+			);
+
+			send({
+				jsonrpc: '2.0',
+				id: 'round-trip',
+				method: 'tools/call',
+				params: { name: 'round-trip', arguments: {} },
+			});
+			await vi.waitFor(() =>
+				expect(writes).toContainEqual(
+					expect.objectContaining({ method: 'client/answer' }),
+				),
+			);
+			const shared_id = writes.find(
+				(message) => message.method === 'client/answer',
+			)?.id;
+			if (shared_id === undefined) {
+				throw new Error('Expected a server-to-client request ID');
+			}
+
+			// The queued request takes the id of the pending server request,
+			// then the client answers that server request with the same id.
+			send({
+				jsonrpc: '2.0',
+				id: shared_id,
+				method: 'tools/call',
+				params: { name: 'slow', arguments: {} },
+			});
+			send({ jsonrpc: '2.0', id: shared_id, result: {} });
+			send({
+				jsonrpc: '2.0',
+				method: 'notifications/cancelled',
+				params: { requestId: shared_id, reason: 'user cancelled' },
+			});
+
+			await vi.waitFor(() => expect(reason).toBe('user cancelled'));
+		} finally {
+			await transport.close();
+			write.mockRestore();
+		}
+	});
+
 	it('drains queued legacy work before closing', async () => {
 		/** @type {(value?: void) => void} */
 		let release = () => {};
