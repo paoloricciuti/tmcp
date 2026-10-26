@@ -1,5 +1,22 @@
 # @tmcp/transport-stdio
 
+## 0.5.1
+
+### Patch Changes
+
+- 0bb36e8: chore: generate the type declarations with `tsc`
+
+    The declarations are now in `types/`, one file per module, instead of a single bundled `src/types/index.d.ts`. The exported names are unchanged. `InMemorySubscriptionManager`, `InMemoryStreamSessionManager` and `InMemoryInfoSessionManager` can now be subclassed, and `tmcp` lists `@types/json-schema` as a dependency, since its declarations import it.
+
+    The bundled declarations hid that the packages are ESM-only: CommonJS projects using `module: "node16"`, or `module: "nodenext"` with TypeScript older than 5.8, now get TS1479 when importing them.
+
+- 86c35e1: fix: abort `ctx.signal` of a request on `notifications/cancelled`
+
+    A handler running over stdio now sees `server.ctx.signal` abort when the client cancels its request, including a request that is still queued, and the cancelled request gets no response.
+
+- Updated dependencies [0bb36e8]
+    - @tmcp/session-manager@0.3.1
+
 ## 0.5.0
 
 ### Minor Changes
