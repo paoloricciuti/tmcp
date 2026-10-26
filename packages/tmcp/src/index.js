@@ -408,13 +408,14 @@ export class McpServer {
 					event('initialize', validated_initialize),
 				);
 
-				// Return server response with negotiated version and capabilities
-				// (per-request protocol options are not part of the legacy initialize result)
-				// eslint-disable-next-line no-unused-vars
-				const { cache, ...legacy_options } = options;
+				// Return server response with negotiated version and capabilities;
+				// the rest of the options (adapter, pagination, cache...) is server-side only
 				return {
 					protocolVersion: negotiated_version,
-					...legacy_options,
+					capabilities: options.capabilities,
+					...(options.instructions != null
+						? { instructions: options.instructions }
+						: {}),
 					serverInfo: server_info,
 				};
 			} catch (error) {
