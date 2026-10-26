@@ -11,8 +11,9 @@
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
+		"generate:types": "pnpm -r --workspace-concurrency=1 run generate:types",
 		"typecheck": "pnpm -r typecheck",
-		"release": "changeset publish"
+		"release": "pnpm generate:types && pnpm_config_ignore_scripts=true changeset publish"
 	},
 	"keywords": [],
 	"author": "Paolo Ricciuti",

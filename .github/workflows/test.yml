@@ -27,5 +27,8 @@ jobs:
             - name: Install dependencies
               run: pnpm i
 
+            - name: Generate and validate declarations
+              run: pnpm generate:types
+
             - name: Run tests
               run: pnpm run test
