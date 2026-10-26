@@ -765,7 +765,10 @@ export class OAuth {
 				? client_metadata
 				: {
 						...client_metadata,
-						client_secret: `cs_${crypto.randomUUID()}`,
+						client_secret: `cs_${Array.from(
+							crypto.getRandomValues(new Uint8Array(32)),
+							(byte) => byte.toString(16).padStart(2, '0'),
+						).join('')}`,
 						client_secret_expires_at:
 							Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
 					},

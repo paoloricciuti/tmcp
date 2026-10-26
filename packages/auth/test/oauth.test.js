@@ -312,9 +312,7 @@ describe('OAuth', () => {
 			const confidential = await register({
 				token_endpoint_auth_method: 'client_secret_post',
 			});
-			expect(confidential.client_secret).toMatch(
-				/^cs_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-			);
+			expect(confidential.client_secret).toMatch(/^cs_[0-9a-f]{64}$/);
 		});
 
 		it('returns null for non-matching requests', async () => {
