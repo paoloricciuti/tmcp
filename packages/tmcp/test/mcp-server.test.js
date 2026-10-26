@@ -122,6 +122,45 @@ describe('McpServer', () => {
 	});
 
 	describe('message handling', () => {
+		it('should not leak server options into the initialize result', async () => {
+			const server = new McpServer(server_info, {
+				adapter,
+				capabilities: { tools: {} },
+				instructions: 'Use the tools',
+				pagination: { tools: { size: 10 } },
+				logging: { default: 'info' },
+				requestStateCodec: {
+					encode: JSON.stringify,
+					decode: JSON.parse,
+				},
+			});
+
+			const result = await server.receive(
+				request({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-06-18',
+						capabilities: {},
+						clientInfo: { name: 'test-client', version: '1.0.0' },
+					},
+				}),
+				{ sessionId: 'session-1' },
+			);
+
+			expect(result).toStrictEqual({
+				jsonrpc: '2.0',
+				id: 1,
+				result: {
+					protocolVersion: '2025-06-18',
+					capabilities: { tools: {} },
+					instructions: 'Use the tools',
+					serverInfo: server_info,
+				},
+			});
+		});
+
 		it('should handle initialize request', async () => {
 			const initialize_request = request({
 				jsonrpc: '2.0',
