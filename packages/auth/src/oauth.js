@@ -759,12 +759,17 @@ export class OAuth {
 			throw new ServerError('Client registration not supported');
 		}
 
-		const registeredClient = await this.#client_store.registerClient({
-			...client_metadata,
-			client_secret: `cs_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`,
-			client_secret_expires_at:
-				Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
-		});
+		// A public client authenticates with PKCE alone and gets no secret (RFC 7591 3.2.1).
+		const registeredClient = await this.#client_store.registerClient(
+			client_metadata.token_endpoint_auth_method === 'none'
+				? client_metadata
+				: {
+						...client_metadata,
+						client_secret: `cs_${crypto.randomUUID()}`,
+						client_secret_expires_at:
+							Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
+					},
+		);
 
 		return new Response(JSON.stringify(registeredClient), {
 			status: 201,
