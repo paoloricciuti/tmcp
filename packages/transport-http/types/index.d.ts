@@ -31,6 +31,7 @@ export type HttpTransportOptions = {
     };
     subscriptionManager?: SubscriptionManager;
     disableSse?: boolean;
+    response?: "sse" | "json";
 };
 export type SubscriptionRegistration = {
     promise: Promise<boolean>;

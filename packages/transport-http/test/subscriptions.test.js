@@ -499,4 +499,41 @@ describe('HTTP per-request subscriptions', () => {
 			});
 		}
 	});
+
+	it('keeps subscriptions/listen on SSE when response is "json"', async () => {
+		const server = new McpServer(
+			{ name: 'http-subscriptions', version: '1.0.0' },
+			{
+				adapter: undefined,
+				capabilities: { tools: { listChanged: true } },
+			},
+		);
+		const transport = new HttpTransport(server, {
+			path: '/mcp',
+			response: 'json',
+		});
+		const response = await post(transport, {
+			jsonrpc: '2.0',
+			id: 1,
+			method: 'subscriptions/listen',
+			params: {
+				notifications: { toolsListChanged: true },
+				_meta: metadata(),
+			},
+		});
+		if (!response?.body) throw new Error('Expected a subscription stream');
+		const reader = response.body.getReader();
+
+		expect(response.headers.get('content-type')).toBe('text/event-stream');
+		await expect(next_message(reader)).resolves.toMatchObject({
+			method: 'notifications/subscriptions/acknowledged',
+			params: { _meta: { [SUBSCRIPTION_ID]: 1 } },
+		});
+		await expect(transport.closeSubscription(response)).resolves.toBe(true);
+		await expect(next_message(reader)).resolves.toMatchObject({
+			id: 1,
+			result: { resultType: 'complete' },
+		});
+		await expect(reader.read()).resolves.toMatchObject({ done: true });
+	});
 });

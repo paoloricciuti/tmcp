@@ -1150,4 +1150,149 @@ describe('HTTP Transport', () => {
 			await local_transport.close();
 		});
 	});
+
+	describe('response option', () => {
+		beforeEach(() => {
+			({ mcp_server, sse_connected } = new_server({
+				capabilities: {
+					tools: { listChanged: true },
+				},
+			}).setup(() => {}));
+		});
+
+		/**
+		 * @param {Record<string, unknown>} body
+		 */
+		function post(body) {
+			return new Request('http://localhost/mcp', {
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json',
+					'mcp-session-id': 'json-session',
+				},
+				body: JSON.stringify(body),
+			});
+		}
+
+		it('returns a single JSON object when response is "json"', async () => {
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				response: 'json',
+			});
+
+			const response = await transport.respond(
+				post({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+			);
+
+			expect(response?.status).toBe(200);
+			expect(response?.headers.get('content-type')).toBe(
+				'application/json',
+			);
+			expect(response?.headers.get('mcp-session-id')).toBe(
+				'json-session',
+			);
+			await expect(response?.json()).resolves.toStrictEqual({
+				jsonrpc: '2.0',
+				id: 1,
+				result: {},
+			});
+		});
+
+		it('keeps SSE responses when response is "sse"', async () => {
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				response: 'sse',
+			});
+
+			const response = await transport.respond(
+				post({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+			);
+
+			expect(response?.status).toBe(200);
+			expect(response?.headers.get('content-type')).toBe(
+				'text/event-stream',
+			);
+			await response?.body?.cancel();
+		});
+
+		it('keeps SSE responses when response is undefined', async () => {
+			const transport = new HttpTransport(mcp_server, { path: '/mcp' });
+
+			const response = await transport.respond(
+				post({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+			);
+
+			expect(response?.status).toBe(200);
+			expect(response?.headers.get('content-type')).toBe(
+				'text/event-stream',
+			);
+			await response?.body?.cancel();
+		});
+
+		it('still returns 202 for notifications when response is "json"', async () => {
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				response: 'json',
+			});
+
+			const response = await transport.respond(
+				post({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+			);
+
+			expect(response?.status).toBe(202);
+			await expect(response?.text()).resolves.toBe('');
+		});
+	});
+
+	describe('response option with server', () => {
+		beforeEach(() => {
+			({ mcp_server, sse_connected } = new_server(
+				{
+					capabilities: {
+						tools: { listChanged: true },
+					},
+				},
+				{ response: 'json' },
+			).setup(() => {}));
+		});
+
+		it('answers SDK client requests with JSON responses', async () => {
+			const fetch_spy = vi.spyOn(globalThis, 'fetch');
+			const local_transport = new StreamableHTTPClientTransport(
+				new URL('http://localhost:3000/mcp'),
+			);
+			const local_client = new Client({
+				name: 'test-client',
+				version: '1.0.0',
+			});
+
+			try {
+				await local_client.connect(local_transport);
+				await expect(local_client.ping()).resolves.toStrictEqual({});
+
+				const responses = await Promise.all(
+					fetch_spy.mock.calls.map(async ([, init], index) => ({
+						method: init?.method,
+						response: await fetch_spy.mock.results[index]?.value,
+					})),
+				);
+				const post_content_types = responses
+					.filter(
+						({ method, response }) =>
+							method === 'POST' && response?.status === 200,
+					)
+					.map(({ response }) =>
+						response?.headers.get('content-type'),
+					);
+				expect(post_content_types.length).toBeGreaterThan(0);
+				expect(new Set(post_content_types)).toStrictEqual(
+					new Set(['application/json']),
+				);
+			} finally {
+				fetch_spy.mockRestore();
+				await local_client.close();
+				await local_transport.close();
+			}
+		});
+	});
 });
