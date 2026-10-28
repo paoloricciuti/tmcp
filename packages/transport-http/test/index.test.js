@@ -1242,6 +1242,50 @@ describe('HTTP Transport', () => {
 			expect(response?.status).toBe(202);
 			await expect(response?.text()).resolves.toBe('');
 		});
+
+		it('fails server-to-client requests instead of hanging when response is "json"', async () => {
+			mcp_server.tool({ name: 'ask', description: 'ask' }, async () => {
+				await mcp_server.message({
+					messages: [
+						{ role: 'user', content: { type: 'text', text: 'hi' } },
+					],
+					maxTokens: 10,
+				});
+				return { content: [] };
+			});
+			const transport = new HttpTransport(mcp_server, {
+				path: '/mcp',
+				response: 'json',
+			});
+
+			const init = await transport.respond(
+				post({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-06-18',
+						capabilities: { sampling: {} },
+						clientInfo: { name: 'test-client', version: '1.0.0' },
+					},
+				}),
+			);
+			expect(init?.status).toBe(200);
+
+			const response = await transport.respond(
+				post({
+					jsonrpc: '2.0',
+					id: 2,
+					method: 'tools/call',
+					params: { name: 'ask', arguments: {} },
+				}),
+			);
+
+			expect(response?.status).toBe(200);
+			const body = await response?.json();
+			expect(body).toMatchObject({ jsonrpc: '2.0', id: 2 });
+			expect(JSON.stringify(body)).toContain('cannot be delivered');
+		});
 	});
 
 	describe('response option with server', () => {

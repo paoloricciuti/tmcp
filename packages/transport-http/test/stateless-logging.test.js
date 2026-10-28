@@ -139,6 +139,10 @@ describe('HttpTransport stateless logging', () => {
 			id: 1,
 			result: { content: [] },
 		});
-		expect(body).not.toHaveProperty('method');
+		expect(Object.keys(body).sort()).toStrictEqual([
+			'id',
+			'jsonrpc',
+			'result',
+		]);
 	});
 });

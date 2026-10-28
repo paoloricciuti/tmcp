@@ -41,6 +41,7 @@ export type SubscriptionSink = {
     controller?: ReadableStreamDefaultController;
     state: "open" | "cancelled" | "disconnected";
     signal?: AbortSignal;
+    json?: boolean;
     subscription?: {
         id: string | number;
         registration: SubscriptionRegistration;

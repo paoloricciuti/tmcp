@@ -32,7 +32,7 @@
 
 /**
  * @typedef {{ promise: Promise<boolean>, resolve: (registered: boolean) => void }} SubscriptionRegistration
- * @typedef {{ controller?: ReadableStreamDefaultController, state: 'open' | 'cancelled' | 'disconnected', signal?: AbortSignal, subscription?: { id: string | number, registration: SubscriptionRegistration } }} SubscriptionSink
+ * @typedef {{ controller?: ReadableStreamDefaultController, state: 'open' | 'cancelled' | 'disconnected', signal?: AbortSignal, json?: boolean, subscription?: { id: string | number, registration: SubscriptionRegistration } }} SubscriptionSink
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -260,8 +260,24 @@ export class HttpTransport {
 					}
 					return;
 				}
-				// use the current controller if the request has an id (it means it's a request and not a notification)
 				const sink = this.#controller_storage.getStore();
+				const id = request.id;
+				if (sink?.json && id != null) {
+					// A JSON reply cannot carry this request and the client will
+					// never see it: fail it now instead of leaving the handler
+					// waiting for an answer forever.
+					void this.#server.receive({
+						jsonrpc: '2.0',
+						id,
+						error: {
+							code: -32000,
+							message:
+								'Server-to-client requests cannot be delivered when the transport answers with JSON; use `response: "sse"`',
+						},
+					});
+					return;
+				}
+				// use the current controller if the request has an id (it means it's a request and not a notification)
 				if (
 					!sink?.controller ||
 					sink.state !== 'open' ||
@@ -803,12 +819,18 @@ export class HttpTransport {
 				registration: { promise, resolve },
 			};
 		}
+		const has_request = request_message && valid_id;
+		const json_response =
+			this.#options.response === 'json' &&
+			has_request &&
+			subscription_id === undefined;
 		const abort_controller = new AbortController();
 		/** @type {SubscriptionSink} */
 		const sink = {
 			controller: undefined,
 			state: 'open',
 			signal: abort_controller.signal,
+			json: json_response,
 			subscription,
 		};
 		const manager = this.#subscription_manager;
@@ -867,12 +889,6 @@ export class HttpTransport {
 		request.signal.addEventListener('abort', on_request_abort, {
 			once: true,
 		});
-
-		const has_request = request_message && valid_id;
-		const json_response =
-			this.#options.response === 'json' &&
-			has_request &&
-			subscription_id === undefined;
 
 		/**
 		 * Run the server and return its JSON-RPC response, or `undefined` when
@@ -940,8 +956,18 @@ export class HttpTransport {
 			// handler drops notifications and server requests emitted before the
 			// response: a JSON reply can only carry the response itself.
 			if (request.signal.aborted) void disconnect(true);
+			// A handler that ignores its signal must not keep the reply pending
+			// once the client is gone, so the abort wins the race.
+			const aborted = new Promise((resolve) => {
+				abort_controller.signal.addEventListener(
+					'abort',
+					() => resolve(undefined),
+					{ once: true },
+				);
+				if (abort_controller.signal.aborted) resolve(undefined);
+			});
 			try {
-				const response = await handle();
+				const response = await Promise.race([handle(), aborted]);
 				if (!deliverable(response)) {
 					return new Response(null, { status: 204 });
 				}

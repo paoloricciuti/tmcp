@@ -621,4 +621,35 @@ describe('strict per-request HTTP runtime', () => {
 		await expect(response?.text()).resolves.toBe('');
 		expect(execute).not.toHaveBeenCalled();
 	});
+
+	it('returns 204 when a json request is aborted while the handler ignores its signal', async () => {
+		const started = Promise.withResolvers();
+		const release = Promise.withResolvers();
+		const server = new McpServer(
+			{ name: 'strict-http', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		server.tool({ name: 'stuck', description: 'stuck' }, async () => {
+			started.resolve(undefined);
+			await release.promise;
+			return { content: [] };
+		});
+		const transport = new HttpTransport(server, {
+			path: '/mcp',
+			response: 'json',
+		});
+		const controller = new AbortController();
+		const pending = transport.respond(
+			post_request(modern_message('tools/call', { name: 'stuck' }), {
+				signal: controller.signal,
+			}),
+		);
+		await started.promise;
+		controller.abort();
+
+		const response = await pending;
+		expect(response?.status).toBe(204);
+		await expect(response?.text()).resolves.toBe('');
+		release.resolve(undefined);
+	});
 });

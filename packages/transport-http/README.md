@@ -255,7 +255,7 @@ const transport = new HttpTransport(server, {
 
 A request then receives `Content-Type: application/json` with the JSON-RPC response as the body, which is easier to inspect in browser devtools and fits stateless deployments; combine it with `disableSse` for an endpoint that never streams. The option applies to session-based and per-request clients alike. Notifications still return HTTP 202 without a body, and `subscriptions/listen` always opens an SSE stream.
 
-A JSON response can only carry the response itself: log and progress notifications emitted while a handler runs are dropped, and server-to-client requests such as sampling and elicitation never reach the client, so a handler that awaits their answer never receives it. Keep the default `'sse'` when your handlers rely on them. This matches the JSON response mode of the official TypeScript and Python SDKs.
+A JSON response can only carry the response itself: log and progress notifications emitted while a handler runs are dropped, as in the JSON response mode of the official TypeScript and Python SDKs. Server-to-client requests such as sampling and elicitation cannot reach the client either, so they fail at once with JSON-RPC error `-32000` instead of leaving the handler waiting for an answer. Keep the default `'sse'` when your handlers rely on them. When the client aborts a request, the transport answers `204 No Content` as soon as the abort arrives, even if the handler ignores `server.ctx.signal`.
 
 #### Methods
 
