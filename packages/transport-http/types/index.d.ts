@@ -31,6 +31,7 @@ export type HttpTransportOptions = {
     };
     subscriptionManager?: SubscriptionManager;
     disableSse?: boolean;
+    response?: "sse" | "json";
 };
 export type SubscriptionRegistration = {
     promise: Promise<boolean>;
@@ -40,6 +41,7 @@ export type SubscriptionSink = {
     controller?: ReadableStreamDefaultController;
     state: "open" | "cancelled" | "disconnected";
     signal?: AbortSignal;
+    json?: boolean;
     subscription?: {
         id: string | number;
         registration: SubscriptionRegistration;

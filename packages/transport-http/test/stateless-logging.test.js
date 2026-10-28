@@ -109,4 +109,40 @@ describe('HttpTransport stateless logging', () => {
 			}),
 		);
 	});
+
+	it('returns only the final response when response is "json"', async () => {
+		const server = new McpServer(
+			{ name: 'test-server', version: '1.0.0' },
+			{
+				adapter: undefined,
+				capabilities: { tools: {}, logging: {} },
+			},
+		);
+		const transport = new HttpTransport(server, {
+			path: '/mcp',
+			response: 'json',
+		});
+		server.tool({ name: 'logger', description: 'logger' }, () => {
+			server.log('info', 'dropped');
+			return { content: [] };
+		});
+
+		const response = await transport.respond(
+			tool_request('logger', 'json-session'),
+		);
+
+		expect(response?.status).toBe(200);
+		expect(response?.headers.get('content-type')).toBe('application/json');
+		const body = await response?.json();
+		expect(body).toMatchObject({
+			jsonrpc: '2.0',
+			id: 1,
+			result: { content: [] },
+		});
+		expect(Object.keys(body).sort()).toStrictEqual([
+			'id',
+			'jsonrpc',
+			'result',
+		]);
+	});
 });

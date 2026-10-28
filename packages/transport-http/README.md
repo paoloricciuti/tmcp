@@ -181,6 +181,7 @@ const transport = new HttpTransport(server, {
 - **🌐 HTTP/SSE Communication**: Uses Server-Sent Events for real-time bidirectional communication
 - **🔄 Dual Protocol Support**: Supports both initialization-based sessions and sessionless per-request calls
 - **📡 Streaming Responses**: Supports streaming responses through SSE
+- **📄 JSON Responses**: Optionally answers requests with a single JSON object instead of an SSE stream
 - **🛤️ Configurable Path**: Customizable MCP endpoint path with automatic filtering (set `path` to `null` to respond everywhere)
 - **🔧 Framework Agnostic**: Works with any HTTP server framework (Fastify, Bun, Deno, etc.)
 - **⚡ Real-time Updates**: Server can push notifications and updates to connected clients
@@ -220,6 +221,7 @@ interface HttpTransportOptions {
 	}; // Provide custom managers; defaults to in-memory implementations
 	subscriptionManager?: SubscriptionManager; // Per-request subscription routing
 	disableSse?: boolean; // Disable SSE stream endpoint (GET returns 405)
+	response?: 'sse' | 'json'; // Answer requests with one JSON object instead of SSE (default: 'sse')
 }
 ```
 
@@ -241,11 +243,25 @@ const transport = new HttpTransport(server, {
 
 When `disableSse` is `true`, GET requests to the MCP endpoint return `405 Method Not Allowed`, so legacy session-negotiated clients cannot receive server-initiated notifications through a GET stream. Per-request clients can still open modern `subscriptions/listen` streams through POST.
 
+### JSON Responses
+
+By default every JSON-RPC request is answered with a short-lived SSE stream, even when that stream carries nothing but the final response. Set `response: 'json'` to answer requests with a single JSON object instead:
+
+```javascript
+const transport = new HttpTransport(server, {
+	response: 'json',
+});
+```
+
+A request then receives `Content-Type: application/json` with the JSON-RPC response as the body, which is easier to inspect in browser devtools and fits stateless deployments; combine it with `disableSse` for an endpoint that never streams. The option applies to session-based and per-request clients alike. Notifications still return HTTP 202 without a body, and `subscriptions/listen` always opens an SSE stream.
+
+A JSON response can only carry the response itself: log and progress notifications emitted while a handler runs are dropped, as in the JSON response mode of the official TypeScript and Python SDKs. Server-to-client requests such as sampling and elicitation cannot reach the client either, so they fail at once with JSON-RPC error `-32000` instead of leaving the handler waiting for an answer. Keep the default `'sse'` when your handlers rely on them. When the client aborts a request, the transport answers `204 No Content` as soon as the abort arrives, even if the handler ignores `server.ctx.signal`.
+
 #### Methods
 
 ##### `respond(request: Request, customContext?: T): Promise<Response | null>`
 
-Processes an HTTP request and returns a Response with Server-Sent Events, or null if the request path doesn't match the configured MCP path.
+Processes an HTTP request and returns a Response (an SSE stream, or a single JSON object when `response: 'json'` is set), or null if the request path doesn't match the configured MCP path.
 
 **Parameters:**
 
@@ -254,11 +270,11 @@ Processes an HTTP request and returns a Response with Server-Sent Events, or nul
 
 **Returns:**
 
-- A Response object with SSE stream for ongoing communication, or null if the request path doesn't match the MCP endpoint
+- A Response object with an SSE stream (or a JSON body in `response: 'json'` mode), or null if the request path doesn't match the MCP endpoint
 
 **HTTP Methods:**
 
-- **POST**: Processes MCP messages and returns short-lived event stream responses
+- **POST**: Processes MCP messages and returns short-lived event stream responses, or single JSON objects with `response: 'json'`
 - **GET**: Establishes long-lived connections for server notifications
 - **DELETE**: Disconnects sessions and cleans up resources
 
@@ -290,7 +306,7 @@ Each request or notification uses its own POST. A conforming request includes:
 
 `Mcp-Name` and parameter headers use the specification's `=?base64?...?=` sentinel when a value cannot be represented safely as plain ASCII. Header names are compared case-insensitively; values remain case-sensitive.
 
-Successful requests use request-scoped SSE and include `X-Accel-Buffering: no`. Accepted notifications return HTTP 202 without a body. Header mismatches and unsupported versions return HTTP 400; unknown or unavailable methods return HTTP 404. Per-request traffic ignores `Mcp-Session-Id` and `Last-Event-ID`, never returns a session ID, and returns HTTP 405 for GET and DELETE.
+Successful requests use request-scoped SSE and include `X-Accel-Buffering: no`, or a single `application/json` object when `response: 'json'` is set. Accepted notifications return HTTP 202 without a body. Header mismatches and unsupported versions return HTTP 400; unknown or unavailable methods return HTTP 404. Per-request traffic ignores `Mcp-Session-Id` and `Last-Event-ID`, never returns a session ID, and returns HTTP 405 for GET and DELETE.
 
 Initialization-based clients continue to use the behavior documented below on the same transport. Their session header, GET stream, DELETE lifecycle, and JSON-RPC response POSTs remain supported.
 
@@ -325,6 +341,16 @@ mcp-session-id: generated-or-provided-session-id
 
 data: {"jsonrpc":"2.0","id":1,"result":{"tools":[...]}}
 
+```
+
+With `response: 'json'` the same request receives a single JSON object instead:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+mcp-session-id: generated-or-provided-session-id
+
+{"jsonrpc":"2.0","id":1,"result":{"tools":[...]}}
 ```
 
 #### GET - Notification Stream

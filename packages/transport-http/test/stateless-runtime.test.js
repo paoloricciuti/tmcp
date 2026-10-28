@@ -571,4 +571,85 @@ describe('strict per-request HTTP runtime', () => {
 		expect(signal?.aborted).toBe(true);
 		release.resolve(undefined);
 	});
+
+	it('returns a single JSON object for per-request requests when response is "json"', async () => {
+		const server = new McpServer(
+			{ name: 'strict-http', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		server.tool({ name: 'echo', description: 'echo' }, () => ({
+			content: [],
+		}));
+		const transport = new HttpTransport(server, {
+			path: '/mcp',
+			response: 'json',
+		});
+		const response = await transport.respond(
+			post_request(modern_message('tools/list')),
+		);
+
+		expect(response?.status).toBe(200);
+		expect(response?.headers.get('content-type')).toBe('application/json');
+		expect(response?.headers.has('mcp-session-id')).toBe(false);
+		await expect(response?.json()).resolves.toMatchObject({
+			jsonrpc: '2.0',
+			id: 1,
+			result: { tools: [expect.objectContaining({ name: 'echo' })] },
+		});
+	});
+
+	it('returns 204 for an already cancelled request when response is "json"', async () => {
+		const execute = vi.fn(() => ({ content: [] }));
+		const server = new McpServer(
+			{ name: 'strict-http', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		server.tool({ name: 'cancelled', description: 'cancelled' }, execute);
+		const transport = new HttpTransport(server, {
+			path: '/mcp',
+			response: 'json',
+		});
+		const controller = new AbortController();
+		controller.abort();
+		const response = await transport.respond(
+			post_request(modern_message('tools/call', { name: 'cancelled' }), {
+				signal: controller.signal,
+			}),
+		);
+
+		expect(response?.status).toBe(204);
+		await expect(response?.text()).resolves.toBe('');
+		expect(execute).not.toHaveBeenCalled();
+	});
+
+	it('returns 204 when a json request is aborted while the handler ignores its signal', async () => {
+		const started = Promise.withResolvers();
+		const release = Promise.withResolvers();
+		const server = new McpServer(
+			{ name: 'strict-http', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		server.tool({ name: 'stuck', description: 'stuck' }, async () => {
+			started.resolve(undefined);
+			await release.promise;
+			return { content: [] };
+		});
+		const transport = new HttpTransport(server, {
+			path: '/mcp',
+			response: 'json',
+		});
+		const controller = new AbortController();
+		const pending = transport.respond(
+			post_request(modern_message('tools/call', { name: 'stuck' }), {
+				signal: controller.signal,
+			}),
+		);
+		await started.promise;
+		controller.abort();
+
+		const response = await pending;
+		expect(response?.status).toBe(204);
+		await expect(response?.text()).resolves.toBe('');
+		release.resolve(undefined);
+	});
 });

@@ -26,12 +26,13 @@
  * 	sessionManager?: { streams?: StreamSessionManager, info?: OptionalizeSessionManager<InfoSessionManager> }
  * 	subscriptionManager?: SubscriptionManager
  * 	disableSse?: boolean
+ * 	response?: 'sse' | 'json'
  * }} HttpTransportOptions
  */
 
 /**
  * @typedef {{ promise: Promise<boolean>, resolve: (registered: boolean) => void }} SubscriptionRegistration
- * @typedef {{ controller?: ReadableStreamDefaultController, state: 'open' | 'cancelled' | 'disconnected', signal?: AbortSignal, subscription?: { id: string | number, registration: SubscriptionRegistration } }} SubscriptionSink
+ * @typedef {{ controller?: ReadableStreamDefaultController, state: 'open' | 'cancelled' | 'disconnected', signal?: AbortSignal, json?: boolean, subscription?: { id: string | number, registration: SubscriptionRegistration } }} SubscriptionSink
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -122,6 +123,7 @@ export class HttpTransport {
 			cors,
 			allowedOrigins,
 			disableSse,
+			response = 'sse',
 			subscriptionManager: _subscriptionManager,
 			sessionManager: _sessionManager = {
 				streams: new InMemoryStreamSessionManager(),
@@ -161,6 +163,7 @@ export class HttpTransport {
 			allowedOrigins,
 			sessionManager,
 			disableSse,
+			response,
 		};
 		this.#path = path;
 		this.#subscription_manager = subscriptionManager;
@@ -257,8 +260,24 @@ export class HttpTransport {
 					}
 					return;
 				}
-				// use the current controller if the request has an id (it means it's a request and not a notification)
 				const sink = this.#controller_storage.getStore();
+				const id = request.id;
+				if (sink?.json && id != null) {
+					// A JSON reply cannot carry this request and the client will
+					// never see it: fail it now instead of leaving the handler
+					// waiting for an answer forever.
+					void this.#server.receive({
+						jsonrpc: '2.0',
+						id,
+						error: {
+							code: -32000,
+							message:
+								'Server-to-client requests cannot be delivered when the transport answers with JSON; use `response: "sse"`',
+						},
+					});
+					return;
+				}
+				// use the current controller if the request has an id (it means it's a request and not a notification)
 				if (
 					!sink?.controller ||
 					sink.state !== 'open' ||
@@ -800,12 +819,18 @@ export class HttpTransport {
 				registration: { promise, resolve },
 			};
 		}
+		const has_request = request_message && valid_id;
+		const json_response =
+			this.#options.response === 'json' &&
+			has_request &&
+			subscription_id === undefined;
 		const abort_controller = new AbortController();
 		/** @type {SubscriptionSink} */
 		const sink = {
 			controller: undefined,
 			state: 'open',
 			signal: abort_controller.signal,
+			json: json_response,
 			subscription,
 		};
 		const manager = this.#subscription_manager;
@@ -865,22 +890,12 @@ export class HttpTransport {
 			once: true,
 		});
 
-		const stream = new ReadableStream({
-			start(controller) {
-				sink.controller = controller;
-				if (subscription_id !== undefined) {
-					register_sink(subscription_origin, subscription_id, sink);
-				}
-			},
-			cancel: () => disconnect(false),
-		});
-		if (request.signal.aborted) void disconnect(true);
-
+		/**
+		 * Run the server and return its JSON-RPC response, or `undefined` when
+		 * the request was cancelled before dispatch.
+		 */
 		const handle = async () => {
-			if (abort_controller.signal.aborted) {
-				release_sink();
-				return;
-			}
+			if (abort_controller.signal.aborted) return;
 			const init_message =
 				body.method === 'initialize' ? body : undefined;
 			const client_capabilities = session_id
@@ -904,10 +919,7 @@ export class HttpTransport {
 							.getLogLevel(session_id)
 							.catch(() => undefined)
 				: undefined;
-			if (abort_controller.signal.aborted) {
-				release_sink();
-				return;
-			}
+			if (abort_controller.signal.aborted) return;
 
 			const receive = () =>
 				this.#server.receive(/** @type {any} */ (body), {
@@ -927,43 +939,97 @@ export class HttpTransport {
 					subscriptionOrigin: subscription_origin,
 					subscriptionManager: server_subscription_manager,
 				});
-			const response = await this.#controller_storage.run(sink, () =>
+			return this.#controller_storage.run(sink, () =>
 				session_id
 					? this.#session_id_storage.run(session_id, receive)
 					: receive(),
 			);
-
-			if (
-				sink.state === 'open' &&
-				!abort_controller.signal.aborted &&
-				response != null
-			) {
-				sink.controller?.enqueue(
-					this.#text_encoder.encode(
-						'event: message\ndata: ' +
-							JSON.stringify(response) +
-							'\n\n',
-					),
-				);
-			}
-			if (sink.state !== 'disconnected') sink.controller?.close();
-			release_sink();
 		};
+		/** @param {unknown} response */
+		const deliverable = (response) =>
+			sink.state === 'open' &&
+			!abort_controller.signal.aborted &&
+			response != null;
 
-		void handle().catch((error) => {
-			if (sink.state === 'open') {
-				sink.controller?.error(error);
-			} else if (sink.state === 'cancelled') {
-				try {
-					sink.controller?.close();
-				} catch {
-					// The cancellation may already have closed the stream.
+		if (json_response) {
+			// Without a stream `sink.controller` stays undefined, so the `send`
+			// handler drops notifications and server requests emitted before the
+			// response: a JSON reply can only carry the response itself.
+			if (request.signal.aborted) void disconnect(true);
+			// A handler that ignores its signal must not keep the reply pending
+			// once the client is gone, so the abort wins the race.
+			const aborted = new Promise((resolve) => {
+				abort_controller.signal.addEventListener(
+					'abort',
+					() => resolve(undefined),
+					{ once: true },
+				);
+				if (abort_controller.signal.aborted) resolve(undefined);
+			});
+			try {
+				const response = await Promise.race([handle(), aborted]);
+				if (!deliverable(response)) {
+					return new Response(null, { status: 204 });
 				}
+				return new Response(JSON.stringify(response), {
+					status: 200,
+					headers: {
+						'Content-Type': 'application/json',
+						...(session_id ? { 'mcp-session-id': session_id } : {}),
+					},
+				});
+			} catch (error) {
+				return this.#json_rpc_error(
+					500,
+					body.id,
+					-32603,
+					/** @type {Error} */ (error).message ?? 'Internal error',
+					undefined,
+					session_id,
+				);
+			} finally {
+				release_sink();
 			}
-			release_sink();
-		});
+		}
 
-		const has_request = request_message && valid_id;
+		const stream = new ReadableStream({
+			start(controller) {
+				sink.controller = controller;
+				if (subscription_id !== undefined) {
+					register_sink(subscription_origin, subscription_id, sink);
+				}
+			},
+			cancel: () => disconnect(false),
+		});
+		if (request.signal.aborted) void disconnect(true);
+
+		void handle()
+			.then((response) => {
+				if (deliverable(response)) {
+					sink.controller?.enqueue(
+						this.#text_encoder.encode(
+							'event: message\ndata: ' +
+								JSON.stringify(response) +
+								'\n\n',
+						),
+					);
+				}
+				if (sink.state !== 'disconnected') sink.controller?.close();
+				release_sink();
+			})
+			.catch((error) => {
+				if (sink.state === 'open') {
+					sink.controller?.error(error);
+				} else if (sink.state === 'cancelled') {
+					try {
+						sink.controller?.close();
+					} catch {
+						// The cancellation may already have closed the stream.
+					}
+				}
+				release_sink();
+			});
+
 		const response = new Response(has_request ? stream : null, {
 			headers: has_request
 				? {
