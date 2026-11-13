@@ -59,7 +59,12 @@ export class StdioTransport {
 	/** @type {Map<string | number, AbortController>} */
 	#request_controllers = new Map();
 	#write_queue = Promise.resolve();
-	#legacy_queue = Promise.resolve();
+	/**
+	 * Set while an `initialize` request is being handled: session messages that
+	 * arrive in the meantime wait for it so they see the negotiated session.
+	 * @type {Promise<void> | undefined}
+	 */
+	#initializing;
 	/** @type {Set<Promise<void>>} */
 	#processing_tasks = new Set();
 	/** @type {Promise<void> | undefined} */
@@ -174,6 +179,8 @@ export class StdioTransport {
 		}
 
 		try {
+			// A request cancelled while waiting for `initialize` never starts.
+			if (controller?.signal.aborted) return;
 			const response = await this.#server.receive(
 				/** @type {*} */ (message),
 				{
@@ -215,10 +222,9 @@ export class StdioTransport {
 			/** @type {ReturnType<typeof setTimeout> | undefined} */
 			let timeout;
 			const drained = await Promise.race([
-				Promise.allSettled([
-					this.#legacy_queue,
-					...this.#processing_tasks,
-				]).then(() => true),
+				Promise.allSettled([...this.#processing_tasks]).then(
+					() => true,
+				),
 				new Promise((resolve) => {
 					timeout = setTimeout(
 						() => resolve(false),
@@ -297,24 +303,38 @@ export class StdioTransport {
 						const is_control_notification =
 							message.method === 'notifications/cancelled' ||
 							message.method === 'notifications/progress';
-						if (
-							per_request ||
-							cancels_listen ||
-							is_response ||
-							is_control_notification
-						) {
-							const task = this.#handle_message(
-								message,
-								ctx,
-							).catch(() => {});
-							this.#processing_tasks.add(task);
-							void task.finally(() =>
-								this.#processing_tasks.delete(task),
+						// Session messages run concurrently, like on every other
+						// transport, so a slow tool call doesn't hold back `ping`,
+						// `tools/list` or parallel calls. They only wait (in arrival
+						// order) for an `initialize` that is still being handled.
+						const waits_for_initialize =
+							this.#initializing !== undefined &&
+							!(
+								per_request ||
+								cancels_listen ||
+								is_response ||
+								is_control_notification
 							);
-						} else {
-							this.#legacy_queue = this.#legacy_queue
-								.then(() => this.#handle_message(message, ctx))
-								.catch(() => {});
+						const task = (
+							waits_for_initialize
+								? /** @type {Promise<void>} */ (
+										this.#initializing
+									).then(() =>
+										this.#handle_message(message, ctx),
+									)
+								: this.#handle_message(message, ctx)
+						).catch(() => {});
+						this.#processing_tasks.add(task);
+						void task.finally(() =>
+							this.#processing_tasks.delete(task),
+						);
+						if (message.method === 'initialize' && !per_request) {
+							this.#initializing = task;
+							void task.finally(() => {
+								if (this.#initializing === task) {
+									this.#initializing = undefined;
+								}
+							});
 						}
 					} catch {
 						/** empty */

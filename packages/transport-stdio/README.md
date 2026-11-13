@@ -78,7 +78,7 @@ Starts listening for JSON-RPC messages on stdin and sets up response handling on
 - Parses JSON-RPC messages and forwards to the server
 - Writes responses to `process.stdout`
 - Handles process termination signals
-- Processes per-request calls concurrently so `subscriptions/listen` does not block cancellation or later requests
+- Processes requests concurrently so a slow tool call or `subscriptions/listen` does not block `ping`, cancellation or later requests (session requests only wait for an in-flight `initialize`)
 - Serializes all stdout writes and suppresses a cancelled listen response
 
 ## Message Flow
