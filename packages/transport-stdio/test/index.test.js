@@ -577,6 +577,271 @@ describe('StdioTransport', () => {
 		}
 	});
 
+	it('answers session requests while a slow tool call is running', async () => {
+		const server = new McpServer(
+			{ name: 'test-server', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		/** @type {(value?: void) => void} */
+		let release = () => {};
+		const pending = new Promise((resolve) => {
+			release = resolve;
+		});
+		let running = 0;
+		let max_running = 0;
+		server.tool(
+			{ name: 'slow', description: 'Waits until released' },
+			async () => {
+				running++;
+				max_running = Math.max(max_running, running);
+				await pending;
+				running--;
+				return { content: [] };
+			},
+		);
+		const transport = new StdioTransport(server);
+		/** @type {any[]} */
+		const writes = [];
+		const write = vi
+			.spyOn(process.stdout, 'write')
+			.mockImplementation((value) => {
+				writes.push(JSON.parse(String(value)));
+				return true;
+			});
+		/** @param {unknown[]} messages */
+		const send = (...messages) =>
+			process.stdin.emit(
+				'data',
+				messages.map((message) => JSON.stringify(message)).join('\n') +
+					'\n',
+			);
+
+		try {
+			transport.listen();
+			// Everything in one chunk: the requests after `initialize` must wait
+			// for it, then run concurrently.
+			send(
+				{
+					jsonrpc: '2.0',
+					id: 0,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-06-18',
+						capabilities: {},
+						clientInfo: { name: 'test-client', version: '1.0.0' },
+					},
+				},
+				{ jsonrpc: '2.0', method: 'notifications/initialized' },
+				{
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'tools/call',
+					params: { name: 'slow', arguments: {} },
+				},
+				{
+					jsonrpc: '2.0',
+					id: 2,
+					method: 'tools/call',
+					params: { name: 'slow', arguments: {} },
+				},
+				{ jsonrpc: '2.0', id: 3, method: 'ping' },
+				{ jsonrpc: '2.0', id: 4, method: 'tools/list' },
+			);
+
+			await vi.waitFor(() => {
+				expect(writes).toContainEqual(
+					expect.objectContaining({ id: 3, result: {} }),
+				);
+				expect(writes).toContainEqual(
+					expect.objectContaining({
+						id: 4,
+						result: expect.objectContaining({
+							tools: expect.any(Array),
+						}),
+					}),
+				);
+				expect(max_running).toBe(2);
+			});
+			expect(writes[0]).toEqual(expect.objectContaining({ id: 0 }));
+			expect(writes).not.toContainEqual(
+				expect.objectContaining({ id: 1 }),
+			);
+			expect(writes).not.toContainEqual(
+				expect.objectContaining({ id: 2 }),
+			);
+
+			release();
+			await vi.waitFor(() => {
+				expect(writes).toContainEqual(
+					expect.objectContaining({ id: 1, result: { content: [] } }),
+				);
+				expect(writes).toContainEqual(
+					expect.objectContaining({ id: 2, result: { content: [] } }),
+				);
+			});
+		} finally {
+			release();
+			await transport.close();
+			write.mockRestore();
+		}
+	});
+
+	it.each([
+		['succeeds', false],
+		['fails', true],
+	])('holds session requests until a slow initialize %s', async (_, fail) => {
+		const server = new McpServer(
+			{ name: 'test-server', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		/** @type {(value?: void) => void} */
+		let release = () => {};
+		const pending = new Promise((resolve) => {
+			release = resolve;
+		});
+		/** @type {unknown[]} */
+		const received = [];
+		const receive = server.receive.bind(server);
+		const spy = vi
+			.spyOn(server, 'receive')
+			.mockImplementation(async (message, ctx) => {
+				received.push('id' in message ? message.id : message.method);
+				if ('method' in message && message.method === 'initialize') {
+					await pending;
+					if (fail) throw new Error('initialize failed');
+				}
+				return receive(message, ctx);
+			});
+		const transport = new StdioTransport(server);
+		/** @type {any[]} */
+		const writes = [];
+		const write = vi
+			.spyOn(process.stdout, 'write')
+			.mockImplementation((value) => {
+				writes.push(JSON.parse(String(value)));
+				return true;
+			});
+		/** @param {unknown[]} messages */
+		const send = (...messages) =>
+			process.stdin.emit(
+				'data',
+				messages.map((message) => JSON.stringify(message)).join('\n') +
+					'\n',
+			);
+
+		try {
+			transport.listen();
+			send(
+				{
+					jsonrpc: '2.0',
+					id: 0,
+					method: 'initialize',
+					params: {
+						protocolVersion: '2025-06-18',
+						capabilities: {},
+						clientInfo: {
+							name: 'test-client',
+							version: '1.0.0',
+						},
+					},
+				},
+				{ jsonrpc: '2.0', id: 1, method: 'ping' },
+			);
+			// Arrives in a later chunk while initialize is still running.
+			await new Promise((resolve) => setImmediate(resolve));
+			send({ jsonrpc: '2.0', id: 2, method: 'ping' });
+			await new Promise((resolve) => setImmediate(resolve));
+			expect(received).toEqual([0]);
+			expect(writes).toEqual([]);
+
+			release();
+			await vi.waitFor(() => {
+				expect(writes).toContainEqual(
+					expect.objectContaining({ id: 1, result: {} }),
+				);
+				expect(writes).toContainEqual(
+					expect.objectContaining({ id: 2, result: {} }),
+				);
+			});
+			expect(received).toEqual([0, 1, 2]);
+			if (!fail) {
+				expect(writes[0]).toEqual(expect.objectContaining({ id: 0 }));
+			}
+		} finally {
+			release();
+			await transport.close();
+			spy.mockRestore();
+			write.mockRestore();
+		}
+	});
+
+	it('never runs a request cancelled while waiting for initialize', async () => {
+		const server = new McpServer(
+			{ name: 'test-server', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		const handler = vi.fn(() => ({ content: [] }));
+		server.tool({ name: 'tool', description: 'A tool' }, handler);
+		const transport = new StdioTransport(server);
+		/** @type {any[]} */
+		const writes = [];
+		const write = vi
+			.spyOn(process.stdout, 'write')
+			.mockImplementation((value) => {
+				writes.push(JSON.parse(String(value)));
+				return true;
+			});
+
+		try {
+			transport.listen();
+			process.stdin.emit(
+				'data',
+				[
+					{
+						jsonrpc: '2.0',
+						id: 0,
+						method: 'initialize',
+						params: {
+							protocolVersion: '2025-06-18',
+							capabilities: {},
+							clientInfo: {
+								name: 'test-client',
+								version: '1.0.0',
+							},
+						},
+					},
+					{
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'tools/call',
+						params: { name: 'tool', arguments: {} },
+					},
+					{
+						jsonrpc: '2.0',
+						method: 'notifications/cancelled',
+						params: { requestId: 1 },
+					},
+					{ jsonrpc: '2.0', id: 2, method: 'ping' },
+				]
+					.map((message) => JSON.stringify(message))
+					.join('\n') + '\n',
+			);
+
+			await vi.waitFor(() =>
+				expect(writes).toContainEqual(
+					expect.objectContaining({ id: 2, result: {} }),
+				),
+			);
+			expect(handler).not.toHaveBeenCalled();
+			expect(writes).not.toContainEqual(
+				expect.objectContaining({ id: 1 }),
+			);
+		} finally {
+			await transport.close();
+			write.mockRestore();
+		}
+	});
+
 	it('drains queued legacy work before closing', async () => {
 		/** @type {(value?: void) => void} */
 		let release = () => {};
