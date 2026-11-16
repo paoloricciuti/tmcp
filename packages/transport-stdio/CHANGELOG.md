@@ -1,5 +1,11 @@
 # @tmcp/transport-stdio
 
+## 0.5.2
+
+### Patch Changes
+
+- ce79279: fix: handle session requests concurrently
+
 ## 0.5.1
 
 ### Patch Changes
