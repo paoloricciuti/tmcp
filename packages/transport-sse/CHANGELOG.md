@@ -1,5 +1,11 @@
 # @tmcp/transport-sse
 
+## 0.6.2
+
+### Patch Changes
+
+- fix: require the `Content-Type` MIME type to be exactly `application/json` on POST requests
+
 ## 0.6.1
 
 ### Patch Changes

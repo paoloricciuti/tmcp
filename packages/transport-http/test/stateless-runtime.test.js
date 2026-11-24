@@ -320,6 +320,80 @@ describe('strict per-request HTTP runtime', () => {
 		},
 	);
 
+	it.each([
+		'text/plain; charset=application/json',
+		'text/plain;application/json',
+		'application/x-www-form-urlencoded; a=application/json',
+		'multipart/form-data; boundary=application/json',
+		'application/jsonp',
+		'application/json-seq',
+	])(
+		'rejects non JSON content type %s without running the tool',
+		async (content_type) => {
+			const execute = vi.fn(() => ({ content: [] }));
+			const server = new McpServer(
+				{ name: 'strict-http', version: '1.0.0' },
+				{ adapter: undefined, capabilities: { tools: {} } },
+			);
+			server.tool({ name: 'probe', description: 'probe' }, execute);
+			const transport = new HttpTransport(server, { path: '/mcp' });
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			try {
+				const response = await transport.respond(
+					new Request('http://localhost/mcp', {
+						method: 'POST',
+						headers: {
+							'content-type': content_type,
+							origin: 'https://attacker.example',
+						},
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							id: 1,
+							method: 'tools/call',
+							params: { name: 'probe', arguments: {} },
+						}),
+					}),
+				);
+
+				expect(response?.status).toBe(415);
+				expect(execute).not.toHaveBeenCalled();
+			} finally {
+				warn.mockRestore();
+			}
+		},
+	);
+
+	it.each([
+		'application/json',
+		'application/json; charset=utf-8',
+		'Application/JSON',
+		' application/json ;charset=utf-8',
+	])('accepts JSON content type %s', async (content_type) => {
+		const execute = vi.fn(() => ({ content: [] }));
+		const server = new McpServer(
+			{ name: 'strict-http', version: '1.0.0' },
+			{ adapter: undefined, capabilities: { tools: {} } },
+		);
+		server.tool({ name: 'probe', description: 'probe' }, execute);
+		const transport = new HttpTransport(server, { path: '/mcp' });
+		const response = await transport.respond(
+			new Request('http://localhost/mcp', {
+				method: 'POST',
+				headers: { 'content-type': content_type },
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'tools/call',
+					params: { name: 'probe', arguments: {} },
+				}),
+			}),
+		);
+
+		expect(response?.status).toBe(200);
+		await response?.text();
+		expect(execute).toHaveBeenCalledOnce();
+	});
+
 	it('returns unsupported versions as HTTP 400 before opening SSE', async () => {
 		const server = new McpServer(
 			{ name: 'strict-http', version: '1.0.0' },

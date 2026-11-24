@@ -60,6 +60,21 @@ const PER_REQUEST_METADATA_KEYS = [
 ];
 
 /**
+ * Checks that the MIME type essence of a Content-Type header is exactly
+ * `application/json`. A substring check is not enough: a value like
+ * `text/plain; charset=application/json` is a CORS-safelisted content type, so
+ * browsers send it cross-origin without a preflight.
+ *
+ * @param {string | null} content_type
+ */
+function is_json_content_type(content_type) {
+	if (!content_type) return false;
+	return (
+		content_type.split(';')[0].trim().toLowerCase() === 'application/json'
+	);
+}
+
+/**
  * @template {Record<string, unknown> | undefined} [TCustom=undefined]
  */
 export class HttpTransport {
@@ -692,7 +707,7 @@ export class HttpTransport {
 	async #handle_post(request, auth_info, ctx) {
 		const header_is_per_request = this.#is_per_request(request);
 		const content_type = request.headers.get('content-type');
-		if (!content_type || !content_type.includes('application/json')) {
+		if (!is_json_content_type(content_type)) {
 			const session_id = header_is_per_request
 				? undefined
 				: request.headers.get('mcp-session-id') ||
