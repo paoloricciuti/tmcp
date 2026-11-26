@@ -11,6 +11,22 @@ import {
 	InMemoryInfoSessionManager,
 } from '@tmcp/session-manager';
 import { DEV } from 'esm-env';
+
+/**
+ * Checks that the MIME type essence of a Content-Type header is exactly
+ * `application/json`. A substring check is not enough: a value like
+ * `text/plain; charset=application/json` is a CORS-safelisted content type, so
+ * browsers send it cross-origin without a preflight.
+ *
+ * @param {string | null} content_type
+ */
+function is_json_content_type(content_type) {
+	if (!content_type) return false;
+	return (
+		content_type.split(';')[0].trim().toLowerCase() === 'application/json'
+	);
+}
+
 /**
  * @typedef {{
  * 	origin?: string | string[] | boolean
@@ -354,7 +370,7 @@ export class SseTransport {
 	async #handle_post(session_id, request, auth_info, ctx) {
 		// Check Content-Type header
 		const content_type = request.headers.get('content-type');
-		if (!content_type || !content_type.includes('application/json')) {
+		if (!is_json_content_type(content_type)) {
 			return new Response(
 				JSON.stringify({
 					jsonrpc: '2.0',
